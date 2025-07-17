@@ -44,11 +44,13 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
-    if (devOrigins.includes(origin)) return callback(null, true);
+    const devOrigins = [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://techlearnsolutions.com"
+    ];
 
-    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
-      return callback(null, true);
+    if (devOrigins.includes(origin)) return callback(null, true);
 
     if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return callback(null, true);
 
@@ -58,6 +60,7 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
 };
+
 
 app.use(cors(corsOptions));
 
