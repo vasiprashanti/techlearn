@@ -1,0 +1,679 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  body {
+    @apply text-gray-900 antialiased;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-white/50 rounded-lg shadow-md border border-gray-200 p-6;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+}
+
+/* Custom utility styles */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .brand-heading-primary {
+    @apply transition-all duration-500 ease-in-out;
+    background: linear-gradient(90deg, #007bff 0%, #0600a6 50%, #b5a3f0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    background-size: 200% 100%;
+    background-position: 0% 0;
+  }
+
+  /* Dark mode version for better visibility */
+  .dark .brand-heading-primary {
+    background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 50%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    background-size: 200% 100%;
+    background-position: 0% 0;
+  }
+
+  /* Desktop hover effect for brand-heading-primary */
+  @media (hover: hover) and (pointer: fine) {
+    .brand-heading-primary:hover {
+      background-position: 100% 0;
+    }
+  }
+
+  /* Mobile viewport effect for brand-heading-primary */
+  @media (hover: none) or (pointer: coarse) {
+    .brand-heading-primary.in-viewport {
+      background-position: 100% 0;
+    }
+  }
+
+  .brand-heading-secondary {
+    @apply bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+}
+
+  .Marquee-title {
+    font-family: "Poppins", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #f7f7ff;
+    background: linear-gradient(90deg, #007bff 0%, #0600a6 50%, #b5a3f0 100%);
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    border: none;
+    padding: 8px 0;
+    text-align: left;
+    transition: all 0.5s ease-in-out;
+  }
+
+  /* Responsive font sizes for Marquee-title */
+  @media (min-width: 640px) {
+    .Marquee-title {
+      font-size: 2.5rem;
+      letter-spacing: 1.5px;
+      padding: 10px 0;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .Marquee-title {
+      font-size: 3rem;
+      letter-spacing: 2px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .Marquee-title {
+      font-size: 3.7rem;
+    }
+  }
+
+  /* Desktop hover effect for Marquee-title */
+  @media (hover: hover) and (pointer: fine) {
+    .Marquee-title:hover {
+      background-position: 100% 0;
+    }
+  }
+
+  /* Mobile viewport effect for Marquee-title */
+  @media (hover: none) or (pointer: coarse) {
+    .Marquee-title.in-viewport {
+      background-position: 100% 0;
+    }
+  }
+
+  /* Marquee-title without border for All Courses page */
+  .Marquee-title-no-border {
+    font-family: "Poppins", sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #f7f7ff;
+    background: linear-gradient(90deg, #007bff 0%, #0600a6 50%, #b5a3f0 100%);
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    padding: 8px;
+    text-align: center;
+    transition: all 0.5s ease-in-out;
+  }
+
+  /* Responsive font sizes for Marquee-title-no-border */
+  @media (min-width: 640px) {
+    .Marquee-title-no-border {
+      font-size: 2.5rem;
+      letter-spacing: 1.5px;
+      padding: 10px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .Marquee-title-no-border {
+      font-size: 3rem;
+      letter-spacing: 2px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .Marquee-title-no-border {
+      font-size: 3.7rem;
+    }
+  }
+
+  /* Desktop hover effect for Marquee-title-no-border */
+  @media (hover: hover) and (pointer: fine) {
+    .Marquee-title-no-border:hover {
+      background-position: 100% 0;
+    }
+  }
+
+  /* Mobile viewport effect for Marquee-title-no-border */
+  @media (hover: none) or (pointer: coarse) {
+    .Marquee-title-no-border.in-viewport {
+      background-position: 100% 0;
+    }
+  }
+
+  /* Smooth scroll behavior */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Respect reduced motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Review scrolling animations */
+  @keyframes scrollUp {
+    0% { transform: translateY(0%); }
+    100% { transform: translateY(-50%); }
+  }
+
+  @keyframes scrollDown {
+    0% { transform: translateY(-50%); }
+    100% { transform: translateY(0%); }
+  }
+
+  .animate-scroll-up {
+    animation: scrollUp 7s linear infinite;
+  }
+
+  .animate-scroll-down {
+    animation: scrollDown 7s linear infinite;
+  }
+
+  /* Horizontal scrolling animation for mobile reviews */
+  @keyframes scrollHorizontal {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(-288px * 10 - 16px * 9)); } /* Move exactly the width of 10 cards + gaps */
+  }
+
+  .animate-scroll-horizontal {
+    animation: scrollHorizontal 20s linear infinite; /* Optimized speed for full content */
+    width: max-content;
+  }
+
+  /* Hide scrollbar for mobile reviews */
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+
+  .overflow-x-auto {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Line clamp utility */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Code snippet floating animation - exact match from HTML */
+  .code-snippet {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(14px, 2vw, 20px);
+    color: rgba(0, 20, 84, 0.651);
+    animation: float-down 3.1s linear infinite;
+    max-width: min(90vw, 600px);
+    padding: 8px;
+    text-align: center;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Dark mode code snippet color */
+  .dark .code-snippet {
+    color: rgba(100, 150, 255, 0.4);
+  }
+
+  /* Floating down animation - exact match from HTML */
+  @keyframes float-down {
+    from {
+      transform: translate(-50%, -10%);
+      opacity: 1;
+    }
+    to {
+      transform: translate(-50%, 110vh);
+      opacity: 0;
+    }
+  }
+
+  /* Hide scrollbars on code snippets */
+  .code-snippet::-webkit-scrollbar {
+    display: none;
+  }
+
+  .code-snippet {
+    scrollbar-width: none;
+  }
+
+  /* Responsive adjustments for mobile */
+  @media (max-width: 768px) {
+    .code-snippet {
+      font-size: clamp(12px, 3vw, 18px);
+      max-width: min(95vw, 400px);
+    }
+  }
+
+  /* Marquee sections - exact match from HTML */
+  .marquee-header,
+  .marquee-header-2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    width: 85%;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    gap: 40px;
+    padding: 80px 0;
+  }
+
+  /* Mobile-first approach - override for all mobile devices */
+  @media (max-width: 768px) {
+    .marquee-header,
+    .marquee-header-2 {
+      margin: 0 !important;
+      padding: 40px 20px !important;
+      width: 100% !important;
+      min-height: 100vh !important;
+      height: auto !important;
+      max-height: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      text-align: center !important;
+      gap: 20px !important;
+      justify-content: center !important;
+    }
+  }
+
+  /* Force remove any default spacing on mobile */
+  @media (max-width: 768px) {
+    .marquee-header * {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    .marquee-subtext,
+    .marquee-subtext-2 {
+      margin: 0 !important;
+      padding: 5px 15px !important;
+      line-height: 1.3 !important;
+      max-height: 180px !important;
+      overflow: hidden !important;
+      display: -webkit-box !important;
+      -webkit-line-clamp: 8 !important;
+      -webkit-box-orient: vertical !important;
+    }
+
+    /* Global mobile spacing override - remove ALL gaps */
+    section {
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* Remove gaps between marquee sections specifically */
+    .marquee-header + .marquee-header-2,
+    .marquee-header-2 + .marquee-header,
+    .marquee-header + *,
+    .marquee-header-2 + * {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    /* Add spacing between DesignLab and Learn Reviews */
+    .marquee-header-2:last-of-type {
+      margin-bottom: 40px !important;
+    }
+
+    /* Add spacing between Learn Reviews and Footer */
+    footer {
+      margin-top: 0px !important;
+    }
+
+    /* Target any divs that might be creating gaps */
+    .min-h-screen > div,
+    .container > div {
+      margin: 0 !important;
+    }
+
+    /* Aggressive override for ALL elements between marquee sections */
+    .marquee-header + .marquee-header,
+    .marquee-header + .marquee-header-2,
+    .marquee-header-2 + .marquee-header,
+    .marquee-header-2 + .marquee-header-2 {
+      margin-top: 0 !important;
+    }
+
+    /* Remove any potential spacing from parent containers */
+    body > div > div {
+      margin: 0 !important;
+    }
+
+    /* Force specific elements to have no margin */
+    .marquee-header,
+    .marquee-header-2,
+    .marquee-title,
+    .marquee-title-2,
+    .marquee-subtext,
+    .marquee-subtext-2 {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    /* Make content more compact on mobile */
+    .marquee-title,
+    .marquee-title-2 {
+      font-size: 2.5rem !important;
+      padding: 10px 15px !important;
+      margin-bottom: 10px !important;
+    }
+
+    .marquee-subtext,
+    .marquee-subtext-2 {
+      font-size: 0.95rem !important;
+      line-height: 1.4 !important;
+      max-width: 100% !important;
+      margin-bottom: 10px !important;
+    }
+
+    .marquee-link {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+
+  .marquee-header-2 {
+    flex-direction: row-reverse;
+  }
+
+  .marquee-link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Title Styling - exact match from HTML */
+  .marquee-title,
+  .marquee-title-2 {
+    font-family: "Poppins", sans-serif;
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    font-weight: 900;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #3295ff 0%, #0600a6 50%, #9271ff 100%);
+    background-size: 200% 100%;
+    background-position: 0% 0%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    padding: 15px 25px;
+    border-radius: 12px;
+    text-align: center;
+    flex: 0 0 auto;
+    animation: floatUpDown 4s ease-in-out infinite;
+  }
+
+  .marquee-link:hover .marquee-title,
+  .marquee-link:hover .marquee-title-2 {
+    background-position: 100% 0%;
+    transition: background-position 0.5s ease;
+    animation: floatUpDown 4s ease-in-out infinite;
+  }
+
+  /* Subtext Styling - exact match from HTML */
+  .marquee-subtext,
+  .marquee-subtext-2 {
+    font-family: "Poppins", sans-serif;
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: #04013d;
+    max-width: 600px;
+    flex: 1 1 400px;
+    line-height: 1.6;
+    text-align: justify;
+  }
+
+  /* Dark mode colors */
+  .dark .marquee-subtext,
+  .dark .marquee-subtext-2 {
+    color: #e2e8f0;
+  }
+
+  /* Float animation - exact match from HTML */
+  @keyframes floatUpDown {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-18px);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  /* Animate gradient when in viewport */
+  .marquee-title.animate,
+  .marquee-title-2.animate {
+    background-position: 100% 0%;
+    transition: background-position 1.2s ease-out;
+  }
+
+  /* Responsive Layout Fixes - exact match from HTML */
+  @media (max-width: 1024px) {
+    .marquee-header,
+    .marquee-header-2 {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 30px;
+      width: 90%;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 60px 0;
+    }
+
+    .marquee-title,
+    .marquee-title-2 {
+      font-size: clamp(1.8rem, 6vw, 3rem);
+      text-align: center;
+    }
+
+    .marquee-subtext,
+    .marquee-subtext-2 {
+      max-width: 90%;
+      font-size: 0.95rem;
+      text-align: left;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .marquee-title,
+    .marquee-title-2 {
+      font-size: 1.7rem;
+      padding: 10px 15px;
+    }
+
+    .marquee-subtext,
+    .marquee-subtext-2 {
+      font-size: 0.85rem;
+      text-align: left;
+    }
+  }
+
+  /* Enhanced focus styles for accessibility */
+  .focus-visible:focus-visible {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Parallax container for subtle depth effects */
+  .parallax-container {
+    transform-style: preserve-3d;
+    perspective: 1000px;
+  }
+
+  /* 3D Transform utilities */
+  .perspective-1000 {
+    perspective: 1000px;
+  }
+
+  .transform-style-preserve-3d {
+    transform-style: preserve-3d;
+  }
+
+  .rotate-x-12 {
+    transform: rotateX(12deg);
+  }
+
+  .transform-gpu {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Custom scrollbar - darker blue and comfortable size */
+  ::-webkit-scrollbar {
+    width: 16px !important;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9 !important;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e3a8a !important;
+    border-radius: 8px !important;
+    border: 3px solid #f1f5f9 !important;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #1d4ed8 !important;
+  }
+
+  /* For Firefox */
+  html {
+    scrollbar-width: auto;
+    scrollbar-color: #1e3a8a #f1f5f9;
+  }
+
+
+
+/* High specificity gradient text class - outside of Tailwind layers */
+.hover-gradient-text {
+  transition: all 0.5s ease-in-out !important;
+  cursor: pointer !important;
+  background: linear-gradient(90deg, #007bff 0%, #0600a6 50%, #b5a3f0 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+  background-size: 200% 100% !important;
+  background-position: 0% 0 !important;
+}
+
+/* Desktop hover effect */
+@media (hover: hover) and (pointer: fine) {
+  .hover-gradient-text:hover {
+    background-position: 100% 0 !important;
+  }
+}
+
+/* Mobile viewport effect - applies gradient when element is in view */
+@media (hover: none) or (pointer: coarse) {
+  .hover-gradient-text.in-viewport {
+    background-position: 100% 0 !important;
+  }
+}
+
+@keyframes marquee-rtl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes marquee-ltr {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+.animate-marquee-rtl {
+  animation: marquee-rtl 24s linear infinite;
+}
+.animate-marquee-ltr {
+  animation: marquee-ltr 28s linear infinite;
+}
