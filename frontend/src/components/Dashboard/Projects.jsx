@@ -17,14 +17,14 @@ const ProjectsDashboard = () => {
   // ==============================================
   // BACKEND CONNECTION - FETCHING ALL PROJECTS
   // Uses the endpoint you provided initially:
-  // GET https://tl-final.onrender.com/api/dashboard/projects
+  // GET https://techlearnsolutions-backend.vercel.app/api/dashboard/projects
   // ==============================================
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          "https://tl-final.onrender.com/api/dashboard/projects",
+          "https://techlearnsolutions-backend.vercel.app/api/dashboard/projects",
           {
             method: "GET",
             headers: {

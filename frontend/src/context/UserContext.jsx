@@ -50,7 +50,7 @@ export const UserProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const { data } = await axios.get('https://tl-final.onrender.com/api/dashboard', {
+      const { data } = await axios.get('https://techlearnsolutions-backend.vercel.app/api/dashboard', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
