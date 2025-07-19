@@ -11,12 +11,6 @@
 
 ---
 
-## Inheritance
-
-Inheritance is a powerful feature of object-oriented programming that allows one class (child/subclass) to inherit properties and methods from another class (parent/superclass). This promotes **code reusability**, **extensibility**, and **maintainability**.
-
----
-
 ## Polymorphism
 
 Polymorphism allows objects of different classes to be treated as objects of a common superclass. It enables the same interface to represent different underlying data types and behaviors.
