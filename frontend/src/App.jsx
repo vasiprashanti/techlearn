@@ -58,6 +58,12 @@ import PaymentGateway from './pages/Build/PaymentGateway'
 import UILibrary from './pages/Build/UILibrary'
 import Profile from './components/Dashboard/Profile'
 
+// Contact component
+import Contact from './pages/Contact/Contact'
+
+// About component
+import About from './pages/About/About'
+
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
@@ -603,6 +609,8 @@ function LayoutWrapper() {
            <Route path="/payment-gateway" element={<PaymentGateway />} />
           <Route path="/build/ui-library" element={<UILibrary />} />
           <Route path="/careers" element={<CareersPage />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/about" element={<About />} />
           <Route 
   path="/admin" 
   element={

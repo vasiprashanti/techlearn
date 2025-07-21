@@ -102,6 +102,7 @@ const Navbar = () => {
           >
             Dashboard
           </Link>
+
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
               <span className={`text-[15px] font-extralight ${
@@ -206,6 +207,7 @@ const Navbar = () => {
           >
             Dashboard
           </Link>
+
         </div>
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
