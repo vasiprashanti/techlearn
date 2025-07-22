@@ -550,28 +550,7 @@ const OnlineCompiler = () => {
                     <RotateCcw className="w-4 h-4" />
                   </button>
 
-                  {/* Hide Run/Preview button on mobile since we have tabs */}
-                  <button
-                    onClick={isRunning ? handleStopExecution : handleRunCode}
-                    disabled={!code.trim()}
-                    className={`hidden lg:flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      isRunning
-                        ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
-                        : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {isRunning ? (
-                      <>
-                        <Square className="w-4 h-4" />
-                        Stop
-                      </>
-                    ) : (
-                      <>
-                        <Play className="w-4 h-4" />
-                        {currentLanguage.isWebLanguage ? 'Preview' : 'Run'}
-                      </>
-                    )}
-                  </button>
+                  {/* Removed Run button from header - moved to code editor section */}
                 </div>
               </div>
 
@@ -616,6 +595,28 @@ const OnlineCompiler = () => {
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           Code Editor
                         </h3>
+                        {/* Run Button - Moved here for easier access */}
+                        <button
+                          onClick={isRunning ? handleStopExecution : handleRunCode}
+                          disabled={!code.trim()}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                            isRunning
+                              ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
+                              : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isRunning ? (
+                            <>
+                              <Square className="w-4 h-4" />
+                              Stop
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              {currentLanguage.isWebLanguage ? 'Preview' : 'Run'}
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                     <div className="h-[calc(100%-3.5rem)]">
