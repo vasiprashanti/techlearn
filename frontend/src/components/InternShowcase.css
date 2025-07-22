@@ -1,0 +1,273 @@
+.intern-showcase-section {
+  padding: 4rem 2rem;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  /* Remove fixed background to inherit from parent */
+  /* Force remove any inherited shadows */
+  box-shadow: none !important;
+}
+
+.intern-showcase-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  /* Light mode colors */
+  color: #1a365d;
+  background: linear-gradient(135deg, #1a365d, #2d5aa0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Dark mode title */
+.dark .section-title {
+  color: #e2e8f0;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-subtitle {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  font-weight: 500;
+  margin: 0;
+  /* Light mode */
+  color: #4a5568;
+}
+
+/* Dark mode subtitle */
+.dark .section-subtitle {
+  color: #a0aec0;
+}
+
+.intern-container {
+  width: 100%;
+  max-width: 1200px;
+  height: clamp(300px, 40vh, 500px);
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Force remove any shadows */
+  box-shadow: none !important;
+}
+
+.intern-palette {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  /* Force remove any shadows that might cause grayish line */
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Dark mode - force remove shadow */
+.dark .intern-palette {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.intern-card {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  position: relative;
+  overflow: hidden;
+  /* Force remove any shadows */
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.intern-name {
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+  position: relative;
+  transform: translateY(0);
+  will-change: opacity, transform;
+}
+
+.intern-details {
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  width: 90%;
+  text-align: center;
+}
+
+.intern-photo {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  /* Removed box-shadow to eliminate grayish line */
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  filter: brightness(1.1) contrast(1.05);
+}
+
+.intern-quote {
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  max-width: 220px;
+  opacity: 0.95;
+}
+
+.intern-card:hover {
+  flex: 2.5;
+  transform: translateY(-8px);
+  /* Force remove any shadows that might cause grayish line */
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Dark mode hover - force remove shadow */
+.dark .intern-card:hover {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.intern-card:hover .intern-name {
+  opacity: 0 !important;
+  /* Completely hide the name on hover */
+  visibility: hidden !important;
+  display: none !important;
+  transform: translateY(0);
+}
+
+.intern-card:hover .intern-details {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.intern-card:hover .intern-photo {
+  transform: scale(1.15);
+  /* Removed box-shadow to eliminate grayish line */
+  border-width: 4px;
+  filter: brightness(1.2) contrast(1.1);
+}
+
+/* Add a subtle glow effect on hover */
+.intern-card:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.intern-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Responsive styling */
+@media (max-width: 480px) {
+  .intern-container {
+    height: 250px;
+  }
+  
+  .intern-photo {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .intern-quote {
+    font-size: 0.7rem;
+  }
+  
+  .intern-name {
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .intern-container {
+    height: 300px;
+  }
+  
+  .intern-photo {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .intern-quote {
+    font-size: 0.8rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .intern-card:hover {
+    flex: 3;
+    transform: translateY(-12px);
+  }
+
+  /* Removed enhanced shadows on desktop to eliminate grayish line */
+  .intern-card:hover {
+    /* No shadow */
+  }
+
+  .dark .intern-card:hover {
+    /* No shadow */
+  }
+
+  .intern-card:hover .intern-photo {
+    transform: scale(1.2);
+    /* Removed box-shadow to eliminate grayish line */
+  }
+
+  .intern-details {
+    gap: 1.5rem;
+  }
+
+  .intern-quote {
+    max-width: 250px;
+  }
+}
