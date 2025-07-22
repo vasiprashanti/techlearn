@@ -22,13 +22,11 @@ const ProjectsDashboard = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const token = localStorage.getItem("token");
         const response = await fetch(
-          "https://techlearnsolutions-backend.vercel.app/api/dashboard/projects",
+          `${import.meta.env.VITE_API_URL}/dashboard/projects`,
           {
             method: "GET",
             headers: {
-              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
           }

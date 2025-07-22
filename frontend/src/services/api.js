@@ -281,7 +281,9 @@ export const compilerAPI = {
   compileCode: async (codeData) => {
     const response = await fetch(`${API_BASE}/compiler/compile`, {
       method: 'POST',
-      headers: getAuthHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(codeData),
     });
     return handleResponse(response);

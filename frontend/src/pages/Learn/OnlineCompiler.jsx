@@ -190,8 +190,7 @@ numbers = [1, 2, 3, 4, 5]
 squared = [n**2 for n in numbers]
 print(f"Original: {numbers}")
 print(f"Squared: {squared}")`,
-    monacoLanguage: 'python',
-    requiresAuth: true
+    monacoLanguage: 'python'
   },
   java: {
     id: 'java',
@@ -218,14 +217,12 @@ public class Main {
         System.out.println();
     }
 }`,
-    monacoLanguage: 'java',
-    requiresAuth: true
+    monacoLanguage: 'java'
   }
 };
 
 const OnlineCompiler = () => {
   const { theme } = useTheme();
-  const { user } = useAuth();
   const [selectedLanguage, setSelectedLanguage] = useState('html');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -258,11 +255,7 @@ const OnlineCompiler = () => {
   const handleRunCode = async () => {
     const currentLang = LANGUAGES[selectedLanguage];
 
-    // Check if user is logged in for Python and Java
-    if (currentLang.requiresAuth && !user) {
-      setOutput('❌ Please log in to run Python and Java code.');
-      return;
-    }
+    // No login required for any language
 
     setIsRunning(true);
 
