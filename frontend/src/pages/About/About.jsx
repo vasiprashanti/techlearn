@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { useTheme } from '../../context/ThemeContext'
 import Navbar from '../../components/Navbar'
 import ScrollProgress from '../../components/ScrollProgress'
+import InternShowcase from '../../components/InternShowcase'
 
 const About = () => {
   const { theme } = useTheme()
@@ -68,7 +69,10 @@ const About = () => {
         </div>
       </div>
 
-      {/* Section 2: What We Offer */}
+      {/* Section 2: Meet the Summer Interns 25' */}
+      <InternShowcase />
+
+      {/* Section 3: What We Offer */}
       <div className="offerings-section py-16 bg-white/10 dark:bg-black/20 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white mb-4">
@@ -129,7 +133,7 @@ const About = () => {
         </div>
       </div>
 
-      {/* Section 3: Our Services */}
+      {/* Section 4: Our Services */}
       <div className="services-section py-16">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white mb-4">

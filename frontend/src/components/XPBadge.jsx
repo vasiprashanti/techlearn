@@ -81,34 +81,34 @@ const XPBadge = () => {
   const getXPLevel = () => {
     if (totalXP >= 1000) return {
       level: 'Expert',
-      color: 'text-purple-600 dark:text-purple-400',
+      color: 'text-purple-700 dark:text-purple-100',
       bgColor: 'bg-purple-50/80 dark:bg-purple-900/20',
-      borderColor: 'border-purple-200/50 dark:border-purple-700/30',
-      gradientColor: 'from-purple-500 to-pink-500',
+      borderColor: 'border-purple-300/50 dark:border-purple-600/30',
+      gradientColor: 'from-purple-600 to-purple-800',
       icon: Trophy
     };
     if (totalXP >= 500) return {
       level: 'Advanced',
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50/80 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200/50 dark:border-blue-700/30',
-      gradientColor: 'from-blue-500 to-cyan-500',
+      color: 'text-purple-600 dark:text-purple-200',
+      bgColor: 'bg-purple-50/80 dark:bg-purple-900/20',
+      borderColor: 'border-purple-200/50 dark:border-purple-700/30',
+      gradientColor: 'from-purple-500 to-purple-700',
       icon: Star
     };
     if (totalXP >= 200) return {
       level: 'Intermediate',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-50/80 dark:bg-green-900/20',
-      borderColor: 'border-green-200/50 dark:border-green-700/30',
-      gradientColor: 'from-green-500 to-emerald-500',
+      color: 'text-purple-500 dark:text-purple-200',
+      bgColor: 'bg-purple-50/80 dark:bg-purple-900/20',
+      borderColor: 'border-purple-200/50 dark:border-purple-700/30',
+      gradientColor: 'from-purple-400 to-purple-600',
       icon: Star
     };
     return {
       level: 'Beginner',
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-50/80 dark:bg-amber-900/20',
-      borderColor: 'border-amber-200/50 dark:border-amber-700/30',
-      gradientColor: 'from-amber-500 to-orange-500',
+      color: 'text-purple-500 dark:text-purple-200',
+      bgColor: 'bg-purple-50/80 dark:bg-purple-900/20',
+      borderColor: 'border-purple-200/50 dark:border-purple-700/30',
+      gradientColor: 'from-purple-400 to-purple-500',
       icon: Trophy
     };
   };
