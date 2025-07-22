@@ -119,7 +119,7 @@ const Contact = () => {
               Shoot a Mail
             </a>
             <a 
-              href="https://wa.me/919347055962" 
+              href={`https://wa.me/919000663666?text=Hello%20TechLearn!%20I%20have%20a%20query.`}
               target="_blank" 
               rel="noopener noreferrer"
               className="contact-btn bg-[#00225c] hover:bg-[#001a4a] text-white px-8 py-4 rounded-full text-lg transition-all duration-300 hover:scale-105 border border-white/20 backdrop-blur-sm"
