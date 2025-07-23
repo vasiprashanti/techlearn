@@ -28,149 +28,43 @@ const LANGUAGES = {
     icon: '/html.png',
     extension: '.html',
     defaultCode: `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to HTML</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 30px;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-        }
-        h1 {
-            color: #fff;
-            text-align: center;
-        }
-        .highlight {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-    </style>
+  <title>Welcome to TechLearn</title>
+  <style>
+    body {
+      background-color: #ffffff;
+      color: #2573ee; /* CSS3 blue */
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      font-size: 1.2em;
+      color: #1e40af;
+    }
+    .subtitle {
+      font-style: italic;
+      color: #3b82f6;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🌟 Welcome to HTML & CSS!</h1>
-        <p>This is a live HTML preview. You can edit the code and see changes instantly!</p>
 
-        <div class="highlight">
-            <h3>Features:</h3>
-            <ul>
-                <li>Live preview</li>
-                <li>HTML & CSS support</li>
-                <li>Responsive design</li>
-                <li>Modern styling</li>
-            </ul>
-        </div>
+  <h1>Hey TechLearner!</h1>
+  <p class="subtitle">This is a bug-free place... until you start typing</p>
 
-        <p><strong>Try editing the code</strong> to see your changes in real-time!</p>
-    </div>
 </body>
 </html>`,
     monacoLanguage: 'html',
     isWebLanguage: true
   },
-  css: {
-    id: 'css',
-    name: 'CSS',
-    icon: '/css.png',
-    extension: '.css',
-    defaultCode: `/* Welcome to CSS Online Editor */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
-    background-size: 400% 400%;
-    animation: gradientShift 8s ease infinite;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
-@keyframes gradientShift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-.card {
-    background: rgba(255, 255, 255, 0.95);
-    padding: 40px;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    max-width: 500px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 20px;
-    font-size: 2.5em;
-    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-p {
-    color: #666;
-    line-height: 1.6;
-    font-size: 1.1em;
-}
-
-.button {
-    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-    color: white;
-    padding: 12px 30px;
-    border: none;
-    border-radius: 25px;
-    font-size: 1em;
-    cursor: pointer;
-    transition: transform 0.3s ease;
-    margin-top: 20px;
-}
-
-.button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}`,
-    monacoLanguage: 'css',
-    isWebLanguage: true,
-    htmlTemplate: `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSS Preview</title>
-    <style>
-        {{CSS_CODE}}
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>🎨 CSS Styling</h1>
-        <p>This is a preview of your CSS code. Edit the CSS to see changes!</p>
-        <button class="button">Sample Button</button>
-    </div>
-</body>
-</html>`
-  },
   python: {
     id: 'python',
     name: 'Python',
@@ -588,28 +482,30 @@ const OnlineCompiler = () => {
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           Code Editor
                         </h3>
-                        {/* Run Button - Moved here for easier access */}
-                        <button
-                          onClick={isRunning ? handleStopExecution : handleRunCode}
-                          disabled={!code.trim()}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                            isRunning
-                              ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
-                              : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
-                          } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          {isRunning ? (
-                            <>
-                              <Square className="w-4 h-4" />
-                              Stop
-                            </>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4" />
-                              {currentLanguage.isWebLanguage ? 'Preview' : 'Run'}
-                            </>
-                          )}
-                        </button>
+                        {/* Run Button - Only show for non-web languages */}
+                        {!currentLanguage.isWebLanguage && (
+                          <button
+                            onClick={isRunning ? handleStopExecution : handleRunCode}
+                            disabled={!code.trim()}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                              isRunning
+                                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
+                                : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {isRunning ? (
+                              <>
+                                <Square className="w-4 h-4" />
+                                Stop
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-4 h-4" />
+                                Run
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="h-[calc(100%-3.5rem)]">
