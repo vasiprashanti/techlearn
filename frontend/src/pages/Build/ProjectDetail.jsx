@@ -584,7 +584,7 @@ const ProjectDetail = () => {
               <button
                 onClick={() =>
                   window.open(
-                    `/compiler?project=${encodeURIComponent(project.title)}`,
+                    `/learn/compiler?project=${encodeURIComponent(project.title)}`,
                     "_blank"
                   )
                 }
