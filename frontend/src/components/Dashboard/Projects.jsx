@@ -74,7 +74,7 @@ const ProjectsDashboard = () => {
   };
 
   if (loading) {
-    return <LoadingScreen showMessage={true} fullScreen={true} size={40} duration={800} />;
+    return <LoadingScreen showMessage={false} fullScreen={true} size={40} duration={800} />;
   }
 
   if (error) {
