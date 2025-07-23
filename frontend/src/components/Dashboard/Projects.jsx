@@ -22,12 +22,20 @@ const ProjectsDashboard = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/dashboard/projects`,
           {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`, // Add the token here
             },
           }
         );
