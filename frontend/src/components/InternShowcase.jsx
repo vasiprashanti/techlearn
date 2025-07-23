@@ -94,14 +94,6 @@ const InternShowcase = () => {
             >
               <span className="intern-name">{intern.name}</span>
               <div className="intern-details">
-                <img 
-                  src={intern.photo} 
-                  alt={intern.name} 
-                  className="intern-photo"
-                  onError={(e) => {
-                    e.target.src = '/default-avatar.png'; // Fallback image
-                  }}
-                />
                 <p className="intern-quote">"{intern.quote}"</p>
               </div>
             </div>
