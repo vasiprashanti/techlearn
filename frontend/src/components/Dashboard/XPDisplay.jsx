@@ -38,7 +38,6 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
     fetchXP();
   }, [isAuthenticated, user]);
 
-  // Listen for XP updates from quiz completions
   useEffect(() => {
     const handleXPUpdate = () => {
       fetchXP();
@@ -48,30 +47,29 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
     return () => window.removeEventListener('xpUpdated', handleXPUpdate);
   }, [isAuthenticated]);
 
-  // Use props if they're provided (for controlled usage), otherwise use internal state
   const displayPoints = points !== 0 ? points : xpData.points;
   const displayLoading = loading || xpData.loading;
   const displayError = error || xpData.error;
 
   return (
-    <div className="glass-panel p-6 flex flex-col items-center justify-center rounded-xl h-full text-light-text dark:text-dark-text">
-      <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-purple-300 bg-clip-text text-transparent">
+    <div className="bg-white/50 dark:bg-gray-800/50 p-6 flex flex-col items-center justify-start space-y-4 rounded-xl h-full text-light-text dark:text-dark-text shadow-md">
+      <h3 className="text-lg font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text">
         XP Points
       </h3>
-      
+
       {displayLoading ? (
-        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent mt-2 animate-pulse">
+        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent animate-pulse">
           ...
         </div>
       ) : displayError ? (
-        <div className="text-4xl font-bold text-red-500 mt-2">Error</div>
+        <div className="text-4xl font-bold text-red-500">Error</div>
       ) : (
-        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent mt-2">
-          {displayPoints.toLocaleString()} {/* Formats number with commas */}
+        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent">
+          {displayPoints.toLocaleString()}
         </div>
       )}
-      
-      <p className="text-sm text-light-text/70 dark:text-dark-text/70 mt-1">
+
+      <p className="text-sm text-light-text/70 dark:text-dark-text/70">
         {displayError ? 'Failed to load points' : 'Points collected'}
       </p>
     </div>

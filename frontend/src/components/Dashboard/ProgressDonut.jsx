@@ -11,13 +11,13 @@ const ProgressDonut = ({
   const offset = circumference - (safeProgress / 100) * circumference;
 
   return (
-    <div className="glass-panel p-6 flex flex-col items-center rounded-xl h-full min-h-[300px] text-light-text dark:text-dark-text">
-      <h3 className="text-xl font-semibold bg-gradient-to-r from-blue-400 to-purple-300 bg-clip-text text-transparent mb-4">
+    <div className="bg-white/50 dark:bg-gray-800/50 p-6 flex flex-col items-center rounded-xl h-full min-h-[300px] text-light-text dark:text-dark-text shadow-md">
+      <h3 className="text-xl font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text mb-4">
         {title}
       </h3>
       
       {/* Donut chart container */}
-      <div className="relative w-64 h-64 my-2 flex items-center justify-center">
+      <div className="relative w-56 h-56 my-2 flex items-center justify-center">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-blue-500/30 border-t-emerald-500 rounded-full animate-spin"></div>

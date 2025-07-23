@@ -65,7 +65,7 @@ const Navbar = () => {
             </div>
           </Link>
           {/* XP Badge beside logo - Desktop */}
-          <div className="hidden md:block -ml-7">
+          <div className="hidden md:block">
             <XPBadge />
           </div>
         </div>
@@ -102,14 +102,15 @@ const Navbar = () => {
           >
             Dashboard
           </Link>
-
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
+              {location.pathname !== '/dashboard' && (
               <span className={`text-[15px] font-extralight ${
                 isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
               }`}>
                 Hi, {user?.firstName || user?.email || 'User'}
               </span>
+              )}
               <button
                 onClick={logout}
                 className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
@@ -207,16 +208,17 @@ const Navbar = () => {
           >
             Dashboard
           </Link>
-
         </div>
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
             <div className="py-2.5">
+              {location.pathname !== '/dashboard' && (
               <div className={`text-[14px] mb-2 ${
                 isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
               }`}>
                 Hi, {user?.firstName || user?.email || 'User'}
               </div>
+              )}
               <button
                 onClick={() => {
                   closeMenu();

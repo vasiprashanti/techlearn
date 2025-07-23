@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import Navbar from '../../components/Navbar';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import Sidebar from '../../components/Dashboard/Sidebar';
@@ -14,16 +15,16 @@ import LoadingScreen from '../../components/Loader/Loader3D';
 const Dashboard = () => {
   const { theme, toggleTheme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  const { 
-    user, 
-    isLoading, 
-    error, 
-    xp, 
-    recentExercises, 
+
+  const {
+    user,
+    isLoading,
+    error,
+    xp,
+    recentExercises,
     progress: contextProgress,
     activities,
-    isReady 
+    isReady
   } = useUser();
 
   const progress = useMemo(() => {
@@ -45,12 +46,12 @@ const Dashboard = () => {
 
     const totalExercises = contextProgress.totalExercises || 0;
     const completedExercises = contextProgress.completedExercises || 0;
-    
+
     const validRecentExercises = Array.isArray(recentExercises) ? recentExercises : [];
-    
-    const exerciseCompleted = completedExercises || 
+
+    const exerciseCompleted = completedExercises ||
       validRecentExercises.filter(ex => ex && ex.completed === true).length;
-    
+
     const exerciseTotal = totalExercises || validRecentExercises.length || 1;
 
     return {
@@ -77,10 +78,10 @@ const Dashboard = () => {
   // Loading state - show for minimum time to prevent flashing
   if (isLoading || !isReady) {
     return (
-      <LoadingScreen 
-        showMessage={true} 
-        fullScreen={true} 
-        size={40} 
+      <LoadingScreen
+        showMessage={true}
+        fullScreen={true}
+        size={40}
         duration={800}
       />
     );
@@ -94,8 +95,8 @@ const Dashboard = () => {
           <div className="text-xl text-red-500 dark:text-red-400 mb-4">
             {error}
           </div>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
             Retry
@@ -116,68 +117,67 @@ const Dashboard = () => {
     );
   }
 
-  const userName = user.firstName && user.lastName 
-    ? `${user.firstName} ${user.lastName}` 
+  const userName = user.firstName && user.lastName
+    ? `${user.firstName} ${user.lastName}`
     : user.firstName || user.name || 'User';
 
   return (
-    <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'dark' : 'light'}`}>
-      <div className={`fixed inset-0 -z-10 ${theme === 'dark' ? 
-        'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 
-        'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`}
-      />
-      
-      <Sidebar onToggle={handleSidebarToggle} />
-      
-      <main className={`flex-1 transition-all duration-300 ${
-        sidebarCollapsed ? 'ml-[10px]' : 'ml-[10px]'
-      } p-6 overflow-auto`}>
-        <div className="max-w-[1800px] mx-auto">
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-            <UserGreeting name={userName} />
-          
-            <button
-              onClick={toggleTheme}
-              className={`text-[15px] transition-colors duration-300 p-1.5 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-[#00184f]'
-              }`}
-              aria-label="Toggle dark mode"
-            >
-              <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
-            </button>
-          </header>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <ProgressDonut 
-                title="Course Progress" 
-                progress={progress.course.progressPercent}
-                subtitle={progress.course.title}
-              />
-            </div>
-            
-            <div className="lg:col-span-1 flex flex-col gap-6">
-              <XPDisplay points={progress.xp} />
-              <ProgressBar 
-                title="Exercise Progress" 
-                progress={Math.round((progress.exercise.completed / Math.max(progress.exercise.total, 1)) * 100)}
-                subtitle={`${progress.exercise.completed}/${progress.exercise.total}`}
-              />
-            </div>
-            
-            <div className="lg:col-span-1">
-              <Calendar activities={progress.calendar} />
-            </div>
-            
-            <div className="col-span-full mt-6">
-              <RecentExercises exercises={progress.recentExercises} />
+    <>
+      <Navbar />
+
+      <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'dark' : 'light'}`}>
+        <div
+          className={`fixed inset-0 -z-10 ${
+            theme === 'dark'
+              ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
+              : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'
+          }`}
+        />
+
+        <Sidebar onToggle={handleSidebarToggle} />
+
+        <main
+          className={`flex-1 transition-all duration-300 ${
+            sidebarCollapsed ? 'ml-[10px]' : 'ml-[10px]'
+          } pt-16 p-6 overflow-auto`}
+          >
+          <div className="max-w-[1800px] mx-auto">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-2">
+              <UserGreeting name={userName} />
+            </header>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="lg:col-span-1">
+                <ProgressDonut
+                  title="Course Progress"
+                  progress={progress.course.progressPercent}
+                  subtitle={progress.course.title}
+                />
+              </div>
+
+              <div className="lg:col-span-1 flex flex-col gap-7 items-stretch">
+                <XPDisplay points={progress.xp} />
+                <ProgressBar
+                  title="Exercise Progress"
+                  progress={Math.round(
+                    (progress.exercise.completed / Math.max(progress.exercise.total, 1)) * 100
+                  )}
+                  subtitle={`${progress.exercise.completed}/${progress.exercise.total}`}
+                />
+              </div>
+
+              <div className="lg:col-span-1">
+                <Calendar activities={progress.calendar} />
+              </div>
+
+              <div className="col-span-full mt-6">
+                <RecentExercises exercises={progress.recentExercises} />
+              </div>
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 };
 

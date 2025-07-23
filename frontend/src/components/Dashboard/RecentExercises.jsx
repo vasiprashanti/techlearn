@@ -3,8 +3,8 @@ const RecentExercises = ({ exercises = [] }) => {
   const displayedExercises = exercises.slice(0, 3);
 
   return (
-    <div className="glass-panel p-6">
-      <h3 className="text-lg font-semibold bg-gradient-to-r from-blue-400 to-purple-300 bg-clip-text text-transparent mb-4">
+    <div className="bg-white/50 dark:bg-gray-800/50 p-6 rounded-xl">
+      <h3 className="text-lg font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text mb-4">
         Recent Exercises
       </h3>
       {displayedExercises.length > 0 ? (

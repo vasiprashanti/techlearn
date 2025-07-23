@@ -14,11 +14,36 @@ const Sidebar = ({ onToggle }) => {
   };
 
   const menuItems = [
-    { id: 'profile', title: 'Profile', description: 'Your profile settings', completed: false },
-    { id: 'learn/courses', title: 'Courses', description: 'View your courses', completed: false },
-    { id: 'learn/exercises', title: 'Exercises', description: 'Practice exercises', completed: false },
-    { id: 'projects', title: 'Projects', description: 'Your projects', completed: false},
-    { id: 'dashboard', title: 'Dashboard', description: 'Progress dashboard', completed: true },
+    {
+      id: 'profile',
+      title: 'Profile',
+      icon: '/sidebar/profile.png',
+      completed: false,
+    },
+    {
+      id: 'learn/courses',
+      title: 'Enrolled Courses',
+      icon: '/sidebar/courses.png',
+      completed: false,
+    },
+    {
+      id: 'learn/exercises',
+      title: 'My Exercises',
+      icon: '/sidebar/exercises.png',
+      completed: false,
+    },
+    {
+      id: 'projects',
+      title: 'Current Projects',
+      icon: '/sidebar/projects.png',
+      completed: false,
+    },
+    {
+      id: 'dashboard',
+      title: 'Dashboard',
+      icon: '/icons/dashboard.svg',
+      completed: true,
+    },
   ];
 
   return (
@@ -27,32 +52,20 @@ const Sidebar = ({ onToggle }) => {
       <motion.div
         initial={false}
         animate={{
-          width: sidebarCollapsed ? "90px" : "280px",
+          width: sidebarCollapsed ? "82px" : "280px",
           transition: { duration: 0.3, ease: "easeInOut" }
         }}
-        className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 relative z-40"
+        style={{ willChange: 'width' }}
+        className="hidden lg:flex flex-col bg-transparent dark:bg-transparent relative z-40 h-screen overflow-hidden"
       >
         {/* Clickable Logo */}
-       {/* Sidebar Logo */}
-<div className="flex flex-col items-center justify-center pt-6 pb-4 border-b border-white/10 dark:border-gray-700/20">
-  <Link to="/" className="cursor-pointer block relative h-16 w-auto">
-    {/* Light Mode Logo */}
-    <img
-      src="/logoo.png"
-      alt="Logo Light"
-      className="h-16 w-auto dark:hidden"
-    />
-    {/* Dark Mode Logo */}
-    <img
-      src="/logoo2.png"
-      alt="Logo Dark"
-      className="h-16 w-auto hidden dark:block"
-    />
-  </Link>
-</div>
-
-
-
+        {/* Sidebar Logo */}
+        <div className="flex flex-col items-center justify-center pt-6 pb-4 border-b border-white/10 dark:border-gray-700/20">
+          <Link to="/" className="cursor-pointer block relative h-16 w-auto">
+            {/* You might want to place your logo image here */}
+            {/* <img src="/logoo.png" alt="Logo" className="h-full w-auto" /> */}
+          </Link>
+        </div>
 
         {/* Sidebar Toggle */}
         <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-10 relative z-50">
@@ -77,12 +90,12 @@ const Sidebar = ({ onToggle }) => {
         </div>
 
         {/* Sidebar Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
           <div className="space-y-3">
             {menuItems.map((item, index) => (
               <motion.button
                 key={item.id}
-                onClick={() => {}}
+                onClick={() => { }}
                 whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`group relative w-full text-left rounded-xl transition-all duration-300 ${
@@ -95,17 +108,25 @@ const Sidebar = ({ onToggle }) => {
                   to={`/${item.id}`}
                   className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}
                 >
-                  <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
-                    item.completed ? 'bg-green-500 shadow-sm' : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm'
-                  } ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
+                  <div
+                    className={`
+                      w-10 h-10 flex-none
+                      rounded-lg flex items-center justify-center overflow-hidden relative
+                      ${item.completed
+                        ? 'bg-green-500 shadow-sm'
+                        : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm'}
+                      ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}
+                    `}
+                  >
                     {item.completed ? (
-                      <FiCheckCircle className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-4 h-4'} text-white`} />
+                      <FiCheckCircle className="w-4 h-4 text-white" />
                     ) : (
-                      <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold ${
-                        sidebarCollapsed ? 'text-gray-700 dark:text-gray-200' : 'text-gray-600 dark:text-gray-300'
-                      }`}>
-                        {index + 1}
-                      </span>
+                      <img
+                        src={item.icon}
+                        alt={item.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                      />
                     )}
                   </div>
 
@@ -118,23 +139,23 @@ const Sidebar = ({ onToggle }) => {
                         transition={{ duration: 0.2 }}
                         className="flex-1 min-w-0"
                       >
-                        <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
+                        <h4 className="font-normal text-gray-900 dark:text-white mb-1 truncate">
                           {item.title}
                         </h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                        {/* <p className="text-sm text-gray-600 dark:text-gray-400">
                           {item.description}
-                        </p>
+                        </p> */}
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </NavLink>
 
                 {/* Tooltip for collapsed state */}
-                {sidebarCollapsed && (
+                {/* {sidebarCollapsed && (
                   <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                     {item.title}
                   </div>
-                )}
+                )} */}
               </motion.button>
             ))}
           </div>
@@ -172,12 +193,12 @@ const Sidebar = ({ onToggle }) => {
               <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-6">
                 <div className="flex items-center justify-between">
                   <Link to="/" className="flex items-center" onClick={() => setMobileMenuOpen(false)}>
-                    <img 
+                    <img
                       src="/logoo.png"
                       alt="Logo"
                       className="h-16 w-auto dark:hidden"
                     />
-                    <img 
+                    <img
                       src="/logoo2.png"
                       alt="Logo"
                       className="h-16 w-auto hidden dark:block"
@@ -191,7 +212,7 @@ const Sidebar = ({ onToggle }) => {
                   </button>
                 </div>
               </div>
-              
+
               {/* Mobile Content */}
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="space-y-3">
@@ -207,22 +228,22 @@ const Sidebar = ({ onToggle }) => {
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm">
+                        <div className="w-9 h-9 flex-none rounded-lg overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm flex items-center justify-center">
                           {item.completed ? (
                             <FiCheckCircle className="w-4 h-4 text-white" />
                           ) : (
-                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                              {index + 1}
-                            </span>
+                            <img
+                              src={item.icon}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
                           )}
                         </div>
                         <div>
                           <h4 className="font-medium text-gray-900 dark:text-white">
                             {item.title}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {item.description}
-                          </p>
                         </div>
                       </div>
                     </NavLink>
