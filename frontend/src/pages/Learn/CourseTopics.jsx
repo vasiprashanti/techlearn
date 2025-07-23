@@ -516,13 +516,13 @@ print(df.describe())    # Statistical summary`,
                   console.log('Mouse down on toggle button');
                   e.preventDefault();
                 }}
-                className="p-3 rounded-lg bg-blue-500/20 dark:bg-blue-600/20 hover:bg-blue-500/30 dark:hover:bg-blue-600/30 transition-all duration-200 border-2 border-blue-500/50 dark:border-blue-400/50 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
+                className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+                  <ChevronRight className="w-5 h-5 text-white" />
                 ) : (
-                  <ChevronLeft className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+                  <ChevronLeft className="w-5 h-5 text-white" />
                 )}
               </button>
             </div>
@@ -549,14 +549,12 @@ print(df.describe())    # Statistical summary`,
                 >
                   <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
                     <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
-                      topic.completed ? 'bg-green-500 shadow-sm' : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm'
+                      topic.completed ? 'bg-green-500 shadow-sm' : 'bg-blue-500/50 shadow-sm'
                     } ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
                       {topic.completed ? (
                         <CheckCircle className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-4 h-4'} text-white`} />
                       ) : (
-                        <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold ${
-                          sidebarCollapsed ? 'text-gray-700 dark:text-gray-200' : 'text-gray-600 dark:text-gray-300'
-                        }`}>
+                        <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold text-white`}>
                           {index + 1}
                         </span>
                       )}
@@ -571,12 +569,9 @@ print(df.describe())    # Statistical summary`,
                           transition={{ duration: 0.2 }}
                           className="flex-1 min-w-0"
                         >
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
+                          <h4 className="font-medium text-gray-900 dark:text-white truncate">
                             {topic.title}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                            {topic.description}
-                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -594,13 +589,7 @@ print(df.describe())    # Statistical summary`,
           </div>
         </motion.div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="lg:hidden fixed top-20 right-4 z-40 p-3 bg-blue-500/90 hover:bg-blue-600/90 backdrop-blur-sm rounded-full border border-blue-400/30 shadow-lg transition-all duration-200 hover:scale-105"
-        >
-          <Menu className="w-5 h-5 text-white" />
-        </button>
+
 
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
@@ -698,50 +687,64 @@ print(df.describe())    # Statistical summary`,
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
                     <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                          <BookOpen className="w-6 h-6 text-white" />
-                        </div>
+                      {/* Mobile Book Icon Button */}
+                      <div className="lg:hidden flex items-center gap-3 mb-4">
+                        <button
+                          onClick={() => setMobileMenuOpen(true)}
+                          className="p-2 bg-blue-500/20 hover:bg-blue-500/30 backdrop-blur-sm rounded-lg border border-blue-400/30 shadow-sm transition-all duration-200 hover:scale-105"
+                        >
+                          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </button>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Course Topics</span>
                       </div>
-                      
+
                       <h1
                         ref={titleRef}
                         className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-4`}
                       >
                         {currentTopic?.title}
                       </h1>
-                      
-                      <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl leading-relaxed">
-                        {currentTopic?.description}
-                      </p>
                     </div>
                     
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-4 lg:w-64">
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                            <Code2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {currentTopic?.exercises}
+                    {/* Stats Cards and Quiz Button */}
+                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 lg:gap-3 lg:w-64">
+                      {/* Take Quiz Button - Now matching card style */}
+                      <div className="col-span-2 lg:col-span-1 mx-auto w-fit lg:w-full">
+                        <button
+                          onClick={handleTakeQuiz}
+                          className="w-fit lg:w-full bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 lg:p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-white/80 dark:hover:bg-gray-800/80"
+                        >
+                          <div className="flex items-center justify-center gap-1 lg:gap-2">
+                            <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                              <Trophy className="w-3 h-3 lg:w-4 lg:h-4 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Exercises</div>
+                            <div className="text-sm lg:text-base font-medium text-gray-900 dark:text-white">
+                              Take Quiz
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+
+                      {/* Questions Card - Smaller size, single line */}
+                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+                        <div className="flex items-center gap-1 lg:gap-2">
+                          <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <Code2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                          </div>
+                          <div className="text-xs lg:text-sm font-medium text-gray-900 dark:text-white">
+                            10 Questions
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+
+                      {/* Max XP Card - Smaller size, single line */}
+                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+                        <div className="flex items-center gap-1 lg:gap-2">
+                          <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                            <Trophy className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
                           </div>
-                          <div>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {currentTopic?.maxXP}
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">Max XP</div>
+                          <div className="text-xs lg:text-sm font-medium text-gray-900 dark:text-white">
+                            {currentTopic?.maxXP} Max XP
                           </div>
                         </div>
                       </div>
@@ -759,18 +762,19 @@ print(df.describe())    # Statistical summary`,
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/20 dark:border-gray-700/20"
+                  className="lg:bg-white/60 lg:dark:bg-gray-800/60 lg:backdrop-blur-xl lg:rounded-2xl lg:p-8 lg:shadow-lg lg:border lg:border-white/20 lg:dark:border-gray-700/20"
                 >
-                  <div className="flex items-center gap-3 mb-6">
+                  {/* Hide Notes header on mobile, show on desktop */}
+                  <div className="hidden lg:flex items-center gap-3 mb-6">
                     <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                       <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
                     <h2 className="text-2xl font-poppins font-semibold text-gray-900 dark:text-white">Notes</h2>
                   </div>
 
-                  <div className="max-w-none">
+                  <div className="max-w-none px-[5px] lg:px-0">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div className="markdown-content bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-gray-200/50 dark:border-gray-700/50">
+                      <div className="markdown-content lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-4 lg:sm:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
                         <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
@@ -863,7 +867,7 @@ print(df.describe())    # Statistical summary`,
                         </div>
                       </div>
                     ) : (
-                      <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
+                      <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
                         {currentTopic?.content.theory}
                       </div>
                     )}
@@ -874,21 +878,7 @@ print(df.describe())    # Statistical summary`,
 
 
 
-                {/* Quick Actions Section */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                  className="flex justify-center"
-                >
-                  <button
-                    onClick={handleTakeQuiz}
-                    className="flex items-center gap-3 px-6 py-3 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 rounded-xl transition-all duration-300 hover:shadow-md border border-blue-200/50 dark:border-blue-700/50"
-                  >
-                    <Trophy className="w-5 h-5" />
-                    <span className="font-medium">Take Quiz</span>
-                  </button>
-                </motion.div>
+
               </div>
             </div>
           </div>

@@ -170,7 +170,7 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
     padding: 8px;
-    text-align: center;
+    text-align: left;
     transition: all 0.5s ease-in-out;
   }
 

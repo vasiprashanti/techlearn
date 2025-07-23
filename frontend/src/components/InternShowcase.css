@@ -106,8 +106,16 @@
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
   z-index: 2;
   position: relative;
-  transform: translateY(0);
+  transform: rotate(-90deg);
+  white-space: nowrap;
+  
+
   will-change: opacity, transform;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
 }
 
 .intern-details {
@@ -166,7 +174,6 @@
   /* Completely hide the name on hover */
   visibility: hidden !important;
   display: none !important;
-  transform: translateY(0);
 }
 
 .intern-card:hover .intern-details {
