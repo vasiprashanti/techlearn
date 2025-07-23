@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -13,6 +13,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle modal close - navigate to home if user was trying to access protected route
+  const handleClose = () => {
+    // If user is on dashboard or other protected route and closes modal, go to home
+    if (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')) {
+      navigate('/');
+    }
+    onClose();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,10 +45,24 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
         onClose();
       } else {
         setError(result.error || "Login failed");
+        // On login failure, if user was trying to access dashboard, redirect to home after a delay
+        if (location.pathname === '/dashboard') {
+          setTimeout(() => {
+            navigate('/');
+            onClose();
+          }, 2000); // Give user time to see the error message
+        }
       }
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
+      // On error, if user was trying to access dashboard, redirect to home after a delay
+      if (location.pathname === '/dashboard') {
+        setTimeout(() => {
+          navigate('/');
+          onClose();
+        }, 2000);
+      }
     }
   };
 
@@ -94,7 +118,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         />
 
@@ -106,7 +130,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
           className="relative w-full max-w-md mx-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg rounded-xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20"
         >
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
