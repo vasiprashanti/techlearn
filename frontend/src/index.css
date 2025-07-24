@@ -321,6 +321,30 @@
     scrollbar-width: none;
   }
 
+  /* Prevent horizontal overflow in online compiler */
+  .online-compiler-container {
+    overflow-x: hidden;
+  }
+
+  /* Hide horizontal scrollbars in Monaco Editor */
+  .monaco-editor .overflow-guard {
+    overflow-x: hidden !important;
+  }
+
+  .monaco-editor .monaco-scrollable-element > .scrollbar.horizontal {
+    display: none !important;
+  }
+
+  /* Prevent sidebar horizontal overflow */
+  .sidebar-button {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .sidebar-button * {
+    max-width: 100%;
+  }
+
   /* Responsive adjustments for mobile */
   @media (max-width: 768px) {
     .code-snippet {
@@ -640,7 +664,6 @@
 /* High specificity gradient text class - outside of Tailwind layers */
 .hover-gradient-text {
   transition: all 0.5s ease-in-out !important;
-  cursor: pointer !important;
   background: linear-gradient(90deg, #007bff 0%, #0600a6 50%, #b5a3f0 100%) !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
@@ -650,19 +673,7 @@
   background-position: 0% 0 !important;
 }
 
-/* Desktop hover effect */
-@media (hover: hover) and (pointer: fine) {
-  .hover-gradient-text:hover {
-    background-position: 100% 0 !important;
-  }
-}
-
-/* Mobile viewport effect - applies gradient when element is in view */
-@media (hover: none) or (pointer: coarse) {
-  .hover-gradient-text.in-viewport {
-    background-position: 100% 0 !important;
-  }
-}
+/* Removed hover effects - no gradient animation on hover or viewport */
 
 @keyframes marquee-rtl {
   0% { transform: translateX(0); }
@@ -677,6 +688,55 @@
 }
 .animate-marquee-ltr {
   animation: marquee-ltr 28s linear infinite;
+}
+
+/* Shooting star animation for cosmic background */
+@keyframes shootingStar {
+  0% {
+    transform: translateX(-100px) translateY(-100px) rotate(45deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw) translateY(100vh) rotate(45deg);
+    opacity: 0;
+  }
+}
+
+/* Smooth scrolling for cosmic sections */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Cosmic background continuity */
+.cosmic-background {
+  background: linear-gradient(to bottom,
+    #daf0fa 0%,
+    #bceaff 25%,
+    #4a90e2 50%,
+    #2c5aa0 75%,
+    #1e3a8a 100%
+  );
+}
+
+.dark .cosmic-background {
+  background: linear-gradient(to bottom,
+    #020b23 0%,
+    #001233 25%,
+    #0a1128 50%,
+    #051a3e 75%,
+    #0f172a 100%
+  );
+}
+
+/* Section transitions */
+.cosmic-section {
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Contact Page Styles */
@@ -822,4 +882,23 @@
   .about-services-container {
     grid-template-columns: repeat(1, 1fr);
   }
+}
+
+/* Letter Animation Styles */
+.letter {
+  display: inline-block;
+  color: rgba(25, 70, 164, 0.1);
+  transition: color 0.4s ease-out;
+}
+
+.dark .letter {
+  color: rgba(147, 197, 253, 0.1);
+}
+
+.letter.visible {
+  color: rgba(25, 70, 164, 1);
+}
+
+.dark .letter.visible {
+  color: rgba(147, 197, 253, 1);
 }

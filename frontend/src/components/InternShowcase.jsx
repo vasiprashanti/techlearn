@@ -7,73 +7,73 @@ const InternShowcase = () => {
       name: "Raunak",
       photo: "/intern-photos/raunak.jpg",
       quote: "Building the future, one line of code at a time.",
-      background: "rgba(133, 194, 250, 0.5)"
+      background: "rgba(133, 194, 250, 1.0)"
     },
     {
       name: "Rishikesh",
       photo: "/intern-photos/rishikesh.jpg",
       quote: "Innovation happens when passion meets purpose.",
-      background: "rgba(98, 178, 254, 0.5)"
+      background: "rgba(98, 178, 254, 1.0)"
     },
     {
       name: "Pavan",
       photo: "/intern-photos/pavan.jpg",
       quote: "Every bug is a step closer to perfection.",
-      background: "rgba(55, 155, 248, 0.5)"
+      background: "rgba(55, 155, 248, 1.0)"
     },
     {
-      name: "Arjun",
+      name: "Kushagra",
       photo: "/intern-photos/arjun.jpg",
       quote: "Code is poetry written in logic.",
-      background: "rgba(21, 142, 255, 0.5)"
+      background: "rgba(21, 142, 255, 1.0)"
     },
     {
-      name: "Priya",
+      name: "Ahmad",
       photo: "/intern-photos/priya.jpg",
       quote: "Turning ideas into digital reality.",
-      background: "rgba(15, 107, 245, 0.5)"
+      background: "rgba(15, 107, 245, 1.0)"
     },
     {
-      name: "Sanjay",
+      name: "Shrashti",
       photo: "/intern-photos/sanjay.jpg",
       quote: "Design is not just what it looks like, but how it works.",
-      background: "rgba(59, 130, 246, 0.5)"
+      background: "rgba(59, 130, 246, 1.0)"
     },
     {
-      name: "Meera",
+      name: "Srinivas",
       photo: "/intern-photos/meera.jpg",
       quote: "Great software is built by great teams.",
-      background: "rgba(37, 99, 235, 0.5)"
+      background: "rgba(37, 99, 235, 1.0)"
     },
     {
-      name: "Karthik",
+      name: "Srikar",
       photo: "/intern-photos/karthik.jpg",
       quote: "Debugging is like being a detective in a crime movie.",
-      background: "rgba(29, 78, 216, 0.5)"
+      background: "rgba(29, 78, 216, 1.0)"
     },
     {
-      name: "Sneha",
+      name: "Varshitha",
       photo: "/intern-photos/sneha.jpg",
       quote: "Code never lies, comments sometimes do.",
-      background: "rgba(30, 64, 175, 0.5)"
+      background: "rgba(30, 64, 175, 1.0)"
     },
     {
-      name: "Rohit",
+      name: "Mooksh",
       photo: "/intern-photos/rohit.jpg",
       quote: "The best error message is the one that never shows up.",
-      background: "rgba(30, 58, 138, 0.5)"
+      background: "rgba(30, 58, 138, 1.0)"
     },
     {
-      name: "Ananya",
+      name: "Kaushik",
       photo: "/intern-photos/ananya.jpg",
       quote: "Technology is best when it brings people together.",
-      background: "rgba(23, 37, 84, 0.5)"
+      background: "rgba(23, 37, 84, 1.0)"
     },
     {
-      name: "Vikram",
+      name: "Vidhi",
       photo: "/intern-photos/vikram.jpg",
       quote: "First, solve the problem. Then, write the code.",
-      background: "rgba(15, 23, 42, 0.5)"
+      background: "rgba(15, 23, 42, 1.0)"
     }
   ];
 

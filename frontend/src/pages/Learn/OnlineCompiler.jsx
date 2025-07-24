@@ -231,73 +231,59 @@ const OnlineCompiler = () => {
   const currentLanguage = LANGUAGES[selectedLanguage];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] online-compiler-container">
       <ScrollProgress />
       <Navbar />
       
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen overflow-x-hidden">
         {/* Desktop Sidebar */}
         <motion.div
           initial={false}
           animate={{
-            width: sidebarCollapsed ? "120px" : "280px",
+            width: sidebarCollapsed ? "60px" : "160px",
             transition: { duration: 0.3, ease: "easeInOut" }
           }}
-          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 relative z-40"
+          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 relative z-40 overflow-x-hidden"
         >
           {/* Sidebar Header */}
-          <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
-            <div className="flex items-center justify-between relative z-50">
-              <AnimatePresence mode="wait">
-                {!sidebarCollapsed && (
-                  <motion.h3
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold text-gray-900 dark:text-white text-sm"
-                  >
-                    Languages
-                  </motion.h3>
-                )}
-              </AnimatePresence>
-
+          <div className="p-2 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
+            <div className="flex items-center justify-end relative z-50">
               <button
                 type="button"
                 onClick={handleToggleSidebar}
-                className="p-3 rounded-lg bg-blue-500/20 dark:bg-blue-600/20 hover:bg-blue-500/30 dark:hover:bg-blue-600/30 transition-all duration-200 border-2 border-blue-500/50 dark:border-blue-400/50 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
+                className="p-1.5 rounded-lg bg-blue-500/20 dark:bg-blue-600/20 hover:bg-blue-500/30 dark:hover:bg-blue-600/30 transition-all duration-200 border border-blue-500/50 dark:border-blue-400/50 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+                  <ChevronRight className="w-3 h-3 text-blue-700 dark:text-blue-300" />
                 ) : (
-                  <ChevronLeft className="w-5 h-5 text-blue-700 dark:text-blue-300" />
+                  <ChevronLeft className="w-3 h-3 text-blue-700 dark:text-blue-300" />
                 )}
               </button>
             </div>
           </div>
 
           {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-3">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-2">
+            <div className="space-y-2">
               {Object.values(LANGUAGES).map((language) => (
                 <motion.button
                   key={language.id}
                   onClick={() => handleLanguageSelect(language.id)}
                   whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`group relative w-full text-left rounded-xl transition-all duration-300 ${
+                  className={`sidebar-button group relative w-full text-left rounded-lg transition-all duration-300 ${
                     selectedLanguage === language.id
-                      ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
+                      ? 'bg-blue-500/20 border border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
                       : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
-                  } ${sidebarCollapsed ? 'p-3 mx-1' : 'p-4'}`}
+                  } ${sidebarCollapsed ? 'p-2 mx-1' : 'p-3'}`}
                 >
-                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
+                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2'}`}>
+                    <div className={`${sidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} rounded-md flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm`}>
                       <img
                         src={language.icon}
                         alt={`${language.name} logo`}
-                        className={`${sidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} object-contain`}
+                        className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-3 h-3'} object-contain`}
                       />
                     </div>
 
@@ -310,12 +296,9 @@ const OnlineCompiler = () => {
                           transition={{ duration: 0.2 }}
                           className="flex-1 min-w-0"
                         >
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-1 truncate">
+                          <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">
                             {language.name}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            {language.extension}
-                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -369,11 +352,11 @@ const OnlineCompiler = () => {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
+                          <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
                             <img
                               src={language.icon}
                               alt={`${language.name} logo`}
-                              className="w-5 h-5 object-contain"
+                              className="w-4 h-4 object-contain"
                             />
                           </div>
                           <div>
@@ -405,11 +388,11 @@ const OnlineCompiler = () => {
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
                       <img
                         src={currentLanguage.icon}
                         alt={`${currentLanguage.name} logo`}
-                        className="w-6 h-6 object-contain"
+                        className="w-4 h-4 object-contain"
                       />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -528,7 +511,13 @@ const OnlineCompiler = () => {
                           lineDecorationsWidth: 10,
                           lineNumbersMinChars: 3,
                           glyphMargin: false,
-                          padding: { top: 16, bottom: 16 }
+                          padding: { top: 16, bottom: 16 },
+                          scrollbar: {
+                            horizontal: 'hidden',
+                            vertical: 'visible',
+                            horizontalScrollbarSize: 0,
+                            verticalScrollbarSize: 8
+                          }
                         }}
                       />
                     </div>
@@ -592,7 +581,13 @@ const OnlineCompiler = () => {
                             lineDecorationsWidth: 10,
                             lineNumbersMinChars: 3,
                             glyphMargin: false,
-                            padding: { top: 16, bottom: 16 }
+                            padding: { top: 16, bottom: 16 },
+                            scrollbar: {
+                              horizontal: 'hidden',
+                              vertical: 'visible',
+                              horizontalScrollbarSize: 0,
+                              verticalScrollbarSize: 8
+                            }
                           }}
                         />
                       </div>

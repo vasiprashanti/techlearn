@@ -5,6 +5,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 10 !important;
   /* Remove fixed background to inherit from parent */
   /* Force remove any inherited shadows */
   box-shadow: none !important;
@@ -13,27 +15,31 @@
 .intern-showcase-header {
   text-align: center;
   margin-bottom: 3rem;
+  position: relative;
+  z-index: 20 !important;
 }
 
 .section-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  /* Light mode colors */
-  color: #1a365d;
-  background: linear-gradient(135deg, #1a365d, #2d5aa0);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: clamp(2rem, 4vw, 3rem) !important;
+  font-weight: 700 !important;
+  margin-bottom: 0.5rem !important;
+  position: relative !important;
+  z-index: 30 !important;
+  /* Clean, simple styling */
+  color: #011c56 !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  background-clip: unset !important;
 }
 
 /* Dark mode title */
 .dark .section-title {
-  color: #e2e8f0;
-  background: linear-gradient(135deg, #e2e8f0, #cbd5e0);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  background-clip: unset !important;
 }
 
 .section-subtitle {
