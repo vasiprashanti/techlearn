@@ -17,9 +17,8 @@ import FloatingCourseLogos from './components/FloatingCourseLogos'
 import LoadingScreen from './components/LoadingScreen'
 
 //Admin Dashboard
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import PaymentConfirm from './pages/Admin/PaymentConfirm';
-import { RequireAuth } from './components/RequireAuth';
+import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
+import Sidebar from './components/AdminDashbaord/Admin_Sidebar'
 
 // Auth pages
 import Login from './pages/Auth/Login'
@@ -64,8 +63,11 @@ import Contact from './pages/Contact/Contact'
 // About component
 import About from './pages/About/About'
 
-import TermsAndConditions from './pages/About/TermsAndConditons'
-import PrivacyPolicy from './pages/About/PrivacyPolicy'
+// Terms and Conditions componenet
+import TermsAndConditions from './pages/About/TermsAndConditons';
+
+import PrivacyPolicy from './pages/About/PrivacyPolicy';
+
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
@@ -325,7 +327,7 @@ const HomePage = () => {
 
           {/* Start for Free Button */}
           <button
-            onClick={() => navigate('/learn/compiler')}
+            onClick={() => navigate('/learn')}
             className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
             style={{
               backgroundColor: '#ffffffac',
@@ -571,7 +573,7 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard'].includes(location.pathname);
+  const showNavbar = !['/dashboard', '/admin'].includes(location.pathname);
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -586,8 +588,7 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
-           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-           <Route path="/privacy" element={<PrivacyPolicy />} />
+          
           <Route path="/profile" element={<Profile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
@@ -613,23 +614,10 @@ function LayoutWrapper() {
           <Route path="/build/ui-library" element={<UILibrary />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/about" element={<About />} />
-          <Route 
-  path="/admin" 
-  element={
-    <RequireAuth adminOnly={true}>
-      <AdminDashboard />
-    </RequireAuth>
-  } 
-/>
-<Route 
-  path="/admin/payments/:paymentId" 
-  element={
-    <RequireAuth adminOnly={true}>
-      <PaymentConfirm />
-    </RequireAuth>
-  } 
-/>
           
         </Routes>
       </main>

@@ -104,7 +104,7 @@ const Navbar = () => {
           </Link>
           {isAuthenticated ? (
             <div className="flex items-center gap-4">
-              {location.pathname !== '/dashboard' && (
+              {location.pathname !== '/dashboard' && location.pathname !== '/build' && location.pathname !== '/learn' &&(
               <span className={`text-[15px] font-extralight ${
                 isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
               }`}>
