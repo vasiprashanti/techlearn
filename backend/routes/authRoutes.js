@@ -108,15 +108,27 @@ router.post("/login", async function login(req, res) {
     }
 
     const token = generateToken(user._id);
-    return res.status(200).json({
+    // return res.status(200).json({
+    //   message: "Login successful",
+    //   user: {
+    //     id: user._id,
+    //     firstName: user.firstName,
+    //     email: user.email,
+    //   },
+    //   token,
+    // });
+     res.status(200).json({
       message: "Login successful",
       user: {
         id: user._id,
         firstName: user.firstName,
         email: user.email,
+        photoUrl: user.photoUrl || "", 
+        role: user.role,              
+        isClub: user.isClub           
       },
       token,
-    });
+});
   } catch (err) {
     console.error("Login error:", err);
     return res.status(500).json({ message: "Server error" });

@@ -118,19 +118,63 @@ export const loginUser = async (req, res) => {
     }
 
     const token = generatorToken(user._id);
+    // res.status(200).json({
+    //   message: "Login successful",
+    //   user: {
+    //     id: user._id,
+    //     firstName: user.firstName,
+    //     email: user.email,
+    //     role: user.role, // From main repo
+    //     isClub: user.isClub, // From backend_web
+    //   },
+    //   token,
+    // });
     res.status(200).json({
       message: "Login successful",
       user: {
         id: user._id,
         firstName: user.firstName,
         email: user.email,
-        role: user.role, // From main repo
-        isClub: user.isClub, // From backend_web
+        photoUrl: user.photoUrl || "", 
+        role: user.role,              
+        isClub: user.isClub           
       },
       token,
-    });
+});
+
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+
+// 📌 PUT /api/user/:id
+export const updateUserProfile = async (req, res) => {
+  const { id } = req.params;
+  const { photoUrl, firstName, lastName, dateOfBirth, gender } = req.body;
+
+  try {
+    const updatedFields = {};
+
+    if (photoUrl) updatedFields.photoUrl = photoUrl;
+    if (firstName) updatedFields.firstName = firstName;
+    if (lastName) updatedFields.lastName = lastName;
+    if (dateOfBirth) updatedFields.dateOfBirth = dateOfBirth;
+    if (gender) updatedFields.gender = gender;
+
+    const updatedUser = await User.findByIdAndUpdate(id, updatedFields, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      message: "User profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -13,19 +13,54 @@ const AVATAR_PATH = '/profile_avatars';
 
 const Profile = () => {
   const { user, isLoading, updateUser } = useUser();
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.photoUrl || `${AVATAR_PATH}/avatar1.png`);
+  const [selectedAvatar, setSelectedAvatar] = useState(`${AVATAR_PATH}/avatar1.png`);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
 
   useEffect(() => {
-    if (user?.photoUrl) {
+    // Get userData from localStorage
+    const storedUser = JSON.parse(localStorage.getItem("userData"));
+    if (storedUser?.photoUrl) {
+      setSelectedAvatar(storedUser.photoUrl);
+    } else if (user?.photoUrl) {
       setSelectedAvatar(user.photoUrl);
     }
   }, [user?.photoUrl]);
 
-  const handleAvatarSelect = (avatarUrl) => {
+  const handleAvatarSelect = async (avatarUrl) => {
     setSelectedAvatar(avatarUrl);
-    updateUser({ photoUrl: avatarUrl });
     setIsSelectingAvatar(false);
+
+    try {
+      // Get the user from localStorage
+      const storedUser = JSON.parse(localStorage.getItem("userData"));
+      
+      if (!storedUser || !storedUser.id) {
+        throw new Error("User ID not found in localStorage");
+      }
+
+      const userId = storedUser.id;
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/user/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ photoUrl: avatarUrl }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to update avatar");
+      }
+
+      const data = await res.json();
+      
+      // Update localStorage with new photoUrl
+      const updatedUser = { ...storedUser, photoUrl: avatarUrl };
+      localStorage.setItem("userData", JSON.stringify(updatedUser));
+      
+    } catch (error) {
+      console.error("Error updating avatar:", error);
+    }
   };
 
   const renderAvatarChoices = () => (
@@ -65,6 +100,10 @@ const Profile = () => {
     );
   }
 
+  // Get userData from localStorage for display
+  const userData = JSON.parse(localStorage.getItem("userData")) || {};
+  const displayUser = user || userData;
+
   return (
     <div className="max-w-6xl mx-auto px-4 pt-32 pb-12">
       <div className="flex flex-col lg:flex-row gap-8">
@@ -86,7 +125,7 @@ const Profile = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Name</p>
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {user?.firstName || 'First'} {user?.lastName || 'Last'}
+                    {displayUser?.firstName || 'First'} {displayUser?.lastName || 'Last'}
                   </p>
                 </div>
               </div>
@@ -98,7 +137,7 @@ const Profile = () => {
                     Date of Birth
                   </p>
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {user?.dateOfBirth || 'Not specified'}
+                    {displayUser?.dateOfBirth || 'Not specified'}
                   </p>
                 </div>
               </div>
@@ -108,7 +147,7 @@ const Profile = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Gender</p>
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {user?.gender || 'Not specified'}
+                    {displayUser?.gender || 'Not specified'}
                   </p>
                 </div>
               </div>
@@ -118,7 +157,7 @@ const Profile = () => {
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {user?.email || 'No email provided'}
+                    {displayUser?.email || 'No email provided'}
                   </p>
                 </div>
               </div>
@@ -139,7 +178,7 @@ const Profile = () => {
                     Username
                   </p>
                   <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {user?.username || 'Not specified'}
+                    {displayUser?.username || 'Not specified'}
                   </p>
                 </div>
               </div>
@@ -177,10 +216,10 @@ const Profile = () => {
           </div>
 
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-1">
-            {user?.firstName || "User"} {user?.lastName}
+            {displayUser?.firstName || "User"} {displayUser?.lastName}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {user?.email || "No email provided"}
+            {displayUser?.email || "No email provided"}
           </p>
 
           {/* Avatar Selection Overlay */}

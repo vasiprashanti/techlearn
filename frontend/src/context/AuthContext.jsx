@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 // Initial state
 const initialState = {
@@ -95,6 +96,7 @@ const AuthContext = createContext();
 // Auth Provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const navigate = useNavigate(); // Move useNavigate inside the component
 
   // Restore session on app load
   useEffect(() => {
@@ -131,6 +133,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authAPI.login(credentials);
       
       // Store token and user data (use 'token' for compatibility with UserContext)
+      console.log(response);
       localStorage.setItem('token', response.token);
       localStorage.setItem('userData', JSON.stringify(response.user));
 
@@ -186,6 +189,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('userData');
     dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    navigate("/"); // Fixed: now using navigate correctly
   };
 
   // Clear error function
