@@ -57,18 +57,18 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  to="/resources"
+                  to="/terms-and-conditions"
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
-                  Free Resources
+                  Terms and Conditions
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/blogs"
+                  to="/privacy"
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
-                  Blogs
+                  Privacy Policy
                 </Link>
               </li>
             </ul>
@@ -120,4 +120,4 @@ const Footer = () => {
   )
 }
 
-export default Footer
+export default Footer;

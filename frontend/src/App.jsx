@@ -64,6 +64,8 @@ import Contact from './pages/Contact/Contact'
 // About component
 import About from './pages/About/About'
 
+import TermsAndConditions from './pages/About/TermsAndConditons'
+import PrivacyPolicy from './pages/About/PrivacyPolicy'
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
@@ -584,7 +586,8 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
-          
+           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
