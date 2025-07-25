@@ -44,6 +44,15 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Calculate total XP from courseXP object
+  const calculateTotalXP = (courseXP) => {
+    if (!courseXP || typeof courseXP !== 'object') return 0;
+    
+    return Object.values(courseXP).reduce((total, xpValue) => {
+      return total + (typeof xpValue === 'number' ? xpValue : 0);
+    }, 0);
+  };
+
   // Fetch user + dashboard data from API
   const fetchUserData = async () => {
     try {
@@ -60,15 +69,24 @@ export const UserProvider = ({ children }) => {
         localStorage.setItem('userData', JSON.stringify(data.user));
       }
 
-      // Update other dashboard data (xp, progress, etc.)
-      setXp(data.xpPoints?.totalXP || 0);
-      setRecentExercises(Array.isArray(data.recentExercises) ? data.recentExercises : []);
+      // Calculate total XP from courseXP field
+      const totalXP = calculateTotalXP(data.courseXP);
+      setXp(totalXP);
+
+      // Set recent exercises from completedExercises
+      const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];
+      setRecentExercises(exercises);
+
+      // Set calendar activities
       setActivities(data.calendarActivity || {});
+
+      // Update progress with correct field mappings
       setProgress({
-        courseProgress: data.courseProgress?.progressPercent || 0,
+        courseProgress: data.totalCourseProgress?.progressPercent || 0,
         goalsProgress: 40, // Placeholder
         totalExercises: data.exerciseProgress?.totalExercises || 0,
         completedExercises: data.exerciseProgress?.completedExercises || 0,
+        exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0
       });
 
     } catch (err) {

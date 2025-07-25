@@ -36,7 +36,8 @@ const Dashboard = () => {
         },
         exercise: {
           completed: 0,
-          total: 0
+          total: 0,
+          progressPercent: 0
         },
         xp: 0,
         calendar: {},
@@ -49,21 +50,26 @@ const Dashboard = () => {
 
     const validRecentExercises = Array.isArray(recentExercises) ? recentExercises : [];
 
-    const exerciseCompleted = completedExercises ||
-      validRecentExercises.filter(ex => ex && ex.completed === true).length;
-
-    const exerciseTotal = totalExercises || validRecentExercises.length || 1;
+    // Use the exerciseProgressPercent from the API if available
+    const exerciseProgressPercent = contextProgress.exerciseProgressPercent !== undefined 
+      ? contextProgress.exerciseProgressPercent 
+      : totalExercises > 0 
+        ? Math.round((completedExercises / totalExercises) * 100)
+        : 0;
 
     return {
       course: {
         title: 'Current Course',
+        // Use courseProgress from API response (totalCourseProgress.progressPercent)
         progressPercent: Math.max(0, Math.min(100, contextProgress.courseProgress || 0))
       },
       exercise: {
-        completed: exerciseCompleted,
-        total: exerciseTotal
+        completed: completedExercises,
+        total: totalExercises,
+        // Use exerciseProgress.progressPercent from API response
+        progressPercent: Math.max(0, Math.min(100, exerciseProgressPercent))
       },
-      xp: Math.max(0, xp || 0),
+      xp: Math.max(0, xp || 0), // XP is now calculated from courseXP in UserContext
       calendar: activities && typeof activities === 'object' ? activities : {},
       recentExercises: validRecentExercises
     };
@@ -159,9 +165,7 @@ const Dashboard = () => {
                 <XPDisplay points={progress.xp} />
                 <ProgressBar
                   title="Exercise Progress"
-                  progress={Math.round(
-                    (progress.exercise.completed / Math.max(progress.exercise.total, 1)) * 100
-                  )}
+                  progress={progress.exercise.progressPercent}
                   subtitle={`${progress.exercise.completed}/${progress.exercise.total}`}
                 />
               </div>
