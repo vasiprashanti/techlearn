@@ -195,7 +195,7 @@ ${backendExercise.exerciseAnswers}
 
     try {
       // Determine language based on exercise topic
-      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'java' : 'python';
+      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'python' : 'java';
 
       // Send code to backend for execution
       const codeData = {
