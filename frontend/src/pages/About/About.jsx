@@ -62,17 +62,12 @@ const About = () => {
     // Wrap letters for all text elements that should have animation
     const textElementIds = [
       "heroTitle",
-      "longBefore", "beforeCompilers", "beforeGit", "beforeIDEs",
-      "oneMortal", "vasiIntro", "studentOnce", "survivor", "didntStay", "sheRose",
-      "mortalTitle", "mortalPara1", "anotherMortal",
-      "mortalPara2", "taughtHundreds", "mortalPara3",
-      "sparkText", "oneRoom", "fourStudents", "whiteboard",
-      "sharedDesire", "roomPortal", "firstExplorers", "architect",
-      "birthTitle", "birthPara1", "stoppedBorrowing",
-      "birthPara2", "byStudents", "birthPara3",
-      "codingPlanet", "aCodingPlanet", "whereText", "dashboards", "quizzes", "learners",
-      "techlearnText", "thisWasTechlearn", "fullyFormed",
-      "orbitTitle", "orbitPara1", "orbitPara2", "futureText"
+      "longBefore", "oneMortal", "vasiIntro",
+      "mortalTitle", "mortalPara1", "taughtHundreds",
+      "sparkText", "oneRoom",
+      "birthTitle", "birthPara1", "birthPara2", "birthPara3",
+      "codingPlanet", "whereText", "techlearnText",
+      "orbitTitle", "orbitPara1", "futureText"
     ];
 
     textElementIds.forEach(id => wrapLetters(id));
@@ -127,7 +122,7 @@ const About = () => {
       <div className="fixed inset-0 cosmic-starfield">
         {/* Extended gradient background to prevent gaps */}
         <div
-          className="absolute inset-0 w-full h-[500vh] bg-gradient-to-b from-[#daf0fa] via-[#bceaff] via-[#4a90e2] to-[#2c5aa0] dark:from-[#020b23] dark:via-[#001233] dark:to-[#051a3e] transition-all duration-300"
+          className="absolute inset-0 w-full h-[500vh] bg-gradient-to-b from-[#daf0fa] via-[#bceaff] to-[#4a90e2] dark:from-[#020b23] dark:via-[#001233] dark:to-[#051a3e] transition-all duration-300"
           style={{
             transform: `translateY(${scrollY * 0.05}px)`,
             top: '-200vh'
@@ -274,193 +269,117 @@ const About = () => {
 
       {/* Story Content Sections - Smooth Transitions */}
       <div className="relative z-10 w-full">
-        <div className="w-full space-y-0 text-lg leading-relaxed">
-            {/* Para 1: Poetic Introduction - Left Aligned */}
+        <div className="w-full space-y-8 text-lg leading-relaxed">
+            {/* Para 1: Poetic Introduction & Vasi Introduction - Combined */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6"
               style={{
                 transform: `translateY(${scrollY * 0.05}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl">
-                <p id="longBefore" className="opacity-90 transition-opacity duration-1000">Long before code had syntax...</p>
-                <p id="beforeCompilers" className="opacity-90 transition-opacity duration-1000">Before compilers whispered logic into circuits,</p>
-                <p id="beforeGit" className="opacity-90 transition-opacity duration-1000">Before Git ruled the realms of version control,</p>
-                <p id="beforeIDEs" className="opacity-90 transition-opacity duration-1000">Before IDEs lit up like constellations...</p>
-              </div>
-            </section>
-
-            {/* Para 2: Vasi Introduction - Right Aligned */}
-            <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
-              style={{
-                transform: `translateY(${scrollY * 0.04}px)`
-              }}
-            >
-              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl">
-                <p id="oneMortal" className="text-2xl md:text-3xl font-semibold text-[#011c56] dark:text-white">There was only one mortal —</p>
-                <p id="vasiIntro" className="text-3xl md:text-4xl font-bold text-[#1946a4] dark:text-blue-300 leading-relaxed">
-                  Vasi Prashanthi, a seeker buried under textbooks, tangled in broken tutorials and faded blackboard and diagrams.
+              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl">
+                <p id="longBefore" className="opacity-90 transition-opacity duration-1000">
+                  Long before code had syntax, before compilers whispered logic into circuits, before Git ruled the realms of version control, and before IDEs lit up like constellations...
                 </p>
-                <p id="studentOnce">A student once.</p>
-                <p id="survivor">A survivor of Segmentation Faults and for-loops that spiraled into the void.</p>
-                <p id="didntStay">But she didn't stay lost.</p>
-                <p id="sheRose" className="font-semibold">She rose.</p>
+                <p id="oneMortal" className="text-2xl md:text-3xl font-semibold text-[#011c56] dark:text-white mt-8">There was only one mortal —</p>
+                <p id="vasiIntro" className="text-2xl md:text-3xl font-bold text-[#1946a4] dark:text-blue-300 leading-relaxed">
+                  Vasi Prashanthi, a seeker buried under textbooks, tangled in broken tutorials and faded blackboard diagrams. A student once, a survivor of Segmentation Faults and for-loops that spiraled into the void. But she didn't stay lost. She rose.
+                </p>
               </div>
             </section>
 
-            {/* Para 3: The Mortal Who Dared - Left Aligned */}
+            {/* Para 2: The Mortal Who Dared - Combined Content */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6"
               style={{
                 transform: `translateY(${scrollY * 0.03}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
+              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
                 <h2 id="mortalTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
                   The Mortal Who Dared
                 </h2>
                 <p id="mortalPara1">
-                  For years, she stood before classrooms — sharing logic, decoding the chaos of C, Java, Python — but always under someone else's banner.
+                  For years, she stood before classrooms — sharing logic, decoding the chaos of C, Java, Python — but always under someone else's banner. Another mortal's company. Another faded vision. Her voice echoed through rented halls, but the spark in her teaching couldn't be contained by borrowed whiteboards and borrowed dreams.
                 </p>
-                <p id="anotherMortal">Another mortal's company. Another faded vision.</p>
+                <p id="taughtHundreds">She taught hundreds — sometimes thousands — yet always knew: <span id="mortalPara3" className="font-semibold text-[#011c56] dark:text-white">Something greater awaited.</span></p>
               </div>
             </section>
 
-            {/* Para 4: Her Voice - Right Aligned */}
+            {/* Para 3: The Spark & Portal - Combined Content */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
-              style={{
-                transform: `translateY(${scrollY * 0.025}px)`
-              }}
-            >
-              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
-                <p id="mortalPara2">
-                  Her voice echoed through rented halls, but the spark in her teaching couldn't  be contained by borrowed whiteboards and borrowed dreams.
-                </p>
-                <p id="taughtHundreds">She taught hundreds — sometimes thousands — yet always knew:</p>
-                <p id="mortalPara3" className="font-semibold text-[#011c56] dark:text-white">Something greater awaited.</p>
-              </div>
-            </section>
-
-            {/* Para 5: The Spark - Left Aligned */}
-            <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6"
               style={{
                 transform: `translateY(${scrollY * 0.02}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
+              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
                 <p id="sparkText" className="text-2xl md:text-3xl font-semibold">Then came a spark.</p>
-                <p id="oneRoom">One room.</p>
-                <p id="fourStudents">Four students.</p>
-                <p id="whiteboard">A whiteboard stained with logic gates.</p>
-              </div>
-            </section>
-
-            {/* Para 6: The Portal - Right Aligned */}
-            <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
-              style={{
-                transform: `translateY(${scrollY * 0.015}px)`
-              }}
-            >
-              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
-                <p id="sharedDesire">
-                  A shared desire to master C — not just as a language, but as a key to the machine realm.
+                <p id="oneRoom">
+                  One room. Four students. A whiteboard stained with logic gates. A shared desire to master C — not just as a language, but as a key to the machine realm. That room became a portal. The four students — the first explorers. She — the Architect of a world yet to be formed.
                 </p>
-                <p id="roomPortal">That room became a portal.</p>
-                <p id="firstExplorers">The four students — the first explorers.</p>
-                <p id="architect">She — the Architect of a world yet to be formed.</p>
               </div>
             </section>
 
-            {/* Para 7: The Birth - Left Aligned */}
+            {/* Para 4: The Birth of a Coding Planet - Combined Content */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6"
               style={{
                 transform: `translateY(${scrollY * 0.01}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
+              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
                 <h2 id="birthTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
                   The Birth of a Coding Planet
                 </h2>
                 <p id="birthPara1">
-                  From that single room, the spark spread — to homes, cities, and campuses.
+                  From that single room, the spark spread — to homes, cities, and campuses. Until one day, she stopped borrowing systems... and built her own.
                 </p>
-                <p id="stoppedBorrowing">Until one day, she stopped borrowing systems... and built her own.</p>
-              </div>
-            </section>
-
-            {/* Para 8: World Coded from Scratch - Right Aligned */}
-            <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
-              style={{
-                transform: `translateY(${scrollY * 0.005}px)`
-              }}
-            >
-              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
                 <p id="birthPara2" className="text-2xl md:text-3xl font-semibold text-[#011c56] dark:text-white">
-                  A world coded from scratch —
+                  A world coded from scratch — by students, for students.
                 </p>
-                <p id="byStudents">By students. For students.</p>
                 <p id="birthPara3">
                   With summer interns who learned, designed, and launched the platform you're using right now — in just four weeks.
                 </p>
               </div>
             </section>
 
-            {/* Para 9: Not a Company - Left Aligned */}
+            {/* Para 5: A Coding Planet - Combined Content */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6"
               style={{
                 transform: `translateY(${scrollY * 0}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
+              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
                 <p id="codingPlanet" className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white">
-                  Not a company.
+                  Not a company. A coding planet.
                 </p>
-                <p id="aCodingPlanet" className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white">A coding planet.</p>
-                <p id="whereText" className="text-2xl font-semibold text-[#011c56] dark:text-white mt-8">Where:</p>
-                <p id="dashboards">Dashboards orbit like moons,</p>
-                <p id="quizzes">Quizzes rain like meteor showers,</p>
-                <p id="learners">And every learner becomes a celestial body — given gravity, direction,and light.</p>
+                <p id="whereText" className="text-2xl font-semibold text-[#011c56] dark:text-white">
+                  Where dashboards orbit like moons, quizzes rain like meteor showers, and every learner becomes a celestial body — given gravity, direction, and light.
+                </p>
+                <p id="techlearnText">
+                  This was no ordinary platform. This was <strong className="text-[#011c56] dark:text-white text-2xl">TechLearn Solutions</strong> — a fully-formed ecosystem, fueled by her clarity, her code, and the ancient logic whispered by the Tech Gods themselves.
+                </p>
               </div>
             </section>
 
-            {/* Para 10: TechLearn Solutions - Right Aligned */}
+            {/* Para 6: Join the Orbit - Final Section */}
             <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
-              style={{
-                transform: `translateY(${scrollY * -0.005}px)`
-              }}
-            >
-              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
-                <p id="techlearnText">This was no ordinary platform.</p>
-                <p id="thisWasTechlearn">This was <strong className="text-[#011c56] dark:text-white text-2xl">TechLearn Solutions</strong> —</p>
-                <p id="fullyFormed">A fully-formed ecosystem, fueled by her clarity, her code, and the ancient logic whispered by the Tech Gods themselves.</p>
-              </div>
-            </section>
-
-            {/* Para 11: Join the Orbit - Left Aligned */}
-            <section
-              className="min-h-screen flex flex-col justify-center py-20 px-6"
+              className="flex flex-col justify-center py-12 px-6 mb-12"
               style={{
                 transform: `translateY(${scrollY * -0.01}px)`
               }}
             >
-              <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-4 text-[#1946a4] dark:text-blue-300 text-xl md:text-2xl leading-relaxed">
+              <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
                 <h2 id="orbitTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
                   Join the Orbit
                 </h2>
                 <p id="orbitPara1">
-                  Today, TechLearn is home to thousands of explorers — interns, students, hobbyists, and warriors of syntax.
+                  Today, TechLearn is home to thousands of explorers — interns, students, hobbyists, and warriors of syntax. Together, we build. We debug. We launch.
                 </p>
-                <p id="orbitPara2">Together, we build. We debug. We launch.</p>
                 <p id="futureText" className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white mt-8">
-                Because the future belongs to those who dare to decode it.
+                  Because the future belongs to those who dare to decode it.
                 </p>
               </div>
             </section>

@@ -31,13 +31,13 @@ const InternShowcase = () => {
       name: "Ahmad",
       photo: "/intern-photos/priya.jpg",
       quote: "Turning ideas into digital reality.",
-      background: "rgba(15, 107, 245, 1.0)"
+      background: "rgba(59, 130, 246, 1.0)"
     },
     {
       name: "Shrashti",
       photo: "/intern-photos/sanjay.jpg",
       quote: "Design is not just what it looks like, but how it works.",
-      background: "rgba(59, 130, 246, 1.0)"
+      background: "rgba(15, 107, 245, 1.0)"
     },
     {
       name: "Srinivas",
