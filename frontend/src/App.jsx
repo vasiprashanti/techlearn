@@ -327,7 +327,7 @@ const HomePage = () => {
 
           {/* Start for Free Button */}
           <button
-            onClick={() => navigate('/learn')}
+            onClick={() => navigate('/learn/compiler')}
             className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
             style={{
               backgroundColor: '#ffffffac',
