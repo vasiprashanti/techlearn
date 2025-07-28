@@ -346,11 +346,11 @@ const OnlineCompiler = () => {
                   } ${sidebarCollapsed ? 'p-2 mx-1' : 'p-3'}`}
                 >
                   <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    <div className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-7 h-7'} flex items-center justify-center`}>
+                    <div className={`${sidebarCollapsed ? 'w-10 h-10' : 'w-9 h-9'} flex items-center justify-center`}>
                       <img
                         src={language.icon}
                         alt={`${language.name} logo`}
-                        className={`${sidebarCollapsed ? 'w-7 h-7' : 'w-6 h-6'} object-contain`}
+                        className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-7 h-7'} object-contain`}
                       />
                     </div>
 
@@ -419,11 +419,11 @@ const OnlineCompiler = () => {
                         }`}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-8 h-8 flex items-center justify-center">
+                          <div className="w-10 h-10 flex items-center justify-center">
                             <img
                               src={language.icon}
                               alt={`${language.name} logo`}
-                              className="w-7 h-7 object-contain"
+                              className="w-8 h-8 object-contain"
                             />
                           </div>
                           <div>
@@ -455,11 +455,11 @@ const OnlineCompiler = () => {
               <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
+                    <div className="w-8 h-8 flex items-center justify-center">
                       <img
                         src={currentLanguage.icon}
                         alt={`${currentLanguage.name} logo`}
-                        className="w-4 h-4 object-contain"
+                        className="w-6 h-6 object-contain"
                       />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">

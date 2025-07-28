@@ -281,8 +281,8 @@ const About = () => {
                 <p id="longBefore" className="opacity-90 transition-opacity duration-1000">
                   Long before code had syntax, before compilers whispered logic into circuits, before Git ruled the realms of version control, and before IDEs lit up like constellations...
                 </p>
-                <p id="oneMortal" className="text-2xl md:text-3xl font-semibold text-[#011c56] dark:text-white mt-8">There was only one mortal —</p>
-                <p id="vasiIntro" className="text-2xl md:text-3xl font-bold text-[#1946a4] dark:text-blue-300 leading-relaxed">
+                <p id="oneMortal" className="text-2xl md:text-3xl font-normal text-[#011c56] dark:text-white mt-8">There was only one mortal —</p>
+                <p id="vasiIntro" className="text-2xl md:text-3xl font-medium text-[#1946a4] dark:text-blue-300 leading-relaxed">
                   Vasi Prashanthi, a seeker buried under textbooks, tangled in broken tutorials and faded blackboard diagrams. A student once, a survivor of Segmentation Faults and for-loops that spiraled into the void. But she didn't stay lost. She rose.
                 </p>
               </div>
@@ -296,7 +296,7 @@ const About = () => {
               }}
             >
               <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
-                <h2 id="mortalTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
+                <h2 id="mortalTitle" className="text-4xl md:text-5xl font-medium text-[#011c56] dark:text-white mb-8">
                   The Mortal Who Dared
                 </h2>
                 <p id="mortalPara1">
@@ -329,13 +329,13 @@ const About = () => {
               }}
             >
               <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
-                <h2 id="birthTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
+                <h2 id="birthTitle" className="text-4xl md:text-5xl font-medium text-[#011c56] dark:text-white mb-8">
                   The Birth of a Coding Planet
                 </h2>
                 <p id="birthPara1">
                   From that single room, the spark spread — to homes, cities, and campuses. Until one day, she stopped borrowing systems... and built her own.
                 </p>
-                <p id="birthPara2" className="text-2xl md:text-3xl font-semibold text-[#011c56] dark:text-white">
+                <p id="birthPara2" className="text-2xl md:text-3xl font-normal text-[#011c56] dark:text-white">
                   A world coded from scratch — by students, for students.
                 </p>
                 <p id="birthPara3">
@@ -352,10 +352,10 @@ const About = () => {
               }}
             >
               <div className="text-justify md:text-left max-w-5xl md:max-w-4xl mx-auto md:mx-0 space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
-                <p id="codingPlanet" className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white">
+                <p id="codingPlanet" className="text-3xl md:text-4xl font-medium text-[#011c56] dark:text-white">
                   Not a company. A coding planet.
                 </p>
-                <p id="whereText" className="text-2xl font-semibold text-[#011c56] dark:text-white">
+                <p id="whereText" className="text-2xl font-normal text-[#011c56] dark:text-white">
                   Where dashboards orbit like moons, quizzes rain like meteor showers, and every learner becomes a celestial body — given gravity, direction, and light.
                 </p>
                 <p id="techlearnText">
@@ -372,13 +372,13 @@ const About = () => {
               }}
             >
               <div className="text-justify md:text-right max-w-5xl md:max-w-4xl mx-auto md:mx-0 md:ml-auto space-y-6 text-[#1946a4] dark:text-blue-300 text-xl md:text-3xl leading-relaxed">
-                <h2 id="orbitTitle" className="text-4xl md:text-5xl font-bold text-[#011c56] dark:text-white mb-8">
+                <h2 id="orbitTitle" className="text-4xl md:text-5xl font-medium text-[#011c56] dark:text-white mb-8">
                   Join the Orbit
                 </h2>
                 <p id="orbitPara1">
                   Today, TechLearn is home to thousands of explorers — interns, students, hobbyists, and warriors of syntax. Together, we build. We debug. We launch.
                 </p>
-                <p id="futureText" className="text-3xl md:text-4xl font-bold text-[#011c56] dark:text-white mt-8">
+                <p id="futureText" className="text-3xl md:text-4xl font-medium text-[#011c56] dark:text-white mt-8">
                   Because the future belongs to those who dare to decode it.
                 </p>
               </div>
