@@ -65,7 +65,7 @@ const Navbar = () => {
             </div>
           </Link>
           {/* XP Badge beside logo - Desktop */}
-          <div className="hidden md:block">
+          <div className="hidden md:block ml-5">
             <XPBadge />
           </div>
         </div>
