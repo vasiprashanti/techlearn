@@ -128,8 +128,45 @@ const OnlineCompiler = () => {
 
   // Update editor theme when app theme changes
   useEffect(() => {
-    setEditorTheme(theme === 'dark' ? 'vs-dark' : 'light');
+    setEditorTheme(theme === 'dark' ? 'custom-dark' : 'light');
   }, [theme]);
+
+  // Define custom dark theme for Monaco Editor
+  const defineCustomTheme = (monaco) => {
+    monaco.editor.defineTheme('custom-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: 'e2e8f0', background: '1e293b' },
+        { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '60a5fa' },
+        { token: 'string', foreground: '34d399' },
+        { token: 'number', foreground: 'f59e0b' },
+        { token: 'operator', foreground: 'e2e8f0' },
+        { token: 'identifier', foreground: 'e2e8f0' },
+        { token: 'type', foreground: '8b5cf6' },
+        { token: 'function', foreground: 'fbbf24' },
+      ],
+      colors: {
+        'editor.background': '#1e293b',
+        'editor.foreground': '#e2e8f0',
+        'editorLineNumber.foreground': '#64748b',
+        'editorLineNumber.activeForeground': '#94a3b8',
+        'editor.selectionBackground': '#334155',
+        'editor.selectionHighlightBackground': '#475569',
+        'editorCursor.foreground': '#60a5fa',
+        'editor.lineHighlightBackground': '#334155',
+        'editorWhitespace.foreground': '#475569',
+        'editorIndentGuide.background': '#475569',
+        'editorIndentGuide.activeBackground': '#64748b',
+        'editor.findMatchBackground': '#0ea5e9',
+        'editor.findMatchHighlightBackground': '#0284c7',
+        'scrollbarSlider.background': '#475569',
+        'scrollbarSlider.hoverBackground': '#64748b',
+        'scrollbarSlider.activeBackground': '#94a3b8',
+      }
+    });
+  };
 
   // Update code when language changes
   useEffect(() => {
@@ -216,6 +253,36 @@ const OnlineCompiler = () => {
     setOutput('');
   };
 
+  // Function to render output with styled status
+  const renderOutput = (outputText) => {
+    if (!outputText) return 'Click "Run" to execute your code...';
+
+    // Split the output to find status line
+    const lines = outputText.split('\n');
+    const statusLineIndex = lines.findIndex(line => line.includes('📊 Status:'));
+
+    if (statusLineIndex === -1) {
+      return outputText;
+    }
+
+    const beforeStatus = lines.slice(0, statusLineIndex).join('\n');
+    const statusLine = lines[statusLineIndex];
+    const afterStatus = lines.slice(statusLineIndex + 1).join('\n');
+
+    return (
+      <span>
+        {beforeStatus && beforeStatus}
+        {beforeStatus && statusLine && '\n\n'}
+        {statusLine && (
+          <span className="text-gray-500 dark:text-gray-400">
+            {statusLine}
+          </span>
+        )}
+        {afterStatus && afterStatus}
+      </span>
+    );
+  };
+
   // Generate preview content for web languages
   const getPreviewContent = () => {
     const currentLang = LANGUAGES[selectedLanguage];
@@ -278,12 +345,12 @@ const OnlineCompiler = () => {
                       : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
                   } ${sidebarCollapsed ? 'p-2 mx-1' : 'p-3'}`}
                 >
-                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-2'}`}>
-                    <div className={`${sidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} rounded-md flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm`}>
+                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+                    <div className={`${sidebarCollapsed ? 'w-8 h-8' : 'w-7 h-7'} flex items-center justify-center`}>
                       <img
                         src={language.icon}
                         alt={`${language.name} logo`}
-                        className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-3 h-3'} object-contain`}
+                        className={`${sidebarCollapsed ? 'w-7 h-7' : 'w-6 h-6'} object-contain`}
                       />
                     </div>
 
@@ -351,12 +418,12 @@ const OnlineCompiler = () => {
                             : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50'
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 flex items-center justify-center">
                             <img
                               src={language.icon}
                               alt={`${language.name} logo`}
-                              className="w-4 h-4 object-contain"
+                              className="w-7 h-7 object-contain"
                             />
                           </div>
                           <div>
@@ -379,13 +446,13 @@ const OnlineCompiler = () => {
 
         {/* Main Content */}
         <div className="flex-1 relative min-w-0">
-          <div className="relative z-10 pt-24 pb-4">
-            <div className={`h-[calc(100vh-7rem)] transition-all duration-300 ${
+          <div className="relative z-10 pt-20 pb-2">
+            <div className={`h-[calc(100vh-5.5rem)] transition-all duration-300 ${
               sidebarCollapsed ? 'px-4' : 'px-4 lg:px-6'
             }`}>
 
               {/* Header */}
-              <div className="mb-4 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-lg flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
@@ -412,13 +479,7 @@ const OnlineCompiler = () => {
                     <Menu className="w-4 h-4" />
                   </button>
 
-                  <button
-                    onClick={handleResetCode}
-                    className="p-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                    title="Reset Code"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
+
 
                   {/* Removed Run button from header - moved to code editor section */}
                 </div>
@@ -427,7 +488,7 @@ const OnlineCompiler = () => {
 
 
               {/* Mobile Navigation Tabs */}
-              <div className="lg:hidden mb-4">
+              <div className="lg:hidden mb-2">
                 <div className="flex bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 p-1">
                   <button
                     onClick={() => setActiveView('editor')}
@@ -455,7 +516,7 @@ const OnlineCompiler = () => {
               </div>
 
               {/* Editor and Output Panels */}
-              <div className="h-[calc(100%-9rem)] lg:h-[calc(100%-5rem)]">
+              <div className="h-[calc(100%-7rem)] lg:h-[calc(100%-3rem)]">
                 {/* Desktop Layout - Side by Side */}
                 <div className="hidden lg:grid lg:grid-cols-2 gap-4 h-full">
                   {/* Code Editor Panel */}
@@ -498,6 +559,7 @@ const OnlineCompiler = () => {
                         value={code}
                         onChange={(value) => setCode(value || '')}
                         theme={editorTheme}
+                        beforeMount={defineCustomTheme}
                         options={{
                           minimap: { enabled: false },
                           fontSize: 14,
@@ -526,9 +588,18 @@ const OnlineCompiler = () => {
                   {/* Output Panel */}
                   <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
                     <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
-                      <h3 className="font-medium text-gray-900 dark:text-white">
-                        {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
-                      </h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-gray-900 dark:text-white">
+                          {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
+                        </h3>
+                        <button
+                          onClick={handleResetCode}
+                          className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
+                          title="Reset Code"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                     <div className="h-[calc(100%-3.5rem)] overflow-hidden">
                       {currentLanguage.isWebLanguage ? (
@@ -541,7 +612,7 @@ const OnlineCompiler = () => {
                       ) : (
                         <div className="h-full p-4 overflow-auto">
                           <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
-                            {output || 'Click "Run" to execute your code...'}
+                            {renderOutput(output)}
                           </pre>
                         </div>
                       )}
@@ -568,6 +639,7 @@ const OnlineCompiler = () => {
                           value={code}
                           onChange={(value) => setCode(value || '')}
                           theme={editorTheme}
+                          beforeMount={defineCustomTheme}
                           options={{
                             minimap: { enabled: false },
                             fontSize: 14,
@@ -623,9 +695,18 @@ const OnlineCompiler = () => {
                     /* Output/Preview Panel */
                     <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden h-full">
                       <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
-                        </h3>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
+                          </h3>
+                          <button
+                            onClick={handleResetCode}
+                            className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
+                            title="Reset Code"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <div className="h-[calc(100%-3.5rem)] overflow-hidden">
                         {currentLanguage.isWebLanguage ? (
@@ -638,7 +719,7 @@ const OnlineCompiler = () => {
                         ) : (
                           <div className="h-full p-4 overflow-auto">
                             <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
-                              {output || 'Click "Run" to execute your code...'}
+                              {renderOutput(output)}
                             </pre>
                           </div>
                         )}
