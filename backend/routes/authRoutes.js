@@ -1,19 +1,16 @@
-// routes/auth.js  –  ES‑module version
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
-//forgot password dependencies
-
 import crypto from "crypto";
 import nodemailer from "nodemailer";
+import admin from "../config/firebase-service-account.js";
 
 import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
-
 const SALT_ROUNDS = 10;
 
 /* -------- JWT helper -------- */
@@ -30,7 +27,6 @@ router.post("/register", async function register(req, res) {
       return res.status(400).json({ message: "Please fill all fields" });
     }
 
-    //regex added for proper mail
     const formattedEmail = email.trim().toLowerCase();
     const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
     if (!emailRegex.test(formattedEmail)) {
@@ -83,11 +79,7 @@ router.post("/login", async function login(req, res) {
         .json({ message: "Please provide email and password" });
     }
 
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    // const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-    // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
-
     if (!emailRegex.test(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
@@ -97,7 +89,6 @@ router.post("/login", async function login(req, res) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    /* users created through Google OAuth have no local hash */
     if (!user.password) {
       return res.status(400).json({ message: "Please log in with Google" });
     }
@@ -108,27 +99,18 @@ router.post("/login", async function login(req, res) {
     }
 
     const token = generateToken(user._id);
-    // return res.status(200).json({
-    //   message: "Login successful",
-    //   user: {
-    //     id: user._id,
-    //     firstName: user.firstName,
-    //     email: user.email,
-    //   },
-    //   token,
-    // });
-     res.status(200).json({
+    return res.status(200).json({
       message: "Login successful",
       user: {
         id: user._id,
         firstName: user.firstName,
         email: user.email,
-        photoUrl: user.photoUrl || "", 
-        role: user.role,              
-        isClub: user.isClub           
+        photoUrl: user.photoUrl || "",
+        role: user.role,
+        isClub: user.isClub,
       },
       token,
-});
+    });
   } catch (err) {
     console.error("Login error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -148,12 +130,11 @@ router.post("/google", async function googleLogin(req, res) {
 
     let user = await User.findOne({ email });
     if (!user) {
-      /* create account with no local password */
       user = await User.create({
         firstName: name.split(" ")[0],
         lastName: name.split(" ")[1] || "",
         email,
-        password: "", // no hash stored
+        password: "",
       });
     }
 
@@ -171,6 +152,47 @@ router.post("/google", async function googleLogin(req, res) {
   } catch (err) {
     console.error("Google login error:", err);
     return res.status(401).json({ message: "Google authentication failed" });
+  }
+});
+
+/* ========== FIREBASE AUTH ========== */
+router.post("/firebase", async (req, res) => {
+  const { idToken } = req.body;
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const { email, name } = decodedToken;
+    const [firstName, ...rest] = name?.split(" ") || ["", ""];
+    const lastName = rest.join(" ");
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required from Firebase" });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        firstName,
+        lastName,
+        email,
+        password: "",
+      });
+    }
+
+    const token = generateToken(user._id);
+    return res.status(200).json({
+      message: "Firebase login successful",
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+      },
+    });
+  } catch (err) {
+    console.error("Firebase login error: ", err);
+    return res.status(401).json({ message: "Firebase authentication failed!" });
   }
 });
 
@@ -192,7 +214,7 @@ router.get("/me", protect, async function getMe(req, res) {
   }
 });
 
-/* ==========FORGOT PASSWORD ========== */
+/* ========== FORGOT PASSWORD ========== */
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
 
@@ -202,12 +224,8 @@ router.post("/forgot-password", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    //token generation
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
 
     user.resetPasswordToken = tokenHash;
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
@@ -216,8 +234,8 @@ router.post("/forgot-password", async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: process.env.EMAIL_USER, // e.g. 'yourgmail@gmail.com'
-        pass: process.env.EMAIL_PASS, // Gmail App Password
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
@@ -236,7 +254,6 @@ router.post("/forgot-password", async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-
     return res.status(200).json({ message: "Reset email sent successfully" });
   } catch (err) {
     console.error("Forgot Password Error:", err);
@@ -245,54 +262,61 @@ router.post("/forgot-password", async (req, res) => {
 });
 
 /* ========== RESET PASSWORD ========== */
-
 router.post("/reset-password/:resetToken", async (req, res) => {
   const resetToken = req.params.resetToken;
   const { password, confirmPassword } = req.body;
 
   if (!password || !confirmPassword) {
-    return res.status(400).json({
-      message: "Please provide both passwords",
-    });
+    return res.status(400).json({ message: "Please provide both passwords" });
   }
 
-  if (password != confirmPassword) {
-    return res.status(400).json({
-      message: "Password do not match",
-    });
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords do not match" });
   }
 
-  //hashing the recieved token
   try {
-    // Hash the received token
-    const tokenHash = crypto
-      .createHash("sha256")
-      .update(resetToken)
-      .digest("hex");
+    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-    // Find user with matching token and unexpired resetPasswordExpires
     const user = await User.findOne({
       resetPasswordToken: tokenHash,
-      resetPasswordExpires: { $gt: Date.now() }, // token still valid
+      resetPasswordExpires: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired password reset token" });
+      return res.status(400).json({ message: "Invalid or expired password reset token" });
     }
 
-    // Update user password and clear reset token fields
-    user.password = password; // will be hashed by mongoose pre-save middleware
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
-
     await user.save();
 
     return res.status(200).json({ message: "Password reset successful" });
   } catch (err) {
     console.error("Reset Password Error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+/* ========== UPDATE AVATAR ========== */
+router.put("/avatar", protect, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { avatar } = req.body;
+
+    if (!avatar) {
+      return res.status(400).json({ message: "Avatar is required" });
+    }
+
+    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true });
+
+    return res.status(200).json({
+      message: "Avatar updated successfully",
+      avatar: user.avatar,
+    });
+  } catch (error) {
+    console.error("Update avatar error:", error);
+    return res.status(500).json({ message: "Server error updating avatar" });
   }
 });
 

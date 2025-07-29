@@ -25,6 +25,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
+    "firebase-admin": "^13.4.0",
     "fontkit": "^2.0.4",
     "google-auth-library": "^10.1.0",
     "jsonwebtoken": "^9.0.2",
