@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-// import { FcGoogle } from 'react-icons/fc';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../../config/firebase'; // Your Firebase config file
+import { FcGoogle } from 'react-icons/fc';
 
 export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
@@ -20,6 +22,37 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Firebase Google Sign-up
+  const handleGoogleSignUp = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      // Send idToken to your backend Firebase endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/firebase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('isAdmin', 'false');
+        navigate("/dashboard");
+        onClose();
+      } else {
+        setError(data.message || "Google sign-up failed");
+      }
+    } catch (error) {
+      console.error('Google sign-up error:', error);
+      setError("Google sign-up failed");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -47,74 +80,6 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
       setError("Something went wrong");
     }
   };
-
-  // Commented out Google Sign-up logic
-  // useEffect(() => {
-  //   // Load Google script if not already loaded
-  //   if (!window.google) {
-  //     const script = document.createElement('script');
-  //     script.src = 'https://accounts.google.com/gsi/client';
-  //     script.async = true;
-  //     script.defer = true;
-  //     document.body.appendChild(script);
-  //   }
-
-  //   const handleCredentialResponse = (response) => {
-  //     const idToken = response.credential;
-
-  //     fetch("http://localhost:5000/api/auth/google", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ token: idToken }),
-  //     })
-  //       .then(res => res.json())
-  //       .then(data => {
-  //         if (data.token) {
-  //           localStorage.setItem("token", data.token);
-  //           if (data.user) {
-  //             localStorage.setItem('userData', JSON.stringify(data.user));
-  //           }
-  //           onClose();
-  //         } else {
-  //           setError(data.message || "Google sign-up failed");
-  //         }
-  //       })
-  //       .catch(() => setError("Google sign-up failed"));
-  //   };
-
-  //   if (isOpen) {
-  //     const initializeGoogleButton = () => {
-  //       const googleDiv = document.getElementById("googleSignupDiv");
-  //       if (googleDiv && window.google) {
-  //         window.google.accounts.id.initialize({
-  //           client_id: "292576736578-g02qvp9ss7qj3jht2ghso1aqgoil22gp.apps.googleusercontent.com",
-  //           callback: handleCredentialResponse,
-  //         });
-
-  //         window.google.accounts.id.renderButton(
-  //           googleDiv,
-  //           {
-  //             type: 'icon',
-  //             size: 'large',
-  //             theme: 'filled_blue',
-  //             shape: 'circle',
-  //             width: '40'
-  //           }
-  //         );
-  //       }
-  //     };
-
-  //     // Check repeatedly until Google is loaded
-  //     const checkGoogle = setInterval(() => {
-  //       if (window.google) {
-  //         clearInterval(checkGoogle);
-  //         initializeGoogleButton();
-  //       }
-  //     }, 100);
-
-  //     return () => clearInterval(checkGoogle);
-  //   }
-  // }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -229,43 +194,21 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
               Create account
             </button>
 
-            {/* Commented out the "or continue with" divider and Google sign-in */}
-            {/* <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
+            {/* Google Sign-up Section */}
+            <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
               <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
               <span className="px-3 text-sm whitespace-nowrap">or continue with</span>
               <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
-            </div> */}
+            </div>
 
-            {/* Commented out the Google Sign-In Button */}
-            {/* <div className="flex justify-center mt-4">
-              <div 
-                onClick={() => {
-                  const googleButton = document.querySelector('#googleSignupDiv div[role=button]');
-                  if (googleButton) googleButton.click();
-                }}
-                className="
-                  w-12 h-12
-                  rounded-full
-                  bg-white
-                  shadow-md
-                  flex items-center justify-center
-                  cursor-pointer
-                  hover:shadow-lg
-                  transition-all
-                  hover:scale-110
-                  border border-gray-200
-                  dark:border-gray-600
-                  relative
-                "
-              >
-                <FcGoogle className="w-6 h-6" />
-                <div 
-                  id="googleSignupDiv" 
-                  className="absolute opacity-0 w-full h-full cursor-pointer"
-                  style={{ pointerEvents: 'none' }}
-                ></div>
-              </div>
-            </div> */}
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <FcGoogle className="w-5 h-5" />
+              Sign up with Google
+            </button>
 
             <p className="text-gray-700 dark:text-gray-300 text-center mt-6 text-sm">
               Already have an account?

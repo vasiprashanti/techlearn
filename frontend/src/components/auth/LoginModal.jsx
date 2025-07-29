@@ -3,6 +3,9 @@ import { X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { auth } from '../../config/firebase'; // Your Firebase config file
+import { FcGoogle } from 'react-icons/fc';
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -17,11 +20,41 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
   // Handle modal close - navigate to home if user was trying to access protected route
   const handleClose = () => {
-    // If user is on dashboard or other protected route and closes modal, go to home
     if (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')) {
       navigate('/');
     }
     onClose();
+  };
+
+  // Firebase Google Sign-in
+  const handleGoogleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+
+      // Send idToken to your backend Firebase endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/firebase`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('userData', JSON.stringify(data.user));
+        localStorage.setItem('isAdmin', 'false');
+        navigate("/dashboard");
+        onClose();
+      } else {
+        setError(data.message || "Google sign-in failed");
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      setError("Google sign-in failed");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -45,18 +78,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
         onClose();
       } else {
         setError(result.error || "Login failed");
-        // On login failure, if user was trying to access dashboard, redirect to home after a delay
         if (location.pathname === '/dashboard') {
           setTimeout(() => {
             navigate('/');
             onClose();
-          }, 2000); // Give user time to see the error message
+          }, 2000);
         }
       }
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
-      // On error, if user was trying to access dashboard, redirect to home after a delay
       if (location.pathname === '/dashboard') {
         setTimeout(() => {
           navigate('/');
@@ -223,6 +254,22 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                   className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                 >
                   Sign in
+                </button>
+
+                {/* Google Sign-in Section */}
+                <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
+                  <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
+                  <span className="px-3 text-sm whitespace-nowrap">or continue with</span>
+                  <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <FcGoogle className="w-5 h-5" />
+                  Sign in with Google
                 </button>
 
                 <p className="text-gray-700 dark:text-gray-300 text-center mt-6 text-sm">
