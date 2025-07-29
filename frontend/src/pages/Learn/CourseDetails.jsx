@@ -233,9 +233,9 @@ const CourseDetails = () => {
       {/* Hero Section */}
       <div className="relative z-10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-b border-white/20 dark:border-gray-700/20 pt-20">
         <div className="container px-6 py-16 mx-auto max-w-7xl">
-          <div className="grid lg:grid-cols-3 gap-12 items-start">
+          <div className="max-w-4xl">
             {/* Course Info */}
-            <div className="lg:col-span-2">
+            <div>
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -250,6 +250,7 @@ const CourseDetails = () => {
                 <h1
                   ref={titleRef}
                   className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-6`}
+                  style={{ padding: '0' }}
                 >
                   {course.title}
                 </h1>
@@ -259,7 +260,7 @@ const CourseDetails = () => {
                 </p>
 
                 {/* Course Stats */}
-                <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-400">
+                <div className="flex flex-wrap gap-6 text-gray-600 dark:text-gray-400 mb-8">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5" />
                     <span>{course.duration}</span>
@@ -269,67 +270,34 @@ const CourseDetails = () => {
                     <span>{course.lessons} lessons</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    <span>{course.students} students</span>
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                    <span>Lifetime access</span>
                   </div>
-
                 </div>
+
+                {/* Start Learning Button */}
+                <motion.button
+                  onClick={handleStartCourse}
+                  whileHover={{
+                    x: 2,
+                    transition: { duration: 0.2, ease: "easeOut" }
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full max-w-xs h-14 bg-emerald-600 hover:bg-emerald-500 text-white border-none rounded-lg cursor-pointer inline-flex items-center justify-center gap-2 transition-all duration-300 font-sans"
+                >
+                  <Play className="w-5 h-5" />
+                  <span>Start Learning</span>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </motion.div>
+                </motion.button>
               </motion.div>
             </div>
 
-            {/* Enrollment Card */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/20 dark:border-gray-700/20 sticky top-24"
-            >
-              {course.status === 'coming_soon' ? (
-                <motion.button
-                  disabled
-                  className="w-full h-14 bg-gray-400 text-white border-none rounded-lg cursor-not-allowed inline-flex items-center justify-center gap-2 transition-all duration-300 font-sans mb-6 opacity-60"
-                >
-                  <Clock className="w-5 h-5" />
-                  <span>Coming Soon</span>
-                </motion.button>
-              ) : (
-                <>
-                  <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400 mb-6">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Lifetime access</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Mobile and desktop access</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span>Community support</span>
-                    </div>
-                  </div>
 
-                  <motion.button
-                    onClick={handleStartCourse}
-                    whileHover={{
-                      x: 2,
-                      transition: { duration: 0.2, ease: "easeOut" }
-                    }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full h-14 bg-emerald-600 hover:bg-emerald-500 text-white border-none rounded-lg cursor-pointer inline-flex items-center justify-center gap-2 transition-all duration-300 font-sans"
-                  >
-                    <Play className="w-5 h-5" />
-                    <span>Start Learning</span>
-                    <motion.div
-                      whileHover={{ x: 4 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                    </motion.div>
-                  </motion.button>
-                </>
-              )}
-            </motion.div>
           </div>
         </div>
       </div>

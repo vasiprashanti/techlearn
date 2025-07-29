@@ -487,10 +487,10 @@ print(df.describe())    # Statistical summary`,
         <motion.div
           initial={false}
           animate={{
-            width: sidebarCollapsed ? "120px" : "320px",
+            width: sidebarCollapsed ? "80px" : "320px",
             transition: { duration: 0.3, ease: "easeInOut" }
           }}
-          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 relative z-40"
+          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
         >
           {/* Sidebar Header */}
           <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
@@ -502,7 +502,7 @@ print(df.describe())    # Statistical summary`,
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold text-gray-900 dark:text-white text-sm"
+                    className="font-poppins font-semibold text-gray-900 dark:text-white text-sm motion-div"
                   >
                     Course Topics
                   </motion.h3>
@@ -529,7 +529,7 @@ print(df.describe())    # Statistical summary`,
           </div>
 
           {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
             <div className="space-y-3">
               {currentCourse.topics.map((topic, index) => (
                 <motion.button
@@ -541,24 +541,22 @@ print(df.describe())    # Statistical summary`,
                   }}
                   whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`group relative w-full text-left rounded-xl transition-all duration-300 ${
+                  className={`group relative w-full text-left rounded-xl transition-all duration-300 overflow-hidden ${
                     selectedTopic === index
                       ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
                       : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
                   } ${sidebarCollapsed ? 'p-3 mx-1' : 'p-4'}`}
                 >
                   <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center ${
-                      topic.completed ? 'bg-green-500 shadow-sm' : 'bg-blue-500/50 shadow-sm'
-                    } ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
-                      {topic.completed ? (
+                    {topic.completed ? (
+                      <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center bg-green-500 shadow-sm ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
                         <CheckCircle className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-4 h-4'} text-white`} />
-                      ) : (
-                        <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold text-white`}>
-                          {index + 1}
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold text-gray-700 dark:text-gray-300`}>
+                        {index + 1}
+                      </span>
+                    )}
 
                     <AnimatePresence mode="wait">
                       {!sidebarCollapsed && (
@@ -567,7 +565,7 @@ print(df.describe())    # Statistical summary`,
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
                           transition={{ duration: 0.2 }}
-                          className="flex-1 min-w-0"
+                          className="flex-1 min-w-0 motion-div"
                         >
                           <h4 className="font-medium text-gray-900 dark:text-white truncate">
                             {topic.title}
@@ -579,7 +577,7 @@ print(df.describe())    # Statistical summary`,
 
                   {/* Tooltip for collapsed state */}
                   {sidebarCollapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs truncate">
                       {topic.title}
                     </div>
                   )}
@@ -685,7 +683,8 @@ print(df.describe())    # Statistical summary`,
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                  <div className="flex flex-col gap-6">
+                    {/* Header Section */}
                     <div className="flex-1">
                       {/* Mobile Book Icon Button */}
                       <div className="lg:hidden flex items-center gap-3 mb-4">
@@ -700,34 +699,32 @@ print(df.describe())    # Statistical summary`,
 
                       <h1
                         ref={titleRef}
-                        className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-4`}
+                        className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-4 text-center lg:text-left`}
                       >
                         {currentTopic?.title}
                       </h1>
                     </div>
-                    
-                    {/* Stats Cards and Quiz Button */}
-                    <div className="grid grid-cols-2 lg:grid-cols-1 gap-2 lg:gap-3 lg:w-64">
-                      {/* Take Quiz Button - Now matching card style */}
-                      <div className="col-span-2 lg:col-span-1 mx-auto w-fit lg:w-full">
-                        <button
-                          onClick={handleTakeQuiz}
-                          className="w-fit lg:w-full bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 lg:p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:bg-white/80 dark:hover:bg-gray-800/80"
-                        >
-                          <div className="flex items-center justify-center gap-1 lg:gap-2">
-                            <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                              <Trophy className="w-3 h-3 lg:w-4 lg:h-4 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="text-sm lg:text-base font-medium text-gray-900 dark:text-white">
-                              Take Quiz
-                            </div>
-                          </div>
-                        </button>
-                      </div>
 
-                      {/* Questions Card - Smaller size, single line */}
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-                        <div className="flex items-center gap-1 lg:gap-2">
+                    {/* Stats Cards and Quiz Button - Side by Side */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                      {/* Take Quiz Button */}
+                      <button
+                        onClick={handleTakeQuiz}
+                        className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-blue-400/50 dark:border-blue-500/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex-1 sm:flex-none sm:min-w-[160px]"
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg bg-white/20 flex items-center justify-center">
+                            <Trophy className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
+                          </div>
+                          <div className="text-sm lg:text-base font-medium text-white">
+                            Take Quiz
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Questions Card */}
+                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
+                        <div className="flex items-center justify-center gap-2 text-center">
                           <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                             <Code2 className="w-3 h-3 text-green-600 dark:text-green-400" />
                           </div>
@@ -737,9 +734,9 @@ print(df.describe())    # Statistical summary`,
                         </div>
                       </div>
 
-                      {/* Max XP Card - Smaller size, single line */}
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-2 border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
-                        <div className="flex items-center gap-1 lg:gap-2">
+                      {/* Max XP Card */}
+                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
+                        <div className="flex items-center justify-center gap-2 text-center">
                           <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
                             <Trophy className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
                           </div>
@@ -762,19 +759,12 @@ print(df.describe())    # Statistical summary`,
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="lg:bg-white/60 lg:dark:bg-gray-800/60 lg:backdrop-blur-xl lg:rounded-2xl lg:p-8 lg:shadow-lg lg:border lg:border-white/20 lg:dark:border-gray-700/20"
+                  className="lg:bg-white/60 lg:dark:bg-gray-800/60 lg:backdrop-blur-xl lg:rounded-2xl lg:shadow-lg lg:border lg:border-white/20 lg:dark:border-gray-700/20 lg:h-[90vh] lg:flex lg:flex-col"
                 >
-                  {/* Hide Notes header on mobile, show on desktop */}
-                  <div className="hidden lg:flex items-center gap-3 mb-6">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h2 className="text-2xl font-poppins font-semibold text-gray-900 dark:text-white">Notes</h2>
-                  </div>
-
-                  <div className="max-w-none px-[5px] lg:px-0">
+                  <div className="max-w-none px-[5px] lg:px-8 lg:py-8 lg:flex-1 lg:overflow-hidden">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div className="markdown-content lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-4 lg:sm:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
+                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
+                        <div className="markdown-content lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-4 lg:sm:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
                         <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
@@ -857,18 +847,23 @@ print(df.describe())    # Statistical summary`,
                             {currentTopic.notesContent}
                           </ReactMarkdown>
                         </div>
+                        </div>
                       </div>
                     ) : currentTopic?.hasNotes ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                          <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
-                          <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
+                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
+                        <div className="flex items-center justify-center py-8">
+                          <div className="text-center">
+                            <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
+                            <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
+                          </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
-                        {currentTopic?.content.theory}
+                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
+                        <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
+                          {currentTopic?.content.theory}
+                        </div>
                       </div>
                     )}
                   </div>

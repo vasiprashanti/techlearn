@@ -38,12 +38,6 @@ const Sidebar = ({ onToggle }) => {
       icon: '/sidebar/projects.png',
       completed: false,
     },
-    {
-      id: 'dashboard',
-      title: 'Dashboard',
-      icon: '/icons/dashboard.svg',
-      completed: true,
-    },
   ];
 
   return (

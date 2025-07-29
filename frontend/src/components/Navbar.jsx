@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useAuthModalContext } from '../context/AuthModalContext'
 import { useAuth } from '../context/AuthContext'
@@ -9,9 +9,13 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme()
   const { openLogin } = useAuthModalContext()
   const { isAuthenticated, user, logout } = useAuth()
+  const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+
+  // Check if we're on the Dashboard page
+  const isDashboardPage = location.pathname === '/dashboard'
 
   // Handle scroll to hide/show navbar
   useEffect(() => {
@@ -65,9 +69,11 @@ const Navbar = () => {
             </div>
           </Link>
           {/* XP Badge beside logo - Desktop */}
-          <div className="hidden md:block ml-5">
-            <XPBadge />
-          </div>
+          {!isDashboardPage && (
+            <div className="hidden md:block ml-4">
+              <XPBadge />
+            </div>
+          )}
         </div>
 
         {/* Desktop Navigation Links */}
@@ -103,24 +109,30 @@ const Navbar = () => {
             Dashboard
           </Link>
           {isAuthenticated ? (
-            <div className="flex items-center gap-4">
-              {location.pathname !== '/dashboard' && location.pathname !== '/build' && location.pathname !== '/learn' &&(
-              <span className={`text-[15px] font-extralight ${
-                isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
+            <div className="relative group">
+              {/* User Greeting with Hover Indicator */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all duration-300 w-24 ${
+                isDarkMode
+                  ? 'text-[#e0e6f5] group-hover:text-white group-hover:bg-white/5'
+                  : 'text-[#00184f] group-hover:text-[#001a5c] group-hover:bg-black/5'
               }`}>
-                Hi, {user?.firstName || user?.email || 'User'}
-              </span>
-              )}
-              <button
-                onClick={logout}
-                className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+                <span className="text-[15px] font-extralight">
+                  Hi, {user?.firstName || user?.email || 'User'}
+                </span>
+              </div>
+
+              {/* Compact Dropdown Menu */}
+              <div className={`absolute top-full right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0 z-50`}>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-b-lg cursor-pointer transition-all duration-300 whitespace-nowrap w-24 ${
                   isDarkMode
-                    ? 'text-[#e0e6f5] hover:text-white'
-                    : 'text-[#00184f]'
+                    ? 'text-[#e0e6f5] hover:text-white hover:bg-white/5'
+                    : 'text-[#00184f] hover:text-[#001a5c] hover:bg-black/5'
                 }`}
-              >
-                Log Out
-              </button>
+                onClick={logout}
+                >
+                  <span className="text-[15px] font-extralight">Log Out</span>
+                </div>
+              </div>
             </div>
           ) : (
             <button
@@ -212,13 +224,11 @@ const Navbar = () => {
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
             <div className="py-2.5">
-              {location.pathname !== '/dashboard' && (
               <div className={`text-[14px] mb-2 ${
                 isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
               }`}>
                 Hi, {user?.firstName || user?.email || 'User'}
               </div>
-              )}
               <button
                 onClick={() => {
                   closeMenu();
@@ -252,9 +262,11 @@ const Navbar = () => {
           )}
         </div>
         {/* XP Badge - Mobile */}
-        <div className="py-2 w-full flex justify-start pl-4">
-          <XPBadge />
-        </div>
+        {!isDashboardPage && (
+          <div className="py-2 w-full flex justify-start pl-4">
+            <XPBadge />
+          </div>
+        )}
         {/* Dark Mode Toggle - Mobile */}
         <div className="w-full flex justify-start">
           <button
