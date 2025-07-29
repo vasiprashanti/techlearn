@@ -239,7 +239,7 @@ router.post("/forgot-password", async (req, res) => {
       },
     });
 
-    const resetLink = `https://techlearnsolutions-backend.vercel.app/reset-password/${resetToken}`;
+    const resetLink = `https://techlearnsolutions.com/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
