@@ -521,8 +521,8 @@ const OnlineCompiler = () => {
                 <div className="hidden lg:grid lg:grid-cols-2 gap-4 h-full">
                   {/* Code Editor Panel */}
                   <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
-                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
-                      <div className="flex items-center justify-between">
+                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                      <div className="flex items-center justify-between h-full">
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           Code Editor
                         </h3>
@@ -552,7 +552,7 @@ const OnlineCompiler = () => {
                         )}
                       </div>
                     </div>
-                    <div className="h-[calc(100%-3.5rem)]">
+                    <div className="h-[calc(100%-4rem)]">
                       <Editor
                         height="100%"
                         language={currentLanguage.monacoLanguage}
@@ -587,8 +587,8 @@ const OnlineCompiler = () => {
 
                   {/* Output Panel */}
                   <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
-                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20">
-                      <div className="flex items-center justify-between">
+                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                      <div className="flex items-center justify-between h-full">
                         <h3 className="font-medium text-gray-900 dark:text-white">
                           {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
                         </h3>
@@ -601,7 +601,7 @@ const OnlineCompiler = () => {
                         </button>
                       </div>
                     </div>
-                    <div className="h-[calc(100%-3.5rem)] overflow-hidden">
+                    <div className="h-[calc(100%-4rem)] overflow-hidden">
                       {currentLanguage.isWebLanguage ? (
                         <iframe
                           srcDoc={getPreviewContent()}

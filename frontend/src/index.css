@@ -345,6 +345,23 @@
     max-width: 100%;
   }
 
+  /* Additional sidebar overflow prevention */
+  .sidebar-container {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+
+  .sidebar-container * {
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+  }
+
+  /* Prevent motion animations from causing horizontal overflow */
+  .sidebar-container .motion-div {
+    overflow: hidden !important;
+  }
+
   /* Responsive adjustments for mobile */
   @media (max-width: 768px) {
     .code-snippet {
@@ -657,6 +674,50 @@
   html {
     scrollbar-width: auto;
     scrollbar-color: #1e3a8a #f1f5f9;
+  }
+
+  /* Custom scrollbar for specific containers */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.6);
+    border-radius: 4px;
+    transition: background 0.3s ease;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.8);
+  }
+
+  /* For Firefox - custom scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.6) rgba(0, 0, 0, 0.1);
+  }
+
+  /* Dark mode custom scrollbar */
+  .dark .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(96, 165, 250, 0.6);
+  }
+
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(96, 165, 250, 0.8);
+  }
+
+  .dark .custom-scrollbar {
+    scrollbar-color: rgba(96, 165, 250, 0.6) rgba(255, 255, 255, 0.1);
   }
 
 

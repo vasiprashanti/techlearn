@@ -137,7 +137,7 @@ const XPBadge = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className={`flex items-center gap-2 px-3 py-1.5 ${levelInfo.bgColor} backdrop-blur-sm rounded-full transition-all duration-300 hover:scale-105 cursor-pointer border ${levelInfo.borderColor} opacity-70 hover:opacity-90`}
+        className={`flex items-center gap-2 px-2 py-1.5 ${levelInfo.bgColor} backdrop-blur-sm rounded-full transition-all duration-300 hover:scale-105 cursor-pointer border ${levelInfo.borderColor} opacity-70 hover:opacity-90`}
         title="Click to view XP breakdown"
       >
         <Icon className={`w-4 h-4 ${levelInfo.color}`} />
