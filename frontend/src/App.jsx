@@ -616,7 +616,9 @@ function LayoutWrapper() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
-          <Route path="/admin" element={<AdminDashboard />} />
+           <Route element={<PrivateRoute />}>
+             <Route path="/admin" element={<AdminDashboard />} />
+           </Route>
           <Route path="/about" element={<About />} />
           
         </Routes>
