@@ -80,7 +80,11 @@ const Navbar = () => {
         <nav className="hidden md:flex items-center" style={{ gap: '62px' }}>
           <Link
             to="/learn"
-            className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/learn')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-[#00184f]'
@@ -90,7 +94,11 @@ const Navbar = () => {
           </Link>
           <Link
             to="/build"
-            className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/build')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-[#00184f]'
@@ -100,7 +108,11 @@ const Navbar = () => {
           </Link>
           <Link
             to="/dashboard"
-            className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/dashboard')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-[#00184f]'
@@ -137,7 +149,7 @@ const Navbar = () => {
           ) : (
             <button
               onClick={openLogin}
-              className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+              className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
                 isDarkMode
                   ? 'text-[#e0e6f5] hover:text-white'
                   : 'text-[#00184f]'
@@ -190,7 +202,11 @@ const Navbar = () => {
           <Link
             to="/learn"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/learn')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-black hover:text-[#333]'
@@ -201,7 +217,11 @@ const Navbar = () => {
           <Link
             to="/build"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/build')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-black hover:text-[#333]'
@@ -212,7 +232,11 @@ const Navbar = () => {
           <Link
             to="/dashboard"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/dashboard')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
               isDarkMode
                 ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-black hover:text-[#333]'
@@ -250,7 +274,7 @@ const Navbar = () => {
                   closeMenu();
                   openLogin();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+                className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
                   isDarkMode
                     ? 'text-[#e0e6f5] hover:text-white'
                     : 'text-black hover:text-[#333]'
