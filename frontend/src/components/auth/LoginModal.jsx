@@ -18,6 +18,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Helper function to handle navigation based on user role
+  const navigateBasedOnRole = (userData) => {
+   
+    if (userData.role==="admin") {
+      navigate("/admin");
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   // Handle modal close - navigate to home if user was trying to access protected route
   const handleClose = () => {
     if (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')) {
@@ -45,8 +55,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       if (response.ok && data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userData', JSON.stringify(data.user));
-        localStorage.setItem('isAdmin', 'false');
-        navigate("/dashboard");
+        localStorage.setItem('isAdmin', data.user?.isAdmin ? 'true' : 'false');
+        
+        // Navigate based on user role
+        navigateBasedOnRole(data.user);
         onClose();
       } else {
         setError(data.message || "Google sign-in failed");
@@ -73,8 +85,12 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     try {
       const result = await login(formData);
       if (result.success) {
-        localStorage.setItem('isAdmin', 'false');
-        navigate("/dashboard");
+        // Set admin status based on user data
+        const isAdmin = result.data?.user?.isAdmin || false;
+        localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+        
+        // Navigate based on user role
+        navigateBasedOnRole(result.data?.user);
         onClose();
       } else {
         setError(result.error || "Login failed");

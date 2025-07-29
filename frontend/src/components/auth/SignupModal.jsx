@@ -24,6 +24,16 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Helper function to handle navigation based on user role
+  const navigateBasedOnRole = (userData) => {
+  
+    if (userData.role==="admin") {
+      navigate("/admin");
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   // Firebase Google Sign-up
   const handleGoogleSignUp = async () => {
     try {
@@ -43,8 +53,10 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
       if (response.ok && data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userData', JSON.stringify(data.user));
-        localStorage.setItem('isAdmin', 'false');
-        navigate("/dashboard");
+        localStorage.setItem('isAdmin', data.user?.isAdmin ? 'true' : 'false');
+        
+        // Navigate based on user role
+        navigateBasedOnRole(data.user);
         onClose();
       } else {
         setError(data.message || "Google sign-up failed");
@@ -68,9 +80,12 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
         }
         if (result.data?.user) {
           localStorage.setItem('userData', JSON.stringify(result.data.user));
+          localStorage.setItem('isAdmin', result.data.user?.isAdmin ? 'true' : 'false');
         }
         console.log("Signed up:", result.data);
-        navigate("/dashboard");
+        
+        // Navigate based on user role
+        navigateBasedOnRole(result.data?.user);
         onClose();
       } else {
         setError(result.error || "Signup failed");
