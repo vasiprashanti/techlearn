@@ -1,3 +1,24 @@
+/*
+ * ExerciseDetail Component
+ *
+ * Current Changes:
+ * - Removed external container styling
+ * - Moved Run Code button to top right of output area
+ * - Removed Submit button (backend not connected)
+ * - Made header areas gradient
+ * - Removed symbols before output text
+ * - Extended box widths to fit screen
+ * - Removed live preview icon
+ *
+ * Next Phase Layout (TODO):
+ * For laptops: Split into 2 parts
+ * - Left side: Theory area
+ * - Right side: Split into two sections
+ *   - Top half: Code area
+ *   - Bottom half: Output area
+ * - Both sections must have draggers to adjust window size
+ */
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -322,7 +343,7 @@ ${backendExercise.exerciseAnswers}
         }
       `}</style>
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="w-full px-4">
         {/* Back Button */}
         <motion.button
           initial={{ opacity: 0, x: -20 }}
@@ -468,7 +489,7 @@ ${backendExercise.exerciseAnswers}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/20 overflow-hidden"
+          className="w-full"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -511,21 +532,25 @@ ${backendExercise.exerciseAnswers}
 
           {/* Combined Code & Preview Tab (Desktop Only) */}
           {activeTab === 'codePreview' && (
-            <div className="h-[700px] flex gap-4 p-4">
+            <div className="h-[700px] flex gap-2 p-2">
               {/* Left Side - Code Editor (50%) */}
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Code Editor Header */}
-                <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
                     <Code className="w-4 h-4" />
                     <span className="font-medium">Code Editor</span>
                   </div>
-                  <button
-                    onClick={resetCode}
-                    className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={runCode}
+                      disabled={isRunning}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
+                    >
+                      {isRunning ? 'Running...' : 'Run Code'}
+                      <Play className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Monaco Editor */}
@@ -634,33 +659,28 @@ ${backendExercise.exerciseAnswers}
                   />
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons - Removed Submit button */}
                 <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex gap-3">
-                  <button
-                    onClick={runCode}
-                    disabled={isRunning}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                  >
-                    <Play className="w-4 h-4" />
-                    {isRunning ? 'Running...' : 'Run Code'}
-                  </button>
-                  <button
-                    onClick={submitCode}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4" />
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
-                  </button>
+                  {/* Submit button removed as backend is not connected */}
                 </div>
               </div>
 
               {/* Right Side - Live Preview (50%) */}
               <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Output Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
-                  <Terminal className="w-4 h-4" />
-                  <span className="font-medium">Output</span>
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4" />
+                    <span className="font-medium">Output</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={resetCode}
+                      className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Output Content */}
@@ -669,17 +689,11 @@ ${backendExercise.exerciseAnswers}
                     {output ? (
                       <>
                         <div className="mb-4">
-                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Your Output:
-                          </h4>
                           <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto">
                             {output}
                           </pre>
                         </div>
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Expected Output:
-                          </h4>
                           <pre className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto border border-green-200 dark:border-green-700">
                             {exercise?.expectedOutput}
                           </pre>
@@ -687,9 +701,8 @@ ${backendExercise.exerciseAnswers}
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-center">
-                        <Eye className="w-16 h-16 text-gray-500 mb-4" />
                         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          Live Preview
+                          Output
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400">
                           Run your code to see the output here.
@@ -706,16 +719,21 @@ ${backendExercise.exerciseAnswers}
           {activeTab === 'compiler' && (
             <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* Code Editor Header */}
-              <div className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2">
+                  <Code className="w-4 h-4" />
                   <span className="font-medium">Code Editor</span>
                 </div>
-                <button
-                  onClick={resetCode}
-                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={runCode}
+                    disabled={isRunning}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
+                  >
+                    {isRunning ? 'Running...' : 'Run Code'}
+                    <Play className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Monaco Editor */}
@@ -824,24 +842,9 @@ ${backendExercise.exerciseAnswers}
                 />
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - Removed Submit and Run Code buttons */}
               <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex gap-3">
-                <button
-                  onClick={runCode}
-                  disabled={isRunning}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                >
-                  <Play className="w-4 h-4" />
-                  {isRunning ? 'Running...' : 'Run Code'}
-                </button>
-                <button
-                  onClick={submitCode}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
-                </button>
+                {/* Run Code button moved to header, Submit button removed as backend is not connected */}
               </div>
             </div>
           )}
@@ -850,9 +853,19 @@ ${backendExercise.exerciseAnswers}
           {activeTab === 'preview' && (
             <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* Output Header */}
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
-                <Terminal className="w-4 h-4" />
-                <span className="font-medium">Output</span>
+              <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-4 h-4" />
+                  <span className="font-medium">Output</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={resetCode}
+                    className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Terminal Output */}
@@ -860,25 +873,22 @@ ${backendExercise.exerciseAnswers}
                 <div className="p-4 h-full overflow-auto custom-scrollbar">
                   {output ? (
                     <>
-                      <div className="text-green-600 dark:text-green-400 mb-2">$ node main.js</div>
                       <div className="text-gray-900 dark:text-white whitespace-pre-wrap">
                         {output}
                       </div>
                       {exercise?.expectedOutput && (
                         <div className="mt-4 pt-2 border-t border-gray-300 dark:border-gray-700">
-                          <div className="text-gray-600 dark:text-gray-400 text-xs mb-1">Expected Output:</div>
                           <div className="text-yellow-600 dark:text-yellow-400">{exercise.expectedOutput}</div>
                         </div>
                       )}
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center">
-                      <Eye className="w-16 h-16 text-gray-500 mb-4" />
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                        Live Preview
+                        Output
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400">
-                        Run your code in the Compiler tab to see the output here.
+                        Run your code to see the output here.
                       </p>
                     </div>
                   )}

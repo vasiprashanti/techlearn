@@ -156,7 +156,7 @@ export const insertJavaMarkdownContent = async () => {
 
       coreJavaCourse = new Course({
         title: "Core Java",
-        description: "Learn the fundamentals of Java programming.",
+        description: "Sharpen your Java skills with practical questions for college, placements, or daily practice.",
         level: "Beginner",
         topics: coreJavaTopics,
       });

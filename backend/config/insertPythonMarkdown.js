@@ -111,7 +111,7 @@ export const insertPythonMarkdownContent = async () => {
       }));
       pythonCourse = new Course({
         title: "Python",
-        description: "Learn the fundamentals of Python programming.",
+        description: "Level up your Python with focused problems for interviews, academics, or everyday coding.",
         level: "Beginner",
         topics: pythonTopics,
       });
