@@ -18,7 +18,10 @@ import LoadingScreen from './components/LoadingScreen'
 
 //Admin Dashboard
 import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
-import Sidebar from './components/AdminDashbaord/Admin_Sidebar'
+import Sidebar from '../src/components/AdminDashbaord/Admin_Sidebar'
+import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
+import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
+
 
 // Auth pages
 import Login from './pages/Auth/Login'
@@ -619,6 +622,8 @@ function LayoutWrapper() {
            <Route element={<PrivateRoute />}>
              <Route path="/admin" element={<AdminDashboard />} />
            </Route>
+          <Route path="/admin/courses" element={<Courses_Admin />} />
+          <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
           <Route path="/about" element={<About />} />
           
         </Routes>
