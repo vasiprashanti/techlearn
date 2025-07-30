@@ -77,13 +77,7 @@ print("Hello, World!")
 x = 10
 y = 20
 result = x + y
-print(f"The sum of {x} and {y} is {result}")
-
-# List operations
-numbers = [1, 2, 3, 4, 5]
-squared = [n**2 for n in numbers]
-print(f"Original: {numbers}")
-print(f"Squared: {squared}")`,
+print(f"The sum of {x} and {y} is {result}")`,
     monacoLanguage: 'python'
   },
   java: {
@@ -101,14 +95,6 @@ public class Main {
         int y = 20;
         int result = x + y;
         System.out.println("The sum of " + x + " and " + y + " is " + result);
-
-        // Array operations
-        int[] numbers = {1, 2, 3, 4, 5};
-        System.out.print("Original: ");
-        for (int num : numbers) {
-            System.out.print(num + " ");
-        }
-        System.out.println();
     }
 }`,
     monacoLanguage: 'java'

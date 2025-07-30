@@ -312,20 +312,25 @@ const Courses = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             className="pb-16 pt-8 md:pt-0"
           >
-            <div className="flex items-center gap-3 mb-12">
-              <h2
-                ref={liveBatchesHeadingRef}
-                className={`font-poppins text-3xl font-medium brand-heading-primary ${isLiveBatchesHeadingInViewport ? 'in-viewport' : ''} uppercase tracking-wider`}
-              >
-                LIVE BATCHES
-              </h2>
-              <span className="relative">
-                <Dot
-                  className="w-7 h-7 text-red-500"
-                  style={{ filter: "drop-shadow(0 0 6px #f00)" }}
-                />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 bg-red-500 rounded-full opacity-80 animate-pulse"></span>
-              </span>
+            <div className="mb-12">
+              <div className="flex items-center gap-3 mb-3">
+                <h2
+                  ref={liveBatchesHeadingRef}
+                  className={`font-poppins text-3xl font-medium brand-heading-primary ${isLiveBatchesHeadingInViewport ? 'in-viewport' : ''} uppercase tracking-wider`}
+                >
+                  LIVE BATCHES
+                </h2>
+                <span className="relative">
+                  <Dot
+                    className="w-7 h-7 text-red-500"
+                    style={{ filter: "drop-shadow(0 0 6px #f00)" }}
+                  />
+                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 bg-red-500 rounded-full opacity-80 animate-pulse"></span>
+                </span>
+              </div>
+              <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+                Interactive sessions with hands-on guidance
+              </p>
             </div>
 
             {/* Netflix-style carousel for cards */}
@@ -349,11 +354,7 @@ const Courses = () => {
                         batch={batch}
                         index={index}
                         onWhatsAppClick={() => handleWhatsAppClick(batch.title)}
-                        onGetStarted={() => {
-                          sessionStorage.setItem('returnToLiveBatches', 'true');
-                          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                          setTimeout(() => navigate(`/learn/batches/${batch.id}`), 100);
-                        }}
+                        onGetStarted={() => handleWhatsAppClick(batch.title)}
                       />
                     </CarouselItem>
                   ))}
@@ -445,24 +446,10 @@ const LiveBatchCard = ({ batch, index, onWhatsAppClick, onGetStarted }) => {
         </p>
       </div>
 
-      {/* Price and Actions - Fixed height section */}
-      <div className="h-12 flex items-center justify-between mb-4">
-        <div className="text-2xl font-bold text-gray-900 dark:text-white">
-          {batch.price}
-        </div>
-        <button
-          onClick={onWhatsAppClick}
-          className="flex items-center gap-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 transition-colors duration-300"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span className="text-sm">WhatsApp</span>
-        </button>
-      </div>
-
       {/* Get Started Button - Fixed height */}
       <button
         onClick={onGetStarted}
-        className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg"
+        className="w-full h-12 bg-blue-800 hover:bg-blue-900 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg"
       >
         Get Started
       </button>
