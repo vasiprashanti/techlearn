@@ -329,7 +329,7 @@ const Courses = () => {
                 </span>
               </div>
               <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-                Interactive sessions with hands-on guidance
+              Accelerate your learning with expert-led classes.
               </p>
             </div>
 
