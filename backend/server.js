@@ -165,3 +165,5 @@ app.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔒 CORS: Dynamic origin matching enabled`);
 });
+
+//api route
