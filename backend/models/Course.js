@@ -29,7 +29,6 @@ const courseSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Topic", // Reference to Topic model
-        required: true,
       },
     ],
     numTopics: {
