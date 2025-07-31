@@ -4,21 +4,19 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
-import { insertJavaMarkdownContent } from "./config/insertJavaMarkdown.js";
-import { insertPythonMarkdownContent } from "./config/insertPythonMarkdown.js";
 
-// Route imports for techlearn
-import exerciseRoutes from './routes/exerciseRoutes.js';
-import courseRoutes from './routes/courseRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-import userProgressRoutes from './routes/userProgressRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
-import certificationRoutes from './routes/certificationRoutes.js';
-import compilerRoutes from './routes/compilerRoutes.js';
-import xpRoutes from './routes/xpRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js';
-import dashboardProjectRoutes from './routes/dashboardProjectRoutes.js';
+// Route imports
+import exerciseRoutes from "./routes/exerciseRoutes.js";
+import courseRoutes from "./routes/courseRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import userProgressRoutes from "./routes/userProgressRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
+import certificationRoutes from "./routes/certificationRoutes.js";
+import compilerRoutes from "./routes/compilerRoutes.js";
+import xpRoutes from "./routes/xpRoutes.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
+import dashboardProjectRoutes from "./routes/dashboardProjectRoutes.js";
 
 import miniRouter from "./routes/mini.js";
 import majorRouter from "./routes/major.js";
@@ -35,22 +33,16 @@ const app = express();
 // 🧠 MongoDB Connection
 await connectDB();
 
-// Seed courses with markdown content
-await insertJavaMarkdownContent();
-await insertPythonMarkdownContent();
-
 // 🌐 CORS Configuration
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const devOrigins = [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "https://techlearnsolutions.com"
-    ];
-
+    const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
     if (devOrigins.includes(origin)) return callback(null, true);
+
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
+      return callback(null, true);
 
     if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return callback(null, true);
 
@@ -60,7 +52,6 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
 };
-
 
 app.use(cors(corsOptions));
 
@@ -81,23 +72,22 @@ app.use(
   )
 );
 
-
-app.get('/', (req, res) => {
-  res.send('Techlearn Backend API is running!');
+app.get("/", (req, res) => {
+  res.send("Techlearn Backend API is running!");
 });
 
 // ✅ AUTH + LEARN Routes
-app.use('/api/exercises', exerciseRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/user-progress', userProgressRoutes);
-app.use('/api/certificate', paymentRoutes);
-app.use('/api/certification', certificationRoutes);
-app.use('/api/compiler', compilerRoutes);
-app.use('/api/xp', xpRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api', dashboardProjectRoutes);
+app.use("/api/exercises", exerciseRoutes);
+app.use("/api/courses", courseRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/user-progress", userProgressRoutes);
+app.use("/api/certificate", paymentRoutes);
+app.use("/api/certification", certificationRoutes);
+app.use("/api/compiler", compilerRoutes);
+app.use("/api/xp", xpRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api", dashboardProjectRoutes);
 
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
@@ -165,5 +155,3 @@ app.listen(PORT, () => {
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`🔒 CORS: Dynamic origin matching enabled`);
 });
-
-//api route

@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import { sendMail } from "../utils/mailer.js"; // ✅ Correct named import
+import { sendMail } from "../utils/mailer.js";
 
 // User submits transaction ID for club membership
 export const submitTransactionId = async (req, res) => {

@@ -1,27 +1,16 @@
+import User from "../models/User.js";
 import UserProgress from "../models/UserProgress.js";
 import Exercise from "../models/Exercise.js";
 import Quiz from "../models/Quiz.js";
-
-// Helper function to calculate total possible XP
-const calculateTotalPossibleXP = async () => {
-  // Calculate total exercises * 10 (10 XP per exercise)
-  const totalExercises = await Exercise.countDocuments();
-  const totalExerciseXP = totalExercises * 10;
-
-  // Calculate total quiz questions * 10 (10 XP per question)
-  const allQuizzes = await Quiz.find();
-  let totalQuizQuestions = 0;
-  for (const quiz of allQuizzes) {
-    totalQuizQuestions += quiz.questions.length;
-  }
-  const totalCourseXP = totalQuizQuestions * 10;
-
-  return { totalCourseXP, totalExerciseXP };
-};
+import Topic from "../models/Topic.js";
+import mongoose from "mongoose";
 
 export const getDashboardData = async (req, res) => {
   try {
     const userId = req.user._id;
+    //fetching the user
+    const user = await User.findById(userId);
+
     const progress = await UserProgress.findOne({ userId }).populate(
       "completedExercises.exerciseId",
       "topicTitle"
@@ -42,6 +31,7 @@ export const getDashboardData = async (req, res) => {
           completedExercises: 0,
           progressPercent: 0,
         },
+        avatar: user.avatar,
         quizProgress: {
           totalQuizzes: 0, // Show 0 initially
           completedQuizzes: 0,
@@ -115,6 +105,7 @@ export const getDashboardData = async (req, res) => {
         completedExercises: completedExercisesCount,
         progressPercent: exercisePercent,
       },
+      avatar: user.avatar,
     });
   } catch (error) {
     console.error("Dashboard data fetch error:", error);

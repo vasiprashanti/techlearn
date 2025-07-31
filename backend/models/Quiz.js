@@ -2,17 +2,9 @@ import mongoose from "mongoose";
 
 const quizSchema = new mongoose.Schema(
   {
-    courseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
-      required: true,
-    },
     topicId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-    },
-    topicTitle: {
-      type: String,
+      ref: "Topic",
       required: true,
     },
     questions: [
@@ -33,6 +25,7 @@ const quizSchema = new mongoose.Schema(
         },
         explanation: {
           type: String,
+          required: false,
         },
       },
     ],

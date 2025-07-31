@@ -2,7 +2,9 @@ import mongoose from "mongoose";
 import Payment from "../models/Payment.js";
 import Course from "../models/Course.js";
 import Quiz from "../models/Quiz.js";
+import Exercise from "../models/Exercise.js";
 import UserProgress from "../models/UserProgress.js";
+import Topic from "../models/Topic.js";
 import { sendPaymentStatusEmail } from "../utils/sendCertificate.js";
 
 // Helper function to check eligibility (without sending response)
@@ -15,21 +17,28 @@ const getEligibilityData = async (userId, courseId) => {
   const course = await Course.findById(courseId);
   if (!course) throw new Error("Course not found");
 
-  // Calculate total possible XP
+  // Calculate total possible XP FOR THIS COURSE ONLY
   let totalQuizXP = 0;
   let totalExerciseXP = 0;
-  for (const topic of course.topics) {
+
+  // Get topics for this course
+  const topics = await Topic.find({ _id: { $in: course.topicIds } });
+
+  // Calculate quiz XP for this course
+  for (const topic of topics) {
     if (topic.quizId) {
       const quiz = await Quiz.findById(topic.quizId);
       if (quiz) totalQuizXP += quiz.questions.length * 10;
     }
-    if (topic.exerciseId) {
-      totalExerciseXP += 10;
-    }
   }
+
+  // FIX: Calculate exercise XP for THIS COURSE ONLY
+  const exercisesForThisCourse = await Exercise.countDocuments({ courseId });
+  totalExerciseXP = exercisesForThisCourse * 10;
+
   const totalPossibleXP = totalQuizXP + totalExerciseXP;
 
-  // Fetch user progress
+  // Fetch user progress FOR THIS COURSE ONLY
   const userProgress = await UserProgress.findOne({ userId });
   const courseIdStr = courseId.toString();
   const userQuizXP = userProgress?.courseXP.get(courseIdStr) || 0;
@@ -37,7 +46,6 @@ const getEligibilityData = async (userId, courseId) => {
   const userTotalXP = userQuizXP + userExerciseXP;
 
   // Set eligibility threshold (e.g., 80%)
-  // Removed requiredXP as per user request
   return {
     eligible: userTotalXP >= Math.floor(totalPossibleXP * 0.8),
     userTotalXP,

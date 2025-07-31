@@ -7,7 +7,7 @@ export const addXP = async (req, res) => {
   // } testing what we are getting after hitting the api endpoints
 
   const { source, points } = req.body;
-  // ✅ Fix: Use req.user._id instead of req.user.id
+  //  Fix: Use req.user._id instead of req.user.id
   const userId = req.user._id;
 
   try {

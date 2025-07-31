@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     },
     lastName: {
       type: String,
+      required: true,
       trim: true,
     },
     email: {
@@ -21,6 +22,7 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
+      required: true,
     },
     role: {
       type: String,
@@ -35,10 +37,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    photoUrl: {
+    avatar: {
       type: String,
-      default: "/profile_avatars/avatar1.png", // ✅ Default avatar
+      default: "",
     },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },

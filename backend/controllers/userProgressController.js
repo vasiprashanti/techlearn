@@ -1,6 +1,6 @@
+import mongoose from "mongoose";
 import UserProgress from "../models/UserProgress.js";
 import Quiz from "../models/Quiz.js";
-import Course from "../models/Course.js";
 import Exercise from "../models/Exercise.js";
 
 // Check if a question has already been answered
@@ -12,7 +12,6 @@ export const checkIfQuestionAnswered = async ({
   let userProgress = await UserProgress.findOne({ userId });
   if (!userProgress) return { answered: false };
 
-  // Check if this specific question has already been answered
   const answered = userProgress.answeredQuestions.get(quizId.toString()) || [];
   if (answered.map((id) => id.toString()).includes(questionId.toString())) {
     return { error: "You have already answered this question." };
@@ -37,14 +36,12 @@ export const recordQuizAttempt = async ({
       courseXP: new Map(),
       totalCourseXP: 0,
       answeredQuestions: new Map(),
-      // ✅ Add missing fields for consistency
       exerciseXP: new Map(),
       totalExerciseXP: 0,
       completedExercises: [],
     });
   }
 
-  // ✅ Consistent string conversion
   const quizIdStr = quizId.toString();
   const courseIdStr = courseId.toString();
 
@@ -53,14 +50,20 @@ export const recordQuizAttempt = async ({
   answered.push(questionId);
   userProgress.answeredQuestions.set(quizIdStr, answered);
 
-  // Add XP for this question
+  // Add XP for this question (earned XP, not total possible)
   const currentCourseXP = userProgress.courseXP.get(courseIdStr) || 0;
   userProgress.courseXP.set(courseIdStr, currentCourseXP + xp);
 
-  // Recalculate total course XP
-  userProgress.totalCourseXP = Array.from(
-    userProgress.courseXP.values()
-  ).reduce((sum, xp) => sum + xp, 0);
+  //  FIX: Calculate GLOBAL totals across ALL courses
+  const allQuizzes = await Quiz.find();
+  let totalPossibleQuizXP = 0;
+  for (const quiz of allQuizzes) {
+    totalPossibleQuizXP += quiz.questions.length * 10; // 10 XP per question
+  }
+  userProgress.totalCourseXP = totalPossibleQuizXP;
+
+  const totalExercisesGlobally = await Exercise.countDocuments();
+  userProgress.totalExerciseXP = totalExercisesGlobally * 10; // 10 XP per exercise
 
   await userProgress.save();
 
@@ -68,12 +71,16 @@ export const recordQuizAttempt = async ({
   const quiz = await Quiz.findById(quizId);
   const isQuizComplete = quiz && answered.length === quiz.questions.length;
 
-  // ✅ Mark quiz as completed when all questions are answered
   if (
     isQuizComplete &&
-    !userProgress.completedQuizzes.some((id) => id.toString() === quizIdStr)
+    !userProgress.completedQuizzes.some(
+      (item) => item.quizId && item.quizId.toString() === quizIdStr
+    )
   ) {
-    userProgress.completedQuizzes.push(quizId);
+    userProgress.completedQuizzes.push({
+      quizId: new mongoose.Types.ObjectId(quizId),
+      completedAt: new Date(),
+    });
     await userProgress.save();
   }
 
@@ -85,31 +92,108 @@ export const recordQuizAttempt = async ({
   };
 };
 
-// Get Current Authenticated User's Progress
+export const recordExerciseAttempt = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { courseId, exerciseId, questionId, xp } = req.body;
+
+    let userProgress = await UserProgress.findOne({ userId });
+
+    if (!userProgress) {
+      userProgress = new UserProgress({
+        userId,
+        exerciseXP: new Map(),
+        totalExerciseXP: 0,
+        completedExercises: [],
+        courseXP: new Map(),
+        totalCourseXP: 0,
+        completedQuizzes: [],
+        answeredQuestions: new Map(),
+      });
+    }
+
+    const courseIdStr = courseId.toString();
+    const currentXP = userProgress.exerciseXP.get(courseIdStr) || 0;
+    userProgress.exerciseXP.set(courseIdStr, currentXP + xp);
+
+    //  FIX: Calculate GLOBAL totals across ALL courses
+    const allQuizzes = await Quiz.find();
+    let totalPossibleQuizXP = 0;
+    for (const quiz of allQuizzes) {
+      totalPossibleQuizXP += quiz.questions.length * 10; // 10 XP per question
+    }
+    userProgress.totalCourseXP = totalPossibleQuizXP;
+
+    const totalExercisesGlobally = await Exercise.countDocuments();
+    userProgress.totalExerciseXP = totalExercisesGlobally * 10; // 10 XP per exercise
+
+    // Use correct schema structure for exercise completion
+    if (
+      !userProgress.completedExercises.some(
+        (item) => item.exerciseId && item.exerciseId.toString() === exerciseId
+      )
+    ) {
+      userProgress.completedExercises.push({
+        exerciseId: new mongoose.Types.ObjectId(exerciseId),
+        completedAt: new Date(),
+      });
+    }
+
+    await userProgress.save();
+
+    return res
+      .status(200)
+      .json({ success: true, totalExerciseXP: userProgress.totalExerciseXP });
+  } catch (error) {
+    console.error("Error in recordExerciseAttempt:", error);
+    return res
+      .status(500)
+      .json({ message: "Failed to record exercise attempt" });
+  }
+};
+
 export const getUserProgress = async (req, res) => {
   const userId = req.user._id;
 
   try {
-    // ✅ Include answeredQuestions and completedExercises in the select
-    const userProgress = await UserProgress.findOne({ userId }).select(
-      "courseXP exerciseXP totalCourseXP totalExerciseXP completedQuizzes answeredQuestions completedExercises"
-    );
+    const userProgress = await UserProgress.findOne({ userId });
 
     if (!userProgress) {
+      //  Calculate global totals even for new users
+      const allQuizzes = await Quiz.find();
+      let totalPossibleQuizXP = 0;
+      for (const quiz of allQuizzes) {
+        totalPossibleQuizXP += quiz.questions.length * 10;
+      }
+
+      const totalExercisesGlobally = await Exercise.countDocuments();
+      const totalPossibleExerciseXP = totalExercisesGlobally * 10;
+
       return res.status(200).json({
         courseXP: {},
         exerciseXP: {},
-        totalCourseXP: 0,
-        totalExerciseXP: 0,
+        totalCourseXP: totalPossibleQuizXP,
+        totalExerciseXP: totalPossibleExerciseXP,
         completedQuizzes: [],
-        answeredQuestions: {}, // ✅ Add this
-        completedExercises: [], // ✅ Add this
+        answeredQuestions: {},
+        completedExercises: [],
       });
     }
 
-    // Recalculate totals to ensure consistency
-    let recalculatedTotalCourseXP = 0;
-    let recalculatedTotalExerciseXP = 0;
+    // Update global totals every time user progress is fetched
+    const allQuizzes = await Quiz.find();
+    let totalPossibleQuizXP = 0;
+    for (const quiz of allQuizzes) {
+      totalPossibleQuizXP += quiz.questions.length * 10;
+    }
+
+    const totalExercisesGlobally = await Exercise.countDocuments();
+    const totalPossibleExerciseXP = totalExercisesGlobally * 10;
+
+    // Update the stored values
+    userProgress.totalCourseXP = totalPossibleQuizXP;
+    userProgress.totalExerciseXP = totalPossibleExerciseXP;
+    await userProgress.save();
 
     // Convert Maps to plain objects for JSON response
     const courseXPObject = {};
@@ -117,15 +201,13 @@ export const getUserProgress = async (req, res) => {
 
     for (const [courseId, xp] of userProgress.courseXP) {
       courseXPObject[courseId] = xp;
-      recalculatedTotalCourseXP += xp;
     }
 
     for (const [courseId, xp] of userProgress.exerciseXP) {
       exerciseXPObject[courseId] = xp;
-      recalculatedTotalExerciseXP += xp;
     }
 
-    // ✅ Convert answeredQuestions Map to plain object
+    // Convert answeredQuestions Map to plain object
     const answeredQuestionsObject = {};
     if (userProgress.answeredQuestions) {
       for (const [quizId, questionIds] of userProgress.answeredQuestions) {
@@ -139,71 +221,14 @@ export const getUserProgress = async (req, res) => {
       _id: userProgress._id,
       courseXP: courseXPObject,
       exerciseXP: exerciseXPObject,
-      totalCourseXP: recalculatedTotalCourseXP,
-      totalExerciseXP: recalculatedTotalExerciseXP,
+      totalCourseXP: userProgress.totalCourseXP,
+      totalExerciseXP: userProgress.totalExerciseXP,
       completedQuizzes: userProgress.completedQuizzes || [],
-      answeredQuestions: answeredQuestionsObject, // ✅ Include this
-      completedExercises: userProgress.completedExercises || [], // ✅ Include this
+      answeredQuestions: answeredQuestionsObject,
+      completedExercises: userProgress.completedExercises || [],
     });
   } catch (err) {
     console.error("User Progress Fetch Error:", err.message);
     return res.status(500).json({ message: "Failed to fetch user progress" });
-  }
-};
-
-// recordExerciseAttempt route
-
-export const recordExerciseAttempt = async (req, res) => {
-  try {
-    // ✅ Fix: use req.user._id instead of req.user.userId
-    const userId = req.user._id;
-    const { courseId, exerciseId, questionId, xp } = req.body;
-
-    let userProgress = await UserProgress.findOne({ userId });
-
-    if (!userProgress) {
-      userProgress = new UserProgress({
-        userId,
-        exerciseXP: new Map(),
-        totalExerciseXP: 0,
-        completedExercises: [],
-        // ✅ Add missing fields for consistency
-        courseXP: new Map(),
-        totalCourseXP: 0,
-        completedQuizzes: [],
-        answeredQuestions: new Map(),
-      });
-    }
-
-    // ✅ Convert courseId to string for consistency
-    const courseIdStr = courseId.toString();
-
-    // Add XP for this exercise question
-    const currentXP = userProgress.exerciseXP.get(courseIdStr) || 0;
-    userProgress.exerciseXP.set(courseIdStr, currentXP + xp);
-
-    // ✅ Recalculate total exercise XP from all courses
-    userProgress.totalExerciseXP = Array.from(
-      userProgress.exerciseXP.values()
-    ).reduce((sum, xp) => sum + xp, 0);
-
-    if (
-      !userProgress.completedExercises.some(
-        (id) => id.toString() === exerciseId
-      )
-    ) {
-      userProgress.completedExercises.push(exerciseId);
-    }
-
-    await userProgress.save();
-
-    return res
-      .status(200)
-      .json({ success: true, totalExerciseXP: userProgress.totalExerciseXP });
-  } catch (error) {
-    console.error("Error in recordExerciseAttempt:", error);
-    return res
-      .status(500)
-      .json({ message: "Failed to record exercise attempt" });
   }
 };

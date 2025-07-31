@@ -12,11 +12,12 @@ export const generateCertificateController = async (req, res) => {
     const { firstName, lastName } = req.user;
     const name = `${firstName} ${lastName}`.trim();
 
-
     // Generate Certificate ID
     const certificateId = `TLS-${uuidv4().split("-")[0].toUpperCase()}`;
 
-    const templatePath = `./templates/template-${courseName.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+    const templatePath = `./templates/template-${courseName
+      .toLowerCase()
+      .replace(/\s+/g, "-")}.pdf`;
     const fontPath = path.resolve("./fonts/BDScript-Regular.ttf");
 
     const templateBytes = fs.readFileSync(templatePath);
@@ -37,7 +38,7 @@ export const generateCertificateController = async (req, res) => {
 
     // Calculate center X
     const x = (pageWidth - textWidth) / 2;
-    const y = 250; 
+    const y = 250;
 
     firstPage.drawText(name, {
       x,
@@ -49,10 +50,10 @@ export const generateCertificateController = async (req, res) => {
 
     // ➤ Certificate ID - Bottom Right
     firstPage.drawText(`${certificateId}`, {
-      x: 628,       // adjust depending on template width
+      x: 628, // adjust depending on template width
       y: 103,
       size: 10,
-      color: rgb(14 / 255, 25 / 255, 109 / 255)
+      color: rgb(14 / 255, 25 / 255, 109 / 255),
     });
 
     // ➤ Issue Date - Bottom Left
@@ -60,7 +61,7 @@ export const generateCertificateController = async (req, res) => {
       x: 275,
       y: 103,
       size: 10,
-      color: rgb(14 / 255, 25 / 255, 109 / 255)
+      color: rgb(14 / 255, 25 / 255, 109 / 255),
     });
 
     const finalPdfBuffer = await pdfDoc.save();
@@ -68,28 +69,29 @@ export const generateCertificateController = async (req, res) => {
     // Upload to Cloudinary
     const fileName = `certificates/${courseName}-${name}.pdf`;
     const uploadResult = await uploadToCloudinary(finalPdfBuffer, fileName);
-    const cloudinaryUrl = uploadResult.secure_url; 
+    const cloudinaryUrl = uploadResult.secure_url;
 
-// Send Email
-await sendCertificate({
-  name,
-  email,
-  courseName,
-  xp,
-  buffer: Buffer.from(finalPdfBuffer),
-  certificateId,
-  cloudUrl: cloudinaryUrl,
-});
+    // Send Email
+    await sendCertificate({
+      name,
+      email,
+      courseName,
+      xp,
+      buffer: Buffer.from(finalPdfBuffer),
+      certificateId,
+      cloudUrl: cloudinaryUrl,
+    });
 
-// Send response
-return res.status(200).json({
-  message: "Certificate generated and emailed successfully",
-  certificateId,
-  url: cloudinaryUrl, 
-});
-
+    // Send response
+    return res.status(200).json({
+      message: "Certificate generated and emailed successfully",
+      certificateId,
+      url: cloudinaryUrl,
+    });
   } catch (err) {
     console.error("Certificate generation error:", err);
-    return res.status(500).json({ error: "Failed to generate/send certificate" });
+    return res
+      .status(500)
+      .json({ error: "Failed to generate/send certificate" });
   }
 };
