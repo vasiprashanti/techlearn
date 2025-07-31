@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 
 export default function NewCourseForm({ onAdd }) {
-  const [form, setForm] = useState({ title: "", description: "", topics: "" });
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    topics: "",
+    level: "", // New level field
+  });
 
   const handleChange = (e) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -9,13 +14,14 @@ export default function NewCourseForm({ onAdd }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (form.title && form.description && form.topics) {
+    if (form.title && form.description && form.topics && form.level) {
       onAdd({
         title: form.title,
         description: form.description,
         topics: parseInt(form.topics, 10),
+        level: form.level, // Include level!
       });
-      setForm({ title: "", description: "", topics: "" });
+      setForm({ title: "", description: "", topics: "", level: "" });
     }
   };
 
@@ -56,6 +62,22 @@ export default function NewCourseForm({ onAdd }) {
           className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
           placeholder="Enter number of topics"
         />
+      </div>
+      {/* Level Field */}
+      <div>
+        <label className="block text-sm font-medium mb-1 text-light-text/80 dark:text-dark-text/70">Level</label>
+        <select
+          name="level"
+          value={form.level}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2 text-light-text/80 dark:text-dark-text/70 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          required
+        >
+          <option value="">Select level</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+        </select>
       </div>
       <button
         type="submit"

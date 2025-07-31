@@ -85,7 +85,7 @@ export default function Admin_Sidebar() {
                       transition
                       ${
                         active
-                          ? "bg-green-100 text-green-700 shadow-[0_4px_32px_0_rgba(44,197,94,0.08)]"
+                          ? "bg-blue-200 text-blue-700 shadow-[0_4px_32px_0_rgba(44,197,94,0.08)]"
                           : "text-light-text/90 dark:text-dark-text/70 hover:bg-blue-100 hover:text-blue-700"
                       }
                     `}
@@ -93,13 +93,13 @@ export default function Admin_Sidebar() {
                     onClick={() => setMobileOpen(false)}
                   >
                     {active && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-9 w-2 rounded-xl bg-green-500" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-9 w-2 rounded-xl bg-blue-500" />
                     )}
                     <span
                       className={`
                         z-10 flex items-center justify-center
                         text-2xl
-                        ${active ? "text-white bg-green-500 rounded-lg p-1 shadow" : ""}
+                        ${active ? "text-white bg-blue-500 rounded-lg p-1 shadow" : ""}
                         transition
                       `}
                       style={{ minWidth: 30 }}
@@ -161,7 +161,7 @@ export default function Admin_Sidebar() {
                   transition
                   ${
                     active
-                      ? "bg-green-100 text-green-700 shadow-[0_4px_32px_0_rgba(44,197,94,0.08)]"
+                      ? "bg-blue-200 text-blue-700 shadow-[0_4px_32px_0_rgba(44,197,94,0.08)]"
                       : "text-light-text/90 dark:text-dark-text/70 hover:bg-blue-100 hover:text-blue-700"
                   }
                 `}
@@ -170,13 +170,13 @@ export default function Admin_Sidebar() {
                 }}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-9 w-2 rounded-xl bg-green-500" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-9 w-2 rounded-xl bg-blue-500" />
                 )}
                 <span
                   className={`
                     z-10 flex items-center justify-center
                     text-2xl
-                    ${active ? "text-white bg-green-500 rounded-lg p-1 shadow" : ""}
+                    ${active ? "text-white bg-blue-500 rounded-lg p-1 shadow" : ""}
                     transition
                   `}
                   style={{ minWidth: 30 }}
