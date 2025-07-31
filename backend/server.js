@@ -7,7 +7,7 @@ import { connectDB } from "./config/db.js";
 import { insertJavaMarkdownContent } from "./config/insertJavaMarkdown.js";
 import { insertPythonMarkdownContent } from "./config/insertPythonMarkdown.js";
 
-// Route imports
+// Route imports for techlearn
 import exerciseRoutes from './routes/exerciseRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import userRoutes from './routes/userRoutes.js';
