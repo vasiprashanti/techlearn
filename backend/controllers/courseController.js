@@ -16,7 +16,7 @@ import {
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
-    const { title, description, level, courseStatus, numTopics } = req.body;
+    const { title, description, level, numTopics } = req.body;
 
     // Validate required fields
     if (!title || !numTopics) {
@@ -30,7 +30,6 @@ export const createCourseShell = async (req, res) => {
       title: title.trim(),
       description: description?.trim() || "No description provided",
       level: level,
-      courseStatus: courseStatus,
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
     });
@@ -46,7 +45,6 @@ export const createCourseShell = async (req, res) => {
         title: savedCourse.title,
         description: savedCourse.description,
         level: savedCourse.level,
-        courseStatus: savedCourse.courseStatus,
         numTopics: savedCourse.numTopics,
         topicIds: savedCourse.topicIds,
       },

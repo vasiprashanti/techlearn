@@ -19,12 +19,6 @@ const courseSchema = new mongoose.Schema(
       enum: ["Beginner", "Intermediate", "Advanced"],
       default: "Beginner",
     },
-    courseStatus: {
-      type: String,
-      enum: ["draft", "published"],
-      default: "draft",
-      required: true,
-    },
     topicIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
