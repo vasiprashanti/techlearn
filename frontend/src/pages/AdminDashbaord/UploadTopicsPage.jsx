@@ -3,7 +3,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { HiOutlineUpload } from "react-icons/hi";
 import { useSearchParams } from "react-router-dom";
 
-const BASE_URL = "";
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function UploadTopicsPage() {
   const [courseName, setCourseName] = useState("");

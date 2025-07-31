@@ -5,7 +5,7 @@ import NewCourseForm from "../../components/AdminDashbaord/NewCourseForm";
 import { useNavigate } from "react-router-dom";
 
 // Backend API base
-const BASE_URL = "";
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
