@@ -161,7 +161,7 @@ export const uploadExerciseFile = async (req, res) => {
 //  Clean up ALL files in uploads/temp
 export const cleanupTempFiles = async (req, res) => {
   try {
-    const uploadsDir = "uploads/temp";
+    const uploadsDir = process.env.VERCEL ? "/tmp" : "uploads/temp";
 
     if (!fs.existsSync(uploadsDir)) {
       return res.status(200).json({

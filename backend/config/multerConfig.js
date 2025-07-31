@@ -3,7 +3,8 @@ import path from "path";
 import fs from "fs";
 
 // Create uploads directory if it doesn't exist
-const uploadsDir = "uploads/temp";
+// Use /tmp for Vercel deployment, uploads/temp for local development
+const uploadsDir = process.env.VERCEL ? "/tmp" : "uploads/temp";
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
