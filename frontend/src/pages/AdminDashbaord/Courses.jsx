@@ -18,7 +18,13 @@ export default function Courses() {
     async function fetchCourses() {
       try {
         setError(null);
-        const res = await fetch(`${BASE_URL}/courses`);
+        const token = localStorage.getItem("token");
+        
+        const res = await fetch(`${BASE_URL}/courses`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
         
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
@@ -35,7 +41,7 @@ export default function Courses() {
           title: String(course.title || 'Untitled Course'),
           description: String(course.description || ''),
           level: String(course.level || ''),
-          topics: Number(course.topics) || 0,
+          topics: Number(course.numTopics || course.topics) || 0,
           _id: String(course._id || course.courseId || course.id || '')
         }));
         
@@ -51,22 +57,37 @@ export default function Courses() {
   }, []);
 
   const handleAddCourse = async (course) => {
-    // Validate course object before sending
+    // Validate course object - backend expects numTopics
     const validatedCourse = {
       title: String(course.title || ''),
       description: String(course.description || ''),
-      topics: Number(course.topics) || 0,
+      numTopics: Number(course.numTopics) || 0,
       level: String(course.level || '')
     };
-
+    
+    console.log('Sending course data:', validatedCourse);
+    
+    const token = localStorage.getItem("token");
+    
+    if (!token) {
+      alert("Authentication required. Please log in again.");
+      return;
+    }
+    
     try {
-      const res = await fetch(`${BASE_URL}/course-initiate`, {
+      const res = await fetch(`${BASE_URL}/courses/course-initiate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify(validatedCourse),
       });
       
-      if (!res.ok) throw new Error("Failed to create course");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+      }
       
       const responseData = await res.json();
       const courseId = String(responseData.courseId || '');
@@ -74,14 +95,14 @@ export default function Courses() {
       const newCourse = {
         ...validatedCourse,
         _id: courseId,
-        topics: validatedCourse.topics
+        topics: validatedCourse.numTopics // Convert to 'topics' for frontend display
       };
       
       setCourses(prevCourses => [newCourse, ...prevCourses]);
       navigate(`/admin/upload-topics?courseId=${courseId}`);
     } catch (err) {
       console.error('Error creating course:', err);
-      alert("Could not create course. Please try again.");
+      alert(`Could not create course: ${err.message}`);
     }
   };
 
@@ -110,11 +131,19 @@ export default function Courses() {
       )
     ) {
       try {
+        const token = localStorage.getItem("token");
+        
         const res = await fetch(`${BASE_URL}/courses/${courseId}`, {
           method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
         });
         
-        if (!res.ok) throw new Error('Delete request failed');
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.message || 'Delete request failed');
+        }
         
         setCourses(prevCourses => 
           prevCourses.filter(c => {
@@ -124,7 +153,7 @@ export default function Courses() {
         );
       } catch (err) {
         console.error('Error deleting course:', err);
-        alert("Deletion failed. Please try again.");
+        alert(`Deletion failed: ${err.message}`);
       }
     }
   };

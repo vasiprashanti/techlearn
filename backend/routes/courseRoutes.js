@@ -13,7 +13,7 @@ import { protect, isAdmin } from "../middleware/authMiddleware.js";
 const courseRouter = Router();
 
 // Admin routes
-courseRouter.post("/course-initiate", protect, isAdmin, createCourseShell);
+courseRouter.post("/course-initiate", protect, createCourseShell);
 courseRouter.post("/:courseId/topics", protect, isAdmin, addMultipleTopics);
 courseRouter.delete("/:courseId", protect, isAdmin, deleteCourse);
 

@@ -12,8 +12,8 @@ export default function UploadTopicsPage() {
   const [quizInputOpen, setQuizInputOpen] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [exerciseFile, setExerciseFile] = useState(null); // NEW state for exercise file
-  const [exerciseStatus, setExerciseStatus] = useState(""); // For displaying exercise file upload status
+  const [exerciseFile, setExerciseFile] = useState(null);
+  const [exerciseStatus, setExerciseStatus] = useState("");
 
   const [searchParams] = useSearchParams();
   const courseId = searchParams.get("courseId");
@@ -26,7 +26,8 @@ export default function UploadTopicsPage() {
         title: `Topic ${i + 1}: `,
         file: null,
         status: "",
-        quiz: ""
+        quizFile: null, // Changed from quiz text to quiz file
+        quizStatus: ""
       })
     );
   }, [numTopics]);
@@ -61,16 +62,20 @@ export default function UploadTopicsPage() {
     }));
   };
 
-  // quiz text change
-  const handleQuizChange = (idx, value) => {
+  // NEW: quiz file upload handler
+  const handleQuizFileUpload = (idx, file) => {
     setTopics((prev) => {
       const updated = [...prev];
-      updated[idx].quiz = value;
+      updated[idx] = {
+        ...updated[idx],
+        quizFile: file,
+        quizStatus: file ? `Quiz uploaded: ${file.name}` : "",
+      };
       return updated;
     });
   };
 
-  // New: handle exercise file input change
+  // handle exercise file input change
   const handleExerciseFileChange = (file) => {
     setExerciseFile(file);
     setExerciseStatus(file ? `Uploaded: ${file.name}` : "");
@@ -83,49 +88,133 @@ export default function UploadTopicsPage() {
     setLoading(true);
 
     try {
-      // Upload all topic files and exercise file
+      // Step 1: Upload all topic files and quiz files to /dashboard/files
       const formData = new FormData();
-      topics.forEach((t, i) => {
-        if (t.file) {
-          formData.append(`file${i}`, t.file);
+      
+      // Add topic notes files with correct field names (notesFile${index})
+      topics.forEach((topic, index) => {
+        if (topic.file) {
+          formData.append(`notesFile${index}`, topic.file);
         }
       });
+
+      // Add quiz files with field names (quizFile${index})
+      topics.forEach((topic, index) => {
+        if (topic.quizFile) {
+          formData.append(`quizFile${index}`, topic.quizFile);
+        }
+      });
+
+      // Add titles array as JSON string
+      const topicTitles = topics.map(topic => topic.title);
+      formData.append("titles", JSON.stringify(topicTitles));
+
+      // Add quiz files info (for topics that have quiz files)
+      const quizFilesInfo = topics.map((topic, index) => ({
+        index,
+        hasQuiz: !!topic.quizFile,
+        quizFileName: topic.quizFile ? topic.quizFile.name : ""
+      }));
+      formData.append("quizFilesInfo", JSON.stringify(quizFilesInfo));
+
+      const token = localStorage.getItem("token");
+      
+      // Only proceed if we have files to upload
+      if (!topics.some(t => t.file) && !exerciseFile) {
+        throw new Error("Please upload at least one file before submitting.");
+      }
+
+      // Upload files and get processed response
+      const filesRes = await fetch(`${BASE_URL}/dashboard/files`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`  
+        },
+        body: formData,  
+      });
+
+      if (!filesRes.ok) {
+        const errorText = await filesRes.text();
+        throw new Error(`Uploading files failed! ${errorText}`);
+      }
+
+      const filesData = await filesRes.json();
+      console.log("Files upload response:", filesData);
+
+      // Step 2: Upload exercise file to separate endpoint if exists
+      let exerciseData = null;
       if (exerciseFile) {
-        formData.append("exerciseFile", exerciseFile); // append exercise file with key 'exerciseFile'
-      }
+        const exerciseFormData = new FormData();
+        exerciseFormData.append("exerciseFile", exerciseFile);
 
-      if (topics.some(t => t.file) || exerciseFile) {
-        const filesRes = await fetch(`${BASE_URL}/dashboard/files`, {
+        const exerciseRes = await fetch(`${BASE_URL}/dashboard/${courseId}/exercise`, {
           method: "POST",
-          body: formData,
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: exerciseFormData,
         });
-        if (!filesRes.ok) throw new Error("Uploading files failed!");
-        // const filesData = await filesRes.json();
+
+        if (!exerciseRes.ok) {
+          const errorText = await exerciseRes.text();
+          throw new Error(`Uploading exercise file failed! ${errorText}`);
+        }
+
+        exerciseData = await exerciseRes.json();
+        console.log("Exercise upload response:", exerciseData);
       }
 
-      // POST topics to /courses/:courseId/topics
+      // Step 3: Extract topics from the response
+      const processedTopics = filesData.topics || [];
+      
+      // Step 4: Use the processed topics data for the final API call
+      const finalTopics = processedTopics.map((processedTopic, index) => {
+        const userTopic = topics[index] || {};
+        
+        return {
+          title: processedTopic.title || userTopic.title || `Topic ${index + 1}`,
+          noteFile: userTopic.file ? userTopic.file.name : "",
+          quizFile: userTopic.quizFile ? userTopic.quizFile.name : "",
+          notesFilePath: processedTopic.notesFilePath || null,
+          quizFilePath: processedTopic.quizFilePath || null,
+          index: processedTopic.index || index + 1
+        };
+      });
+
+      // Step 5: POST topics to /courses/:courseId/topics with the processed data
       const payload = {
-        topics: topics.map((t) => ({
-          title: t.title,
-          noteFile: t.file ? t.file.name : "",
-          quiz: t.quiz,
-        })),
-        // Optional: if your backend expects an exercise file name, send here
+        topics: finalTopics,
         exerciseFileName: exerciseFile ? exerciseFile.name : "",
+        processedTopics: processedTopics,
+        // Include exercise data if available
+        ...(exerciseData && { exerciseData: exerciseData }),
       };
+
       const topicsRes = await fetch(
         `${BASE_URL}/courses/${courseId}/topics`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify(payload),
         }
       );
-      if (!topicsRes.ok) throw new Error("Saving topics failed!");
+
+      if (!topicsRes.ok) {
+        const errorData = await topicsRes.json().catch(() => ({}));
+        throw new Error(errorData.message || "Saving topics failed!");
+      }
+
+      const topicsData = await topicsRes.json();
+      console.log("Topics creation response:", topicsData);
 
       setMessage("Topics and files uploaded successfully!");
+
     } catch (err) {
-      setMessage("Error uploading topics. " + err.message);
+      console.error("Upload error:", err);
+      setMessage("Error uploading topics: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -151,7 +240,7 @@ export default function UploadTopicsPage() {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Existing Course Name & Number of Topics inputs */}
+            {/* Course Name & Number of Topics inputs */}
             <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mt-6 lg:mt-8 mb-4">
               <div className="flex-1">
                 <label className="block text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">Course Name</label>
@@ -178,10 +267,10 @@ export default function UploadTopicsPage() {
               </div>
             </div>
 
-            {/* Topic Details Section with mobile/tablet cards and desktop table */}
+            {/* Topic Details Section */}
             <h2 className="text-base sm:text-lg font-semibold mt-6 lg:mt-8 mb-4 text-light-text/80 dark:text-dark-text/70">Topic Details</h2>
 
-            {/* Mobile/Tablet Card View (unchanged)... */}
+            {/* Mobile/Tablet Card View */}
             <div className="block lg:hidden space-y-4">
               {topics.map((topic, i) => (
                 <div key={i} className="bg-white/50 dark:bg-gray-800/70 rounded-lg p-4 space-y-3">
@@ -192,7 +281,7 @@ export default function UploadTopicsPage() {
                       className="text-xs px-2 py-1 rounded bg-blue-200 hover:bg-blue-300 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-900 dark:text-blue-200 font-semibold transition"
                       onClick={() => handleQuizToggle(i)}
                     >
-                      {topic.quiz ? "Edit Quiz" : "Add Quiz"}
+                      {topic.quizFile ? "Change Quiz" : "Add Quiz"}
                     </button>
                   </div>
                   <div>
@@ -206,7 +295,7 @@ export default function UploadTopicsPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Upload File</label>
+                      <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Upload Notes File</label>
                       <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-1 text-sm">
                         <HiOutlineUpload className="inline text-base" />
                         <input
@@ -225,17 +314,25 @@ export default function UploadTopicsPage() {
                     )}
                   </div>
                   {quizInputOpen[i] && (
-                    <div className="border-l-4 border-blue-300 dark:border-blue-700 pl-3 bg-blue-50/50 dark:bg-blue-900/20 rounded-r-lg py-2">
-                      <label className="block text-xs font-medium text-blue-800 dark:text-blue-200 mb-1">
-                        Quiz for this topic:
+                    <div className="border-l-4 border-green-300 dark:border-green-700 pl-3 bg-green-50/50 dark:bg-green-900/20 rounded-r-lg py-2">
+                      <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
+                        Upload Quiz File:
                       </label>
-                      <input
-                        type="text"
-                        value={topic.quiz}
-                        onChange={e => handleQuizChange(i, e.target.value)}
-                        className="w-full px-3 py-2 text-sm border border-blue-200 dark:border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-900 transition"
-                        placeholder="Enter quiz question or description"
-                      />
+                      <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1 text-sm">
+                        <HiOutlineUpload className="inline text-base" />
+                        <input
+                          type="file"
+                          accept=".md"
+                          className="hidden"
+                          onChange={e => handleQuizFileUpload(i, e.target.files?.[0] || null)}
+                        />
+                        Upload Quiz .md
+                      </label>
+                      {topic.quizStatus && (
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                          {topic.quizStatus}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -247,15 +344,15 @@ export default function UploadTopicsPage() {
               )}
             </div>
 
-            {/* Desktop Table View (unchanged)... */}
+            {/* Desktop Table View */}
             <div className="hidden lg:block rounded-xl overflow-x-auto bg-white/50 dark:bg-gray-800/70">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-white/30 dark:bg-gray-800/70">
                     <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Topic Title</th>
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Upload .md File</th>
+                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Upload Notes File</th>
                     <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Status</th>
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Quiz</th>
+                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Quiz File</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -288,27 +385,37 @@ export default function UploadTopicsPage() {
                         <td className="px-4 py-2">
                           <button
                             type="button"
-                            className="text-xs px-3 py-1 rounded bg-blue-200 hover:bg-blue-300 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-900 dark:text-blue-200 font-semibold transition"
+                            className="text-xs px-3 py-1 rounded bg-green-200 hover:bg-green-300 dark:bg-green-800 dark:hover:bg-green-700 text-green-900 dark:text-green-200 font-semibold transition"
                             onClick={() => handleQuizToggle(i)}
                           >
-                            {topic.quiz ? "Edit Quiz" : "Add Quiz"}
+                            {topic.quizFile ? "Change Quiz" : "Add Quiz"}
                           </button>
                         </td>
                       </tr>
                       {quizInputOpen[i] && (
                         <tr>
-                          <td colSpan={4} className="pl-8 border-l-4 border-blue-300 dark:border-blue-700 bg-transparent">
-                            <div className="flex flex-col gap-1 py-2">
-                              <label className="ml-2 font-medium text-xs text-blue-800 dark:text-blue-100 mb-1">
-                                Quiz for this topic:
+                          <td colSpan={4} className="pl-8 border-l-4 border-green-300 dark:border-green-700 bg-transparent">
+                            <div className="flex flex-col gap-2 py-2">
+                              <label className="ml-2 font-medium text-xs text-green-800 dark:text-green-100 mb-1">
+                                Upload Quiz File:
                               </label>
-                              <input
-                                type="text"
-                                value={topic.quiz}
-                                onChange={e => handleQuizChange(i, e.target.value)}
-                                className="w-full px-3 py-2 border border-blue-200 dark:border-blue-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white dark:bg-gray-900 transition text-sm"
-                                placeholder="Enter quiz question or description"
-                              />
+                              <div className="flex items-center gap-4">
+                                <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1">
+                                  <HiOutlineUpload className="inline text-base" />
+                                  <input
+                                    type="file"
+                                    accept=".md"
+                                    className="hidden"
+                                    onChange={e => handleQuizFileUpload(i, e.target.files?.[0] || null)}
+                                  />
+                                  Upload Quiz .md
+                                </label>
+                                {topic.quizStatus && (
+                                  <span className="text-xs text-green-600 dark:text-green-400">
+                                    {topic.quizStatus}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -326,7 +433,7 @@ export default function UploadTopicsPage() {
               </table>
             </div>
 
-            {/* --- NEW Exercise file upload UI --- */}
+            {/* Exercise file upload UI */}
             <div className="mt-8 border-t border-gray-300 dark:border-gray-700 pt-6">
               <h2 className="text-base sm:text-lg font-semibold mb-3 text-light-text/80 dark:text-dark-text/70">
                 Exercise File
@@ -357,7 +464,6 @@ export default function UploadTopicsPage() {
                 {loading ? "Uploading..." : "Submit"}
               </button>
             </div>
-
           </form>
         </div>
       </div>

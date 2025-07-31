@@ -16,25 +16,39 @@ import {
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
+    console.log("Hi");
+    console.log("Request body:", req.body);
+    
     const { title, description, level, numTopics } = req.body;
+    console.log("Extracted values:", { title, description, level, numTopics });
 
     // Validate required fields
     if (!title || !numTopics) {
+      console.log("Validation failed - missing required fields");
       return res.status(400).json({
         message: "Title and number of topics are required",
       });
     }
 
+    console.log("Validation passed, creating course object...");
+
     // Create course shell with empty topicIds array
-    const newCourse = new Course({
+    const courseData = {
       title: title.trim(),
       description: description?.trim() || "No description provided",
       level: level,
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
-    });
+    };
+    
+    console.log("Course data prepared:", courseData);
+    console.log("About to create new Course instance...");
+
+    const newCourse = new Course(courseData);
+    console.log("Course instance created, about to save...");
 
     const savedCourse = await newCourse.save();
+    console.log("Course saved successfully:", savedCourse);
 
     res.status(201).json({
       success: true,
@@ -50,9 +64,15 @@ export const createCourseShell = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("ERROR in createCourseShell:", error);
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    
     res.status(500).json({
       message: "Failed to create course",
       error: error.message,
+      details: error.stack, // Remove this in production
     });
   }
 };

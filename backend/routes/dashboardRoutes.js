@@ -11,7 +11,7 @@ import upload from "../config/multerConfig.js";
 const dashboardRouter = express.Router();
 
 // Admin route to upload files
-dashboardRouter.post("/files", protect, isAdmin, upload.any(), uploadFiles);
+dashboardRouter.post("/files", protect, upload.any(), uploadFiles);
 
 // Admin route to upload exercise file for a specific course
 dashboardRouter.post(
