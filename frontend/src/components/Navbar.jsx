@@ -1,52 +1,49 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom'; // Import useLocation
-import { useTheme } from '../context/ThemeContext';
-import { useAuthModalContext } from '../context/AuthModalContext';
-import { useAuth } from '../context/AuthContext';
-import XPBadge from './XPBadge';
+import { useState, useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
+import { useAuthModalContext } from '../context/AuthModalContext'
+import { useAuth } from '../context/AuthContext'
+import XPBadge from './XPBadge'
 
 const Navbar = () => {
-  const { theme, toggleTheme } = useTheme();
-  const { openLogin } = useAuthModalContext();
-  const { isAuthenticated, user, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const { theme, toggleTheme } = useTheme()
+  const { openLogin } = useAuthModalContext()
+  const { isAuthenticated, user, logout } = useAuth()
+  const location = useLocation()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
 
-  // Get the current location object
-  const location = useLocation();
-
-  // Determine if the current path is ANY admin page (starts with /admin)
-  // This is the key change!
-  const isOnAdminPath = location.pathname.startsWith('/admin');
+  // Check if we're on the Dashboard page
+  const isDashboardPage = location.pathname === '/dashboard'
 
   // Handle scroll to hide/show navbar
   useEffect(() => {
     const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+      const currentScrollY = window.scrollY
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
-        setIsVisible(false);
+        setIsVisible(false)
       } else {
-        setIsVisible(true);
+        setIsVisible(true)
       }
 
-      setLastScrollY(currentScrollY);
-    };
+      setLastScrollY(currentScrollY)
+    }
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+    setIsMenuOpen(!isMenuOpen)
+  }
 
   const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
+    setIsMenuOpen(false)
+  }
 
-  const isDarkMode = theme === 'dark';
+  const isDarkMode = theme === 'dark'
 
   return (
     <header
@@ -71,9 +68,9 @@ const Navbar = () => {
               />
             </div>
           </Link>
-          {/* XP Badge beside logo - Desktop - Conditionally rendered */}
-          {!isOnAdminPath && (
-            <div className="hidden md:block">
+          {/* XP Badge beside logo - Desktop */}
+          {!isDashboardPage && (
+            <div className="hidden md:block ml-4">
               <XPBadge />
             </div>
           )}
@@ -81,75 +78,78 @@ const Navbar = () => {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center" style={{ gap: '62px' }}>
-          {/* Learn Link - Conditionally rendered */}
-          {!isOnAdminPath && ( 
-            <Link
-              to="/learn"
-              onClick={closeMenu}
-              className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-[#00184f]'
-              }`}
-            >
-              Learn
-            </Link>
-          )}
-
-          {/* Build Link - Conditionally rendered */}
-          {!isOnAdminPath && ( // Changed from !isAdminPage
-            <Link
-              to="/build"
-              onClick={closeMenu}
-              className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-[#00184f]'
-              }`}
-            >
-              Build
-            </Link>
-          )}
-
-          {/* Dashboard Link - Conditionally rendered */}
-          {!isOnAdminPath && ( 
-            <Link
-              to="/dashboard"
-              onClick={closeMenu}
-              className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-[#00184f]'
-              }`}
-            >
-              Dashboard
-            </Link>
-          )}
-
+          <Link
+            to="/learn"
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/learn')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-[#00184f]'
+            }`}
+          >
+            Learn
+          </Link>
+          <Link
+            to="/build"
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/build')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-[#00184f]'
+            }`}
+          >
+            Build
+          </Link>
+          <Link
+            to="/dashboard"
+            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/dashboard')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-[#00184f]'
+            }`}
+          >
+            Dashboard
+          </Link>
           {isAuthenticated ? (
-            <div className="flex items-center gap-4">
-              {location.pathname !== '/dashboard' && !isOnAdminPath && ( 
-                <span className={`text-[15px] font-extralight ${
-                  isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
-                }`}>
+            <div className="relative group">
+              {/* User Greeting with Hover Indicator */}
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all duration-300 w-24 ${
+                isDarkMode
+                  ? 'text-[#e0e6f5] group-hover:text-white group-hover:bg-white/5'
+                  : 'text-[#00184f] group-hover:text-[#001a5c] group-hover:bg-black/5'
+              }`}>
+                <span className="text-[15px] font-extralight">
                   Hi, {user?.firstName || user?.email || 'User'}
                 </span>
-              )}
-              <button
-                onClick={logout}
-                className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+              </div>
+
+              {/* Compact Dropdown Menu */}
+              <div className={`absolute top-full right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0 z-50`}>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-b-lg cursor-pointer transition-all duration-300 whitespace-nowrap w-24 ${
                   isDarkMode
-                    ? 'text-[#e0e6f5] hover:text-white'
-                    : 'text-[#00184f]'
+                    ? 'text-[#e0e6f5] hover:text-white hover:bg-white/5'
+                    : 'text-[#00184f] hover:text-[#001a5c] hover:bg-black/5'
                 }`}
-              >
-                Log Out
-              </button>
+                onClick={logout}
+                >
+                  <span className="text-[15px] font-extralight">Log Out</span>
+                </div>
+              </div>
             </div>
           ) : (
             <button
               onClick={openLogin}
-              className={`relative text-[15px] font-extralight transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+              className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
                 isDarkMode
                   ? 'text-[#e0e6f5] hover:text-white'
                   : 'text-[#00184f]'
@@ -199,61 +199,60 @@ const Navbar = () => {
           : 'bg-gradient-to-r from-[#daf0fa]/90 via-[#bceaff]/90 to-[#bceaff]/90'
       }`}>
         <div className="flex flex-col w-full">
-          {/* Learn Link - Conditionally rendered for mobile */}
-          {!isOnAdminPath && ( 
-            <Link
-              to="/learn"
-              onClick={closeMenu}
-              className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-black hover:text-[#333]'
-              }`}
-            >
-              Learn
-            </Link>
-          )}
-
-          {/* Build Link - Conditionally rendered for mobile */}
-          {!isOnAdminPath && ( 
-            <Link
-              to="/build"
-              onClick={closeMenu}
-              className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-black hover:text-[#333]'
-              }`}
-            >
-              Build
-            </Link>
-          )}
-
-          {/* Dashboard Link - Conditionally rendered for mobile */}
-          {!isOnAdminPath && ( 
-            <Link
-              to="/dashboard"
-              onClick={closeMenu}
-              className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
-                isDarkMode
-                  ? 'text-[#e0e6f5] hover:text-white'
-                  : 'text-black hover:text-[#333]'
-              }`}
-            >
-              Dashboard
-            </Link>
-          )}
+          <Link
+            to="/learn"
+            onClick={closeMenu}
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/learn')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-black hover:text-[#333]'
+            }`}
+          >
+            Learn
+          </Link>
+          <Link
+            to="/build"
+            onClick={closeMenu}
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/build')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-black hover:text-[#333]'
+            }`}
+          >
+            Build
+          </Link>
+          <Link
+            to="/dashboard"
+            onClick={closeMenu}
+            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
+              location.pathname.startsWith('/dashboard')
+                ? 'after:w-full'
+                : 'after:w-0'
+            } ${
+              isDarkMode
+                ? 'text-[#e0e6f5] hover:text-white'
+                : 'text-black hover:text-[#333]'
+            }`}
+          >
+            Dashboard
+          </Link>
         </div>
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
             <div className="py-2.5">
-              {location.pathname !== '/dashboard' && !isOnAdminPath && (
-                <div className={`text-[14px] mb-2 ${
-                  isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
-                }`}>
-                  Hi, {user?.firstName || user?.email || 'User'}
-                </div>
-              )}
+              <div className={`text-[14px] mb-2 ${
+                isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
+              }`}>
+                Hi, {user?.firstName || user?.email || 'User'}
+              </div>
               <button
                 onClick={() => {
                   closeMenu();
@@ -275,7 +274,7 @@ const Navbar = () => {
                   closeMenu();
                   openLogin();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 ${
+                className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out ${
                   isDarkMode
                     ? 'text-[#e0e6f5] hover:text-white'
                     : 'text-black hover:text-[#333]'
@@ -286,8 +285,8 @@ const Navbar = () => {
             </div>
           )}
         </div>
-        {/* XP Badge - Mobile - Conditionally rendered */}
-        {!isOnAdminPath && ( 
+        {/* XP Badge - Mobile */}
+        {!isDashboardPage && (
           <div className="py-2 w-full flex justify-start pl-4">
             <XPBadge />
           </div>
@@ -298,7 +297,7 @@ const Navbar = () => {
             onClick={toggleTheme}
             className={`text-[15px] transition-colors duration-300 p-1.5 ${
               isDarkMode
-                ? 'text-[#e0e6f5]'
+                ? 'text-[#e0e6f5] hover:text-white'
                 : 'text-[#00184f]'
             }`}
             aria-label="Toggle dark mode"
@@ -308,7 +307,7 @@ const Navbar = () => {
         </div>
       </nav>
     </header>
-  );
-};
+  )
+}
 
-export default Navbar;
+export default Navbar
