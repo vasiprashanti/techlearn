@@ -212,6 +212,20 @@ export default function UploadTopicsPage() {
 
       setMessage("Topics and files uploaded successfully!");
 
+      // Step 6: Cleanup temp files from server
+      try {
+        await fetch(`${BASE_URL}/dashboard/notes/exercises/cleanup`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        console.log("Temporary files cleaned up successfully.");
+      } catch (cleanupErr) {
+        console.warn("Cleanup failed:", cleanupErr.message);
+      }
+
+
     } catch (err) {
       console.error("Upload error:", err);
       setMessage("Error uploading topics: " + err.message);
