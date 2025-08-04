@@ -23,6 +23,7 @@ const upload = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
     files: 30, // Max 10 files
+    files: 30, // Max 10 files
   },
   fileFilter: (req, file, cb) => {
     // Accept all files

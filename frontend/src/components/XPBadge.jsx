@@ -45,10 +45,21 @@ const XPBadge = () => {
     try {
       const data = await progressAPI.getUserProgress();
       console.log('XPBadge: Received data:', data);
-      const total = (data.totalCourseXP || 0) + (data.totalExerciseXP || 0);
-      console.log('XPBadge: Calculated total XP:', total);
+      const courseXPValues = Object.values(data.courseXP || {});
+      const exerciseXPValues = Object.values(data.exerciseXP || {});
+
+      const totalFromCourse = courseXPValues.reduce((sum, xp) => sum + xp, 0);
+      const totalFromExercise = exerciseXPValues.reduce((sum, xp) => sum + xp, 0);
+
+      const total = totalFromCourse + totalFromExercise;
+
       setTotalXP(total);
-      setProgress(data);
+      setProgress({
+       ...data,
+      totalCourseXP: totalFromCourse,
+      totalExerciseXP: totalFromExercise,
+      });
+
     } catch (error) {
       console.error('XPBadge: Error fetching XP:', error);
       setTotalXP(0);
