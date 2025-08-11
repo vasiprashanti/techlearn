@@ -16,12 +16,28 @@ const About = () => {
     const content = textElement.textContent;
     textElement.innerHTML = "";
 
-    content.split("").forEach((letter) => {
-      const span = document.createElement("span");
-      span.classList.add("letter");
-      span.textContent = letter;
-      if (letter === " ") span.style.marginRight = "6px";
-      textElement.appendChild(span);
+    // Split into words and spaces, preserve spaces to let browser handle justification
+    const tokens = content.split(/(\s+)/);
+
+    tokens.forEach((token) => {
+      if (token.trim() === "") {
+        // Keep spaces as text nodes so spacing/justification remains natural
+        textElement.appendChild(document.createTextNode(token));
+      } else {
+        // Wrap each word so it never breaks across lines
+        const wordSpan = document.createElement("span");
+        wordSpan.classList.add("word");
+
+        // Build letter spans inside the word (for reveal animation)
+        token.split("").forEach((letter) => {
+          const span = document.createElement("span");
+          span.classList.add("letter");
+          span.textContent = letter;
+          wordSpan.appendChild(span);
+        });
+
+        textElement.appendChild(wordSpan);
+      }
     });
   };
 
