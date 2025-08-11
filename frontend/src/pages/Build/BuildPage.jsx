@@ -142,7 +142,7 @@ const BuildPage = () => {
           <span
             className="
               brand-heading-primary hover-gradient-text italic
-              text-3xl md:text-5xl font-semibold
+              text-3xl md:text-5xl font-semibold ml-2
             "
             style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
             mini
@@ -157,7 +157,7 @@ const BuildPage = () => {
           </span>
         </div>
         <div
-          className="font-sans text-[0.9rem] md:text-[1.2rem] mb-12 mt-[0.1rem] text-gray-700 dark:text-gray-300 hover-gradient-text"
+          className="font-sans text-[0.9rem] md:text-[1.2rem] mb-12 mt-[0.1rem] text-gray-700 dark:text-gray-300 hover-gradient-text ml-2"
           style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
           because crying over big ones is overrated
         </div>
@@ -238,7 +238,7 @@ const BuildPage = () => {
           <span
             className="
               brand-heading-primary hover-gradient-text italic
-              text-3xl md:text-5xl font-semibold
+              text-3xl md:text-5xl font-semibold lg:ml-8 ml-2
             "
             style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
             mid
@@ -253,7 +253,7 @@ const BuildPage = () => {
           </span>
         </div>
         <div
-          className="font-sans text-[0.9rem] md:text-[1.2rem] mb-12 mt-[0.1rem] text-gray-700 dark:text-gray-300 hover-gradient-text"
+          className="font-sans text-[0.9rem] md:text-[1.2rem] mb-12 mt-[0.1rem] text-gray-700 dark:text-gray-300 hover-gradient-text lg:ml-8 ml-2"
           style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
           for when you want to flex a little harder
         </div>
@@ -341,11 +341,11 @@ const BuildPage = () => {
       <section className="mt-20 md:mt-14 py-10">
         <div className="block md:hidden" style={{ height: "80px" }} />
         {/* Heading */}
-        <div className="mb-10 px-6">
+        <div className="mb-10 px-0">
           <span
             className="
               brand-heading-primary hover-gradient-text italic
-              text-3xl md:text-5xl font-semibold
+              text-3xl md:text-5xl font-semibold lg:ml-8 ml-2
             "
             style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
             design
