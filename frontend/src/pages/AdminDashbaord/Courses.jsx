@@ -112,8 +112,13 @@ export default function Courses() {
   };
 
   const handleEdit = (course) => {
-    const courseTitle = String(course?.title || 'Unknown Course');
-    alert(`Edit course: ${courseTitle}`);
+    // Navigate to topics list for this course
+    const courseId = String(course?._id || course?.courseId || course?.id || '');
+    if (!courseId) {
+      alert('Invalid course ID');
+      return;
+    }
+    navigate(`/admin/topics/${courseId}`);
   };
 
   const handleDelete = async (course) => {

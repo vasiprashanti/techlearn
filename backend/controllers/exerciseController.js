@@ -106,10 +106,14 @@ export const submitExerciseCode = async (req, res) => {
     c: 50,
   };
 
-  const languageId = languageMap[language?.toLowerCase()];
+  const langKey = language?.toLowerCase();
+  const languageId = languageMap[langKey];
   if (!languageId) {
+    console.error(`Unsupported language received in submitExerciseCode: '${language}'`);
     return res.status(400).json({
-      error: "Unsupported language. Please use 'python' or 'java' or 'c'.",
+      error: "Unsupported language. Please use 'python', 'java', or 'c'.",
+      received: language,
+      allowed: Object.keys(languageMap)
     });
   }
 
@@ -131,38 +135,65 @@ export const submitExerciseCode = async (req, res) => {
     const expectedOutput = exercise.expectedOutput?.trim();
     const inputToUse = input || exercise.input || "";
 
-    const submission = await axios.post(
-      "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true",
-      {
-        source_code: code,
-        stdin: inputToUse,
-        language_id: languageId,
-      },
-      {
-        headers: {
-          "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-          "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
-          "Content-Type": "application/json",
-        },
+    // Encode source_code and stdin as base64
+    const base64Source = Buffer.from(code || '', 'utf-8').toString('base64');
+    const base64Input = Buffer.from(inputToUse || '', 'utf-8').toString('base64');
+
+    // Log Judge0 payload and headers
+    const judge0Payload = {
+      source_code: base64Source,
+      stdin: base64Input,
+      language_id: languageId,
+    };
+    const judge0Headers = {
+      "x-rapidapi-key": process.env.RAPIDAPI_KEY,
+      "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
+      "Content-Type": "application/json",
+    };
+    console.log("[Judge0] Payload:", judge0Payload);
+    console.log("[Judge0] Headers:", judge0Headers);
+
+    try {
+      const submission = await axios.post(
+        "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=true&wait=true",
+        judge0Payload,
+        { headers: judge0Headers }
+      );
+
+      const result = submission.data;
+      // Decode output if present (Judge0 returns base64 if base64_encoded=true)
+      const decode = (val) => val ? Buffer.from(val, 'base64').toString('utf-8') : '';
+      const actualOutput = decode(result.stdout || '');
+      const isCorrect = expectedOutput === actualOutput.trim();
+
+      return res.status(200).json({
+        stdout: actualOutput,
+        stderr: decode(result.stderr),
+        compile_output: decode(result.compile_output),
+        status: result.status,
+        time: result.time,
+        memory: result.memory,
+        correct: isCorrect,
+        expected: expectedOutput,
+        exerciseId,
+        courseId,
+      });
+    } catch (judge0Err) {
+      // Log full error response from Judge0
+      if (judge0Err.response) {
+        console.error("[Judge0] Error response:", judge0Err.response.data);
+        return res.status(500).json({
+          error: "Judge0 error",
+          judge0: judge0Err.response.data
+        });
+      } else {
+        console.error("[Judge0] Error:", judge0Err.message);
+        return res.status(500).json({
+          error: "Judge0 error",
+          message: judge0Err.message
+        });
       }
-    );
-
-    const result = submission.data;
-    const actualOutput = (result.stdout || "").trim();
-    const isCorrect = expectedOutput === actualOutput;
-
-    return res.status(200).json({
-      stdout: result.stdout,
-      stderr: result.stderr,
-      compile_output: result.compile_output,
-      status: result.status,
-      time: result.time,
-      memory: result.memory,
-      correct: isCorrect,
-      expected: expectedOutput,
-      exerciseId,
-      courseId,
-    });
+    }
   } catch (err) {
     console.error("Judge0 error:", err.message);
     return res.status(500).json({ error: "Code execution failed" });

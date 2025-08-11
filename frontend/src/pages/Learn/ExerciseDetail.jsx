@@ -63,16 +63,18 @@ const ExerciseDetail = () => {
 
   // Helper function to transform backend exercise data to frontend format
   const transformExerciseData = (backendExercise) => {
+    const id = backendExercise._id || backendExercise.exerciseId;
+    const topicTitle = backendExercise.topicTitle || 'Exercise';
     return {
-      id: backendExercise._id,
+      id,
       title: backendExercise.question,
-      topicTitle: backendExercise.topicTitle,
+      topicTitle,
       difficulty: 'Easy', // Default difficulty
       estimatedTime: '15 min', // Default time
       xp: 10, // Default XP
       description: backendExercise.question,
       realLifeApplication: backendExercise.realLifeApplication,
-      theory: `# ${backendExercise.topicTitle}
+      theory: `# ${topicTitle}
 
 ${backendExercise.question}
 
@@ -83,9 +85,9 @@ ${backendExercise.realLifeApplication || 'This exercise helps you practice funda
 Write your code to solve the given problem. Use the provided starter code as a reference.
 
 ## Expected Solution
-\`\`\`java
+\\u007F\u007Fjava
 ${backendExercise.exerciseAnswers}
-\`\`\``,
+\\u007F\u007F`,
       starterCode: `// ${backendExercise.question}
 // Real-life application: ${backendExercise.realLifeApplication || 'Practice programming concepts'}
 
@@ -210,13 +212,32 @@ ${backendExercise.exerciseAnswers}
     return false;
   };
 
+  const detectLanguage = () => {
+    // Only allow 'python', 'java', or 'c' (Judge0/backend supported)
+    const topic = exercise?.topicTitle?.toLowerCase() || '';
+    const starter = exercise?.starterCode?.toLowerCase() || '';
+    if (topic.includes('python') || starter.includes('python')) return 'python';
+    if (topic.includes('java') || starter.includes('java')) return 'java';
+    // Only match 'c' if it is a standalone word (not part of 'python', etc.)
+    const isStandaloneC = (str) => {
+      return str.split(/\W+/).some(word => word === 'c');
+    };
+    if ((isStandaloneC(topic) && !topic.includes('c++')) || (isStandaloneC(starter) && !starter.includes('c++'))) return 'c';
+    // Fallback to python if nothing matches
+    return 'python';
+  };
+
   const runCode = async () => {
+    if (!exercise?.id || exercise.id === 'undefined') {
+      setOutput('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
+      return;
+    }
     setIsRunning(true);
     setOutput('');
 
     try {
-      // Determine language based on exercise topic
-      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'python' : 'java';
+      // Determine language based on topicTitle and starterCode
+      const language = detectLanguage();
 
       // Send code to backend for execution
       const codeData = {
@@ -225,7 +246,8 @@ ${backendExercise.exerciseAnswers}
         input: ''
       };
 
-      const result = await exerciseAPI.submitCode(courseId, exerciseId, codeData);
+      // Always use exercise.id for API call
+      const result = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
       // Format output
       let formattedOutput = '';
@@ -243,11 +265,15 @@ ${backendExercise.exerciseAnswers}
   };
 
   const submitCode = async () => {
+    if (!exercise?.id || exercise.id === 'undefined') {
+      alert('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
       // First, test the code by running it
-      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'java' : 'python';
+      const language = detectLanguage();
 
       const codeData = {
         language,
@@ -255,7 +281,8 @@ ${backendExercise.exerciseAnswers}
         input: ''
       };
 
-      const runResult = await exerciseAPI.submitCode(courseId, exerciseId, codeData);
+      // Always use exercise.id for API call
+      const runResult = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
       // Check if code executed successfully
       if (runResult.stderr || runResult.compile_output) {
@@ -265,11 +292,11 @@ ${backendExercise.exerciseAnswers}
       }
 
       // Submit the exercise for XP
-      const submitResult = await exerciseAPI.submitExercise(courseId, exerciseId);
+      const submitResult = await exerciseAPI.submitExercise(courseId, exercise.id);
 
       // Dispatch events to update UI components
       window.dispatchEvent(new CustomEvent('exerciseCompleted', {
-        detail: { courseId, exerciseId, xpEarned: submitResult.addedXP || 10 }
+        detail: { courseId, exerciseId: exercise.id, xpEarned: submitResult.addedXP || 10 }
       }));
       window.dispatchEvent(new CustomEvent('xpUpdated'));
 
@@ -294,6 +321,7 @@ ${backendExercise.exerciseAnswers}
     setOutput('');
   };
 
+
   if (loading) {
     return (
       <LoadingScreen
@@ -301,6 +329,24 @@ ${backendExercise.exerciseAnswers}
         size={48}
         duration={800}
       />
+    );
+  }
+
+  // Show error if exercise id is missing or invalid
+  if (!exercise?.id || exercise.id === 'undefined') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg text-center">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Invalid Exercise</h2>
+          <p className="mb-4">This exercise could not be loaded or has an invalid ID.<br/>Please return to the exercise list and try again.</p>
+          <button
+            onClick={() => navigate(`/learn/exercises/${courseId}`)}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Back to Exercises
+          </button>
+        </div>
+      </div>
     );
   }
 

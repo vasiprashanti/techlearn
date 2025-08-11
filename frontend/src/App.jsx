@@ -21,6 +21,8 @@ import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
 import Sidebar from '../src/components/AdminDashbaord/Admin_Sidebar'
 import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
 import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
+import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
+import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
 
 
 // Auth pages
@@ -624,6 +626,8 @@ function LayoutWrapper() {
            </Route>
           <Route path="/admin/courses" element={<Courses_Admin />} />
           <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
+          <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
+          <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
           <Route path="/about" element={<About />} />
           
         </Routes>
