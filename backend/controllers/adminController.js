@@ -83,3 +83,36 @@ export const editTopicDetails = async (req, res) => {
     res.status(500).json({ message: "Error updating topic", error });
   }
 };
+
+export const getAdminMetrics = async (req, res) => {
+  try {
+    // stats for the users
+    const totalUsers = await User.countDocuments();
+    const clubMembers = await User.countDocuments({ isClub: true });
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const activeUsers = await User.countDocuments({
+      updatedAt: { $gte: sevenDaysAgo },
+    });
+
+    // course count
+    const totalCourses = await Course.countDocuments();
+
+    // project count
+    const majorProjects = await MajorProject.countDocuments();
+    const midProjects = await MidProject.countDocuments();
+    const miniProjects = await MiniProject.countDocuments();
+
+    const totalProjects = majorProjects + midProjects + miniProjects;
+
+    res.status(200).json({
+      totalUsers,
+      clubMembers,
+      activeUsers,
+      totalCourses,
+      totalProjects,
+    });
+  } catch (err) {
+    console.error("Admin Metrics Error:", err);
+    res.status(500).json({ error: "Failed to fetch admin metrics" });
+  }
+};
