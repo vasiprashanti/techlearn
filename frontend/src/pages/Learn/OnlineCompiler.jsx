@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -111,6 +111,34 @@ const OnlineCompiler = () => {
   const [isRunning, setIsRunning] = useState(false);
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
   const [activeView, setActiveView] = useState('editor'); // 'editor' or 'preview'
+
+  // Resizable split state for desktop
+  const containerRef = useRef(null);
+  const [splitPos, setSplitPos] = useState(50); // percentage width for editor pane
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      let pct = ((e.clientX - rect.left) / rect.width) * 100;
+      pct = Math.max(20, Math.min(80, pct)); // clamp between 20% and 80%
+      setSplitPos(pct);
+    };
+
+    const stopResize = () => setIsResizing(false);
+
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('mouseup', stopResize, { passive: true });
+    window.addEventListener('blur', stopResize, { passive: true });
+    window.addEventListener('mouseleave', stopResize, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopResize);
+      window.removeEventListener('blur', stopResize);
+      window.removeEventListener('mouseleave', stopResize);
+    };
+  }, [isResizing]);
 
   // Update editor theme when app theme changes
   useEffect(() => {
@@ -503,105 +531,138 @@ const OnlineCompiler = () => {
 
               {/* Editor and Output Panels */}
               <div className="h-[calc(100%-7rem)] lg:h-[calc(100%-3rem)]">
-                {/* Desktop Layout - Side by Side */}
-                <div className="hidden lg:grid lg:grid-cols-2 gap-4 h-full">
-                  {/* Code Editor Panel */}
-                  <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
-                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
-                      <div className="flex items-center justify-between h-full">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          Code Editor
-                        </h3>
-                        {/* Run Button - Only show for non-web languages */}
-                        {!currentLanguage.isWebLanguage && (
-                          <button
-                            onClick={isRunning ? handleStopExecution : handleRunCode}
-                            disabled={!code.trim()}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                              isRunning
-                                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
-                                : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {isRunning ? (
-                              <>
-                                <Square className="w-4 h-4" />
-                                Stop
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-4 h-4" />
-                                Run
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="h-[calc(100%-4rem)]">
-                      <Editor
-                        height="100%"
-                        language={currentLanguage.monacoLanguage}
-                        value={code}
-                        onChange={(value) => setCode(value || '')}
-                        theme={editorTheme}
-                        beforeMount={defineCustomTheme}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          roundedSelection: false,
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                          tabSize: 2,
-                          wordWrap: 'on',
-                          folding: true,
-                          lineDecorationsWidth: 10,
-                          lineNumbersMinChars: 3,
-                          glyphMargin: false,
-                          padding: { top: 16, bottom: 16 },
-                          scrollbar: {
-                            horizontal: 'hidden',
-                            vertical: 'visible',
-                            horizontalScrollbarSize: 0,
-                            verticalScrollbarSize: 8
-                          }
+                {/* Desktop Layout - Resizable Split */}
+                <div className="hidden lg:block h-full" ref={containerRef}>
+                  <div className="relative flex h-full w-full">
+                    {isResizing && (
+                      <div
+                        className="absolute inset-0 z-50 cursor-col-resize"
+                        onMouseUp={() => setIsResizing(false)}
+                        onMouseMove={(e) => {
+                          if (!containerRef.current) return;
+                          const rect = containerRef.current.getBoundingClientRect();
+                          let pct = ((e.clientX - rect.left) / rect.width) * 100;
+                          pct = Math.max(20, Math.min(80, pct));
+                          setSplitPos(pct);
                         }}
                       />
-                    </div>
-                  </div>
-
-                  {/* Output Panel */}
-                  <div className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
-                    <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
-                      <div className="flex items-center justify-between h-full">
-                        <h3 className="font-medium text-gray-900 dark:text-white">
-                          {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
-                        </h3>
-                        <button
-                          onClick={handleResetCode}
-                          className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
-                          title="Reset Code"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </button>
+                    )}
+                    {/* Code Editor Panel */}
+                    <div
+                      className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden"
+                      style={{ width: `calc(${splitPos}% - 8px)` }}
+                    >
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                        <div className="flex items-center justify-between h-full">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            Code Editor
+                          </h3>
+                          {/* Run Button - Only show for non-web languages */}
+                          {!currentLanguage.isWebLanguage && (
+                            <button
+                              onClick={isRunning ? handleStopExecution : handleRunCode}
+                              disabled={!code.trim()}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                                isRunning
+                                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-300'
+                                  : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-300'
+                              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                              {isRunning ? (
+                                <>
+                                  <Square className="w-4 h-4" />
+                                  Stop
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="w-4 h-4" />
+                                  Run
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-[calc(100%-4rem)]">
+                        <Editor
+                          height="100%"
+                          language={currentLanguage.monacoLanguage}
+                          value={code}
+                          onChange={(value) => setCode(value || '')}
+                          theme={editorTheme}
+                          beforeMount={defineCustomTheme}
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            roundedSelection: false,
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            tabSize: 2,
+                            wordWrap: 'on',
+                            folding: true,
+                            lineDecorationsWidth: 10,
+                            lineNumbersMinChars: 3,
+                            glyphMargin: false,
+                            padding: { top: 16, bottom: 16 },
+                            scrollbar: {
+                              horizontal: 'hidden',
+                              vertical: 'visible',
+                              horizontalScrollbarSize: 0,
+                              verticalScrollbarSize: 8
+                            }
+                          }}
+                        />
                       </div>
                     </div>
-                    <div className="h-[calc(100%-4rem)] overflow-hidden">
-                      {currentLanguage.isWebLanguage ? (
-                        <iframe
-                          srcDoc={getPreviewContent()}
-                          className="w-full h-full border-0 bg-white"
-                          sandbox="allow-scripts"
-                          title="Live Preview"
-                        />
-                      ) : (
-                        <div className="h-full p-4 overflow-auto">
-                          <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
-                            {renderOutput(output)}
-                          </pre>
+
+                    {/* Drag handle */}
+                    <div
+                      className="w-2 mx-2 cursor-col-resize select-none flex items-center justify-center"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setIsResizing(true);
+                      }}
+                      onMouseUp={() => setIsResizing(false)}
+                    >
+                      <div className="h-3/4 w-[3px] bg-gray-300 dark:bg-gray-600 rounded"></div>
+                    </div>
+
+                    {/* Output Panel */}
+                    <div
+                      className="bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 overflow-hidden flex-1"
+                      style={{ width: `calc(${100 - splitPos}% - 8px)` }}
+                    >
+                      <div className="p-3 border-b border-white/10 dark:border-gray-700/20 bg-white/10 dark:bg-gray-800/20 min-h-[4rem]">
+                        <div className="flex items-center justify-between h-full">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            {currentLanguage.isWebLanguage ? 'Live Preview' : 'Output'}
+                          </h3>
+                          <button
+                            onClick={handleResetCode}
+                            className="p-1.5 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 text-gray-700 dark:text-gray-300 transition-all duration-200"
+                            title="Reset Code"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
                         </div>
-                      )}
+                      </div>
+                      <div className="h-[calc(100%-4rem)] overflow-hidden">
+                        {currentLanguage.isWebLanguage ? (
+                          <iframe
+                            srcDoc={getPreviewContent()}
+                            className="w-full h-full border-0 bg-white"
+                            sandbox="allow-scripts"
+                            title="Live Preview"
+                          />
+                        ) : (
+                          <div className="h-full p-4 overflow-auto">
+                            <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
+                              {renderOutput(output)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

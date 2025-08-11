@@ -952,6 +952,11 @@ html {
   white-space: nowrap;        /* avoid line breaks inside a word */
 }
 
+/* Drag handle hover feedback for resizer in OnlineCompiler */
+.resizer-grab:hover {
+  filter: brightness(1.2);
+}
+
 .letter {
   display: inline-block;
   color: rgba(25, 70, 164, 0.1);
