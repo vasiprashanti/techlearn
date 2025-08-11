@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
-import admin from "../config/firebase-service-account.js";
+import admin from "../utils/firebaseAdmin.js";
 
 import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
@@ -165,7 +165,9 @@ router.post("/firebase", async (req, res) => {
     const lastName = rest.join(" ");
 
     if (!email) {
-      return res.status(400).json({ message: "Email is required from Firebase" });
+      return res
+        .status(400)
+        .json({ message: "Email is required from Firebase" });
     }
 
     let user = await User.findOne({ email });
@@ -226,7 +228,10 @@ router.post("/forgot-password", async (req, res) => {
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     user.resetPasswordToken = tokenHash;
     user.resetPasswordExpires = Date.now() + 15 * 60 * 1000;
@@ -276,7 +281,10 @@ router.post("/reset-password/:resetToken", async (req, res) => {
   }
 
   try {
-    const tokenHash = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const tokenHash = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     const user = await User.findOne({
       resetPasswordToken: tokenHash,
@@ -284,7 +292,9 @@ router.post("/reset-password/:resetToken", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired password reset token" });
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired password reset token" });
     }
 
     user.password = password;
@@ -309,7 +319,11 @@ router.put("/avatar", protect, async (req, res) => {
       return res.status(400).json({ message: "Avatar is required" });
     }
 
-    const user = await User.findByIdAndUpdate(userId, { avatar }, { new: true });
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { avatar },
+      { new: true }
+    );
 
     return res.status(200).json({
       message: "Avatar updated successfully",

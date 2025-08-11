@@ -26,6 +26,7 @@ import projectRouter from "./routes/Project.js";
 import midProjectRoutes from "./routes/midProjectRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import uiLibraryRoutes from "./routes/uiLibraryRoutes.js";
+import adminRouter from "./routes/adminRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -97,6 +98,9 @@ app.use("/api/projects", projectRouter);
 app.use("/api/mid-projects", midProjectRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use(uiLibraryRoutes); // Handles its own path
+
+//ADMIN DASHBOARD Routes
+app.use("/api/admin", adminRouter);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {

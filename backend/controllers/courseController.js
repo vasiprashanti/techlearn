@@ -18,7 +18,7 @@ export const createCourseShell = async (req, res) => {
   try {
     console.log("Hi");
     console.log("Request body:", req.body);
-    
+
     const { title, description, level, numTopics } = req.body;
     console.log("Extracted values:", { title, description, level, numTopics });
 
@@ -40,7 +40,7 @@ export const createCourseShell = async (req, res) => {
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
     };
-    
+
     console.log("Course data prepared:", courseData);
     console.log("About to create new Course instance...");
 
@@ -68,7 +68,7 @@ export const createCourseShell = async (req, res) => {
     console.error("Error name:", error.name);
     console.error("Error message:", error.message);
     console.error("Error stack:", error.stack);
-    
+
     res.status(500).json({
       message: "Failed to create course",
       error: error.message,
