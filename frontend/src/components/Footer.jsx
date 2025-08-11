@@ -43,18 +43,41 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* LEARN Section */}
+          {/* Explore Section */}
           <div className="flex-1 w-full">
-            <h3 className="font-bold text-white mb-4 text-lg uppercase tracking-wide">LEARN</h3>
+            <h3 className="font-bold text-white mb-4 text-lg uppercase tracking-wide">Explore</h3>
             <ul className="space-y-2">
               <li>
                 <Link
                   to="/courses"
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
-                  Paid Courses
+                  Free Courses
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/careers"
+                  className="text-gray-300 hover:text-white text-base transition-colors duration-300"
+                >
+                  Careers
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about"
+                  className="text-gray-300 hover:text-white text-base transition-colors duration-300"
+                >
+                  About Us
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* COMPANY Section */}
+          <div className="flex-1 w-full">
+            <h3 className="font-bold text-white mb-4 text-lg uppercase tracking-wide">COMPANY</h3>
+            <ul className="space-y-2">
               <li>
                 <Link
                   to="/terms-and-conditions"
@@ -69,29 +92,6 @@ const Footer = () => {
                   className="text-gray-300 hover:text-white text-base transition-colors duration-300"
                 >
                   Privacy Policy
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* COMPANY Section */}
-          <div className="flex-1 w-full">
-            <h3 className="font-bold text-white mb-4 text-lg uppercase tracking-wide">COMPANY</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link
-                  to="/about"
-                  className="text-gray-300 hover:text-white text-base transition-colors duration-300"
-                >
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/careers"
-                  className="text-gray-300 hover:text-white text-base transition-colors duration-300"
-                >
-                  Careers
                 </Link>
               </li>
               <li>
@@ -120,4 +120,4 @@ const Footer = () => {
   )
 }
 
-export default Footer;
+export default Footer
