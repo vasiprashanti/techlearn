@@ -190,7 +190,7 @@ export default function Courses() {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
       <Sidebar />
-      <div className="flex-1 flex flex-col mt-10 sm:mt-12 md:mt-16 lg:mt-10 px-4 sm:px-8 lg:px-8 xl:px-16">
+      <div className="flex-1 flex flex-col mt-10 sm:mt-12 md:mt-16 lg:mt-32 px-4 sm:px-8 lg:px-8 xl:px-16">
         <main className="flex-1 max-w-full lg:max-w-6xl mx-auto w-full px-0 sm:px-8 lg:px-0 py-4 sm:py-8 pt-32 sm:pt-8">
           <div className="space-y-6 sm:space-y-8">
             <NewCourseForm onAdd={handleAddCourse} />
