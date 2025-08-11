@@ -366,7 +366,7 @@ const HomePage = () => {
                   : Math.floor(index === 0 ? animatedStats.courses : index === 1 ? animatedStats.batches : animatedStats.students)
                 }{stat.suffix || ''}
               </h2>
-              <p className="text-sm md:text-base text-[#000234] dark:text-[#555] mt-2 font-inter">
+              <p className="text-sm md:text-base text-[#000234] dark:text-[#ffffff] mt-2 font-inter">
                 {stat.label}
               </p>
             </div>
