@@ -166,15 +166,15 @@ export default function AdminDashboard() {
 
             {/* Calendar Widget */}
             <div className="w-full md:w-[490px] flex flex-col items-center">
-              <div className="bg-white/50 dark:bg-gray-800/70 rounded-2xl shadow-lg p-4 sm:p-3 w-full h-auto max-h-[490px] duration-150 hover:scale-[1.02] hover:shadow-xl transition overflow-auto">
+              <div className="bg-white/50 dark:bg-gray-800/70 rounded-2xl shadow-lg p-4 sm:p-0 w-full h-auto max-h-[490px] duration-150 hover:scale-[1.02] hover:shadow-xl transition overflow-auto lg:mx-auto">
                 {/* Header */}
-                <div className="mb-6 sm:mb-8 flex justify-center">
+                <div className="mb-6 sm:mb-8 sm:mt-4 flex justify-center">
                   <span className="text-xl sm:text-2xl font-bold brand-heading-primary">
                     {dayjs().month(calendarMonth).format("MMMM")} {calendarYear}
                   </span>
                 </div>
                 {/* Weekday Names */}
-                <div className="grid grid-cols-7 gap-1 mb-4 sm:mb-8">
+                <div className="grid grid-cols-7 gap-1 mb-4 sm:mb-8 sm:ml-2 sm:mr-2 justify-items-center">
                   {weekdayShort.map((d) => (
                     <div
                       key={d}
@@ -185,7 +185,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
                 {/* Days grid */}
-                <div className="grid grid-cols-7 gap-4 sm:gap-6">
+                <div className="grid grid-cols-7 gap-4 sm:gap-3 sm:mb-2 sm:ml-3 sm:mr-3 justify-items-center">
                   {Array.from({ length: firstWeekday }, (_, i) => (
                     <div key={`empty-${i}`} />
                   ))}

@@ -61,18 +61,53 @@ const ExerciseDetail = () => {
   const [currentFile, setCurrentFile] = useState('main.js');
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
 
+  // Resizer state (for desktop split)
+  const [leftWidth, setLeftWidth] = useState(380); // px, initial width of theory panel
+  const resizerRef = useRef(null);
+  const containerRef = useRef(null);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current || !containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      let newLeftWidth = e.clientX - containerRect.left;
+      // Clamp min/max width
+      newLeftWidth = Math.max(220, Math.min(newLeftWidth, containerRect.width - 320));
+      setLeftWidth(newLeftWidth);
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
+  const startDragging = (e) => {
+    isDraggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  };
+
   // Helper function to transform backend exercise data to frontend format
   const transformExerciseData = (backendExercise) => {
+    const id = backendExercise._id || backendExercise.exerciseId;
+    const topicTitle = backendExercise.topicTitle || 'Exercise';
     return {
-      id: backendExercise._id,
+      id,
       title: backendExercise.question,
-      topicTitle: backendExercise.topicTitle,
+      topicTitle,
       difficulty: 'Easy', // Default difficulty
       estimatedTime: '15 min', // Default time
       xp: 10, // Default XP
       description: backendExercise.question,
       realLifeApplication: backendExercise.realLifeApplication,
-      theory: `# ${backendExercise.topicTitle}
+      theory: `# ${topicTitle}
 
 ${backendExercise.question}
 
@@ -83,9 +118,9 @@ ${backendExercise.realLifeApplication || 'This exercise helps you practice funda
 Write your code to solve the given problem. Use the provided starter code as a reference.
 
 ## Expected Solution
-\`\`\`java
+\\u007F\u007Fjava
 ${backendExercise.exerciseAnswers}
-\`\`\``,
+\\u007F\u007F`,
       starterCode: `// ${backendExercise.question}
 // Real-life application: ${backendExercise.realLifeApplication || 'Practice programming concepts'}
 
@@ -210,13 +245,32 @@ ${backendExercise.exerciseAnswers}
     return false;
   };
 
+  const detectLanguage = () => {
+    // Only allow 'python', 'java', or 'c' (Judge0/backend supported)
+    const topic = exercise?.topicTitle?.toLowerCase() || '';
+    const starter = exercise?.starterCode?.toLowerCase() || '';
+    if (topic.includes('python') || starter.includes('python')) return 'python';
+    if (topic.includes('java') || starter.includes('java')) return 'java';
+    // Only match 'c' if it is a standalone word (not part of 'python', etc.)
+    const isStandaloneC = (str) => {
+      return str.split(/\W+/).some(word => word === 'c');
+    };
+    if ((isStandaloneC(topic) && !topic.includes('c++')) || (isStandaloneC(starter) && !starter.includes('c++'))) return 'c';
+    // Fallback to python if nothing matches
+    return 'python';
+  };
+
   const runCode = async () => {
+    if (!exercise?.id || exercise.id === 'undefined') {
+      setOutput('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
+      return;
+    }
     setIsRunning(true);
     setOutput('');
 
     try {
-      // Determine language based on exercise topic
-      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'python' : 'java';
+      // Determine language based on topicTitle and starterCode
+      const language = detectLanguage();
 
       // Send code to backend for execution
       const codeData = {
@@ -225,7 +279,8 @@ ${backendExercise.exerciseAnswers}
         input: ''
       };
 
-      const result = await exerciseAPI.submitCode(courseId, exerciseId, codeData);
+      // Always use exercise.id for API call
+      const result = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
       // Format output
       let formattedOutput = '';
@@ -243,11 +298,15 @@ ${backendExercise.exerciseAnswers}
   };
 
   const submitCode = async () => {
+    if (!exercise?.id || exercise.id === 'undefined') {
+      alert('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
       // First, test the code by running it
-      const language = exercise.topicTitle.toLowerCase().includes('java') ? 'java' : 'python';
+      const language = detectLanguage();
 
       const codeData = {
         language,
@@ -255,7 +314,8 @@ ${backendExercise.exerciseAnswers}
         input: ''
       };
 
-      const runResult = await exerciseAPI.submitCode(courseId, exerciseId, codeData);
+      // Always use exercise.id for API call
+      const runResult = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
       // Check if code executed successfully
       if (runResult.stderr || runResult.compile_output) {
@@ -265,11 +325,11 @@ ${backendExercise.exerciseAnswers}
       }
 
       // Submit the exercise for XP
-      const submitResult = await exerciseAPI.submitExercise(courseId, exerciseId);
+      const submitResult = await exerciseAPI.submitExercise(courseId, exercise.id);
 
       // Dispatch events to update UI components
       window.dispatchEvent(new CustomEvent('exerciseCompleted', {
-        detail: { courseId, exerciseId, xpEarned: submitResult.addedXP || 10 }
+        detail: { courseId, exerciseId: exercise.id, xpEarned: submitResult.addedXP || 10 }
       }));
       window.dispatchEvent(new CustomEvent('xpUpdated'));
 
@@ -294,6 +354,7 @@ ${backendExercise.exerciseAnswers}
     setOutput('');
   };
 
+
   if (loading) {
     return (
       <LoadingScreen
@@ -304,41 +365,46 @@ ${backendExercise.exerciseAnswers}
     );
   }
 
+  // Show error if exercise id is missing or invalid
+  if (!exercise?.id || exercise.id === 'undefined') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg text-center">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Invalid Exercise</h2>
+          <p className="mb-4">This exercise could not be loaded or has an invalid ID.<br/>Please return to the exercise list and try again.</p>
+          <button
+            onClick={() => navigate(`/learn/exercises/${courseId}`)}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Back to Exercises
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      {/* Custom Scrollbar Styles */}
+      {/* Custom Scrollbar Styles and Resizer Styles */}
       <style jsx>{`
-        /* Custom scrollbar for mobile and desktop */
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-          height: 4px;
+        /* ...existing code... */
+        .resizer-bar {
+          width: 8px;
+          cursor: col-resize;
+          background: linear-gradient(to bottom, #e0e7ef 60%, #bceaff 100%);
+          border-radius: 4px;
+          transition: background 0.2s;
+          z-index: 10;
         }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.1);
-          border-radius: 2px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
+        .resizer-bar:hover, .resizer-bar.active {
           background: #3b82f6;
-          border-radius: 2px;
         }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #2563eb;
-        }
-
-        /* For Firefox */
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #3b82f6 rgba(0, 0, 0, 0.1);
-        }
-
-        /* Mobile specific adjustments */
-        @media (max-width: 768px) {
-          .custom-scrollbar::-webkit-scrollbar {
-            width: 2px;
-            height: 2px;
+        @media (max-width: 1023px) {
+          .desktop-split {
+            flex-direction: column !important;
+          }
+          .resizer-bar {
+            display: none !important;
           }
         }
       `}</style>
@@ -356,15 +422,16 @@ ${backendExercise.exerciseAnswers}
           <span>Back to Exercises</span>
         </motion.button>
 
-        {/* Exercise Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/20 mb-6"
-        >
-          <div className="flex items-start justify-between">
-            <div>
+
+        {/* Desktop Split Layout with Resizer */}
+        <div ref={containerRef} className="desktop-split flex flex-row gap-0 w-full max-w-6xl mx-auto mb-6" style={{ minHeight: 480 }}>
+          {/* Left: Theory/Instructions */}
+          <div style={{ width: leftWidth, minWidth: 220, maxWidth: 600 }} className="transition-all duration-200 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-l-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/20 overflow-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <h1 className="font-poppins text-2xl md:text-3xl font-medium brand-heading-primary mb-2 tracking-wider">
                 {exercise?.title}
               </h1>
@@ -384,9 +451,28 @@ ${backendExercise.exerciseAnswers}
                   <span>{exercise?.xp} XP</span>
                 </div>
               </div>
-            </div>
+              {/* Theory/Instructions Markdown */}
+              <div className="mt-6 prose dark:prose-invert max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                  {exercise?.theory || ''}
+                </ReactMarkdown>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+          {/* Resizer Bar (desktop only) */}
+          <div
+            ref={resizerRef}
+            className="resizer-bar hidden lg:block"
+            style={{ cursor: 'col-resize', height: 'auto' }}
+            onMouseDown={startDragging}
+          />
+          {/* Right: Code/Output Section (flex-grow) */}
+          <div style={{ minWidth: 320 }} className="flex-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-r-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/20 overflow-auto">
+            {/* ...existing code for code editor, output, etc... */}
+            {/* Place your code editor, output, and controls here as before */}
+            {/* You may want to move the code/output JSX here from below */}
+          </div>
+        </div>
 
         {/* Tab Navigation */}
         <motion.div

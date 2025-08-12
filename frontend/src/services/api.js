@@ -247,8 +247,15 @@ export const exerciseAPI = {
 
   // Get a single exercise (helper function that fetches all and filters)
   getExercise: async (courseId, exerciseId) => {
-    const exercises = await exerciseAPI.getExercises(courseId);
-    const exercise = exercises.find(ex => ex._id === exerciseId);
+    let exercises = await exerciseAPI.getExercises(courseId);
+    // Handle both array and object response
+    if (exercises && Array.isArray(exercises.exercises)) {
+      exercises = exercises.exercises;
+    }
+    if (!Array.isArray(exercises)) {
+      throw new Error('Exercises data is not an array');
+    }
+  const exercise = exercises.find(ex => (String(ex._id) === String(exerciseId) || String(ex.exerciseId) === String(exerciseId)));
     if (!exercise) {
       throw new Error('Exercise not found');
     }

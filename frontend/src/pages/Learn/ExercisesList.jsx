@@ -25,18 +25,21 @@ const ExercisesList = () => {
 
   // Helper function to transform backend exercise data to frontend format
   const transformExerciseData = (backendExercises, completedExerciseIds = []) => {
-    return backendExercises.map((exercise, index) => ({
-      id: exercise._id,
-      title: exercise.question, // Use question as title
-      topicTitle: exercise.topicTitle,
-      difficulty: 'Easy', // Default difficulty, could be enhanced later
-      estimatedTime: '15 min', // Default time, could be enhanced later
-      xp: 10, // Default XP, could be enhanced later
-      completed: completedExerciseIds.includes(exercise._id), // Check if exercise is completed
-      locked: index >= 4, // First 4 exercises are free
-      realLifeApplication: exercise.realLifeApplication,
-      exerciseAnswers: exercise.exerciseAnswers,
-    }));
+    return backendExercises.map((exercise, index) => {
+      const id = exercise._id || exercise.exerciseId;
+      return {
+        id,
+        title: exercise.question, // Use question as title
+        topicTitle: exercise.topicTitle,
+        difficulty: 'Easy', // Default difficulty, could be enhanced later
+        estimatedTime: '15 min', // Default time, could be enhanced later
+        xp: 10, // Default XP, could be enhanced later
+        completed: completedExerciseIds.includes(id), // Check if exercise is completed
+        locked: index >= 4, // First 4 exercises are free
+        realLifeApplication: exercise.realLifeApplication,
+        exerciseAnswers: exercise.exerciseAnswers,
+      };
+    });
   };
 
   useEffect(() => {
@@ -48,6 +51,11 @@ const ExercisesList = () => {
 
         // Fetch exercises from backend
         const exerciseResponse = await exerciseAPI.getExercises(courseId);
+        // Handle both array and object response
+        let backendExercises = exerciseResponse;
+        if (exerciseResponse && Array.isArray(exerciseResponse.exercises)) {
+          backendExercises = exerciseResponse.exercises;
+        }
 
         // Fetch user progress if authenticated
         let completedExerciseIds = [];
@@ -61,9 +69,11 @@ const ExercisesList = () => {
           }
         }
 
-        // Transform exercise data with completed status
-        const transformedExercises = transformExerciseData(exerciseResponse, completedExerciseIds);
-        setExercises(transformedExercises);
+  // Log the raw exercises data received from backend
+  console.log('[ExercisesList] Received exercises:', backendExercises);
+  // Transform exercise data with completed status
+  const transformedExercises = transformExerciseData(backendExercises, completedExerciseIds);
+  setExercises(transformedExercises);
       } catch (error) {
         console.error('Error fetching data:', error);
         // Fallback data

@@ -237,7 +237,7 @@ export default function UploadTopicsPage() {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
       <Sidebar />
-      <div className="flex-1 flex justify-center items-start lg:items-center min-h-screen px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-0 pt-28 sm:pt-32 md:pt-28 lg:pt-0 lg:mt-8">
+      <div className="flex-1 flex justify-center items-start lg:items-center min-h-screen px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-0 pt-28 sm:pt-32 md:pt-28 lg:pt-0 lg:mt-24">
         <div className="bg-white/50 dark:bg-gray-800/70 backdrop-blur rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 max-w-full sm:max-w-4xl lg:max-w-5xl w-full max-h-[90vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-2">
             Upload Topics for Course
