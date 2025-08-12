@@ -16,7 +16,10 @@ const AdminTopicsList = () => {
     const fetchTopics = async () => {
       setLoading(true);
       try {
-  const res = await axios.get(`${BASE_URL}/admin/${courseId}`);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${BASE_URL}/admin/${courseId}`,
+          token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+        );
         console.log(res);
         setTopics(res.data.topics || []);
         setError(null);

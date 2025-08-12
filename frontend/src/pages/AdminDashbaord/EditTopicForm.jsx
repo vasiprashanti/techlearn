@@ -24,9 +24,17 @@ const EditTopicForm = () => {
   formData.append('topicName', topicName);
       if (notesFile) formData.append('notesFile', notesFile);
       if (quizFile) formData.append('quizFile', quizFile);
-      const res=await axios.put(`${BASE_URL}/admin/topic/${topicId}`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const token = localStorage.getItem('token');
+      const res = await axios.put(
+        `${BASE_URL}/admin/topic/${topicId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+        }
+      );
       console.log(res);
       setSuccess('Topic updated successfully!');
       setTimeout(() => navigate(`/admin/topics/${courseId}`), 1200);

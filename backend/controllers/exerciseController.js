@@ -218,25 +218,27 @@ export const getCourseExercises = async (req, res) => {
     // Get ALL exercises for this course (not just the linked one)
     const exercises = await Exercise.find({ courseId });
 
+
     if (!exercises || exercises.length === 0) {
       return res
         .status(404)
         .json({ error: "No exercises found for this course" });
     }
 
+    const mappedExercises = exercises.map((exercise) => ({
+      exerciseId: exercise._id,
+      question: exercise.question,
+      realLifeApplication: exercise.realLifeApplication,
+      exerciseAnswers: exercise.exerciseAnswers,
+      expectedOutput: exercise.expectedOutput,
+      input: exercise.input,
+      createdAt: exercise.createdAt,
+      updatedAt: exercise.updatedAt,
+    }));
     res.status(200).json({
       courseId: courseId,
       exerciseCount: exercises.length,
-      exercises: exercises.map((exercise) => ({
-        exerciseId: exercise._id,
-        question: exercise.question,
-        realLifeApplication: exercise.realLifeApplication,
-        exerciseAnswers: exercise.exerciseAnswers,
-        expectedOutput: exercise.expectedOutput,
-        input: exercise.input,
-        createdAt: exercise.createdAt,
-        updatedAt: exercise.updatedAt,
-      })),
+      exercises: mappedExercises,
     });
   } catch (err) {
     console.error("Fetch exercises error:", err.message);

@@ -69,9 +69,11 @@ const ExercisesList = () => {
           }
         }
 
-        // Transform exercise data with completed status
-        const transformedExercises = transformExerciseData(backendExercises, completedExerciseIds);
-        setExercises(transformedExercises);
+  // Log the raw exercises data received from backend
+  console.log('[ExercisesList] Received exercises:', backendExercises);
+  // Transform exercise data with completed status
+  const transformedExercises = transformExerciseData(backendExercises, completedExerciseIds);
+  setExercises(transformedExercises);
       } catch (error) {
         console.error('Error fetching data:', error);
         // Fallback data
