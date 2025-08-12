@@ -24,31 +24,24 @@ export const createCourseShell = async (req, res) => {
 
     // Validate required fields
     if (!title || !numTopics) {
-      console.log("Validation failed - missing required fields");
       return res.status(400).json({
         message: "Title and number of topics are required",
       });
     }
 
-    console.log("Validation passed, creating course object...");
-
-    // Create course shell with empty topicIds array
+    // Create course shell with empty topicIds and exerciseIds arrays
     const courseData = {
       title: title.trim(),
       description: description?.trim() || "No description provided",
       level: level,
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
+      exerciseIds: [], // Empty initially
     };
 
-    console.log("Course data prepared:", courseData);
-    console.log("About to create new Course instance...");
-
     const newCourse = new Course(courseData);
-    console.log("Course instance created, about to save...");
 
     const savedCourse = await newCourse.save();
-    console.log("Course saved successfully:", savedCourse);
 
     res.status(201).json({
       success: true,
@@ -61,14 +54,10 @@ export const createCourseShell = async (req, res) => {
         level: savedCourse.level,
         numTopics: savedCourse.numTopics,
         topicIds: savedCourse.topicIds,
+        exerciseIds: savedCourse.exerciseIds,
       },
     });
   } catch (error) {
-    console.error("ERROR in createCourseShell:", error);
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error stack:", error.stack);
-
     res.status(500).json({
       message: "Failed to create course",
       error: error.message,
@@ -270,6 +259,7 @@ export const getCourseById = async (req, res) => {
       title: course.title,
       description: course.description,
       level: course.level,
+      exerciseIds: course.exerciseIds || [], // Include course-level exercise IDs
       topics: formattedTopics,
     });
   } catch (error) {

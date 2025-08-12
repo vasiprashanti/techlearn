@@ -2,7 +2,7 @@ import User from "../models/User.js";
 import UserProgress from "../models/UserProgress.js";
 import Exercise from "../models/Exercise.js";
 import Quiz from "../models/Quiz.js";
-import Topic from "../models/Topic.js";
+import Course from "../models/Course.js";
 import mongoose from "mongoose";
 
 export const getDashboardData = async (req, res) => {
@@ -11,10 +11,14 @@ export const getDashboardData = async (req, res) => {
     //fetching the user
     const user = await User.findById(userId);
 
-    const progress = await UserProgress.findOne({ userId }).populate(
-      "completedExercises.exerciseId",
-      "topicTitle"
-    );
+    const progress = await UserProgress.findOne({ userId }).populate({
+      path: "completedExercises.exerciseId",
+      select: "title courseId",
+      populate: {
+        path: "courseId",
+        select: "title",
+      },
+    });
 
     if (!progress) {
       return res.status(200).json({

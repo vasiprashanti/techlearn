@@ -1,10 +1,18 @@
-import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 dotenv.config();
 
-export const sendCertificate = async ({ name, email, courseName, xp, buffer, certificateId, cloudUrl }) => {
+export const sendCertificate = async ({
+  name,
+  email,
+  courseName,
+  xp,
+  buffer,
+  certificateId,
+  cloudUrl,
+}) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -24,7 +32,7 @@ export const sendCertificate = async ({ name, email, courseName, xp, buffer, cer
       {
         filename: `${courseName}-${name}.pdf`,
         content: buffer,
-        contentType: 'application/pdf',
+        contentType: "application/pdf",
       },
     ],
   };
@@ -34,7 +42,7 @@ export const sendCertificate = async ({ name, email, courseName, xp, buffer, cer
 
 export const sendPaymentStatusEmail = async ({ user, status }) => {
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -62,4 +70,3 @@ export const sendPaymentStatusEmail = async ({ user, status }) => {
 
   await transporter.sendMail(mailOptions);
 };
-

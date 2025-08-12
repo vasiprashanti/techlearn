@@ -3,10 +3,12 @@ import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Notes from "../models/Notes.js";
 import Quiz from "../models/Quiz.js";
+import Exercise from "../models/Exercise.js";
 import {
   generateSlug,
   parseNotesMarkdown,
   parseQuizMarkdownFile,
+  parseExerciseMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 import fs from "fs";
 
@@ -38,14 +40,18 @@ export const getCourseTopicsForDashboard = async (req, res) => {
 };
 
 export const editTopicDetails = async (req, res) => {
-  const { topicId } = req.params;
-  const { topicName } = req.body;
-  const files = req.files;
-
   try {
+    const { topicId } = req.params;
+    const { topicName } = req.body;
+    const files = req.files;
+
     // Find topic
     const topic = await Topic.findById(topicId);
     if (!topic) return res.status(404).json({ message: "Topic not found" });
+
+    // Get the course for exercise handling
+    const course = await Course.findById(topic.courseId);
+    if (!course) return res.status(404).json({ message: "Course not found" });
 
     // Update title and slug (retain topicId)
     if (topicName) {
@@ -53,9 +59,10 @@ export const editTopicDetails = async (req, res) => {
       topic.slug = generateSlug(topicName);
     }
 
-    // Find the correct file in req.files array
+    // Find the correct files in req.files array
     const notesFile = req.files.find((f) => f.fieldname === "file");
     const quizFile = req.files.find((f) => f.fieldname === "quizFile");
+    const exerciseFile = req.files.find((f) => f.fieldname === "exerciseFile");
 
     // Update notes if file provided
     if (notesFile) {
@@ -77,10 +84,55 @@ export const editTopicDetails = async (req, res) => {
       fs.unlinkSync(quizFile.path);
     }
 
+    // Update exercise if exerciseFile provided
+    if (exerciseFile) {
+      // Parse exercise markdown file
+      const result = await parseExerciseMarkdownFile(
+        exerciseFile.path,
+        course._id
+      );
+
+      if (!result.success) {
+        fs.unlinkSync(exerciseFile.path);
+        return res.status(400).json({
+          message: "Failed to parse exercise file",
+          error: result.error,
+        });
+      }
+
+      // Ensure at least one exercise was found
+      if (result.exercises.length === 0) {
+        fs.unlinkSync(exerciseFile.path);
+        return res.status(400).json({ message: "No exercises found in file" });
+      }
+
+      // Delete existing exercises for this course
+      if (course.exerciseIds && course.exerciseIds.length > 0) {
+        await Exercise.deleteMany({ _id: { $in: course.exerciseIds } });
+      }
+
+      // Update course with new exercise IDs
+      const newExerciseIds = result.exercises.map((ex) => ex._id);
+      course.exerciseIds = newExerciseIds;
+      await course.save();
+
+      fs.unlinkSync(exerciseFile.path);
+    }
+
     await topic.save();
-    res.json({ message: "Topic updated successfully", topic });
+    res.json({
+      message: "Topic updated successfully",
+      topic,
+      exerciseUpdated: !!exerciseFile,
+      exerciseCount: exerciseFile
+        ? (await Course.findById(course._id)).exerciseIds.length
+        : 0,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error updating topic", error });
+    console.error("Edit topic error:", error);
+    res
+      .status(500)
+      .json({ message: "Error updating topic", error: error.message });
   }
 };
 

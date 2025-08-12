@@ -5,6 +5,7 @@ import {
   submitExerciseCode,
   getCourseExercises,
 } from "../controllers/exerciseController.js";
+import { uploadExerciseFile } from "../controllers/fileUploadController.js";
 
 const router = express.Router();
 

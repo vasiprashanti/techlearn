@@ -198,9 +198,8 @@ export const getCourseExercises = async (req, res) => {
       exerciseCount: exercises.length,
       exercises: exercises.map((exercise) => ({
         exerciseId: exercise._id,
+        title: exercise.title,
         question: exercise.question,
-        realLifeApplication: exercise.realLifeApplication,
-        exerciseAnswers: exercise.exerciseAnswers,
         expectedOutput: exercise.expectedOutput,
         input: exercise.input,
         createdAt: exercise.createdAt,

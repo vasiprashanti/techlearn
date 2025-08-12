@@ -1,12 +1,12 @@
-import express from 'express';
-import Mini from '../models/miniProject.js';
-import Mid from '../models/MidProject.js';
-import Major from '../models/majorProject.js';
-import { protect } from '../middleware/authMiddleware.js';
+import express from "express";
+import Mini from "../models/miniProject.js";
+import Mid from "../models/MidProject.js";
+import Major from "../models/majorProject.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get('/dashboard/projects', protect, async (req, res) => {
+router.get("/dashboard/projects", protect, async (req, res) => {
   try {
     const [mini, mid, major] = await Promise.all([
       Mini.find(),
@@ -20,8 +20,8 @@ router.get('/dashboard/projects', protect, async (req, res) => {
       majorProjects: major,
     });
   } catch (err) {
-    console.error('Error fetching dashboard projects:', err);
-    res.status(500).json({ message: 'Error loading project data' });
+    console.error("Error fetching dashboard projects:", err);
+    res.status(500).json({ message: "Error loading project data" });
   }
 });
 

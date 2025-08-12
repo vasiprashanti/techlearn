@@ -29,11 +29,12 @@ const courseSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    exerciseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Exercise",
-      required: false, // Only one exercise per course
-    },
+    exerciseIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Exercise",
+      },
+    ],
   },
   { timestamps: true }
 );

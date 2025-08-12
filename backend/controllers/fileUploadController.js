@@ -105,11 +105,11 @@ export const uploadExerciseFile = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Check if course already has an exercise
-    if (course.exerciseId) {
+    // Check if course already has exercises
+    if (course.exerciseIds && course.exerciseIds.length > 0) {
       return res.status(400).json({
         message:
-          "Course already has an exercise. Delete existing exercise first.",
+          "Course already has exercises. Delete existing exercises first or use edit function.",
       });
     }
 
@@ -128,24 +128,25 @@ export const uploadExerciseFile = async (req, res) => {
       return res.status(400).json({ message: "No exercises found in file" });
     }
 
-    const exercise = result.exercises[0];
-
-    // Update course with exercise reference
-    course.exerciseId = exercise._id;
+    // Update course with all exercise references
+    const exerciseIds = result.exercises.map((ex) => ex._id);
+    course.exerciseIds = exerciseIds;
     await course.save();
 
     res.status(201).json({
       success: true,
-      message: "Exercise uploaded and linked to course successfully",
-      exercise: {
-        id: exercise._id,
-        question: exercise.question,
-        courseId: exercise.courseId,
-      },
+      message: "Exercises uploaded and linked to course successfully",
+      exerciseCount: result.exercises.length,
+      exercises: result.exercises.map((ex) => ({
+        id: ex._id,
+        title: ex.title,
+        question: ex.question,
+        courseId: ex.courseId,
+      })),
       course: {
         id: course._id,
         title: course.title,
-        exerciseId: course.exerciseId,
+        exerciseIds: course.exerciseIds,
       },
     });
   } catch (error) {

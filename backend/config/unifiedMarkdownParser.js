@@ -97,7 +97,7 @@ export const parseQuizMarkdownFile = async (filePath, topicId) => {
   }
 };
 
-// exercises are being extarcted one after the other
+// exercises are being extracted one after the other
 export const parseExerciseMarkdownFile = async (filePath, courseId) => {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
@@ -110,18 +110,42 @@ export const parseExerciseMarkdownFile = async (filePath, courseId) => {
       const titleMatch = block.match(/Title:\s*(.*)/);
       const title = titleMatch ? titleMatch[1].trim() : "";
 
-      // Extract question (everything after "Question:")
-      const questionMatch = block.match(/Question:\s*([\s\S]*)/);
-      const question = questionMatch ? questionMatch[1].trim() : block.trim();
+      // Extract question (everything before code blocks or expected solution)
+      const questionMatch = block.match(
+        /Question:\s*([\s\S]*?)(?=```|Expected Solution:|$)/
+      );
+      const question = questionMatch
+        ? questionMatch[1].trim()
+        : title || block.trim();
 
-      // Create exercise document
+      // Extract expected output/solution from code blocks
+      let expectedOutput = "";
+
+      // Look for code blocks (```language...```)
+      const codeBlockMatches = [
+        ...block.matchAll(/```[\s\S]*?\n([\s\S]*?)```/g),
+      ];
+      if (codeBlockMatches.length > 0) {
+        // Use the last code block as expected output (usually the solution)
+        expectedOutput =
+          codeBlockMatches[codeBlockMatches.length - 1][1].trim();
+      } else {
+        // Fallback: look for "Expected Solution:" or "Solution:" section
+        const solutionMatch = block.match(
+          /(?:Expected Solution|Solution):\s*([\s\S]*)/i
+        );
+        if (solutionMatch) {
+          expectedOutput = solutionMatch[1].trim();
+        }
+      }
+
+      // Create exercise document with cleaned fields
       const exercise = new Exercise({
-        question: question || title,
+        title: title, // Include the extracted title
+        question: question,
         courseId, // Link to course
-        realLifeApplication: "",
-        exerciseAnswers: "",
-        expectedOutput: "",
-        input: "",
+        expectedOutput: expectedOutput,
+        input: "", // Can be extracted if needed in the future
       });
 
       await exercise.save();

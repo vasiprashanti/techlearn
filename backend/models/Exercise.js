@@ -9,22 +9,21 @@ const exerciseSchema = new Schema(
       ref: "Course",
       required: true,
     },
+    title: {
+      type: String, // Title of the exercise
+      required: false,
+      default: "",
+    },
     question: {
       type: String, // question text
       required: true,
     },
-    realLifeApplication: {
-      type: String, // real-life context
-    },
-    exerciseAnswers: {
-      type: String, // Full code in string/markdown format
-    },
     expectedOutput: {
-      type: String,
+      type: String, // Expected code solution/output
       default: "",
     },
     input: {
-      type: String,
+      type: String, // Input for testing the code
       default: "",
     },
   },
