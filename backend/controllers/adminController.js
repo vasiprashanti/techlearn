@@ -42,7 +42,7 @@ export const getCourseTopicsForDashboard = async (req, res) => {
 export const editTopicDetails = async (req, res) => {
   try {
     const { topicId } = req.params;
-    const { topicName } = req.body;
+    const { topicName, courseDescription } = req.body;
     const files = req.files;
 
     // Find topic
@@ -57,6 +57,11 @@ export const editTopicDetails = async (req, res) => {
     if (topicName) {
       topic.title = topicName;
       topic.slug = generateSlug(topicName);
+    }
+    // Update course description if provided
+    if (courseDescription) {
+      course.description = courseDescription;
+      await course.save();
     }
 
     // Find the correct files in req.files array
@@ -84,55 +89,107 @@ export const editTopicDetails = async (req, res) => {
       fs.unlinkSync(quizFile.path);
     }
 
-    // Update exercise if exerciseFile provided
-    if (exerciseFile) {
-      // Parse exercise markdown file
-      const result = await parseExerciseMarkdownFile(
-        exerciseFile.path,
-        course._id
-      );
-
-      if (!result.success) {
-        fs.unlinkSync(exerciseFile.path);
-        return res.status(400).json({
-          message: "Failed to parse exercise file",
-          error: result.error,
-        });
-      }
-
-      // Ensure at least one exercise was found
-      if (result.exercises.length === 0) {
-        fs.unlinkSync(exerciseFile.path);
-        return res.status(400).json({ message: "No exercises found in file" });
-      }
-
-      // Delete existing exercises for this course
-      if (course.exerciseIds && course.exerciseIds.length > 0) {
-        await Exercise.deleteMany({ _id: { $in: course.exerciseIds } });
-      }
-
-      // Update course with new exercise IDs
-      const newExerciseIds = result.exercises.map((ex) => ex._id);
-      course.exerciseIds = newExerciseIds;
-      await course.save();
-
-      fs.unlinkSync(exerciseFile.path);
-    }
+    // Exercise handling removed from editTopicDetails
 
     await topic.save();
     res.json({
       message: "Topic updated successfully",
       topic,
-      exerciseUpdated: !!exerciseFile,
-      exerciseCount: exerciseFile
-        ? (await Course.findById(course._id)).exerciseIds.length
-        : 0,
     });
   } catch (error) {
     console.error("Edit topic error:", error);
     res
       .status(500)
       .json({ message: "Error updating topic", error: error.message });
+  }
+};
+
+// Edit all exercises for a course by editing an existing exercise file
+export const editCourseExercises = async (req, res) => {
+  const { courseId } = req.params;
+  const exerciseFile = req.file;
+
+  if (!exerciseFile) {
+    return res
+      .status(400)
+      .json({ success: false, error: "No exercise file uploaded" });
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    if (fs.existsSync(exerciseFile.path)) fs.unlinkSync(exerciseFile.path);
+    return res.status(400).json({ success: false, error: "Invalid courseId" });
+  }
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    if (fs.existsSync(exerciseFile.path)) fs.unlinkSync(exerciseFile.path);
+    return res.status(404).json({ success: false, error: "Course not found" });
+  }
+
+  try {
+    // Parse the uploaded file
+    const parseResult = await parseExerciseMarkdownFile(
+      exerciseFile.path,
+      courseId
+    );
+
+    if (!parseResult.success) {
+      fs.unlinkSync(exerciseFile.path);
+      return res.status(400).json({ success: false, error: parseResult.error });
+    }
+
+    const newExercises = parseResult.exercises;
+    if (!Array.isArray(newExercises) || newExercises.length === 0) {
+      fs.unlinkSync(exerciseFile.path);
+      return res
+        .status(400)
+        .json({ success: false, error: "No valid exercises found in file" });
+    }
+
+    // Get existing exercises for this course
+    const existingExercises = await Exercise.find({ courseId }).sort({
+      createdAt: 1,
+    });
+
+    const exerciseIds = [];
+
+    // Update existing exercises in the order they appear in the markdown file
+    for (let i = 0; i < newExercises.length; i++) {
+      if (i < existingExercises.length) {
+        // Update existing exercise while preserving its ID
+        await Exercise.findByIdAndUpdate(
+          existingExercises[i]._id,
+          newExercises[i]
+        );
+        exerciseIds.push(existingExercises[i]._id);
+      } else {
+        // Create new exercise if we have more exercises than before
+        const created = await Exercise.create(newExercises[i]);
+        exerciseIds.push(created._id);
+      }
+    }
+
+    // Delete extra exercises if new file has fewer
+    if (existingExercises.length > newExercises.length) {
+      const excess = existingExercises.slice(newExercises.length);
+      await Exercise.deleteMany({ _id: { $in: excess.map((e) => e._id) } });
+    }
+
+    // Update course.exerciseIds with the new order
+    await Course.findByIdAndUpdate(courseId, { exerciseIds });
+
+    fs.unlinkSync(exerciseFile.path);
+
+    return res.json({
+      success: true,
+      message: "Exercises updated",
+      count: exerciseIds.length,
+      exerciseIds: exerciseIds,
+    });
+  } catch (error) {
+    if (exerciseFile && fs.existsSync(exerciseFile.path))
+      fs.unlinkSync(exerciseFile.path);
+    return res.status(500).json({ success: false, error: error.message });
   }
 };
 

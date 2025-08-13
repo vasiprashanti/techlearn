@@ -3,6 +3,7 @@ import {
   getAdminMetrics,
   getCourseTopicsForDashboard,
   editTopicDetails,
+  editCourseExercises,
 } from "../controllers/adminController.js";
 import { isAdmin, protect } from "../middleware/authMiddleware.js";
 import upload from "../config/multerConfig.js";
@@ -37,7 +38,16 @@ adminRouter.delete("/:courseId", protect, isAdmin, deleteCourse);
 // Admin route to upload files
 adminRouter.post("/files", protect, upload.any(), uploadFiles);
 
-// Admin route to upload exercise file for a specific course
+// Admin route to edit exercises for a course
+adminRouter.put(
+  "/:courseId/exercise",
+  protect,
+  isAdmin,
+  upload.single("exerciseFile"),
+  editCourseExercises
+);
+
+//Admin route to upload Exercise file for a course for the first time
 adminRouter.post(
   "/:courseId/exercise",
   protect,

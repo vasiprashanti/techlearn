@@ -102,7 +102,6 @@ export const parseExerciseMarkdownFile = async (filePath, courseId) => {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
     const exerciseBlocks = content.split(/## Question/).slice(1);
-
     const exercises = [];
 
     for (const block of exerciseBlocks) {
@@ -110,54 +109,31 @@ export const parseExerciseMarkdownFile = async (filePath, courseId) => {
       const titleMatch = block.match(/Title:\s*(.*)/);
       const title = titleMatch ? titleMatch[1].trim() : "";
 
-      // Extract question (everything before code blocks or expected solution)
-      const questionMatch = block.match(
-        /Question:\s*([\s\S]*?)(?=```|Expected Solution:|$)/
-      );
-      const question = questionMatch
-        ? questionMatch[1].trim()
-        : title || block.trim();
+      // Extract question
+      const questionMatch = block.match(/Question:\s*(.*)/);
+      const question = questionMatch ? questionMatch[1].trim() : "";
 
-      // Extract expected output/solution from code blocks
+      // Extract the code block as expected output
       let expectedOutput = "";
-
-      // Look for code blocks (```language...```)
-      const codeBlockMatches = [
-        ...block.matchAll(/```[\s\S]*?\n([\s\S]*?)```/g),
-      ];
-      if (codeBlockMatches.length > 0) {
-        // Use the last code block as expected output (usually the solution)
-        expectedOutput =
-          codeBlockMatches[codeBlockMatches.length - 1][1].trim();
-      } else {
-        // Fallback: look for "Expected Solution:" or "Solution:" section
-        const solutionMatch = block.match(
-          /(?:Expected Solution|Solution):\s*([\s\S]*)/i
-        );
-        if (solutionMatch) {
-          expectedOutput = solutionMatch[1].trim();
-        }
+      const codeBlockMatch = block.match(/```[\w]*[\r\n]+([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        expectedOutput = codeBlockMatch[1].trim();
       }
 
-      // Create exercise document with cleaned fields
-      const exercise = new Exercise({
-        title: title, // Include the extracted title
-        question: question,
-        courseId, // Link to course
-        expectedOutput: expectedOutput,
-        input: "", // Can be extracted if needed in the future
+      exercises.push({
+        title,
+        question,
+        expectedOutput,
+        input: "", // Always empty since no input is needed
+        courseId,
       });
-
-      await exercise.save();
-      exercises.push(exercise);
     }
 
-    return { success: true, exercises, count: exercises.length };
+    return { success: true, exercises };
   } catch (error) {
     return { success: false, error: error.message };
   }
 };
-
 export default {
   generateSlug,
   parseNotesMarkdown,

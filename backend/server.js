@@ -66,12 +66,12 @@ app.use(express.urlencoded({ extended: false }));
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(
-  "/CoreJava_Images",
-  express.static(
-    path.join(__dirname, "markdown-content/CoreJava/CoreJava_Images")
-  )
-);
+// app.use(
+//   "/CoreJava_Images",
+//   express.static(
+//     path.join(__dirname, "markdown-content/CoreJava/CoreJava_Images")
+//   )
+// );
 
 app.get("/", (req, res) => {
   res.send("Techlearn Backend API is running!");

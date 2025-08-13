@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
 import Course from "../models/Course.js";
+import Exercise from "../models/Exercise.js";
 import { parseExerciseMarkdownFile } from "../config/unifiedMarkdownParser.js";
 
 export const uploadFiles = async (req, res) => {
@@ -128,19 +129,24 @@ export const uploadExerciseFile = async (req, res) => {
       return res.status(400).json({ message: "No exercises found in file" });
     }
 
+    // Save exercises to database first
+    const savedExercises = await Exercise.insertMany(result.exercises);
+
     // Update course with all exercise references
-    const exerciseIds = result.exercises.map((ex) => ex._id);
+    const exerciseIds = savedExercises.map((ex) => ex._id);
     course.exerciseIds = exerciseIds;
     await course.save();
 
     res.status(201).json({
       success: true,
       message: "Exercises uploaded and linked to course successfully",
-      exerciseCount: result.exercises.length,
-      exercises: result.exercises.map((ex) => ({
+      exerciseCount: savedExercises.length,
+      exercises: savedExercises.map((ex) => ({
         id: ex._id,
         title: ex.title,
         question: ex.question,
+        expectedOutput: ex.expectedOutput,
+        input: ex.input,
         courseId: ex.courseId,
       })),
       course: {
