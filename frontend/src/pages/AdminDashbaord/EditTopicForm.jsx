@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { HiOutlineUpload } from "react-icons/hi";
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -23,9 +24,8 @@ const EditTopicForm = () => {
     try {
       const formData = new FormData();
   formData.append('topicName', topicName);
-  if (notesFile) formData.append('notesFile', notesFile);
-  if (quizFile) formData.append('quizFile', quizFile);
-  if (exerciseFile) formData.append('exerciseFile', exerciseFile);
+      if (notesFile) formData.append('notesFile', notesFile);
+      if (quizFile) formData.append('quizFile', quizFile);
       const token = localStorage.getItem('token');
       const res = await axios.put(
         `${BASE_URL}/admin/topic/${topicId}`,
@@ -47,53 +47,78 @@ const EditTopicForm = () => {
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded shadow mt-8">
-      <h2 className="text-2xl font-bold mb-4">Edit Topic</h2>
+    <div className="max-w-xl mx-auto p-6 bg-white/50 dark:bg-gray-800/70 backdrop-blur rounded-lg shadow mt-36 mb-12">
+      <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-4">
+        Edit Topic
+      </h2>
       <form onSubmit={handleSubmit} className="space-y-6">
+
+        {/* Topic Name */}
         <div>
-          <label className="block font-medium mb-1">Topic Name</label>
+          <label className="block text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
+            Topic Name
+          </label>
           <input
             type="text"
-            className="w-full border rounded px-3 py-2"
             value={topicName}
             onChange={e => setTopicName(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter topic name"
             required
           />
         </div>
+
+        {/* Notes File upload */}
         <div>
-          <label className="block font-medium mb-1">Notes File</label>
-          <input
-            type="file"
-            accept=".md,.pdf,.txt"
-            className="w-full"
-            onChange={e => setNotesFile(e.target.files[0])}
-          />
+          <h2 className="text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
+            Notes File
+          </h2>
+          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
+            <HiOutlineUpload className="inline text-lg" />
+            <input
+              type="file"
+              accept=".md,.pdf,.txt"
+              className="hidden"
+              onChange={(e) => setNotesFile(e.target.files?.[0] || null)}
+            />
+            Upload Notes File (.md/.pdf/.txt)
+          </label>
+          {notesFile && (
+            <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
+              {notesFile.name}
+            </p>
+          )}
         </div>
+
+        {/* Quiz File upload */}
         <div>
-          <label className="block font-medium mb-1">Quiz File</label>
-          <input
-            type="file"
-            accept=".md,.pdf,.txt"
-            className="w-full"
-            onChange={e => setQuizFile(e.target.files[0])}
-          />
-        </div>
-        <div>
-          <label className="block font-medium mb-1">Exercise File</label>
-          <input
-            type="file"
-            accept=".md,.pdf,.txt,.json"
-            className="w-full"
-            onChange={e => setExerciseFile(e.target.files[0])}
-          />
+          <h2 className="text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
+            Quiz File
+          </h2>
+          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
+            <HiOutlineUpload className="inline text-lg" />
+            <input
+              type="file"
+              accept=".md,.pdf,.txt"
+              className="hidden"
+              onChange={(e) => setQuizFile(e.target.files?.[0] || null)}
+            />
+            Upload Quiz File (.md/.pdf/.txt)
+          </label>
+          {quizFile && (
+            <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
+              {quizFile.name}
+            </p>
+          )}
         </div>
         <button
           type="submit"
-          className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="bg-blue-600 text-white rounded-lg px-4 sm:px-4 py-2 text-sm sm:text-base font-semibold shadow hover:bg-blue-700 transition w-full sm:w-auto"
           disabled={loading}
         >
           {loading ? 'Saving...' : 'Submit'}
         </button>
+
         {error && <div className="text-red-500 mt-2">{error}</div>}
         {success && <div className="text-green-600 mt-2">{success}</div>}
       </form>

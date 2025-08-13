@@ -11,7 +11,7 @@ import { FiMenu, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
-  { name: "Projects", icon: HiOutlineChartBar, path: "/admin/projects" },
+  { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/projects" },
   { name: "Upload Files", icon: HiOutlineUpload, path: "/admin/upload-topics" },
 ];
 
