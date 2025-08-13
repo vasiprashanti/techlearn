@@ -1,14 +1,18 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useAuthModalContext } from '../context/AuthModalContext';
 
-// AdminPrivateRoute: Only allows access if user is authenticated and has role 'admin'
 export default function AdminPrivateRoute() {
-  const { user, loading } = useAuth();
+  const userData = localStorage.getItem('userData');
+  const token = localStorage.getItem('token');
+  const { openLogin } = useAuthModalContext();
 
-  if (loading) return null; // or a loading spinner
+  // Parse userData only if it exists
+  const user = userData ? JSON.parse(userData) : null;
 
-  if (!user || !user.token) {
-    return <Navigate to="/login" replace />;
+  if (!user || !token) {
+    openLogin();
+    return null;
   }
 
   if (user.role !== 'admin') {

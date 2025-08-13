@@ -24,7 +24,7 @@ import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
 import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
 import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
 import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
-
+import Quizzesupload from '../src/pages/AdminDashbaord/Quizzesupload';
 
 // Auth pages
 import Login from './pages/Auth/Login'
@@ -629,6 +629,7 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
+            <Route path="/admin/quizzes-upload" element={<Quizzesupload/>}/>
           </Route>
           <Route path="/about" element={<About />} />
           

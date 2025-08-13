@@ -4,15 +4,18 @@ import {
   HiOutlineHome,
   HiOutlineBookOpen,
   HiOutlineChartBar,
+  
 } from "react-icons/hi2";
 import { HiOutlineUpload } from "react-icons/hi";
 import { FiMenu, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import {MdQuiz} from 'react-icons/md'
 
 const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
   { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/projects" },
   { name: "Upload Files", icon: HiOutlineUpload, path: "/admin/upload-topics" },
+  {name : "Quizzes", icon: MdQuiz, path: "/admin/quizzes-upload" }
 ];
 
 export default function Admin_Sidebar() {
