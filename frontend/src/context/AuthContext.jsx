@@ -131,9 +131,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await authAPI.login(credentials);
-      
       // Store token and user data (use 'token' for compatibility with UserContext)
-      console.log(response);
       localStorage.setItem('token', response.token);
       localStorage.setItem('userData', JSON.stringify(response.user));
 
@@ -144,6 +142,13 @@ export const AuthProvider = ({ children }) => {
           token: response.token,
         },
       });
+
+      // Redirect based on role
+      if (response.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
 
       return { success: true, data: response };
     } catch (error) {
@@ -161,8 +166,6 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const response = await authAPI.register(userData);
-      
-      // Store token and user data (use 'token' for compatibility)
       localStorage.setItem('token', response.token);
       localStorage.setItem('userData', JSON.stringify(response.user));
 
@@ -173,6 +176,13 @@ export const AuthProvider = ({ children }) => {
           token: response.token,
         },
       });
+
+      // Redirect based on role
+      if (response.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
 
       return { success: true, data: response };
     } catch (error) {
