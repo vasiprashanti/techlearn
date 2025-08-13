@@ -8,6 +8,7 @@ import { AuthProvider } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
+import AdminPrivateRoute from './Routes/AdminPrivateRoute'
 
 // Motion for animations
 import { motion, AnimatePresence } from 'framer-motion'
@@ -621,13 +622,14 @@ function LayoutWrapper() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
-           <Route element={<PrivateRoute />}>
-             <Route path="/admin" element={<AdminDashboard />} />
-           </Route>
-          <Route path="/admin/courses" element={<Courses_Admin />} />
-          <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
-          <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
-          <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
+          {/* All admin routes protected by AdminPrivateRoute */}
+          <Route element={<AdminPrivateRoute />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
+            <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
+            <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
+          </Route>
           <Route path="/about" element={<About />} />
           
         </Routes>

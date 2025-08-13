@@ -242,7 +242,10 @@ export const exerciseAPI = {
     const response = await fetch(`${API_BASE}/exercises/${courseId}`, {
       headers: getAuthHeaders(),
     });
-    return handleResponse(response);
+    const data = await handleResponse(response);
+    // Debug log: compare this with Postman response
+    console.log('🧩 [exerciseAPI.getExercises] Raw backend data:', data);
+    return data;
   },
 
   // Get a single exercise (helper function that fetches all and filters)

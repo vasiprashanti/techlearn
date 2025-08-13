@@ -29,15 +29,20 @@ const ExercisesList = () => {
       const id = exercise._id || exercise.exerciseId;
       return {
         id,
-        title: exercise.question, // Use question as title
-        topicTitle: exercise.topicTitle,
-        difficulty: 'Easy', // Default difficulty, could be enhanced later
-        estimatedTime: '15 min', // Default time, could be enhanced later
-        xp: 10, // Default XP, could be enhanced later
-        completed: completedExerciseIds.includes(id), // Check if exercise is completed
-        locked: index >= 4, // First 4 exercises are free
-        realLifeApplication: exercise.realLifeApplication,
+        exerciseId: exercise.exerciseId,
+        title: exercise.title || exercise.question || '',
+        question: exercise.question || '',
+        expectedOutput: exercise.expectedOutput,
+        input: exercise.input,
+        createdAt: exercise.createdAt,
+        updatedAt: exercise.updatedAt,
+        // Remove realLifeApplication, use only backend fields
         exerciseAnswers: exercise.exerciseAnswers,
+        difficulty: 'Easy', // Default or backend if available
+        estimatedTime: '15 min', // Default or backend if available
+        xp: 10, // Default or backend if available
+        completed: completedExerciseIds.includes(id),
+        locked: index >= 4,
       };
     });
   };

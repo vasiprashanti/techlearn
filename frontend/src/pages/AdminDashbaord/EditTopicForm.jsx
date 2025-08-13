@@ -12,6 +12,7 @@ const EditTopicForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [exerciseFile, setExerciseFile] = useState(null);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,8 +23,9 @@ const EditTopicForm = () => {
     try {
       const formData = new FormData();
   formData.append('topicName', topicName);
-      if (notesFile) formData.append('notesFile', notesFile);
-      if (quizFile) formData.append('quizFile', quizFile);
+  if (notesFile) formData.append('notesFile', notesFile);
+  if (quizFile) formData.append('quizFile', quizFile);
+  if (exerciseFile) formData.append('exerciseFile', exerciseFile);
       const token = localStorage.getItem('token');
       const res = await axios.put(
         `${BASE_URL}/admin/topic/${topicId}`,
@@ -74,6 +76,15 @@ const EditTopicForm = () => {
             accept=".md,.pdf,.txt"
             className="w-full"
             onChange={e => setQuizFile(e.target.files[0])}
+          />
+        </div>
+        <div>
+          <label className="block font-medium mb-1">Exercise File</label>
+          <input
+            type="file"
+            accept=".md,.pdf,.txt,.json"
+            className="w-full"
+            onChange={e => setExerciseFile(e.target.files[0])}
           />
         </div>
         <button
