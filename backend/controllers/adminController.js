@@ -42,7 +42,7 @@ export const getCourseTopicsForDashboard = async (req, res) => {
 export const editTopicDetails = async (req, res) => {
   try {
     const { topicId } = req.params;
-    const { topicName, courseDescription } = req.body;
+    const { topicName, courseDescription, courseTitle } = req.body;
     const files = req.files;
 
     // Find topic
@@ -63,7 +63,10 @@ export const editTopicDetails = async (req, res) => {
       course.description = courseDescription;
       await course.save();
     }
-
+    if (courseTitle) {
+      course.title = courseTitle;
+      await course.save();
+    }
     // Find the correct files in req.files array
     const notesFile = req.files.find((f) => f.fieldname === "file");
     const quizFile = req.files.find((f) => f.fieldname === "quizFile");
