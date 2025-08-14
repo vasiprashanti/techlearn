@@ -108,26 +108,9 @@ const ExerciseDetail = () => {
       description: backendExercise.question,
       realLifeApplication: backendExercise.realLifeApplication,
       theory: `# ${topicTitle}
-
-${backendExercise.question}
-
-## Real-Life Application
-${backendExercise.realLifeApplication || 'This exercise helps you practice fundamental programming concepts.'}
-
-## Instructions
-Write your code to solve the given problem. Use the provided starter code as a reference.
-
-## Expected Solution
-\\u007F\u007Fjava
-${backendExercise.exerciseAnswers}
-\\u007F\u007F`,
-      starterCode: `// ${backendExercise.question}
-// Real-life application: ${backendExercise.realLifeApplication || 'Practice programming concepts'}
-
-// Write your code here
-
-`,
-      expectedOutput: '', // Will be determined by code execution
+\n${backendExercise.question}\n\n## Real-Life Application\n${backendExercise.realLifeApplication || 'This exercise helps you practice fundamental programming concepts.'}\n\n## Instructions\nWrite your code to solve the given problem. Use the provided starter code as a reference.\n\n## Expected Solution\n\n`,
+      starterCode: `// ${backendExercise.question}\n// Real-life application: ${backendExercise.realLifeApplication || 'Practice programming concepts'}\n\n// Write your code here\n\n`,
+      expectedOutput: backendExercise.expectedOutput || '',
       exerciseAnswers: backendExercise.exerciseAnswers,
       testCases: []
     };
@@ -611,6 +594,17 @@ ${backendExercise.exerciseAnswers}
                   >
                     {exercise?.theory}
                   </ReactMarkdown>
+                  {/* Show expected solution if present */}
+                  {exercise?.expectedOutput && (
+                    <div className="mt-6">
+                      <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
+                      <div className="bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                        <pre className="p-5 text-sm font-mono text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
+                          {exercise.expectedOutput}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
