@@ -7,7 +7,7 @@ import Exercise from "../models/Exercise.js";
 import {
   generateSlug,
   parseNotesMarkdown,
-  parseQuizMarkdownFile,
+  parseMcqMarkdownFile,
   parseExerciseMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 import fs from "fs";
@@ -67,32 +67,44 @@ export const editTopicDetails = async (req, res) => {
       course.title = courseTitle;
       await course.save();
     }
+
     // Find the correct files in req.files array
-    const notesFile = req.files.find((f) => f.fieldname === "file");
-    const quizFile = req.files.find((f) => f.fieldname === "quizFile");
-    const exerciseFile = req.files.find((f) => f.fieldname === "exerciseFile");
+    const notesFile = req.files.find(
+      (f) => f.fieldname === "file" || f.fieldname === "notesFile"
+    );
+    const mcqFile = req.files.find(
+      (f) => f.fieldname === "quizFile" || f.fieldname === "mcqFile"
+    );
 
     // Update notes if file provided
     if (notesFile) {
       const notesContent = parseNotesMarkdown(notesFile.path, topic.title);
-      await Notes.findByIdAndUpdate(topic.notesId, {
-        parsedContent: notesContent.content,
-      });
+      let notes = await Notes.findOne({ topicId });
+      if (!notes) {
+        notes = new Notes({
+          topicId,
+          parsedContent: notesContent.content,
+          checkpointMcqs: [],
+        });
+      } else {
+        notes.parsedContent = notesContent.content;
+      }
+      await notes.save();
       fs.unlinkSync(notesFile.path);
     }
 
-    // Update quiz if quizFile provided
-    if (quizFile) {
-      const quizData = await parseQuizMarkdownFile(quizFile.path, topicId);
-      if (quizData && quizData.questions) {
-        await Quiz.findByIdAndUpdate(topic.quizId, {
-          questions: quizData.questions,
-        });
+    // Update MCQs if mcqFile provided
+    if (mcqFile) {
+      const checkpointMcqs = await parseMcqMarkdownFile(mcqFile.path, topicId);
+      let notes = await Notes.findOne({ topicId });
+      if (!notes) {
+        notes = new Notes({ topicId, parsedContent: "", checkpointMcqs });
+      } else {
+        notes.checkpointMcqs = checkpointMcqs;
       }
-      fs.unlinkSync(quizFile.path);
+      await notes.save();
+      fs.unlinkSync(mcqFile.path);
     }
-
-    // Exercise handling removed from editTopicDetails
 
     await topic.save();
     res.json({

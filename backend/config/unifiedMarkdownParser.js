@@ -1,7 +1,4 @@
 import fs from "fs";
-import path from "path";
-import Quiz from "../models/Quiz.js";
-import Exercise from "../models/Exercise.js";
 
 // Generate URL-friendly slug from title
 export const generateSlug = (title) => {
@@ -53,22 +50,21 @@ export const parseNotesMarkdownFile = (filePath, title) => {
 };
 
 // each quiz file is being parser
-export const parseQuizMarkdownFile = async (filePath, topicId) => {
+export const parseMcqMarkdownFile = async (filePath, topicId) => {
   try {
     const content = fs.readFileSync(filePath, "utf-8");
-    // Split by question blocks
-    const questionBlocks = content.split(/###\s*Question/).slice(1);
-
-    const questions = questionBlocks.map((block) => {
+    // Split by MCQ blocks (support both ### Question and :::checkpointMcq)
+    const mcqBlocks = content.split(/###\s*Question|:::checkpointMcq/).slice(1);
+    const checkpointMcqs = mcqBlocks.map((block, idx) => {
       // Extract question text (first line)
-      const questionMatch = block.match(/^(.*?)(?:\n- )/s);
+      const questionMatch = block.match(/Question:\s*(.*?)(?:\n- )/s);
       const question = questionMatch ? questionMatch[1].trim() : "";
 
       // Extract options
       const optionMatches = [...block.matchAll(/\n-\s(.*)/g)];
       const options = optionMatches.map((m) => m[1].trim());
 
-      // Extract correct answer index (0-based)
+      // Extract correct answer index (1-based)
       const answerMatch = block.match(/Answer:\s*(\d+)/);
       const correctAnswer = answerMatch ? parseInt(answerMatch[1], 10) : null;
 
@@ -81,17 +77,28 @@ export const parseQuizMarkdownFile = async (filePath, topicId) => {
         options,
         correctAnswer,
         explanation,
+        checkpointMcqId: `${topicId}-mcq${idx + 1}`,
       };
     });
 
-    // Insert quiz into DB
-    const quiz = new Quiz({
-      topicId,
-      questions,
-    });
-    await quiz.save();
-
-    return { success: true, quizId: quiz._id, questions };
+    // Save MCQs to Notes.checkpointMcqs
+    const Notes = (await import("../models/Notes.js")).default;
+    const notes = await Notes.findOne({ topicId });
+    if (!notes) {
+      // If notes do not exist, create a new Notes document
+      const newNotes = new Notes({
+        topicId,
+        parsedContent: content,
+        checkpointMcqs,
+      });
+      await newNotes.save();
+      return { success: true, notesId: newNotes._id, checkpointMcqs };
+    } else {
+      // If notes exist, update checkpointMcqs
+      notes.checkpointMcqs = checkpointMcqs;
+      await notes.save();
+      return { success: true, notesId: notes._id, checkpointMcqs };
+    }
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -138,6 +145,6 @@ export default {
   generateSlug,
   parseNotesMarkdown,
   parseNotesMarkdownFile,
-  parseQuizMarkdownFile,
+  parseMcqMarkdownFile,
   parseExerciseMarkdownFile,
 };

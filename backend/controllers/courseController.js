@@ -10,7 +10,7 @@ import {
 } from "./userProgressController.js";
 import {
   parseNotesMarkdownFile,
-  parseQuizMarkdownFile,
+  parseMcqMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 
 // admin specific functions
@@ -165,7 +165,7 @@ export const addMultipleTopics = async (req, res) => {
         // Now parse and insert quiz, passing topicId
         let quizId = null;
         if (quizFilePath) {
-          const quizResult = await parseQuizMarkdownFile(
+          const quizResult = await parseMcqMarkdownFile(
             quizFilePath,
             savedTopic._id
           );
@@ -270,91 +270,59 @@ export const getCourseById = async (req, res) => {
   }
 };
 
-export const getQuizByCourseId = async (req, res) => {
-  try {
-    const { courseId, topicId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(courseId))
-      return res.status(400).json({ message: "Invalid Course Id" });
-    if (!mongoose.Types.ObjectId.isValid(topicId))
-      return res.status(400).json({ message: "Invalid Topic Id" });
+//////get quizById moved to the checkpoint controller
 
-    // Find quiz by topicId and verify it belongs to the courseId through population
-    const quiz = await Quiz.findOne({ topicId }).populate({
-      path: "topicId",
-      match: { courseId },
-      select: "title courseId",
-    });
+// export const submitQuiz = async (req, res) => {
+//   try {
+//     const { courseId } = req.params;
+//     const { quizId, questionId, selectedOption } = req.body;
 
-    if (!quiz || !quiz.topicId)
-      return res.status(404).json({ message: "Quiz not found for this topic" });
+//     const quiz = await Quiz.findById(quizId);
+//     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
 
-    return res.status(200).json({
-      quizId: quiz._id,
-      topic: quiz.topicId.title,
-      questions: quiz.questions.map(({ question, options, _id }) => ({
-        question,
-        options,
-        _id,
-      })),
-    });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ message: "Error Fetching quiz", error: error.message });
-  }
-};
+//     const question = quiz.questions.id(questionId);
+//     if (!question)
+//       return res.status(404).json({ message: "Question not found" });
 
-export const submitQuiz = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-    const { quizId, questionId, selectedOption } = req.body;
+//     // FIX: Convert selectedOption to number for proper comparison
+//     const selectedOptionNumber = parseInt(selectedOption);
+//     const isCorrect = question.correctAnswer === selectedOptionNumber;
 
-    const quiz = await Quiz.findById(quizId);
-    if (!quiz) return res.status(404).json({ message: "Quiz not found" });
+//     const alreadyAnswered = await checkIfQuestionAnswered({
+//       userId: req.user._id,
+//       quizId,
+//       questionId,
+//     });
 
-    const question = quiz.questions.id(questionId);
-    if (!question)
-      return res.status(404).json({ message: "Question not found" });
+//     if (alreadyAnswered.error) {
+//       return res.status(400).json({ message: alreadyAnswered.error });
+//     }
 
-    // FIX: Convert selectedOption to number for proper comparison
-    const selectedOptionNumber = parseInt(selectedOption);
-    const isCorrect = question.correctAnswer === selectedOptionNumber;
+//     const xpAwarded = isCorrect ? 10 : 0;
+//     const result = await recordQuizAttempt({
+//       userId: req.user._id,
+//       courseId,
+//       quizId,
+//       questionId,
+//       xp: xpAwarded,
+//     });
 
-    const alreadyAnswered = await checkIfQuestionAnswered({
-      userId: req.user._id,
-      quizId,
-      questionId,
-    });
-
-    if (alreadyAnswered.error) {
-      return res.status(400).json({ message: alreadyAnswered.error });
-    }
-
-    const xpAwarded = isCorrect ? 10 : 0;
-    const result = await recordQuizAttempt({
-      userId: req.user._id,
-      courseId,
-      quizId,
-      questionId,
-      xp: xpAwarded,
-    });
-
-    res.status(200).json({
-      isCorrect,
-      correctAnswer: question.correctAnswer,
-      xpAwarded,
-      explanation: question.explanation || null,
-      quizData: {
-        quizId: quiz._id,
-        totalQuestions: quiz.questions.length,
-        answeredQuestions: result.totalAnswered,
-        remainingQuestions: quiz.questions.length - result.totalAnswered,
-        isQuizComplete: result.quizComplete,
-      },
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Quiz submission failed", error: error.message });
-  }
-};
+//     res.status(200).json({
+//       isCorrect,
+//       correctAnswer: question.correctAnswer,
+//       xpAwarded,
+//       explanation: question.explanation || null,
+//       quizData: {
+//         quizId: quiz._id,
+//         totalQuestions: quiz.questions.length,
+//         answeredQuestions: result.totalAnswered,
+//         remainingQuestions: quiz.questions.length - result.totalAnswered,
+//         isQuizComplete: result.quizComplete,
+//       },
+//     });
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({ message: "Quiz submission failed", error: error.message });
+//   }
+// };
