@@ -13,7 +13,7 @@ import {MdQuiz} from 'react-icons/md'
 const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
-  { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/projects" },
+  { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/upload-exercises" },
   { name: "Upload Files", icon: HiOutlineUpload, path: "/admin/upload-topics" },
   {name : "Quizzes", icon: MdQuiz, path: "/admin/quizzes-upload" }
 ];
