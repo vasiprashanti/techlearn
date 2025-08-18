@@ -106,10 +106,22 @@ const ExerciseDetail = () => {
       estimatedTime: '15 min', // Default time
       xp: 10, // Default XP
       description: backendExercise.question,
-      realLifeApplication: backendExercise.realLifeApplication,
-      theory: `# ${topicTitle}
-\n${backendExercise.question}\n\n## Real-Life Application\n${backendExercise.realLifeApplication || 'This exercise helps you practice fundamental programming concepts.'}\n\n## Instructions\nWrite your code to solve the given problem. Use the provided starter code as a reference.\n\n## Expected Solution\n\n`,
-      starterCode: `// ${backendExercise.question}\n// Real-life application: ${backendExercise.realLifeApplication || 'Practice programming concepts'}\n\n// Write your code here\n\n`,
+      theory: `# ${topicTitle}\n\n${backendExercise.question}`,
+      starterCode: `// ${backendExercise.question}\n// Write your code here\n\n`,
+      expectedOutput: backendExercise.expectedOutput || '',
+      exerciseAnswers: backendExercise.exerciseAnswers,
+      testCases: []
+    };
+    return {
+      id,
+      title: backendExercise.question,
+      topicTitle,
+      difficulty: 'Easy', // Default difficulty
+      estimatedTime: '15 min', // Default time
+      xp: 10, // Default XP
+      description: backendExercise.question,
+      theory: `# ${topicTitle}\n\n${backendExercise.question}`,
+      starterCode: `// ${backendExercise.question}\n// Write your code here\n\n`,
       expectedOutput: backendExercise.expectedOutput || '',
       exerciseAnswers: backendExercise.exerciseAnswers,
       testCases: []
