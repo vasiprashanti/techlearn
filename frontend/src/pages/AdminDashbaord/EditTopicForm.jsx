@@ -9,7 +9,7 @@ const EditTopicForm = () => {
   const { courseId, topicId } = useParams();
   const [topicName, setTopicName] = useState('');
   const [notesFile, setNotesFile] = useState(null);
-  const [quizFile, setQuizFile] = useState(null);
+  const [mcqFile, setMcqFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -23,9 +23,9 @@ const EditTopicForm = () => {
     setSuccess(null);
     try {
       const formData = new FormData();
-  formData.append('topicName', topicName);
+      formData.append('topicName', topicName);
       if (notesFile) formData.append('notesFile', notesFile);
-      if (quizFile) formData.append('quizFile', quizFile);
+      if (mcqFile) formData.append('mcqFile', mcqFile);
       const token = localStorage.getItem('token');
       const res = await axios.put(
         `${BASE_URL}/admin/topic/${topicId}`,
@@ -90,10 +90,10 @@ const EditTopicForm = () => {
           )}
         </div>
 
-        {/* Quiz File upload */}
+        {/* MCQ File upload */}
         <div>
           <h2 className="text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
-            Quiz File
+            MCQ File
           </h2>
           <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
             <HiOutlineUpload className="inline text-lg" />
@@ -101,13 +101,13 @@ const EditTopicForm = () => {
               type="file"
               accept=".md,.pdf,.txt"
               className="hidden"
-              onChange={(e) => setQuizFile(e.target.files?.[0] || null)}
+              onChange={(e) => setMcqFile(e.target.files?.[0] || null)}
             />
-            Upload Quiz File (.md/.pdf/.txt)
+            Upload MCQ File (.md/.pdf/.txt)
           </label>
-          {quizFile && (
+          {mcqFile && (
             <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
-              {quizFile.name}
+              {mcqFile.name}
             </p>
           )}
         </div>

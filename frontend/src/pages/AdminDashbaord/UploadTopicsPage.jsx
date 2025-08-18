@@ -9,7 +9,7 @@ export default function UploadTopicsPage() {
   const [courseName, setCourseName] = useState("");
   const [numTopics, setNumTopics] = useState("");
   const [topics, setTopics] = useState([]);
-  const [quizInputOpen, setQuizInputOpen] = useState({});
+  const [mcqInputOpen, setMcqInputOpen] = useState({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [exerciseFile, setExerciseFile] = useState(null);
@@ -26,8 +26,8 @@ export default function UploadTopicsPage() {
         title: `Topic ${i + 1}: `,
         file: null,
         status: "",
-        quizFile: null, // Changed from quiz text to quiz file
-        quizStatus: ""
+  mcqFile: null, // Changed from quiz text to quiz file
+  mcqStatus: ""
       })
     );
   }, [numTopics]);
@@ -55,21 +55,21 @@ export default function UploadTopicsPage() {
   };
 
   // quiz input toggle per topic
-  const handleQuizToggle = (idx) => {
-    setQuizInputOpen((prev) => ({
+  const handleMcqToggle = (idx) => {
+    setMcqInputOpen((prev) => ({
       ...prev,
       [idx]: !prev[idx],
     }));
   };
 
-  // NEW: quiz file upload handler
-  const handleQuizFileUpload = (idx, file) => {
+  // NEW: MCQ file upload handler
+  const handleMcqFileUpload = (idx, file) => {
     setTopics((prev) => {
       const updated = [...prev];
       updated[idx] = {
         ...updated[idx],
-        quizFile: file,
-        quizStatus: file ? `Quiz uploaded: ${file.name}` : "",
+        mcqFile: file,
+        mcqStatus: file ? `MCQ uploaded: ${file.name}` : "",
       };
       return updated;
     });
@@ -98,10 +98,10 @@ export default function UploadTopicsPage() {
         }
       });
 
-      // Add quiz files with field names (quizFile${index})
+      // Add MCQ files with field names (mcqFile${index})
       topics.forEach((topic, index) => {
-        if (topic.quizFile) {
-          formData.append(`quizFile${index}`, topic.quizFile);
+        if (topic.mcqFile) {
+          formData.append(`mcqFile${index}`, topic.mcqFile);
         }
       });
 
@@ -109,13 +109,13 @@ export default function UploadTopicsPage() {
       const topicTitles = topics.map(topic => topic.title);
       formData.append("titles", JSON.stringify(topicTitles));
 
-      // Add quiz files info (for topics that have quiz files)
-      const quizFilesInfo = topics.map((topic, index) => ({
+      // Add MCQ files info (for topics that have MCQ files)
+      const mcqFilesInfo = topics.map((topic, index) => ({
         index,
-        hasQuiz: !!topic.quizFile,
-        quizFileName: topic.quizFile ? topic.quizFile.name : ""
+        hasMcq: !!topic.mcqFile,
+        mcqFileName: topic.mcqFile ? topic.mcqFile.name : ""
       }));
-      formData.append("quizFilesInfo", JSON.stringify(quizFilesInfo));
+      formData.append("mcqFilesInfo", JSON.stringify(mcqFilesInfo));
 
       const token = localStorage.getItem("token");
       
@@ -174,9 +174,9 @@ export default function UploadTopicsPage() {
         return {
           title: processedTopic.title || userTopic.title || `Topic ${index + 1}`,
           noteFile: userTopic.file ? userTopic.file.name : "",
-          quizFile: userTopic.quizFile ? userTopic.quizFile.name : "",
+          mcqFile: userTopic.mcqFile ? userTopic.mcqFile.name : "",
           notesFilePath: processedTopic.notesFilePath || null,
-          quizFilePath: processedTopic.quizFilePath || null,
+          mcqFilePath: processedTopic.mcqFilePath || null,
           index: processedTopic.index || index + 1
         };
       });
@@ -293,9 +293,9 @@ export default function UploadTopicsPage() {
                     <button
                       type="button"
                       className="text-xs px-2 py-1 rounded bg-blue-200 hover:bg-blue-300 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-900 dark:text-blue-200 font-semibold transition"
-                      onClick={() => handleQuizToggle(i)}
+                      onClick={() => handleMcqToggle(i)}
                     >
-                      {topic.quizFile ? "Change Quiz" : "Add Quiz"}
+                      {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
                     </button>
                   </div>
                   <div>
@@ -327,10 +327,10 @@ export default function UploadTopicsPage() {
                       </div>
                     )}
                   </div>
-                  {quizInputOpen[i] && (
+                  {mcqInputOpen[i] && (
                     <div className="border-l-4 border-green-300 dark:border-green-700 pl-3 bg-green-50/50 dark:bg-green-900/20 rounded-r-lg py-2">
                       <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                        Upload Quiz File:
+                        Upload MCQ File:
                       </label>
                       <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1 text-sm">
                         <HiOutlineUpload className="inline text-base" />
@@ -338,13 +338,13 @@ export default function UploadTopicsPage() {
                           type="file"
                           accept=".md"
                           className="hidden"
-                          onChange={e => handleQuizFileUpload(i, e.target.files?.[0] || null)}
+                          onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
                         />
-                        Upload Quiz .md
+                        Upload MCQ .md
                       </label>
-                      {topic.quizStatus && (
+                      {topic.mcqStatus && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          {topic.quizStatus}
+                          {topic.mcqStatus}
                         </p>
                       )}
                     </div>
@@ -400,18 +400,18 @@ export default function UploadTopicsPage() {
                           <button
                             type="button"
                             className="text-xs px-3 py-1 rounded bg-green-200 hover:bg-green-300 dark:bg-green-800 dark:hover:bg-green-700 text-green-900 dark:text-green-200 font-semibold transition"
-                            onClick={() => handleQuizToggle(i)}
+                            onClick={() => handleMcqToggle(i)}
                           >
-                            {topic.quizFile ? "Change Quiz" : "Add Quiz"}
+                            {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
                           </button>
                         </td>
                       </tr>
-                      {quizInputOpen[i] && (
+                      {mcqInputOpen[i] && (
                         <tr>
                           <td colSpan={4} className="pl-8 border-l-4 border-green-300 dark:border-green-700 bg-transparent">
                             <div className="flex flex-col gap-2 py-2">
                               <label className="ml-2 font-medium text-xs text-green-800 dark:text-green-100 mb-1">
-                                Upload Quiz File:
+                                Upload MCQ File:
                               </label>
                               <div className="flex items-center gap-4">
                                 <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1">
@@ -420,13 +420,13 @@ export default function UploadTopicsPage() {
                                     type="file"
                                     accept=".md"
                                     className="hidden"
-                                    onChange={e => handleQuizFileUpload(i, e.target.files?.[0] || null)}
+                                    onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
                                   />
-                                  Upload Quiz .md
+                                  Upload MCQ .md
                                 </label>
-                                {topic.quizStatus && (
+                                {topic.mcqStatus && (
                                   <span className="text-xs text-green-600 dark:text-green-400">
-                                    {topic.quizStatus}
+                                    {topic.mcqStatus}
                                   </span>
                                 )}
                               </div>
