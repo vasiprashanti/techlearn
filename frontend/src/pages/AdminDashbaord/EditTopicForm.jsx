@@ -77,11 +77,11 @@ const EditTopicForm = () => {
             <HiOutlineUpload className="inline text-lg" />
             <input
               type="file"
-              accept=".md,.pdf,.txt"
+              accept=".md"
               className="hidden"
               onChange={(e) => setNotesFile(e.target.files?.[0] || null)}
             />
-            Upload Notes File (.md/.pdf/.txt)
+            Upload Notes File (.md)
           </label>
           {notesFile && (
             <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
@@ -99,11 +99,11 @@ const EditTopicForm = () => {
             <HiOutlineUpload className="inline text-lg" />
             <input
               type="file"
-              accept=".md,.pdf,.txt"
+              accept=".md"
               className="hidden"
               onChange={(e) => setMcqFile(e.target.files?.[0] || null)}
             />
-            Upload MCQ File (.md/.pdf/.txt)
+            Upload MCQ File (.md)
           </label>
           {mcqFile && (
             <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
