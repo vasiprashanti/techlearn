@@ -123,7 +123,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <div className="relative group">
               {/* User Greeting with Hover Indicator */}
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all duration-300 w-24 ${
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all duration-300 ${
                 isDarkMode
                   ? 'text-[#e0e6f5] group-hover:text-white group-hover:bg-white/5'
                   : 'text-[#00184f] group-hover:text-[#001a5c] group-hover:bg-black/5'
