@@ -43,16 +43,29 @@ const AdminTopicsList = () => {
     navigate(`/admin/topics/${courseId}/edit/${topicId}`);
   };
 
-  // Handle course title update
-  const handleCourseTitleUpdate = async () => {
+  // Handle course title update (with file upload, matches /api/admin/topic/:topicId)
+  const handleCourseTitleUpdate = async (e) => {
+    e && e.preventDefault && e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
-        `${BASE_URL}/admin/${courseId}/title`,
-        { title: courseTitle },
-        token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+      const formData = new FormData();
+      formData.append('title', courseTitle);
+      // Use the first topic's ID if available, else fallback to courseId
+      const topicId = topics && topics.length > 0 ? topics[0].topicId : courseId;
+      const res=await axios.put(
+        `${BASE_URL}/admin/topic/${topicId}`,
+        formData,
+        token
+          ? {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'multipart/form-data',
+              },
+            }
+          : {}
       );
       alert('Course title updated successfully!');
+      console.log("ipd ide",res);
     } catch (err) {
       alert('Failed to update course title.');
     }
@@ -68,7 +81,7 @@ const AdminTopicsList = () => {
     }
   };
 
-  // Handle exercise file upload
+  // Handle exercise file upload (edit exercises for course)
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!exerciseFile) {
@@ -76,13 +89,13 @@ const AdminTopicsList = () => {
       return;
     }
     const formData = new FormData();
-    formData.append('file', exerciseFile);
+    formData.append('exerciseFile', exerciseFile); // field name must match backend
 
     try {
       setUploading(true);
       const token = localStorage.getItem('token');
-      await axios.post(
-        `${BASE_URL}/admin/${courseId}/exercise-upload`,
+      await axios.put(
+        `${BASE_URL}/admin/${courseId}/exercise`,
         formData,
         token
           ? {
@@ -93,11 +106,11 @@ const AdminTopicsList = () => {
             }
           : {}
       );
-      alert('Exercise file uploaded successfully!');
+      alert('Exercises updated successfully!');
       setExerciseStatus(`Uploaded: ${exerciseFile.name}`);
       setExerciseFile(null);
     } catch (err) {
-      alert('Failed to upload exercise file.');
+      alert('Failed to update exercises.');
     } finally {
       setUploading(false);
     }
@@ -114,7 +127,7 @@ const AdminTopicsList = () => {
         <label className="block text-xs sm:text-lg font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
           Course Title:
         </label>
-        <div className="flex gap-2">
+        <form className="flex gap-2" onSubmit={handleCourseTitleUpdate}>
           <input
             type="text"
             value={courseTitle}
@@ -123,12 +136,12 @@ const AdminTopicsList = () => {
             placeholder="Enter course title"
           />
           <button
+            type="submit"
             className="self-center bg-blue-600 text-white rounded px-3 py-1 h-8 text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed w-auto"
-            onClick={handleCourseTitleUpdate}
           >
             Save
           </button>
-        </div>
+        </form>
       </div>
 
       {/* Exercise file upload */}

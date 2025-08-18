@@ -98,7 +98,7 @@ const ExerciseDetail = () => {
   const transformExerciseData = (backendExercise) => {
     const id = backendExercise._id || backendExercise.exerciseId;
     const topicTitle = backendExercise.topicTitle || 'Exercise';
-    return {
+  return {
       id,
       title: backendExercise.question,
       topicTitle,
