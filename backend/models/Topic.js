@@ -15,7 +15,7 @@ const topicSchema = mongoose.Schema(
     notesId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Notes",
-      required: true,
+      required: false, // Allow temporary null during creation
     },
     exerciseId: {
       type: mongoose.Schema.Types.ObjectId,

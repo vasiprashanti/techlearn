@@ -42,8 +42,10 @@ export const getCourseTopicsForDashboard = async (req, res) => {
 export const editTopicDetails = async (req, res) => {
   try {
     const { topicId } = req.params;
-    const { topicName, courseDescription, courseTitle } = req.body;
+    const { topicName, courseTitle } = req.body;
     const files = req.files;
+
+    console.log("[DEBUG] editTopicDetails called for topicId:", topicId);
 
     // Find topic
     const topic = await Topic.findById(topicId);
@@ -58,11 +60,6 @@ export const editTopicDetails = async (req, res) => {
       topic.title = topicName;
       topic.slug = generateSlug(topicName);
     }
-    // Update course description if provided
-    if (courseDescription) {
-      course.description = courseDescription;
-      await course.save();
-    }
     if (courseTitle) {
       course.title = courseTitle;
       await course.save();
@@ -76,40 +73,100 @@ export const editTopicDetails = async (req, res) => {
       (f) => f.fieldname === "quizFile" || f.fieldname === "mcqFile"
     );
 
-    // Update notes if file provided
+    // Parse notes and MCQs if files provided
+    let notesContent = null;
+    let checkpointMcqs = null;
     if (notesFile) {
-      const notesContent = parseNotesMarkdown(notesFile.path, topic.title);
-      let notes = await Notes.findOne({ topicId });
-      if (!notes) {
-        notes = new Notes({
-          topicId,
-          parsedContent: notesContent.content,
-          checkpointMcqs: [],
-        });
-      } else {
-        notes.parsedContent = notesContent.content;
-      }
-      await notes.save();
+      notesContent = parseNotesMarkdown(notesFile.path, topic.title);
       fs.unlinkSync(notesFile.path);
+      console.log(
+        "[DEBUG] notesContent:",
+        notesContent && notesContent.content
+      );
+    }
+    if (mcqFile) {
+      checkpointMcqs = await parseMcqMarkdownFile(mcqFile.path, topicId);
+      fs.unlinkSync(mcqFile.path);
+      console.log("[DEBUG] checkpointMcqs:", checkpointMcqs);
     }
 
-    // Update MCQs if mcqFile provided
-    if (mcqFile) {
-      const checkpointMcqs = await parseMcqMarkdownFile(mcqFile.path, topicId);
-      let notes = await Notes.findOne({ topicId });
-      if (!notes) {
-        notes = new Notes({ topicId, parsedContent: "", checkpointMcqs });
-      } else {
-        notes.checkpointMcqs = checkpointMcqs;
-      }
-      await notes.save();
-      fs.unlinkSync(mcqFile.path);
+    // Merge and save Notes(Both mcqs and notes)
+    let notes = await Notes.findOne({ topicId });
+
+    //  Only allow editing if Notes already exists
+    if (!notes) {
+      return res.status(400).json({
+        message:
+          "Cannot edit: No existing notes found for this topic. Please create notes first using the initial upload process.",
+        error: "NOTES_NOT_FOUND",
+      });
+    }
+
+    // If checkpointMcqs is result object, extract array
+    const mcqArray =
+      checkpointMcqs && checkpointMcqs.checkpointMcqs
+        ? checkpointMcqs.checkpointMcqs
+        : checkpointMcqs || [];
+
+    // Only update parsedContent if a new notes file is uploaded
+    if (notesContent) {
+      notes.parsedContent = notesContent.content;
+    }
+    // Always update checkpointMcqs if a new MCQ file is uploaded
+    if (checkpointMcqs) {
+      notes.checkpointMcqs = mcqArray;
+    }
+
+    // Debug log before saving
+    console.log("[DEBUG] Updating existing notes:", {
+      notesId: notes._id,
+      parsedContentLength: notes.parsedContent?.length || 0,
+      checkpointMcqsCount: notes.checkpointMcqs?.length || 0,
+    });
+    await notes.save();
+
+    // 🔧 VALIDATION: Ensure Topic points to the correct Notes (should already be correct)
+    if (!topic.notesId || topic.notesId.toString() !== notes._id.toString()) {
+      console.log(
+        "[DEBUG] Fixing topic.notesId reference from",
+        topic.notesId,
+        "to",
+        notes._id
+      );
+      topic.notesId = notes._id;
     }
 
     await topic.save();
+
+    const savedTopic = await Topic.findById(topicId);
+    const savedNotes = await Notes.findById(savedTopic.notesId);
+
+    if (!savedNotes) {
+      console.error("[ERROR] Topic-Notes relationship broken after save!");
+      throw new Error("Failed to maintain Topic-Notes relationship");
+    }
+
+    console.log("[DEBUG] ✅ Existing Notes document updated:", {
+      topicId: savedTopic._id,
+      notesId: savedTopic.notesId,
+      mcqCount: savedNotes.checkpointMcqs?.length || 0,
+      operation: "EDIT_EXISTING",
+    });
+    // Use the verified notes data for the response summary
     res.json({
       message: "Topic updated successfully",
-      topic,
+      topic: savedTopic,
+      notesSummary: savedNotes
+        ? {
+            notesId: savedNotes._id,
+            parsedContentPreview: savedNotes.parsedContent
+              ? savedNotes.parsedContent.slice(0, 200)
+              : "",
+            checkpointMcqsCount: Array.isArray(savedNotes.checkpointMcqs)
+              ? savedNotes.checkpointMcqs.length
+              : 0,
+          }
+        : null,
     });
   } catch (error) {
     console.error("Edit topic error:", error);
