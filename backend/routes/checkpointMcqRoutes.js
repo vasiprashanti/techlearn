@@ -8,7 +8,7 @@ import {
 const mcqRouter = express.Router();
 
 //getmcqs
-mcqRouter.get("/:courseId/topics/:topicId/mcqs", protect, getMcqByCourseId);
+mcqRouter.get("/:courseId/topics/:topicId/mcqs", getMcqByCourseId);
 
 //submit and check the mcq answer
 mcqRouter.post(

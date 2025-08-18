@@ -28,14 +28,14 @@ export const uploadFiles = async (req, res) => {
       return res.status(400).json({ message: "Invalid titles format" });
     }
 
-    let quizFilesInfo;
+    let mcqFilesInfo;
     try {
-      quizFilesInfo =
-        typeof req.body.quizFilesInfo === "string"
-          ? JSON.parse(req.body.quizFilesInfo)
-          : req.body.quizFilesInfo;
+      mcqFilesInfo =
+        typeof req.body.mcqFilesInfo === "string"
+          ? JSON.parse(req.body.mcqFilesInfo)
+          : req.body.mcqFilesInfo;
     } catch (parseError) {
-      quizFilesInfo = [];
+      mcqFilesInfo = [];
     }
 
     if (!uploadedFiles || uploadedFiles.length === 0) {
@@ -49,14 +49,14 @@ export const uploadFiles = async (req, res) => {
       const notesFile = uploadedFiles.find(
         (file) => file.fieldname === `notesFile${index}`
       );
-      const quizFile = uploadedFiles.find(
-        (file) => file.fieldname === `quizFile${index}`
+      const mcqFile = uploadedFiles.find(
+        (file) => file.fieldname === `mcqFile${index}`
       );
       return {
         title,
         index: index + 1,
         notesFilePath: notesFile ? notesFile.path : null,
-        quizFilePath: quizFile ? quizFile.path : null,
+        mcqFilePath: mcqFile ? mcqFile.path : null,
       };
     });
 
@@ -74,10 +74,7 @@ export const uploadFiles = async (req, res) => {
             fs.unlinkSync(file.path);
           }
         } catch (cleanupError) {
-          console.warn(
-            `Could not cleanup file ${file.path}:`,
-            cleanupError.message
-          );
+          // Silently ignore cleanup errors
         }
       });
     }
@@ -156,8 +153,6 @@ export const uploadExerciseFile = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Upload exercise error:", error);
-
     res.status(500).json({
       message: "Exercise upload failed",
       error: error.message,
@@ -207,7 +202,6 @@ export const cleanupTempFiles = async (req, res) => {
           });
         }
       } catch (error) {
-        console.warn(`Could not process file ${filename}:`, error.message);
         errors.push({
           filename,
           error: error.message,
@@ -224,7 +218,6 @@ export const cleanupTempFiles = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Cleanup error:", error);
     res.status(500).json({
       message: "Cleanup failed",
       error: error.message,

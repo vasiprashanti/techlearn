@@ -16,11 +16,7 @@ import {
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
-    console.log("Hi");
-    console.log("Request body:", req.body);
-
     const { title, description, level, numTopics } = req.body;
-    console.log("Extracted values:", { title, description, level, numTopics });
 
     // Validate required fields
     if (!title || !numTopics) {
@@ -140,7 +136,7 @@ export const addMultipleTopics = async (req, res) => {
     //Each topic is being processed sequentially
     for (const topicData of topics) {
       try {
-        const { title, index, notesFilePath, quizFilePath } = topicData;
+        const { title, index, notesFilePath, mcqFilePath } = topicData;
 
         // Parse notes
         const notesResult = parseNotesMarkdownFile(notesFilePath, title);
@@ -148,29 +144,39 @@ export const addMultipleTopics = async (req, res) => {
           errors.push({ index, title, error: notesResult.error });
           continue;
         }
-        const notes = new Notes({ parsedContent: notesResult.data.content });
-        const savedNotes = await notes.save();
 
-        // Create topic first (without quizId)
+        // Create topic first (without notesId and quizId)
         const topic = new Topic({
           courseId,
           title: notesResult.data.title,
-          notesId: savedNotes._id,
+          notesId: null, // Will be updated later
           quizId: null,
           slug: notesResult.data.slug,
           index: parseInt(index),
         });
         const savedTopic = await topic.save();
 
-        // Now parse and insert quiz, passing topicId
+        // Now create notes with the topicId
+        const notes = new Notes({
+          parsedContent: notesResult.data.content,
+          topicId: savedTopic._id,
+        });
+        const savedNotes = await notes.save();
+
+        // Update topic with notesId
+        await Topic.findByIdAndUpdate(savedTopic._id, {
+          notesId: savedNotes._id,
+        });
+
+        // Now parse and insert MCQs, passing topicId
         let quizId = null;
-        if (quizFilePath) {
-          const quizResult = await parseMcqMarkdownFile(
-            quizFilePath,
+        if (mcqFilePath) {
+          const mcqResult = await parseMcqMarkdownFile(
+            mcqFilePath,
             savedTopic._id
           );
-          if (quizResult.success) {
-            quizId = quizResult.quizId;
+          if (mcqResult.success) {
+            quizId = mcqResult.quizId;
             // Update topic with quizId
             await Topic.findByIdAndUpdate(savedTopic._id, { quizId });
           }

@@ -56,20 +56,37 @@ export const parseMcqMarkdownFile = async (filePath, topicId) => {
     // Split by MCQ blocks (support both ### Question and :::checkpointMcq)
     const mcqBlocks = content.split(/###\s*Question|:::checkpointMcq/).slice(1);
     const checkpointMcqs = mcqBlocks.map((block, idx) => {
-      // Extract question text (first line)
-      const questionMatch = block.match(/Question:\s*(.*?)(?:\n- )/s);
-      const question = questionMatch ? questionMatch[1].trim() : "";
+      // Split block into lines and trim
+      const lines = block
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      // Find first non-empty line as question
+      let question = "";
+      for (let i = 0; i < lines.length; i++) {
+        if (!lines[i].startsWith("- ")) {
+          question = lines[i];
+          break;
+        }
+      }
 
       // Extract options
       const optionMatches = [...block.matchAll(/\n-\s(.*)/g)];
       const options = optionMatches.map((m) => m[1].trim());
 
-      // Extract correct answer index (1-based)
-      const answerMatch = block.match(/Answer:\s*(\d+)/);
-      const correctAnswer = answerMatch ? parseInt(answerMatch[1], 10) : null;
+      // Extract correct answer index (0-based)
+      let correctAnswer = null;
+      const correctAnswerMatch =
+        block.match(/correctAnswer:\s*(\d+)/i) ||
+        block.match(/Answer:\s*(\d+)/i);
+      if (correctAnswerMatch) {
+        correctAnswer = parseInt(correctAnswerMatch[1], 10);
+      }
 
       // Extract explanation
-      const explanationMatch = block.match(/Explanation:\s*(.*)/);
+      const explanationMatch =
+        block.match(/explanation:\s*(.*)/i) ||
+        block.match(/Explanation:\s*(.*)/i);
       const explanation = explanationMatch ? explanationMatch[1].trim() : "";
 
       return {
