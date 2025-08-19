@@ -490,7 +490,7 @@ print(df.describe())    # Statistical summary`,
             width: sidebarCollapsed ? "80px" : "320px",
             transition: { duration: 0.3, ease: "easeInOut" }
           }}
-          className="hidden lg:flex flex-col bg-white/20 dark:bg-gray-900/40 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
+          className="hidden lg:flex flex-col bg-transparent backdrop-blur-xl sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
         >
           {/* Sidebar Header */}
           <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
@@ -502,7 +502,7 @@ print(df.describe())    # Statistical summary`,
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold text-gray-900 dark:text-white text-sm motion-div"
+                    className="font-poppins font-semibold brand-heading-primary text-sm motion-div"
                   >
                     Course Topics
                   </motion.h3>
@@ -529,7 +529,7 @@ print(df.describe())    # Statistical summary`,
           </div>
 
           {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide">
             <div className="space-y-3">
               {currentCourse.topics.map((topic, index) => (
                 <motion.button
@@ -567,7 +567,7 @@ print(df.describe())    # Statistical summary`,
                           transition={{ duration: 0.2 }}
                           className="flex-1 min-w-0 motion-div"
                         >
-                          <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                          <h4 className="font-medium brand-heading-primary truncate">
                             {topic.title}
                           </h4>
                         </motion.div>
@@ -704,11 +704,10 @@ print(df.describe())    # Statistical summary`,
                         {currentTopic?.title}
                       </h1>
                     </div>
-
                     {/* Stats Cards and Quiz Button - Side by Side */}
                     <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                       {/* Take Quiz Button */}
-                      <button
+                      {/*<button
                         onClick={handleTakeQuiz}
                         className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-blue-400/50 dark:border-blue-500/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex-1 sm:flex-none sm:min-w-[160px]"
                       >
@@ -720,10 +719,10 @@ print(df.describe())    # Statistical summary`,
                             Take Quiz
                           </div>
                         </div>
-                      </button>
+                      </button>*/}
 
                       {/* Questions Card */}
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
+                      {/*<div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
                         <div className="flex items-center justify-center gap-2 text-center">
                           <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                             <Code2 className="w-3 h-3 text-green-600 dark:text-green-400" />
@@ -732,10 +731,10 @@ print(df.describe())    # Statistical summary`,
                             10 Questions
                           </div>
                         </div>
-                      </div>
+                      </div>*/}
 
                       {/* Max XP Card */}
-                      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
+                      {/*<div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
                         <div className="flex items-center justify-center gap-2 text-center">
                           <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
                             <Trophy className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
@@ -744,27 +743,22 @@ print(df.describe())    # Statistical summary`,
                             {currentTopic?.maxXP} Max XP
                           </div>
                         </div>
-                      </div>
+                      </div>*/}
                     </div>
                   </div>
                 </motion.div>
-              </div>
-
-
-
-              {/* Content Sections */}
-              <div className="space-y-8">
+                {/* Content Sections */}
                 {/* Theory Section */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="lg:bg-white/60 lg:dark:bg-gray-800/60 lg:backdrop-blur-xl lg:rounded-2xl lg:shadow-lg lg:border lg:border-white/20 lg:dark:border-gray-700/20 lg:h-[90vh] lg:flex lg:flex-col"
+                  className="lg:bg-transparent lg:h-[90vh] lg:flex lg:flex-col"
                 >
                   <div className="max-w-none px-[5px] lg:px-8 lg:py-8 lg:flex-1 lg:overflow-hidden">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
-                        <div className="markdown-content lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-4 lg:sm:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
+                      <div className="h-full lg:overflow-y-auto scrollbar-hide">
+                        <div className="markdown-content lg:bg-transparent">
                         <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
@@ -850,7 +844,7 @@ print(df.describe())    # Statistical summary`,
                         </div>
                       </div>
                     ) : currentTopic?.hasNotes ? (
-                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
+                      <div className="h-full lg:overflow-y-auto scrollbar-hide">
                         <div className="flex items-center justify-center py-8">
                           <div className="text-center">
                             <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
@@ -868,12 +862,6 @@ print(df.describe())    # Statistical summary`,
                     )}
                   </div>
                 </motion.div>
-
-
-
-
-
-
               </div>
             </div>
           </div>
