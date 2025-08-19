@@ -4,30 +4,29 @@ import {
   HiOutlineHome,
   HiOutlineBookOpen,
   HiOutlineChartBar,
-  
 } from "react-icons/hi2";
-import { HiOutlineUpload } from "react-icons/hi";
-import { FiMenu, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import {MdQuiz} from 'react-icons/md'
+import { FiMenu, FiX } from "react-icons/fi";
+import { MdQuiz } from "react-icons/md";
+import { useTheme } from "../../context/ThemeContext";
 
 const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
   { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/upload-exercises" },
-  //{ name: "Upload Files", icon: HiOutlineUpload, path: "/admin/upload-topics" },
-  {name : "Quizzes", icon: MdQuiz, path: "/admin/quizzes-upload" }
+  { name: "Quizzes", icon: MdQuiz, path: "/admin/quizzes-upload" },
 ];
 
 export default function Admin_Sidebar() {
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
 
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     return saved === "true";
   });
 
-  // Close mobile sidebar on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
@@ -56,7 +55,7 @@ export default function Admin_Sidebar() {
         <FiMenu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
       </button>
 
-      {/* MOBILE/TABLET SIDEBAR (slide/drawer style) */}
+      {/* MOBILE/TABLET SIDEBAR */}
       {mobileOpen && (
         <div>
           {/* Overlay */}
@@ -65,14 +64,12 @@ export default function Admin_Sidebar() {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
             aria-hidden="true"
           ></div>
+
           {/* Sidebar drawer */}
           <aside
-            className="
-              fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-white dark:bg-gray-900
+            className="fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-white dark:bg-gray-900
               w-72 h-full px-4 py-6 transition-transform duration-300 ease-in-out
-              shadow-lg
-              flex lg:hidden
-            "
+              shadow-lg flex lg:hidden"
             style={{ userSelect: "none" }}
             aria-label="Sidebar navigation"
           >
@@ -85,7 +82,7 @@ export default function Admin_Sidebar() {
                 />
                 <img
                   src="/logoo2.png"
-                  alt="Logo Dark"
+                  alt="Dark Logo"
                   className="h-16 w-auto hidden dark:block"
                 />
               </Link>
@@ -103,7 +100,8 @@ export default function Admin_Sidebar() {
             {/* Navigation Links */}
             <nav className="flex-none flex flex-col gap-2">
               {menu.map(({ name, icon: Icon, path }, i) => {
-                const active = isActive(path) || (i === 0 && location.pathname === "/admin");
+                const active =
+                  isActive(path) || (i === 0 && location.pathname === "/admin");
                 return (
                   <Link
                     to={path}
@@ -125,7 +123,11 @@ export default function Admin_Sidebar() {
                       className={`
                         z-10 flex items-center justify-center
                         text-2xl
-                        ${active ? "text-white bg-blue-500 rounded-lg p-1 shadow" : ""}
+                        ${
+                          active
+                            ? "text-white bg-blue-500 rounded-lg p-1 shadow"
+                            : ""
+                        }
                         transition
                       `}
                       style={{ minWidth: 30 }}
@@ -133,7 +135,6 @@ export default function Admin_Sidebar() {
                       <Icon />
                     </span>
                     <span className="z-10 select-none">{name}</span>
-                    {/* 1px underline if active */}
                     {active && (
                       <span className="absolute left-6 right-20 bottom-1 h-px bg-blue-400 rounded z-20" />
                     )}
@@ -149,39 +150,43 @@ export default function Admin_Sidebar() {
       <aside
         className={`
           hidden lg:flex flex-col
-          h-[calc(100vh-48px)]
-          mt-36 ml-0
-          bg-transparent
-          backdrop-blur-lg
-          px-2
-          py-6
-          relative
-          select-none
-          justify-start
+          h-screen
+          ml-0
+          bg-transparent backdrop-blur-lg
+          px-2 py-6 relative
+          select-none justify-start
           overflow-hidden
           transition-[width] duration-300 ease-in-out
         `}
-        style={{
-          width: collapsed ? "80px" : "288px", // use width instead of min/max
-        }}
+        style={{ width: collapsed ? "80px" : "288px" }}
         aria-label="Sidebar navigation"
       >
-        {/* COLLAPSE BUTTON */}
-        <div className={`flex items-center justify-end px-3 mb-6 ${collapsed ? "px-2" : ""}`}>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded-xl bg-blue-400 hover:bg-gray-400 dark:hover:bg-gray-700 transition"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            type="button"
-          >
-            {collapsed ? <FiChevronRight size={20} /> : <FiChevronLeft size={20} />}
-          </button>
+        <div className="flex items-center justify-center mb-8 relative cursor-pointer mr-4">
+          <div onClick={() => setCollapsed(!collapsed)} className="relative flex items-center justify-center">
+            {/* Light Logo */}
+            <img
+              src="/logoo.png"
+              alt="Light Logo"
+              className={`h-12 w-auto transition-opacity duration-300 ${
+                isDarkMode ? "opacity-0" : "opacity-100"
+              }`}
+            />
+            {/* Dark Logo */}
+            <img
+              src="/logoo2.png"
+              alt="Dark Logo"
+              className={`h-12 w-auto absolute transition-opacity duration-300 ${
+                isDarkMode ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          </div>
         </div>
 
         {/* Navigation Links */}
         <nav className="flex-none flex flex-col gap-2">
           {menu.map(({ name, icon: Icon, path }, i) => {
-            const active = isActive(path) || (i === 0 && location.pathname === "/admin");
+            const active =
+              isActive(path) || (i === 0 && location.pathname === "/admin");
             return (
               <Link
                 to={path}
@@ -200,25 +205,30 @@ export default function Admin_Sidebar() {
               >
                 <span
                   className={`
-                    z-10 flex items-center justify-center
-                    text-2xl
-                    ${active ? "text-white bg-blue-500 rounded-lg p-1 shadow" : ""}
+                    z-10 flex items-center justify-center text-2xl
+                    ${
+                      active
+                        ? "text-white bg-blue-500 rounded-lg p-1 shadow"
+                        : ""
+                    }
                     transition-colors duration-300
                   `}
                   style={{ minWidth: 30 }}
                 >
                   <Icon />
                 </span>
-
-                {/* Animate text fade/slide */}
+                {/* Hide names when collapsed */}
                 <span
                   className={`z-10 select-none whitespace-nowrap transition-all duration-300 ease-in-out
-                    ${collapsed ? "opacity-0 translate-x-[-10px] pointer-events-none" : "opacity-100 translate-x-0"}
+                    ${
+                      collapsed
+                        ? "opacity-0 translate-x-[-10px] pointer-events-none"
+                        : "opacity-100 translate-x-0"
+                    }
                   `}
                 >
                   {name}
                 </span>
-
                 {active && !collapsed && (
                   <span className="absolute left-5 right-28 bottom-1 h-px bg-blue-400 rounded z-20" />
                 )}
