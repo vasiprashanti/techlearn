@@ -1,8 +1,9 @@
 import User from "../models/User.js";
 import UserProgress from "../models/UserProgress.js";
 import Exercise from "../models/Exercise.js";
-import Quiz from "../models/Quiz.js";
+import Notes from "../models/Notes.js";
 import Course from "../models/Course.js";
+import Topic from "../models/Topic.js";
 import mongoose from "mongoose";
 
 export const getDashboardData = async (req, res) => {
@@ -24,8 +25,8 @@ export const getDashboardData = async (req, res) => {
       return res.status(200).json({
         courseXP: {},
         exerciseXP: {},
-        totalCourseXP: 0, // Show 0 when no progress exists
-        totalExerciseXP: 0, // Show 0 when no progress exists
+        totalCourseXP: {}, // Show empty object when no progress exists
+        totalExerciseXP: {}, // Show empty object when no progress exists
         completedExercises: [],
         calendarActivity: {},
         answeredQuestions: {},
@@ -36,11 +37,9 @@ export const getDashboardData = async (req, res) => {
           progressPercent: 0,
         },
         avatar: user.avatar,
-        quizProgress: {
-          totalQuizzes: 0, // Show 0 initially
-          completedQuizzes: 0,
-          totalQuizQuestions: 0, // Show 0 initially
-          answeredQuizQuestions: 0,
+        mcqProgress: {
+          totalMcqs: 0, // Show 0 initially
+          answeredMcqs: 0,
           progressPercent: 0,
         },
       });
@@ -48,25 +47,23 @@ export const getDashboardData = async (req, res) => {
 
     // CALCULATE progress from actual data (no schema changes needed)
     const totalExercises = await Exercise.countDocuments();
-    const totalQuizzes = await Quiz.countDocuments();
 
-    const completedExercisesCount = progress.completedExercises.length;
-    const completedQuizzesCount = progress.completedQuizzes.length;
-
-    // Calculate quiz progress based on answered questions
-    let totalQuizQuestions = 0;
-    let answeredQuizQuestions = 0;
-
-    // Get all quizzes to count total questions
-    const allQuizzes = await Quiz.find();
-    for (const quiz of allQuizzes) {
-      totalQuizQuestions += quiz.questions.length;
+    // Get all notes to count total MCQs
+    const allNotes = await Notes.find();
+    let totalMcqs = 0;
+    for (const note of allNotes) {
+      totalMcqs += note.checkpointMcqs.length;
     }
 
-    // Count answered questions from progress.answeredQuestions
-    if (progress.answeredQuestions) {
-      for (const [quizId, questionIds] of progress.answeredQuestions) {
-        answeredQuizQuestions += questionIds.length;
+    const completedExercisesCount = progress.completedExercises.length;
+
+    // Calculate MCQ progress based on answered checkpoint MCQs
+    let answeredMcqs = 0;
+
+    // Count answered MCQs from progress.answeredCheckpointMcqs
+    if (progress.answeredCheckpointMcqs) {
+      for (const [notesId, mcqIds] of progress.answeredCheckpointMcqs) {
+        answeredMcqs += mcqIds.length;
       }
     }
 
@@ -74,12 +71,10 @@ export const getDashboardData = async (req, res) => {
       totalExercises > 0
         ? Math.round((completedExercisesCount / totalExercises) * 1000) / 10
         : 0;
-    const quizPercent =
-      totalQuizQuestions > 0
-        ? Math.round((answeredQuizQuestions / totalQuizQuestions) * 1000) / 10
-        : 0;
+    const mcqPercent =
+      totalMcqs > 0 ? Math.round((answeredMcqs / totalMcqs) * 1000) / 10 : 0;
     const courseProgressPercent =
-      Math.round(((exercisePercent + quizPercent) / 2) * 10) / 10;
+      Math.round(((exercisePercent + mcqPercent) / 2) * 10) / 10;
 
     // Create calendar activity
     const calendarActivity = {};
@@ -88,21 +83,66 @@ export const getDashboardData = async (req, res) => {
       calendarActivity[dateKey] = "active"; // Use string instead of boolean
     }
 
+    // Convert Maps to plain objects for frontend
+    const courseXPObject = {};
+    const exerciseXPObject = {};
+    const totalCourseXPObject = {};
+    const totalExerciseXPObject = {};
+
+    if (progress.courseXP) {
+      for (const [courseId, xp] of progress.courseXP) {
+        courseXPObject[courseId] = xp;
+      }
+    }
+    if (progress.exerciseXP) {
+      for (const [courseId, xp] of progress.exerciseXP) {
+        exerciseXPObject[courseId] = xp;
+      }
+    }
+
+    // Calculate total possible XP for each course the user has progress in
+    const allCourseIds = Array.from(
+      new Set([...progress.courseXP.keys(), ...progress.exerciseXP.keys()])
+    );
+
+    for (const courseId of allCourseIds) {
+      // Calculate total MCQ XP for this course
+      const course = await Course.findById(courseId);
+      let totalMcqXP = 0;
+      let totalExerciseXP = 0;
+
+      if (course) {
+        const topics = await Topic.find({ _id: { $in: course.topicIds } });
+        for (const topic of topics) {
+          if (topic.notesId) {
+            const notes = await Notes.findById(topic.notesId);
+            if (notes && notes.checkpointMcqs) {
+              totalMcqXP += notes.checkpointMcqs.length * 10;
+            }
+          }
+        }
+        // Calculate total exercise XP for this course
+        const exerciseCount = await Exercise.countDocuments({ courseId });
+        totalExerciseXP = exerciseCount * 10;
+      }
+
+      totalCourseXPObject[courseId] = totalMcqXP;
+      totalExerciseXPObject[courseId] = totalExerciseXP;
+    }
+
     res.status(200).json({
-      courseXP: progress.courseXP,
-      exerciseXP: progress.exerciseXP,
-      totalCourseXP: progress.totalCourseXP, // Use stored value from database
-      totalExerciseXP: progress.totalExerciseXP, // Use stored value from database
+      courseXP: courseXPObject,
+      exerciseXP: exerciseXPObject,
+      totalCourseXP: totalCourseXPObject,
+      totalExerciseXP: totalExerciseXPObject,
       completedExercises: progress.completedExercises,
       calendarActivity,
-      answeredQuestions: progress.answeredQuestions,
+      answeredCheckpointMcqs: progress.answeredCheckpointMcqs,
       totalCourseProgress: { progressPercent: courseProgressPercent },
-      quizProgress: {
-        totalQuizzes,
-        completedQuizzes: completedQuizzesCount,
-        totalQuizQuestions,
-        answeredQuizQuestions,
-        progressPercent: quizPercent,
+      mcqProgress: {
+        totalMcqs,
+        answeredMcqs,
+        progressPercent: mcqPercent,
       },
       exerciseProgress: {
         totalExercises,

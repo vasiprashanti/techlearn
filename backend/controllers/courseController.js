@@ -4,10 +4,10 @@ import Topic from "../models/Topic.js";
 import Quiz from "../models/Quiz.js";
 import Notes from "../models/Notes.js";
 import Exercise from "../models/Exercise.js";
-import {
-  checkIfQuestionAnswered,
-  recordQuizAttempt,
-} from "./userProgressController.js";
+// import {
+//   checkIfQuestionAnswered,
+//   recordQuizAttempt,
+// } from "./userProgressController.js";
 import {
   parseNotesMarkdownFile,
   parseMcqMarkdownFile,
@@ -80,7 +80,7 @@ export const deleteCourse = async (req, res) => {
     const topicIds = topics.map((topic) => topic._id);
     const notesIds = topics.map((topic) => topic.notesId).filter(Boolean);
 
-    const deletedQuizzes = await Quiz.deleteMany({
+    const deletedMcqs = await Quiz.deleteMany({
       topicId: { $in: topicIds },
     });
     const deletedExercises = await Exercise.deleteMany({ courseId });

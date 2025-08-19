@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 import {
   submitExercise,
   submitExerciseCode,
@@ -12,6 +12,6 @@ const router = express.Router();
 // User routes
 router.post("/:courseId/:exerciseId/submit", protect, submitExercise);
 router.post("/:courseId/:exerciseId/submit-code", protect, submitExerciseCode);
-router.get("/:courseId", protect, getCourseExercises);
+router.get("/:courseId", optionalProtect, getCourseExercises); // Allow guests to view exercises
 
 export default router;

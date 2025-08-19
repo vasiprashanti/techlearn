@@ -20,12 +20,14 @@ const userProgressSchema = new mongoose.Schema(
     },
 
     totalCourseXP: {
-      type: Number,
-      default: 0,
+      type: Map,
+      of: Number,
+      default: {},
     },
     totalExerciseXP: {
-      type: Number,
-      default: 0,
+      type: Map,
+      of: Number,
+      default: {},
     },
 
     completedExercises: [
@@ -40,24 +42,6 @@ const userProgressSchema = new mongoose.Schema(
         },
       },
     ],
-    completedQuizzes: [
-      {
-        quizId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Quiz",
-        },
-        completedAt: {
-          type: Date,
-          default: Date.now,
-        },
-      },
-    ],
-
-    answeredQuestions: {
-      type: Map,
-      of: [mongoose.Schema.Types.ObjectId],
-      default: {},
-    },
 
     // Track answered checkpoint MCQs per notesId
     answeredCheckpointMcqs: {

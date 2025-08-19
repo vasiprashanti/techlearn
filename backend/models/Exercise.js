@@ -19,7 +19,11 @@ const exerciseSchema = new Schema(
       required: true,
     },
     expectedOutput: {
-      type: String, // Expected code solution/output
+      type: String, // Expected code solution for user reference
+      default: "",
+    },
+    expectedProgramOutput: {
+      type: String, // Expected program output for validation
       default: "",
     },
     input: {

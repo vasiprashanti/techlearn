@@ -1,131 +1,67 @@
 import mongoose from "mongoose";
 import UserProgress from "../models/UserProgress.js";
-import Quiz from "../models/Quiz.js";
 import Exercise from "../models/Exercise.js";
+import Course from "../models/Course.js";
+import Notes from "../models/Notes.js";
+import Topic from "../models/Topic.js";
 
-// Check if a question has already been answered
-export const checkIfQuestionAnswered = async ({
+// Record MCQ attempt (checkpoint MCQ)
+export const recordCheckpointMcqAttempt = async ({
   userId,
-  quizId,
-  questionId,
-}) => {
-  let userProgress = await UserProgress.findOne({ userId });
-  if (!userProgress) return { answered: false };
-
-  const answered = userProgress.answeredQuestions.get(quizId.toString()) || [];
-  if (answered.map((id) => id.toString()).includes(questionId.toString())) {
-    return { error: "You have already answered this question." };
-  }
-
-  return { answered: false };
-};
-
-// Update progress and XP for any answer attempt
-export const recordQuizAttempt = async ({
-  userId,
-  quizId,
+  notesId,
+  checkpointMcqId,
   courseId,
-  questionId,
   xp,
 }) => {
   let userProgress = await UserProgress.findOne({ userId });
   if (!userProgress) {
     userProgress = new UserProgress({
       userId,
-      completedQuizzes: [],
       courseXP: new Map(),
-      totalCourseXP: 0,
-      answeredQuestions: new Map(),
       exerciseXP: new Map(),
-      totalExerciseXP: 0,
       completedExercises: [],
+      answeredCheckpointMcqs: new Map(),
     });
   }
 
-  const quizIdStr = quizId.toString();
+  // Track answered MCQs per notesId
+  const notesIdStr = notesId.toString();
+  const answeredMcqs =
+    userProgress.answeredCheckpointMcqs.get(notesIdStr) || [];
+  if (!answeredMcqs.includes(checkpointMcqId)) {
+    answeredMcqs.push(checkpointMcqId);
+    userProgress.answeredCheckpointMcqs.set(notesIdStr, answeredMcqs);
+  }
+
+  // Add XP for this MCQ (earned XP, not total possible)
   const courseIdStr = courseId.toString();
-
-  // Add this questionId to answeredQuestions for this quiz
-  const answered = userProgress.answeredQuestions.get(quizIdStr) || [];
-  answered.push(questionId);
-  userProgress.answeredQuestions.set(quizIdStr, answered);
-
-  // Add XP for this question (earned XP, not total possible)
   const currentCourseXP = userProgress.courseXP.get(courseIdStr) || 0;
   userProgress.courseXP.set(courseIdStr, currentCourseXP + xp);
 
-  //  FIX: Calculate GLOBAL totals across ALL courses
-  const allQuizzes = await Quiz.find();
-  let totalPossibleQuizXP = 0;
-  for (const quiz of allQuizzes) {
-    totalPossibleQuizXP += quiz.questions.length * 10; // 10 XP per question
-  }
-  userProgress.totalCourseXP = totalPossibleQuizXP;
-
-  const totalExercisesGlobally = await Exercise.countDocuments();
-  userProgress.totalExerciseXP = totalExercisesGlobally * 10; // 10 XP per exercise
+  // Do not update totalCourseXP here; it's calculated in getUserProgress only.
 
   await userProgress.save();
-
-  // Check if quiz is complete
-  const quiz = await Quiz.findById(quizId);
-  const isQuizComplete = quiz && answered.length === quiz.questions.length;
-
-  if (
-    isQuizComplete &&
-    !userProgress.completedQuizzes.some(
-      (item) => item.quizId && item.quizId.toString() === quizIdStr
-    )
-  ) {
-    userProgress.completedQuizzes.push({
-      quizId: new mongoose.Types.ObjectId(quizId),
-      completedAt: new Date(),
-    });
-    await userProgress.save();
-  }
-
-  return {
-    success: true,
-    quizComplete: isQuizComplete,
-    totalAnswered: answered.length,
-    totalQuestions: quiz ? quiz.questions.length : 0,
-  };
+  return { success: true, totalAnswered: answeredMcqs.length };
 };
 
 export const recordExerciseAttempt = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { courseId, exerciseId, questionId, xp } = req.body;
+    const { courseId, exerciseId, xp } = req.body;
 
     let userProgress = await UserProgress.findOne({ userId });
-
     if (!userProgress) {
       userProgress = new UserProgress({
         userId,
-        exerciseXP: new Map(),
-        totalExerciseXP: 0,
-        completedExercises: [],
         courseXP: new Map(),
-        totalCourseXP: 0,
-        completedQuizzes: [],
-        answeredQuestions: new Map(),
+        exerciseXP: new Map(),
+        completedExercises: [],
+        answeredCheckpointMcqs: new Map(),
       });
     }
-
     const courseIdStr = courseId.toString();
     const currentXP = userProgress.exerciseXP.get(courseIdStr) || 0;
     userProgress.exerciseXP.set(courseIdStr, currentXP + xp);
-
-    //  FIX: Calculate GLOBAL totals across ALL courses
-    const allQuizzes = await Quiz.find();
-    let totalPossibleQuizXP = 0;
-    for (const quiz of allQuizzes) {
-      totalPossibleQuizXP += quiz.questions.length * 10; // 10 XP per question
-    }
-    userProgress.totalCourseXP = totalPossibleQuizXP;
-
-    const totalExercisesGlobally = await Exercise.countDocuments();
-    userProgress.totalExerciseXP = totalExercisesGlobally * 10; // 10 XP per exercise
 
     // Use correct schema structure for exercise completion
     if (
@@ -141,9 +77,13 @@ export const recordExerciseAttempt = async (req, res) => {
 
     await userProgress.save();
 
+    // Calculate total possible exercise XP for this course only
+    const exerciseCount = await Exercise.countDocuments({ courseId });
+    const totalPossibleExerciseXP = exerciseCount * 10;
+
     return res
       .status(200)
-      .json({ success: true, totalExerciseXP: userProgress.totalExerciseXP });
+      .json({ success: true, totalExerciseXP: totalPossibleExerciseXP });
   } catch (error) {
     console.error("Error in recordExerciseAttempt:", error);
     return res
@@ -154,81 +94,88 @@ export const recordExerciseAttempt = async (req, res) => {
 
 export const getUserProgress = async (req, res) => {
   const userId = req.user._id;
-
   try {
     const userProgress = await UserProgress.findOne({ userId });
-
     if (!userProgress) {
-      //  Calculate global totals even for new users
-      const allQuizzes = await Quiz.find();
-      let totalPossibleQuizXP = 0;
-      for (const quiz of allQuizzes) {
-        totalPossibleQuizXP += quiz.questions.length * 10;
-      }
-
+      // Calculate global totals even for new users
       const totalExercisesGlobally = await Exercise.countDocuments();
       const totalPossibleExerciseXP = totalExercisesGlobally * 10;
-
       return res.status(200).json({
         courseXP: {},
         exerciseXP: {},
-        totalCourseXP: totalPossibleQuizXP,
+        totalCourseXP: 0, // Placeholder, update if you want to sum all MCQs
         totalExerciseXP: totalPossibleExerciseXP,
-        completedQuizzes: [],
-        answeredQuestions: {},
+        answeredCheckpointMcqs: {},
         completedExercises: [],
       });
     }
 
-    // Update global totals every time user progress is fetched
-    const allQuizzes = await Quiz.find();
-    let totalPossibleQuizXP = 0;
-    for (const quiz of allQuizzes) {
-      totalPossibleQuizXP += quiz.questions.length * 10;
+    // Prepare course-wise XP summary
+    const courseXPObj = {};
+    const exerciseXPObj = {};
+    const totalCourseXPObj = {};
+    const totalExerciseXPObj = {};
+
+    // For each course in courseXP, build summary
+    for (const [courseId, xp] of userProgress.courseXP.entries()) {
+      courseXPObj[courseId] = xp;
+    }
+    for (const [courseId, xp] of userProgress.exerciseXP.entries()) {
+      exerciseXPObj[courseId] = xp;
     }
 
-    const totalExercisesGlobally = await Exercise.countDocuments();
-    const totalPossibleExerciseXP = totalExercisesGlobally * 10;
+    // For each course, calculate total possible XP (MCQ + Exercise)
+    // This requires fetching topics and exercises for each course
+    const allCourseIds = Array.from(
+      new Set([
+        ...userProgress.courseXP.keys(),
+        ...userProgress.exerciseXP.keys(),
+      ])
+    );
 
-    // Update the stored values
-    userProgress.totalCourseXP = totalPossibleQuizXP;
-    userProgress.totalExerciseXP = totalPossibleExerciseXP;
-    await userProgress.save();
-
-    // Convert Maps to plain objects for JSON response
-    const courseXPObject = {};
-    const exerciseXPObject = {};
-
-    for (const [courseId, xp] of userProgress.courseXP) {
-      courseXPObject[courseId] = xp;
-    }
-
-    for (const [courseId, xp] of userProgress.exerciseXP) {
-      exerciseXPObject[courseId] = xp;
-    }
-
-    // Convert answeredQuestions Map to plain object
-    const answeredQuestionsObject = {};
-    if (userProgress.answeredQuestions) {
-      for (const [quizId, questionIds] of userProgress.answeredQuestions) {
-        answeredQuestionsObject[quizId] = questionIds.map((id) =>
-          id.toString()
-        );
+    for (const courseId of allCourseIds) {
+      // MCQ XP: sum all checkpointMcqs for topics in this course
+      const course = await Course.findById(courseId);
+      let totalMcqXP = 0;
+      let totalExerciseXP = 0;
+      if (course) {
+        const topics = await Topic.find({ _id: { $in: course.topicIds } });
+        for (const topic of topics) {
+          if (topic.notesId) {
+            const notes = await Notes.findById(topic.notesId);
+            if (notes && notes.checkpointMcqs) {
+              totalMcqXP += notes.checkpointMcqs.length * 10;
+            }
+          }
+        }
+        // Exercise XP: count exercises for this course
+        const exerciseCount = await Exercise.countDocuments({ courseId });
+        totalExerciseXP = exerciseCount * 10;
       }
+      totalCourseXPObj[courseId] = totalMcqXP;
+      totalExerciseXPObj[courseId] = totalExerciseXP;
     }
 
+    // Prepare answered MCQs summary
+    const answeredMcqsObj = {};
+    for (const [
+      notesId,
+      mcqArr,
+    ] of userProgress.answeredCheckpointMcqs.entries()) {
+      answeredMcqsObj[notesId] = mcqArr;
+    }
+
+    // Response: course-wise XP and total possible XP
     return res.status(200).json({
-      _id: userProgress._id,
-      courseXP: courseXPObject,
-      exerciseXP: exerciseXPObject,
-      totalCourseXP: userProgress.totalCourseXP,
-      totalExerciseXP: userProgress.totalExerciseXP,
-      completedQuizzes: userProgress.completedQuizzes || [],
-      answeredQuestions: answeredQuestionsObject,
-      completedExercises: userProgress.completedExercises || [],
+      courseXP: courseXPObj, // XP earned per course (MCQ)
+      exerciseXP: exerciseXPObj, // XP earned per course (Exercise)
+      totalCourseXP: totalCourseXPObj, // Total possible MCQ XP per course
+      totalExerciseXP: totalExerciseXPObj, // Total possible Exercise XP per course
+      answeredCheckpointMcqs: answeredMcqsObj,
+      completedExercises: userProgress.completedExercises,
     });
-  } catch (err) {
-    console.error("User Progress Fetch Error:", err.message);
-    return res.status(500).json({ message: "Failed to fetch user progress" });
+  } catch (error) {
+    console.error("Get User Progress Error:", error);
+    res.status(500).json({ message: "Server Error" });
   }
 };

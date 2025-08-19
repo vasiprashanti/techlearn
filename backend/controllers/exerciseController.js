@@ -5,7 +5,8 @@ import UserProgress from "../models/UserProgress.js";
 import Course from "../models/Course.js";
 import Quiz from "../models/Quiz.js";
 
-// Submit Exercise and Award XP
+// Submit Exercise and Award XP (Legacy - Use submitExerciseCode instead)
+// This function manually marks exercises as completed without code validation
 export const submitExercise = async (req, res) => {
   const { courseId, exerciseId } = req.params;
   const userId = req.user._id;
@@ -36,13 +37,10 @@ export const submitExercise = async (req, res) => {
     if (!progress) {
       progress = new UserProgress({
         userId,
-        totalExerciseXP: 0,
         exerciseXP: new Map(),
         completedExercises: [],
         courseXP: new Map(),
-        totalCourseXP: 0,
-        completedQuizzes: [],
-        answeredQuestions: new Map(),
+        answeredCheckpointMcqs: new Map(),
       });
     }
 
@@ -64,34 +62,25 @@ export const submitExercise = async (req, res) => {
       completedAt: new Date(),
     });
 
-    // FIX: Calculate GLOBAL totals
-    const allQuizzes = await Quiz.find();
-    let totalPossibleQuizXP = 0;
-    for (const quiz of allQuizzes) {
-      totalPossibleQuizXP += quiz.questions.length * 10;
-    }
-    progress.totalCourseXP = totalPossibleQuizXP;
-
-    const totalExercisesGlobally = await Exercise.countDocuments();
-    progress.totalExerciseXP = totalExercisesGlobally * 10;
+    // Calculate total possible XP for this course only
+    const exercisesForThisCourse = await Exercise.countDocuments({
+      courseId: new mongoose.Types.ObjectId(courseId),
+    });
+    const totalExerciseXP = exercisesForThisCourse * 10;
 
     await progress.save();
 
-    const totalExerciseXP = [...progress.exerciseXP.values()].reduce(
-      (sum, val) => sum + val,
-      0
-    );
-
     res.status(200).json({
-      message: "Exercise completed successfully",
+      message: "Exercise completed successfully (manual submission)",
       addedXP: xpToAdd,
-      totalExerciseXP: progress.totalExerciseXP, // Global total, not earned total
+      totalExerciseXP, // Only for this course
       exerciseId,
       courseId,
+      note: "Consider using /submit-code endpoint for automatic validation",
     });
   } catch (err) {
-    console.error("Submit error:", err);
-    res.status(500).json({ error: "Exercise submission failed" });
+    console.error("Exercise submission failed", err);
+    return res.status(500).json({ error: "Exercise submission failed" });
   }
 };
 
@@ -99,6 +88,7 @@ export const submitExercise = async (req, res) => {
 export const submitExerciseCode = async (req, res) => {
   const { courseId, exerciseId } = req.params;
   const { language, code, input } = req.body;
+  const userId = req.user._id;
 
   const languageMap = {
     python: 71,
@@ -109,11 +99,19 @@ export const submitExerciseCode = async (req, res) => {
   const languageId = languageMap[language?.toLowerCase()];
   if (!languageId) {
     return res.status(400).json({
-      error: "Unsupported language. Please use 'python' or 'java' or 'c'.",
+      error: "Unsupported language. Please use 'python', 'java', or 'c'.",
     });
   }
 
   try {
+    // Validate IDs
+    if (
+      !mongoose.Types.ObjectId.isValid(courseId) ||
+      !mongoose.Types.ObjectId.isValid(exerciseId)
+    ) {
+      return res.status(400).json({ error: "Invalid course or exercise ID" });
+    }
+
     // Verify course exists
     const course = await Course.findById(courseId);
     if (!course) {
@@ -128,51 +126,168 @@ export const submitExerciseCode = async (req, res) => {
       });
     }
 
-    const expectedOutput = exercise.expectedOutput?.trim();
+    const expectedOutput = exercise.expectedOutput?.trim(); // For user reference
+    const expectedProgramOutput = exercise.expectedProgramOutput?.trim(); // For validation
     const inputToUse = input || exercise.input || "";
 
+    // Submit to Judge0 API
     const submission = await axios.post(
       "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true",
       {
         source_code: code,
-        stdin: inputToUse,
         language_id: languageId,
+        stdin: inputToUse,
+        expected_output: expectedProgramOutput, // Use program output for Judge0 validation
       },
       {
         headers: {
-          "x-rapidapi-key": process.env.RAPIDAPI_KEY,
-          "x-rapidapi-host": "judge0-ce.p.rapidapi.com",
           "Content-Type": "application/json",
+          "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
+          "X-RapidAPI-Key": process.env.JUDGE0_RAPIDAPI_KEY,
         },
       }
     );
 
-    const result = submission.data;
-    const actualOutput = (result.stdout || "").trim();
-    const isCorrect = expectedOutput === actualOutput;
+    const { stdout, stderr, compile_output, token, status } = submission.data;
 
-    return res.status(200).json({
-      stdout: result.stdout,
-      stderr: result.stderr,
-      compile_output: result.compile_output,
-      status: result.status,
-      time: result.time,
-      memory: result.memory,
-      correct: isCorrect,
-      expected: expectedOutput,
+    // Check for compilation errors
+    if (compile_output) {
+      return res.status(400).json({
+        success: false,
+        error: "Compilation error",
+        details: compile_output,
+        isOutputCorrect: false,
+        output: stdout?.trim() || "",
+        expectedOutput, // Sample code for user reference
+        expectedProgramOutput, // Expected program output for validation
+        token,
+      });
+    }
+
+    // Check for runtime errors
+    if (stderr) {
+      return res.status(400).json({
+        success: false,
+        error: "Runtime error",
+        details: stderr,
+        isOutputCorrect: false,
+        output: stdout?.trim() || "",
+        expectedOutput, // Sample code for user reference
+        expectedProgramOutput, // Expected program output for validation
+        token,
+      });
+    }
+
+    // Compare the output with the expected program output
+    const userOutput = stdout?.trim() || "";
+    const isOutputCorrect = expectedProgramOutput
+      ? userOutput === expectedProgramOutput
+      : false; // If no expected output is set, mark as incorrect
+
+    let xpAwarded = 0;
+    let alreadyCompleted = false;
+
+    // Get or create user progress
+    let userProgress = await UserProgress.findOne({ userId });
+    if (!userProgress) {
+      userProgress = new UserProgress({
+        userId,
+        exerciseXP: new Map(),
+        completedExercises: [],
+        courseXP: new Map(),
+        answeredCheckpointMcqs: new Map(),
+      });
+    }
+
+    // If output is correct, award XP and mark as completed
+    if (isOutputCorrect) {
+      // Check if this specific exercise is already completed
+      const isAlreadyCompleted = userProgress.completedExercises.some(
+        (item) => item.exerciseId && item.exerciseId.toString() === exerciseId
+      );
+
+      if (!isAlreadyCompleted) {
+        xpAwarded = 10;
+        const currentXP = userProgress.exerciseXP.get(courseId) || 0;
+        userProgress.exerciseXP.set(courseId, currentXP + xpAwarded);
+
+        userProgress.completedExercises.push({
+          exerciseId: new mongoose.Types.ObjectId(exerciseId),
+          completedAt: new Date(),
+        });
+
+        await userProgress.save();
+      } else {
+        alreadyCompleted = true;
+      }
+    }
+
+    // Calculate total possible XP for this course
+    const exercisesForThisCourse = await Exercise.countDocuments({
+      courseId: new mongoose.Types.ObjectId(courseId),
+    });
+    const totalExerciseXP = exercisesForThisCourse * 10;
+
+    // Get updated courseXP and exerciseXP for frontend display
+    const courseXPObject = {};
+    const exerciseXPObject = {};
+    if (userProgress && userProgress.courseXP) {
+      for (const [courseId, xp] of userProgress.courseXP) {
+        courseXPObject[courseId] = xp;
+      }
+    }
+    if (userProgress && userProgress.exerciseXP) {
+      for (const [courseId, xp] of userProgress.exerciseXP) {
+        exerciseXPObject[courseId] = xp;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: isOutputCorrect
+        ? alreadyCompleted
+          ? "Exercise already completed"
+          : "Exercise completed successfully"
+        : "Exercise submitted but output is incorrect",
+      isOutputCorrect,
+      output: userOutput,
+      expectedOutput, // Sample code for user reference
+      expectedProgramOutput, // Expected program output for validation
+      xpAwarded,
+      alreadyCompleted,
+      totalExerciseXP,
       exerciseId,
       courseId,
+      token,
+      status,
+      courseXP: courseXPObject, // Frontend can use this to display XP card
+      exerciseXP: exerciseXPObject, // Frontend can use this to display XP card
     });
   } catch (err) {
-    console.error("Judge0 error:", err.message);
-    return res.status(500).json({ error: "Code execution failed" });
+    console.error("Code submission error:", err);
+
+    // Handle Judge0 API errors specifically
+    if (err.response) {
+      return res.status(500).json({
+        success: false,
+        error: "Judge0 API error",
+        details: err.response.data?.message || "Unknown Judge0 error",
+        isOutputCorrect: false,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Code submission failed",
+      details: err.message,
+      isOutputCorrect: false,
+    });
   }
 };
 
-// Get ALL exercises for a course
+// Get Course Exercises
 export const getCourseExercises = async (req, res) => {
   const { courseId } = req.params;
-
   try {
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ error: "Invalid course ID" });
@@ -184,30 +299,23 @@ export const getCourseExercises = async (req, res) => {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    // Get ALL exercises for this course (not just the linked one)
+    // Fetch exercises for this course
     const exercises = await Exercise.find({ courseId });
 
-    if (!exercises || exercises.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "No exercises found for this course" });
-    }
-
     res.status(200).json({
-      courseId: courseId,
-      exerciseCount: exercises.length,
       exercises: exercises.map((exercise) => ({
         exerciseId: exercise._id,
         title: exercise.title,
         question: exercise.question,
-        expectedOutput: exercise.expectedOutput,
+        expectedOutput: exercise.expectedOutput, // Sample code for user reference
+        expectedProgramOutput: exercise.expectedProgramOutput, // Expected program output
         input: exercise.input,
         createdAt: exercise.createdAt,
         updatedAt: exercise.updatedAt,
       })),
     });
   } catch (err) {
-    console.error("Fetch exercises error:", err.message);
-    res.status(500).json({ error: "Failed to fetch exercises" });
+    console.error("Get course exercises failed", err);
+    return res.status(500).json({ error: "Get course exercises failed" });
   }
 };
