@@ -38,16 +38,16 @@ const CourseCard = ({ course, index, onClick }) => {
           </div>
 
           {/* Course Info */}
-          <div className="p-6">
+          <div className="p-4">
             <h3
               ref={titleRef}
               className={`font-poppins text-xl font-medium text-blue-900 dark:text-white mb-2 hover-gradient-text ${isTitleInViewport ? 'in-viewport' : ''}`}
             >
               {course.title}
             </h3>
-            <p className="text-blue-700 dark:text-gray-200 text-sm leading-relaxed">
+            {/*<p className="text-blue-700 dark:text-gray-200 text-sm leading-relaxed">
               {course.description}
-            </p>
+            </p> */}
           </div>
         </CardContent>
       </Card>
