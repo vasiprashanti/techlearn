@@ -774,6 +774,18 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Hide scrollbars everywhere */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+
+
 /* Cosmic background continuity */
 .cosmic-background {
   background: linear-gradient(to bottom,
