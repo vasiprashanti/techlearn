@@ -502,7 +502,7 @@ print(df.describe())    # Statistical summary`,
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold brand-heading-primary text-sm motion-div"
+                    className="font-poppins font-semibold text-2xl motion-div text-blue-900 dark:text-white/80"
                   >
                     Course Topics
                   </motion.h3>
@@ -516,13 +516,13 @@ print(df.describe())    # Statistical summary`,
                   console.log('Mouse down on toggle button');
                   e.preventDefault();
                 }}
-                className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
+                className="p-2 rounded-xl bg-transparent hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative active:scale-95"
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
                 {sidebarCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-white" />
+                  <ChevronRight className="w-5 h-5 text-blue-900" />
                 ) : (
-                  <ChevronLeft className="w-5 h-5 text-white" />
+                  <ChevronLeft className="w-5 h-5 text-blue-900" />
                 )}
               </button>
             </div>
@@ -673,17 +673,15 @@ print(df.describe())    # Statistical summary`,
             <div className={`container mx-auto max-w-6xl transition-all duration-300 ${
               sidebarCollapsed ? 'px-6' : 'px-6 lg:px-8'
             }`}>
-              
-
 
               {/* Header */}
-              <div className="border-b border-gray-200/20 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-8">
+              <div className="border-b border-gray-200/20 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-2 mt-2">
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
                 >
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-0">
                     {/* Header Section */}
                     <div className="flex-1">
                       {/* Mobile Book Icon Button */}
@@ -705,7 +703,7 @@ print(df.describe())    # Statistical summary`,
                       </h1>
                     </div>
                     {/* Stats Cards and Quiz Button - Side by Side */}
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+
                       {/* Take Quiz Button */}
                       {/*<button
                         onClick={handleTakeQuiz}
@@ -745,7 +743,6 @@ print(df.describe())    # Statistical summary`,
                         </div>
                       </div>*/}
                     </div>
-                  </div>
                 </motion.div>
                 {/* Content Sections */}
                 {/* Theory Section */}
@@ -755,7 +752,7 @@ print(df.describe())    # Statistical summary`,
                   transition={{ duration: 0.6, delay: 0.2 }}
                   className="lg:bg-transparent lg:h-[90vh] lg:flex lg:flex-col"
                 >
-                  <div className="max-w-none px-[5px] lg:px-8 lg:py-8 lg:flex-1 lg:overflow-hidden">
+                  <div className="max-w-none px-[5px] lg:px-8 lg:py-1 lg:flex-1 lg:overflow-hidden">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
                       <div className="h-full lg:overflow-y-auto scrollbar-hide">
                         <div className="markdown-content lg:bg-transparent">
