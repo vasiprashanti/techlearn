@@ -14,7 +14,6 @@ import {
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import useInViewport from "../../hooks/useInViewport";
-import Navbar from "../../components/Navbar";
 import { courseAPI, progressAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
@@ -480,7 +479,6 @@ print(df.describe())    # Statistical summary`,
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <ScrollProgress />
-      <Navbar />
       
       <div className="flex min-h-screen">
         {/* Desktop Sidebar */}
