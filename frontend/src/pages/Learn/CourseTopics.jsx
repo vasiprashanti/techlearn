@@ -14,7 +14,6 @@ import {
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import useInViewport from "../../hooks/useInViewport";
-import Navbar from "../../components/Navbar";
 import { courseAPI, progressAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
@@ -22,7 +21,7 @@ import { useAuthModalContext } from "../../context/AuthModalContext";
 const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const [selectedTopic, setSelectedTopic] = useState(0); // Changed to index-based selection
+  const [selectedTopic, setSelectedTopic] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [titleRef, isTitleInViewport] = useInViewport();
@@ -480,7 +479,6 @@ print(df.describe())    # Statistical summary`,
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <ScrollProgress />
-      <Navbar />
       
       <div className="flex min-h-screen">
         {/* Desktop Sidebar */}
@@ -587,8 +585,6 @@ print(df.describe())    # Statistical summary`,
           </div>
         </motion.div>
 
-
-
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {mobileMenuOpen && (
@@ -600,18 +596,17 @@ print(df.describe())    # Statistical summary`,
                 onClick={() => setMobileMenuOpen(false)}
                 className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
               />
-
               <motion.div
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 flex flex-col"
+                className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 flex flex-col"
               >
                 {/* Mobile Header */}
                 <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-poppins font-semibold text-gray-900 dark:text-white">
+                    <h3 className="font-poppins text-lg font-semibold text-blue-900 dark:text-white/80">
                       Course Topics
                     </h3>
                     <button
@@ -648,14 +643,14 @@ print(df.describe())    # Statistical summary`,
                             {topic.completed ? (
                               <CheckCircle className="w-4 h-4 text-white" />
                             ) : (
-                              <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                              <span className="text-xs font-bold text-blue-950 dark:text-gray-300">
                                 {index + 1}
                               </span>
                             )}
                           </div>
-                          <h4 className="font-medium text-gray-900 dark:text-white">{topic.title}</h4>
+                          <h4 className="font-medium text-blue-800 dark:text-white/60">{topic.title}</h4>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 ml-11">
+                        <p className="text-sm text-blue-500 dark:text-white/60 ml-11">
                           {topic.description}
                         </p>
                       </button>
@@ -703,7 +698,6 @@ print(df.describe())    # Statistical summary`,
                       </h1>
                     </div>
                     {/* Stats Cards and Quiz Button - Side by Side */}
-
                       {/* Take Quiz Button */}
                       {/*<button
                         onClick={handleTakeQuiz}
