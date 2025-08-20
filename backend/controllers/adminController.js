@@ -96,15 +96,23 @@ export const editTopicDetails = async (req, res) => {
     // Merge and save Notes(Both mcqs and notes)
     let notes = await Notes.findOne({ topicId });
 
-    //  Only allow editing if Notes already exists
-    if (!notes) {
+    // If files are provided but no notes exist, create new notes
+    if (!notes && (notesFile || mcqFile)) {
+      notes = new Notes({
+        parsedContent: notesContent ? notesContent.content : "",
+        topicId: topicId,
+        checkpointMcqs: [],
+      });
+    }
+
+    // If no notes exist and no files provided, only allow title updates (already handled above)
+    if (!notes && !notesFile && !mcqFile) {
       return res.status(400).json({
         message:
           "Cannot edit: No existing notes found for this topic. Please create notes first using the initial upload process.",
         error: "NOTES_NOT_FOUND",
       });
     }
-
     // If checkpointMcqs is result object, extract array
     const mcqArray =
       checkpointMcqs && checkpointMcqs.checkpointMcqs
