@@ -67,7 +67,7 @@ export default function Admin_Sidebar() {
 
           {/* Sidebar drawer */}
           <aside
-            className="fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-white dark:bg-gray-900
+            className="fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
               w-72 h-full px-4 py-6 transition-transform duration-300 ease-in-out
               shadow-lg flex lg:hidden"
             style={{ userSelect: "none" }}
