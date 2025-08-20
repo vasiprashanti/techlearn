@@ -44,34 +44,31 @@ const AdminTopicsList = () => {
   };
 
   // Handle course title update (with file upload, matches /api/admin/topic/:topicId)
-  const handleCourseTitleUpdate = async (e) => {
+   
+const handleCourseTitleUpdate = async (e) => {
   e && e.preventDefault && e.preventDefault();
   try {
     const token = localStorage.getItem('token');
-    
-    // Use the first topic's ID if available, else fallback to courseId
+    const formData = new FormData();
+    formData.append('courseTitle', courseTitle);
+    formData.append('courseId', courseId); // send courseId for backend to use
+    // Use the first topic's ID if available, else fallback to courseId (for route param)
     const topicId = topics && topics.length > 0 ? topics[0].topicId : courseId;
-    
     const res = await axios.put(
       `${BASE_URL}/admin/topic/${topicId}`,
-      { courseTitle }, // Send as JSON object - NOT FormData
+      formData,
       token
         ? {
             headers: {
               Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json', // JSON, not multipart
+              'Content-Type': 'multipart/form-data',
             },
           }
-        : {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
+        : {}
     );
     alert('Course title updated successfully!');
-    console.log("Updated:", res);
+    console.log("ipd ide", res);
   } catch (err) {
-    console.log(err);
     alert('Failed to update course title.');
   }
 };
