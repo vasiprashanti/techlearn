@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+const BASE_URL = import.meta.env.VITE_API_URL;
+
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
@@ -59,7 +61,7 @@ export const UserProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const { data } = await axios.get('https://techlearnsolutions-backend.vercel.app/api/dashboard', {
+  const { data } = await axios.get(`${BASE_URL}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

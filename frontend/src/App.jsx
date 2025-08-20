@@ -24,7 +24,7 @@ import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
 import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
 import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
 import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
-import Quizzesupload from '../src/pages/AdminDashbaord/Quizzesupload';
+import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
 
 // Auth pages
@@ -69,11 +69,11 @@ import Contact from './pages/Contact/Contact'
 
 // About component
 import About from './pages/About/About'
-
 // Terms and Conditions componenet
 import TermsAndConditions from './pages/About/TermsAndConditons';
 
 import PrivacyPolicy from './pages/About/PrivacyPolicy';
+import UserMcq from './pages/Mcq/UserMcq'
 
 // Homepage component
 const HomePage = () => {
@@ -622,6 +622,7 @@ function LayoutWrapper() {
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/mcq" element={<UserMcq />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>
@@ -630,7 +631,7 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
-            <Route path="/admin/quizzes-upload" element={<Quizzesupload/>}/>
+            <Route path="/admin/mcqupload" element={<McqUpload/>} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
           </Route>
           <Route path="/about" element={<About />} />

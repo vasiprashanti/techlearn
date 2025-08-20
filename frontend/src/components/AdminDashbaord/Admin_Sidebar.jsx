@@ -13,7 +13,7 @@ const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
   { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/upload-exercises" },
-  { name: "Quizzes", icon: MdQuiz, path: "/admin/quizzes-upload" },
+  {name : "MCQs", icon: MdQuiz, path: "/admin/mcqupload" }
 ];
 
 export default function Admin_Sidebar() {
@@ -162,7 +162,7 @@ export default function Admin_Sidebar() {
         aria-label="Sidebar navigation"
       >
         <div className="flex items-center justify-center mb-8 relative cursor-pointer mr-4">
-          <div onClick={() => setCollapsed(!collapsed)} className="relative flex items-center justify-center">
+          <div onClick={() => setCollapsed(!collapsed)} className="relative flex items-center justify-center" style={{ cursor: 'pointer' }}>
             {/* Light Logo */}
             <img
               src="/logoo.png"

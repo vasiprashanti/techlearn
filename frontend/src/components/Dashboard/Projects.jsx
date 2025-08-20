@@ -4,6 +4,8 @@ import LoadingScreen from "../../components/Loader/Loader3D";
 import ProjectStatsCard from "../../components/Dashboard/ProjectStatsCard";
 import RecentProjectCard from "../../components/Dashboard/RecentProjectCard";
 
+const BASE_URL = import.meta.env.VITE_API_URL;
+
 const ProjectsDashboard = () => {
   const [projectsData, setProjectsData] = useState({
     miniProjects: [],
@@ -17,7 +19,6 @@ const ProjectsDashboard = () => {
   // ==============================================
   // BACKEND CONNECTION - FETCHING ALL PROJECTS
   // Uses the endpoint you provided initially:
-  // GET https://techlearnsolutions-backend.vercel.app/api/dashboard/projects
   // ==============================================
   useEffect(() => {
     const fetchProjects = async () => {
@@ -30,12 +31,12 @@ const ProjectsDashboard = () => {
         }
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/dashboard/projects`,
+          `${BASE_URL}/dashboard/projects`,
           {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`, // Add the token here
+              "Authorization": `Bearer ${token}`,
             },
           }
         );

@@ -38,6 +38,12 @@ const Sidebar = ({ onToggle }) => {
       icon: '/sidebar/projects.png',
       completed: false,
     },
+    {
+      id:'mcq',
+      title:'MCQ',
+      icon:'/sidebar/quizzes.png',
+      completed: false,
+    }
   ];
 
   return (
