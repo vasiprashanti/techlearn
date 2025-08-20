@@ -45,32 +45,36 @@ const AdminTopicsList = () => {
 
   // Handle course title update (with file upload, matches /api/admin/topic/:topicId)
   const handleCourseTitleUpdate = async (e) => {
-    e && e.preventDefault && e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('title', courseTitle);
-      // Use the first topic's ID if available, else fallback to courseId
-      const topicId = topics && topics.length > 0 ? topics[0].topicId : courseId;
-      const res=await axios.put(
-        `${BASE_URL}/admin/topic/${topicId}`,
-        formData,
-        token
-          ? {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'multipart/form-data',
-              },
-            }
-          : {}
-      );
-      alert('Course title updated successfully!');
-      console.log("ipd ide",res);
-    } catch (err) {
-      alert('Failed to update course title.');
-    }
-  };
-
+  e && e.preventDefault && e.preventDefault();
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Use the first topic's ID if available, else fallback to courseId
+    const topicId = topics && topics.length > 0 ? topics[0].topicId : courseId;
+    
+    const res = await axios.put(
+      `${BASE_URL}/admin/topic/${topicId}`,
+      { courseTitle }, // Send as JSON object - NOT FormData
+      token
+        ? {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json', // JSON, not multipart
+            },
+          }
+        : {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+    );
+    alert('Course title updated successfully!');
+    console.log("Updated:", res);
+  } catch (err) {
+    console.log(err);
+    alert('Failed to update course title.');
+  }
+};
   // Handle file select
   const handleExerciseFileChange = (file) => {
     setExerciseFile(file);
