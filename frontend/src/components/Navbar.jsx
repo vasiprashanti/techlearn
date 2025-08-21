@@ -20,8 +20,10 @@ const Navbar = () => {
     "/admin/courses",
     "/admin/upload-exercises",
     "/admin/quizzes-upload",
+    "/admin/mcqupload",
   ];
-  const hideLogo = hideLogoRoutes.includes(location.pathname);
+  // Hide logo for exact matches or any subroutes (e.g., /admin/courses/123)
+  const hideLogo = hideLogoRoutes.some((route) => location.pathname === route || location.pathname.startsWith(route + "/"));
 
   // Handle scroll to hide/show navbar
   useEffect(() => {

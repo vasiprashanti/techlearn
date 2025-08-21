@@ -161,25 +161,27 @@ export default function Admin_Sidebar() {
         style={{ width: collapsed ? "80px" : "288px" }}
         aria-label="Sidebar navigation"
       >
-        <div className="flex items-center justify-center mb-8 relative cursor-pointer mr-4">
-          <div onClick={() => setCollapsed(!collapsed)} className="relative flex items-center justify-center" style={{ cursor: 'pointer' }}>
-            {/* Light Logo */}
+        <div className="flex items-center justify-center mb-8 relative mr-4">
+          {/* Logo acts as sidebar toggle on all admin routes */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="relative flex items-center justify-center focus:outline-none group"
+            style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+            title="Toggle sidebar"
+            tabIndex={0}
+            aria-label="Toggle sidebar"
+          >
             <img
               src="/logoo.png"
               alt="Light Logo"
-              className={`h-12 w-auto transition-opacity duration-300 ${
-                isDarkMode ? "opacity-0" : "opacity-100"
-              }`}
+              className={`h-12 w-auto transition-opacity duration-300 ${isDarkMode ? "opacity-0" : "opacity-100"} group-hover:scale-105`}
             />
-            {/* Dark Logo */}
             <img
               src="/logoo2.png"
               alt="Dark Logo"
-              className={`h-12 w-auto absolute transition-opacity duration-300 ${
-                isDarkMode ? "opacity-100" : "opacity-0"
-              }`}
+              className={`h-12 w-auto absolute transition-opacity duration-300 ${isDarkMode ? "opacity-100" : "opacity-0"} group-hover:scale-105`}
             />
-          </div>
+          </button>
         </div>
 
         {/* Navigation Links */}
