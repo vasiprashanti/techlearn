@@ -2,6 +2,7 @@ import express from "express";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import {
   createCollegeMcq,
+  updateCollegeMcq,
   sendCollegeMcqOTP,
   verifyOTPAndGetCollegeMcq,
   submitCollegeMcqAnswers,
@@ -20,6 +21,8 @@ collegeMcqRouter.get(
   isAdmin,
   getAllCollegeMcqs
 );
+
+collegeMcqRouter.put("/admin/:mcqId", protect, isAdmin, updateCollegeMcq);
 
 collegeMcqRouter.get(
   "/admin/:mcqId/scores",

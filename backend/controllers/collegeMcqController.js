@@ -22,8 +22,32 @@ setInterval(() => {
 // Helper function to check if MCQ is still active based on duration
 const isMcqActive = (mcq) => {
   const now = new Date();
+  const mcqStartTime = new Date(mcq.date);
   const mcqEndTime = new Date(mcq.date.getTime() + mcq.duration * 60 * 1000);
-  return now <= mcqEndTime;
+  return now >= mcqStartTime && now <= mcqEndTime;
+};
+
+// Helper function to get detailed MCQ time status
+const getMcqTimeStatus = (mcq) => {
+  const now = new Date();
+  const mcqStartTime = new Date(mcq.date);
+  const mcqEndTime = new Date(mcq.date.getTime() + mcq.duration * 60 * 1000);
+
+  const hasStarted = now >= mcqStartTime;
+  const hasExpired = now > mcqEndTime;
+  const isActive = hasStarted && !hasExpired;
+
+  return {
+    hasStarted,
+    hasExpired,
+    isActive,
+    remainingMinutes: isActive
+      ? Math.max(0, Math.floor((mcqEndTime - now) / (1000 * 60)))
+      : 0,
+    minutesUntilStart: !hasStarted
+      ? Math.max(0, Math.floor((mcqStartTime - now) / (1000 * 60)))
+      : 0,
+  };
 };
 
 // Admin: Create a new college MCQ
@@ -102,6 +126,84 @@ export const createCollegeMcq = async (req, res) => {
   }
 };
 
+// Admin: Update a college MCQ
+export const updateCollegeMcq = async (req, res) => {
+  try {
+    const { mcqId } = req.params;
+    const { title, college, date, duration, questions, isActive } = req.body;
+
+    // Check if MCQ exists
+    const existingMcq = await CollegeMcq.findById(mcqId);
+    if (!existingMcq) {
+      return res.status(404).json({
+        success: false,
+        message: "College MCQ not found",
+      });
+    }
+
+    // Validate questions format if provided
+    if (questions && questions.length > 0) {
+      for (const question of questions) {
+        if (
+          !question.text ||
+          !question.options ||
+          question.options.length !== 4
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Each question must have text and exactly 4 options",
+          });
+        }
+        if (question.correct < 0 || question.correct > 3) {
+          return res.status(400).json({
+            success: false,
+            message: "Correct answer index must be between 0 and 3",
+          });
+        }
+      }
+    }
+
+    // Prepare update data
+    const updateData = {};
+    if (title !== undefined) updateData.title = title;
+    if (college !== undefined) updateData.college = college;
+    if (date !== undefined) updateData.date = new Date(date);
+    if (duration !== undefined) updateData.duration = duration;
+    if (questions !== undefined) updateData.questions = questions;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    // Update the MCQ
+    const updatedMcq = await CollegeMcq.findByIdAndUpdate(mcqId, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "College MCQ updated successfully",
+      data: {
+        id: updatedMcq._id,
+        title: updatedMcq.title,
+        college: updatedMcq.college,
+        date: updatedMcq.date,
+        duration: updatedMcq.duration,
+        questions: updatedMcq.questions,
+        isActive: updatedMcq.isActive,
+        linkId: updatedMcq.linkId,
+        totalAttempts: updatedMcq.totalAttempts,
+        accessLink: `${process.env.FRONTEND_URL}/mcq/${updatedMcq.linkId}`,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating college MCQ:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update college MCQ",
+      error: error.message,
+    });
+  }
+};
+
 // Student: Send OTP to email for college MCQ access
 export const sendCollegeMcqOTP = async (req, res) => {
   try {
@@ -124,11 +226,21 @@ export const sendCollegeMcqOTP = async (req, res) => {
     }
 
     // Check if college MCQ is still active based on duration
-    if (!isMcqActive(collegeMcq)) {
-      return res.status(410).json({
-        success: false,
-        message: "College MCQ has expired",
-      });
+    const timeStatus = getMcqTimeStatus(collegeMcq);
+    if (!timeStatus.isActive) {
+      if (!timeStatus.hasStarted) {
+        return res.status(425).json({
+          success: false,
+          message: `College MCQ has not started yet. Test will begin in ${timeStatus.minutesUntilStart} minutes.`,
+          timeStatus,
+        });
+      } else {
+        return res.status(410).json({
+          success: false,
+          message: "College MCQ has expired",
+          timeStatus,
+        });
+      }
     }
 
     // Check if student has already submitted (one submission per MCQ per student)
@@ -232,11 +344,21 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
     }
 
     // Check if college MCQ is still active based on duration
-    if (!isMcqActive(collegeMcq)) {
-      return res.status(410).json({
-        success: false,
-        message: "College MCQ has expired",
-      });
+    const timeStatus = getMcqTimeStatus(collegeMcq);
+    if (!timeStatus.isActive) {
+      if (!timeStatus.hasStarted) {
+        return res.status(425).json({
+          success: false,
+          message: `College MCQ has not started yet. Test will begin in ${timeStatus.minutesUntilStart} minutes.`,
+          timeStatus,
+        });
+      } else {
+        return res.status(410).json({
+          success: false,
+          message: "College MCQ has expired",
+          timeStatus,
+        });
+      }
     }
 
     // Verify OTP from memory store
@@ -326,11 +448,21 @@ export const submitCollegeMcqAnswers = async (req, res) => {
     }
 
     // Check if college MCQ is still active based on duration
-    if (!isMcqActive(collegeMcq)) {
-      return res.status(410).json({
-        success: false,
-        message: "College MCQ has expired",
-      });
+    const timeStatus = getMcqTimeStatus(collegeMcq);
+    if (!timeStatus.isActive) {
+      if (!timeStatus.hasStarted) {
+        return res.status(425).json({
+          success: false,
+          message: `College MCQ has not started yet. Test will begin in ${timeStatus.minutesUntilStart} minutes.`,
+          timeStatus,
+        });
+      } else {
+        return res.status(410).json({
+          success: false,
+          message: "College MCQ has expired",
+          timeStatus,
+        });
+      }
     }
 
     // Basic validation for answers array
