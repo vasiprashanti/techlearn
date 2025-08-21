@@ -1,25 +1,25 @@
 import nodemailer from "nodemailer";
 
-const transporterPromise = nodemailer
-  .createTestAccount()
-  .then((testAccount) => {
-    return nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-  });
+// Create transporter using actual email credentials from .env
+const transporter = nodemailer.createTransport({
+  service: "gmail", // or your email service
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 export async function sendMail(to, subject, text) {
-  const transporter = await transporterPromise;
-  const info = await transporter.sendMail({
-    from: '"TechLearn Admin" <no-reply@techlearn.com>',
-    to,
-    subject,
-    text,
-  });
-  console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  try {
+    const info = await transporter.sendMail({
+      from: `"TechLearn Admin" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+    });
+    return info;
+  } catch (error) {
+    console.error("Email sending failed:", error);
+    throw error;
+  }
 }

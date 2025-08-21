@@ -28,6 +28,7 @@ import transactionRoutes from "./routes/transactionRoutes.js";
 import uiLibraryRoutes from "./routes/uiLibraryRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import mcqRouter from "./routes/checkpointMcqRoutes.js";
+import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -90,6 +91,7 @@ app.use("/api/compiler", compilerRoutes);
 app.use("/api/xp", xpRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", mcqRouter);
+app.use("/api/college-mcq", collegeMcqRoutes);
 app.use("/api", dashboardProjectRoutes);
 
 // ✅ BUILD PAGE Routes
