@@ -134,6 +134,7 @@ const LoginPage = ({ onSuccess }) => {
 
 // Quiz Component with Backend Integration
 const UserMcq = () => {
+  const { linkId } = useParams();
   const [step, setStep] = useState("login"); // login → instructions → quiz → result
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(false);
