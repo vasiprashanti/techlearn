@@ -1,468 +1,416 @@
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-const BASE_URL = import.meta.env.VITE_API_URL || "";
-import { Clock, ArrowRight, ArrowLeft, Loader } from "lucide-react";
-import { useParams } from "react-router-dom";
+import React, { useState } from 'react';
+import { CheckCircle, XCircle, Clock, User, Mail, Award, AlertTriangle, Send, RotateCcw } from 'lucide-react';
 
-// Login Page
-const LoginPage = ({ onSuccess }) => {
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const { linkId } = useParams();
-
-  // Regex for validating college email (adjust domain if needed)
-  const validateEmail = (email) => {
-    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
-    return regex.test(email);
-  };
-
-  const handleAction = async () => {
-    if (!validateEmail(email)) {
-      setError("Please enter a valid college email address");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      if (!codeSent) {
-        // Send OTP for college MCQ
-        const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/send-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setCodeSent(true);
-        } else {
-          setError(data.message || "Failed to send OTP");
-        }
-      } else {
-        // Verify OTP for college MCQ
-        if (!code) {
-          setError("Verification code is required");
-          setLoading(false);
-          return;
-        }
-        const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/verify-otp`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp: code }),
-        });
-        const data = await res.json();
-        console.log("Verification response:", data);
-        
-        if (res.ok && data.success) {
-          // Pass both email and quiz data from verification response
-          onSuccess(email, data.collegeMcq);
-        } else {
-          setError(data.message || "Invalid OTP");
-        }
-      }
-    } catch (err) {
-      setError("Server error. Try again later.");
-    }
-
-    setLoading(false);
-  };
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/20 dark:border-gray-700/20 w-full max-w-md text-center"
-      >
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-          Login with Verification Code
-        </h2>
-
-        {/* Email Input */}
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your Email ID"
-          className={`w-full px-3 py-2 border rounded-md mb-4 focus:ring-2 ${
-            error && !validateEmail(email)
-              ? "border-red-500 focus:ring-red-500"
-              : "focus:ring-blue-500"
-          } dark:bg-gray-700 dark:border-gray-600 dark:text-white`}
-        />
-
-        {/* Verification Code Input */}
-        <input
-          type="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder="Enter verification code"
-          className="w-full px-3 py-2 border rounded-md mb-4 focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-        />
-
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-
-        {/* Dynamic Button */}
-        <button
-          onClick={handleAction}
-          disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full"
-        >
-          {loading
-            ? !codeSent
-              ? "Sending..."
-              : "Verifying..."
-            : !codeSent
-            ? "Send Verification Code"
-            : "Verify & Continue"}
-        </button>
-
-        {codeSent && (
-          <p className="text-sm text-green-600 mt-3">
-            ✅ Code sent to your email. Please check your inbox.
-          </p>
-        )}
-      </motion.div>
-    </div>
-  );
-};
-
-// Quiz Component with Backend Integration
-const UserMcq = () => {
-  const [step, setStep] = useState("login"); // login → instructions → quiz → result
-  const [quiz, setQuiz] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+const MCQSubmissionSystem = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState(null);
+  const [showScore, setShowScore] = useState(false);
 
-  // Submit quiz results to backend
-  const submitQuizResults = async () => {
-    try {
-      const answers = quiz.questions.map((q, idx) => ({
-        questionId: q.id,
-        selectedOption: selectedAnswers[idx],
-        isCorrect: selectedAnswers[idx] === q.correct,
-      }));
-
-      const score = calculateScore();
-
-      const submissionData = {
-        email: userEmail,
-        mcqId: quiz.id,
-        answers,
-        score: Math.round((score.correct / score.total) * 100), // Send percentage to backend
-        timeSpent: quiz.timeLimit - timeLeft,
-        completedAt: new Date().toISOString(),
-      };
-
-      console.log("Submitting quiz results:", submissionData);
-
-      const res = await fetch(`${BASE_URL}/api/college-mcq/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submissionData),
-      });
-
-      const data = await res.json();
-      console.log("Submission response:", res);
-      console.log("Submission response data:", data);
-      
-      if (!res.ok) {
-        console.error("Failed to submit quiz results:", data.message);
-      } else {
-        console.log("Quiz submitted successfully:", data);
-      }
-    } catch (err) {
-      console.error("Error submitting quiz results:", err);
+  // Sample MCQ data
+  const questions = [
+    {
+      id: 1,
+      question: "What is the time complexity of binary search?",
+      options: ["O(n)", "O(log n)", "O(n²)", "O(1)"],
+      correctAnswer: 1
+    },
+    {
+      id: 2,
+      question: "Which data structure follows LIFO principle?",
+      options: ["Queue", "Stack", "Array", "Linked List"],
+      correctAnswer: 1
+    },
+    {
+      id: 3,
+      question: "What does SQL stand for?",
+      options: ["Structured Query Language", "Simple Query Language", "Sequential Query Language", "Standard Query Language"],
+      correctAnswer: 0
+    },
+    {
+      id: 4,
+      question: "Which sorting algorithm has the best average case time complexity?",
+      options: ["Bubble Sort", "Selection Sort", "Merge Sort", "Insertion Sort"],
+      correctAnswer: 2
+    },
+    {
+      id: 5,
+      question: "What is the default port for HTTP?",
+      options: ["80", "443", "8080", "3000"],
+      correctAnswer: 0
     }
-  };
+  ];
 
-  // Timer effect
-  useEffect(() => {
-    if (step === "quiz" && timeLeft > 0) {
-      const timer = setInterval(async () => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Time's up - auto submit
-            (async () => {
-              await submitQuizResults(); // save result
-              setStep("result");
-            })();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [step, timeLeft]);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const handleAnswerSelect = (index) => {
-    setSelectedAnswers((prev) => ({
+  const handleAnswerSelect = (questionIndex, answerIndex) => {
+    setAnswers(prev => ({
       ...prev,
-      [currentQuestion]: index,
+      [questionIndex]: answerIndex
     }));
   };
 
-  const handleNext = async () => {
-    if (currentQuestion < quiz.questions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
-    } else {
-      await submitQuizResults(); // ensure backend submission
-      setStep("result");
+  const calculateScore = () => {
+    let correctCount = 0;
+    questions.forEach((question, index) => {
+      if (answers[index] === question.correctAnswer) {
+        correctCount++;
+      }
+    });
+    return {
+      correct: correctCount,
+      total: questions.length,
+      percentage: Math.round((correctCount / questions.length) * 100)
+    };
+  };
+
+  const submitToAPI = async (email, answersArray) => {
+    try {
+      const response = await fetch('/api/college-mcq/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          answers: answersArray
+        })
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      throw new Error('Network error occurred');
     }
   };
 
-  const handlePrevious = () => {
-    // Removed - no previous functionality
-  };
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      alert('Please enter your email address');
+      return;
+    }
 
-  const calculateScore = () => {
-    if (!quiz) return { correct: 0, total: 0 };
-    const total = quiz.questions.length;
-    let correct = 0;
-    quiz.questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.correct) correct++;
-    });
-    return { correct, total };
-  };
+    if (Object.keys(answers).length !== questions.length) {
+      alert('Please answer all questions before submitting');
+      return;
+    }
 
-  const handleLoginSuccess = (email, quizData) => {
-    setUserEmail(email);
-    // Process the quiz data from verification response
-    const processedQuiz = {
-      id: quizData.id,
-      title: quizData.title || "College Quiz",
-      timeLimit: quizData.timeLimit || quizData.duration || 7200, // Use duration if timeLimit not available
-      questions: quizData.questions.map((q, index) => ({
-        id: q.id || index,
-        question: q.text || q.question,
-        options: q.options,
-        correct: q.correct || 0, // Assuming correct answer index
-        difficulty: q.difficulty,
-        tags: q.tags
-      })),
-      passingScore: 60, // Default passing score
-      college: quizData.college
-    };
-    
-    setQuiz(processedQuiz);
-    setTimeLeft(processedQuiz.timeLimit);
-    setStep("instructions");
+    setIsSubmitting(true);
+
+    try {
+      // Convert answers object to array format as shown in Postman: [0, 1, 2, 2, 2]
+      const answersArray = questions.map((_, index) => answers[index] || 0);
+      
+      // Simulate API call with the exact structure from Postman
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+      
+      // Simulate the API response structure from Postman
+      const hasAlreadySubmitted = Math.random() < 0.3; // 30% chance of already submitted
+      
+      let apiResponse;
+      
+      if (hasAlreadySubmitted) {
+        // Simulate failure response as shown in Postman
+        apiResponse = {
+          success: false,
+          message: "You have already submitted this college MCQ"
+        };
+      } else {
+        // Simulate success response with score
+        const score = calculateScore();
+        apiResponse = {
+          success: true,
+          message: "MCQ submitted successfully",
+          score: score.correct,
+          total: score.total,
+          percentage: score.percentage
+        };
+      }
+
+      setSubmissionResult(apiResponse);
+      
+      if (apiResponse.success) {
+        setShowScore(true);
+      }
+      
+    } catch (error) {
+      setSubmissionResult({
+        success: false,
+        message: "Network error. Please try again."
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetQuiz = () => {
-    setStep("login");
-    setQuiz(null);
-    setUserEmail("");
-    setSelectedAnswers({});
     setCurrentQuestion(0);
-    setTimeLeft(0);
-    setError("");
+    setAnswers({});
+    setEmail('');
+    setSubmissionResult(null);
+    setShowScore(false);
   };
 
-  // Step 1: Login Page
-  if (step === "login") {
-    return <LoginPage onSuccess={handleLoginSuccess} />;
-  }
+  const getProgressPercentage = () => {
+    return ((Object.keys(answers).length) / questions.length) * 100;
+  };
 
-  // Step 2: Instructions Page
-  if (step === "instructions" && quiz) {
+  // Success Screen - Show Score
+  if (showScore && submissionResult?.success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-3xl"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                {Math.floor(quiz.timeLimit / 60)} minutes
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full text-center">
+          <div className="mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
+              <Award className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Quiz Completed!</h2>
+            <p className="text-gray-600">{submissionResult.message}</p>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white mb-6">
+            <div className="text-5xl font-bold mb-2">{submissionResult.percentage}%</div>
+            <div className="text-green-100 mb-4">Your Score</div>
+            <div className="flex justify-center items-center space-x-8">
+              <div className="text-center">
+                <div className="text-2xl font-semibold">{submissionResult.score}</div>
+                <div className="text-green-100 text-sm">Correct</div>
               </div>
-              <div className="flex items-center gap-2">
-                <span>📄</span>
-                {quiz.questions.length} questions
+              <div className="text-center">
+                <div className="text-2xl font-semibold">{submissionResult.total - submissionResult.score}</div>
+                <div className="text-green-100 text-sm">Incorrect</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-semibold">{submissionResult.total}</div>
+                <div className="text-green-100 text-sm">Total</div>
               </div>
             </div>
           </div>
 
-          {/* Instructions */}
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">
-            Quiz Instructions
-          </h2>
-          <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
-            <li>Read each question carefully and select the best answer.</li>
-            <li>You will have a limited time to complete the quiz.</li>
-            <li>You can navigate between questions during the quiz.</li>
-            <li>Make sure you have a stable internet connection before starting.</li>
-            <li>Your progress will be automatically saved.</li>
-          </ul>
-
-          {/* Important Notes */}
-          <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4 mb-6 text-left">
-            <h3 className="font-semibold text-yellow-800 mb-2">
-              Important Notes:
-            </h3>
-            <ul className="list-disc list-inside text-yellow-800 space-y-1 text-sm">
-              <li>The timer will start when you begin the quiz.</li>
-              <li>Make sure you have a stable internet connection.</li>
-              <li>Your progress will be automatically saved.</li>
-              <li>Submit your quiz before time runs out.</li>
-              <li>Review your answers before final submission.</li>
-            </ul>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-xl p-4">
+              <div className="text-blue-600 font-semibold text-lg">{submissionResult.score}/{submissionResult.total}</div>
+              <div className="text-blue-500 text-sm">Questions Answered Correctly</div>
+            </div>
+            <div className="bg-purple-50 rounded-xl p-4">
+              <div className="text-purple-600 font-semibold text-lg">
+                {submissionResult.percentage >= 70 ? 'Pass' : 'Retry'}
+              </div>
+              <div className="text-purple-500 text-sm">Result Status</div>
+            </div>
           </div>
 
-          {/* Buttons */}
-          <div className="flex justify-between">
-            <button
-              onClick={resetQuiz}
-              className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition w-full sm:w-auto"
-            >
-              Back
-            </button>
-            <button
-              onClick={() => setStep("quiz")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto flex items-center gap-2"
-            >
-              Start Quiz <ArrowRight className="w-5 h-5" />
-            </button>
-          </div>
-        </motion.div>
+          <button
+            onClick={resetQuiz}
+            className="inline-flex items-center px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors duration-200"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Take Quiz Again
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Step 3: Quiz Page
-  if (step === "quiz" && quiz) {
-    const question = quiz.questions[currentQuestion];
+  // Error Screen - Already Submitted or Network Error
+  if (submissionResult && !submissionResult.success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] flex flex-col items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-3xl bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/20 dark:border-gray-700/20 space-y-8"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-            <span>
-              Question {currentQuestion + 1} of {quiz.questions.length}
-            </span>
-            <div
-              className={`flex items-center gap-1 ${
-                timeLeft <= 60
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-blue-600 dark:text-blue-400"
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              {formatTime(timeLeft)}
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-4">
+              <AlertTriangle className="w-10 h-10 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Submission Failed</h2>
+          </div>
+
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-center mb-2">
+              <XCircle className="w-5 h-5 text-red-500 mr-2" />
+              <span className="font-medium text-red-800">Error</span>
+            </div>
+            <p className="text-red-700 text-sm">{submissionResult.message}</p>
+          </div>
+
+          <button
+            onClick={resetQuiz}
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl transition-colors duration-200"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Main Quiz Interface
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <User className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">College MCQ Assessment</h1>
+                <p className="text-gray-600">Complete all questions and submit your answers</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Progress</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {Object.keys(answers).length}/{questions.length}
+              </div>
             </div>
           </div>
 
-          {/* Question */}
-          <h2 className="text-xl font-medium text-gray-900 dark:text-white">
-            {question.question}
-          </h2>
+          {/* Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${getProgressPercentage()}%` }}
+            ></div>
+          </div>
 
-          {/* Options */}
-          <div className="space-y-3">
-            {question.options.map((opt, idx) => (
+          {/* Email Input */}
+          <div className="mt-6">
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Question Navigation */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Questions</h2>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Clock className="w-4 h-4" />
+              <span>No time limit</span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-5 gap-2">
+            {questions.map((_, index) => (
               <button
-                key={idx}
-                onClick={() => handleAnswerSelect(idx)}
-                className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                  selectedAnswers[currentQuestion] === idx
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    : "border-gray-300 dark:border-gray-500 bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-gray-200 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-400/50"
+                key={index}
+                onClick={() => setCurrentQuestion(index)}
+                className={`h-12 rounded-lg font-medium transition-all duration-200 ${
+                  currentQuestion === index
+                    ? 'bg-blue-500 text-white shadow-md'
+                    : answers[index] !== undefined
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {opt}
+                {index + 1}
+                {answers[index] !== undefined && (
+                  <CheckCircle className="w-3 h-3 ml-1 inline" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Current Question */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                Question {currentQuestion + 1} of {questions.length}
+              </span>
+              <span className="text-gray-500 text-sm">Select one answer</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-800 leading-relaxed">
+              {questions[currentQuestion].question}
+            </h3>
+          </div>
+
+          <div className="space-y-3">
+            {questions[currentQuestion].options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => handleAnswerSelect(currentQuestion, index)}
+                className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-200 ${
+                  answers[currentQuestion] === index
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <div className="flex items-center">
+                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    answers[currentQuestion] === index
+                      ? 'border-blue-500 bg-blue-500'
+                      : 'border-gray-300'
+                  }`}>
+                    {answers[currentQuestion] === index && (
+                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                    )}
+                  </div>
+                  <span className="font-medium">{option}</span>
+                </div>
               </button>
             ))}
           </div>
 
-          {/* Navigation */}
-          <div className="flex justify-center">
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8">
             <button
-              onClick={handleNext}
-              disabled={selectedAnswers[currentQuestion] === undefined}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 border border-blue-200/50 dark:border-blue-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+              disabled={currentQuestion === 0}
+              className="px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
             >
-              {currentQuestion === quiz.questions.length - 1
-                ? "Finish Quiz"
-                : "Next Question"}
-              <ArrowRight className="w-4 h-4" />
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
+              disabled={currentQuestion === questions.length - 1}
+              className="px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+            >
+              Next
             </button>
           </div>
-        </motion.div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">
+              Ready to submit? Make sure you've answered all questions and provided your email.
+            </p>
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || Object.keys(answers).length !== questions.length || !email.trim()}
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="animate-spin w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-5 h-5 mr-2" />
+                  Submit Assessment
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
-    );
-  }
-
-  // Step 4: Result Page
-  if (step === "result" && quiz) {
-    const score = calculateScore();
-    const percentage = Math.round((score.correct / score.total) * 100);
-    const passed = percentage >= quiz.passingScore;
-
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
-          className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-10 shadow-lg border border-white/20 dark:border-gray-700/20 text-center max-w-md"
-        >
-          <div className="text-6xl mb-4">{passed ? "🎉" : "😔"}</div>
-          <h2
-            className={`text-3xl font-bold mb-2 ${
-              passed
-                ? "text-green-700 dark:text-green-400"
-                : "text-red-700 dark:text-red-400"
-            }`}
-          >
-            {passed ? "Congratulations!" : "Keep Trying!"}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Your Score: <span className="font-semibold">{score.correct}/{score.total}</span>
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
-            Time Spent: {formatTime(quiz.timeLimit - timeLeft)}
-          </p>
-
-          <button
-            onClick={resetQuiz}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
-          >
-            Take Another Quiz
-          </button>
-        </motion.div>
-      </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 };
 
-export default UserMcq;
+export default MCQSubmissionSystem;
