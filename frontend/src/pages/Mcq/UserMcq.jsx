@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+const BASE_URL = import.meta.env.VITE_API_URL || "";
 import { Clock, ArrowRight, ArrowLeft, Loader } from "lucide-react";
 
 // Login Page
@@ -12,9 +13,10 @@ const LoginPage = ({ onSuccess }) => {
 
   // Regex for validating college email (adjust domain if needed)
   const validateEmail = (email) => {
-    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(edu|ac\.[a-z]{2,})$/;
-    return regex.test(email);
-  };
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
+  return regex.test(email);
+};
+
 
   const handleAction = async () => {
     if (!validateEmail(email)) {
@@ -27,8 +29,8 @@ const LoginPage = ({ onSuccess }) => {
 
     try {
       if (!codeSent) {
-        // Send verification code
-        const res = await fetch("/api/auth/send-code", {
+        // Send OTP for college MCQ
+        const res = await fetch(`${BASE_URL}/LinkId/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -37,25 +39,25 @@ const LoginPage = ({ onSuccess }) => {
         if (res.ok && data.success) {
           setCodeSent(true);
         } else {
-          setError(data.message || "Failed to send code");
+          setError(data.message || "Failed to send OTP");
         }
       } else {
-        // Verify code
+        // Verify OTP for college MCQ
         if (!code) {
           setError("Verification code is required");
           setLoading(false);
           return;
         }
-        const res = await fetch("/api/auth/verify-code", {
+        const res = await fetch(`${BASE_URL}/LinkId/verify-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, code }),
+          body: JSON.stringify({ email, otp: code }),
         });
         const data = await res.json();
         if (res.ok && data.success) {
           onSuccess(email);
         } else {
-          setError(data.message || "Invalid code");
+          setError(data.message || "Invalid OTP");
         }
       }
     } catch (err) {
