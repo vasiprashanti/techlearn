@@ -90,13 +90,18 @@ export const createCollegeMcq = async (req, res) => {
       }
     }
 
-    // Generate unique link ID
+    // Use the exact date/time sent by the admin
     const linkId = crypto.randomBytes(8).toString("hex");
-
+    let mcqDate;
+    if (typeof date === "string" || date instanceof String) {
+      mcqDate = new Date(date);
+    } else {
+      mcqDate = date;
+    }
     const collegeMcq = new CollegeMcq({
       title,
       college,
-      date: new Date(date),
+      date: mcqDate,
       duration,
       questions,
       linkId,
@@ -702,35 +707,6 @@ export const deleteCollegeMcq = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting college MCQ:", error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-};
-
-export const getCollegeMcqById = async (req, res) => {
-  try {
-    const { mcqId } = req.params;
-    if (!mcqId || !mcqId.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid MCQ ID",
-      });
-    }
-    const mcq = await CollegeMcq.findById(mcqId);
-    if (!mcq) {
-      return res.status(404).json({
-        success: false,
-        message: "College MCQ not found",
-      });
-    }
-    res.status(200).json({
-      success: true,
-      data: mcq,
-    });
-  } catch (error) {
-    console.error("Error fetching college MCQ:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
