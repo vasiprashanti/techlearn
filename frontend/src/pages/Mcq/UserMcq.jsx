@@ -144,46 +144,39 @@ const UserMcq = () => {
   const [timeLeft, setTimeLeft] = useState(0);
 
   // Submit quiz results to backend
-  const submitQuizResults = async () => {
-    try {
-      const answers = quiz.questions.map((q, idx) => ({
-        questionId: q.id,
-        selectedOption: selectedAnswers[idx],
-        isCorrect: selectedAnswers[idx] === q.correct,
-      }));
+  // Submit quiz results to backend
+const submitQuizResults = async () => {
+  try {
+    // Collect only selected options in the order of questions
+    const answers = quiz.questions.map((q, idx) => selectedAnswers[idx] ?? -1);
 
-      const score = calculateScore();
+    const submissionData = {
+      email: userEmail,
+      answers
+    };
 
-      const submissionData = {
-        email: userEmail,
-        mcqId: quiz.id,
-        answers,
-        score: Math.round((score.correct / score.total) * 100), // Send percentage to backend
-        timeSpent: quiz.timeLimit - timeLeft,
-        completedAt: new Date().toISOString(),
-      };
+    console.log("Submitting quiz results:", submissionData);
 
-      console.log("Submitting quiz results:", submissionData);
+    const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(submissionData),
+    });
 
-      const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(submissionData),
-      });
+    const data = await res.json();
+    console.log("Submission response:", res);
+    console.log("Submission response data:", data);
 
-      const data = await res.json();
-      console.log("Submission response:", res);
-      console.log("Submission response data:", data);
-      
-      if (!res.ok) {
-        console.error("Failed to submit quiz results:", data.message);
-      } else {
-        console.log("Quiz submitted successfully:", data);
-      }
-    } catch (err) {
-      console.error("Error submitting quiz results:", err);
+    if (!res.ok) {
+      console.error("Failed to submit quiz results:", data.message);
+    } else {
+      console.log("Quiz submitted successfully:", data);
     }
-  };
+  } catch (err) {
+    console.error("Error submitting quiz results:", err);
+  }
+};
+
 
   // Timer effect
   useEffect(() => {
