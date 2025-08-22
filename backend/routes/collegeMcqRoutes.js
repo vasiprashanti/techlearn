@@ -9,7 +9,6 @@ import {
   getAllCollegeMcqs,
   getCollegeMcqScores,
   deleteCollegeMcq,
-  getCollegeMcqById,
 } from "../controllers/collegeMcqController.js";
 
 const collegeMcqRouter = express.Router();
@@ -24,9 +23,6 @@ collegeMcqRouter.get(
 );
 
 collegeMcqRouter.put("/admin/:mcqId", protect, isAdmin, updateCollegeMcq);
-
-// Admin: Get info of one college MCQ by ID
-collegeMcqRouter.get("/admin/:mcqId", protect, isAdmin, getCollegeMcqById);
 
 collegeMcqRouter.get(
   "/admin/:mcqId/scores",
