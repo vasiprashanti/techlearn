@@ -1,13 +1,8 @@
 import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
-import Quiz from "../models/Quiz.js";
 import Notes from "../models/Notes.js";
 import Exercise from "../models/Exercise.js";
-// import {
-//   checkIfQuestionAnswered,
-//   recordQuizAttempt,
-// } from "./userProgressController.js";
 import {
   parseNotesMarkdownFile,
   parseMcqMarkdownFile,
@@ -80,9 +75,6 @@ export const deleteCourse = async (req, res) => {
     const topicIds = topics.map((topic) => topic._id);
     const notesIds = topics.map((topic) => topic.notesId).filter(Boolean);
 
-    const deletedMcqs = await Quiz.deleteMany({
-      topicId: { $in: topicIds },
-    });
     const deletedExercises = await Exercise.deleteMany({ courseId });
     const deletedNotes = await Notes.deleteMany({ _id: { $in: notesIds } });
     const deletedTopics = await Topic.deleteMany({ courseId });
@@ -95,7 +87,6 @@ export const deleteCourse = async (req, res) => {
       deletedCounts: {
         course: 1,
         topics: deletedTopics.deletedCount,
-        quizzes: deletedQuizzes.deletedCount,
         exercises: deletedExercises.deletedCount,
         notes: deletedNotes.deletedCount,
       },
@@ -113,7 +104,7 @@ export const deleteCourse = async (req, res) => {
 export const addMultipleTopics = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { topics } = req.body; // Array of {title, index, notesFilePath, quizFilePath}
+    const { topics } = req.body; // Array of {title, index, notesFilePath}
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -145,12 +136,11 @@ export const addMultipleTopics = async (req, res) => {
           continue;
         }
 
-        // Create topic first (without notesId and quizId)
+        // Create topic first (without notesId)
         const topic = new Topic({
           courseId,
           title: notesResult.data.title,
           notesId: null, // Will be updated later
-          quizId: null,
           slug: notesResult.data.slug,
           index: parseInt(index),
         });
@@ -169,16 +159,16 @@ export const addMultipleTopics = async (req, res) => {
         });
 
         // Now parse and insert MCQs, passing topicId
-        let quizId = null;
+        let mcqId = null;
         if (mcqFilePath) {
           const mcqResult = await parseMcqMarkdownFile(
             mcqFilePath,
             savedTopic._id
           );
           if (mcqResult.success) {
-            quizId = mcqResult.quizId;
-            // Update topic with quizId
-            await Topic.findByIdAndUpdate(savedTopic._id, { quizId });
+            mcqId = mcqResult.mcqId;
+            // Update topic with mcqId
+            await Topic.findByIdAndUpdate(savedTopic._id, { mcqId });
           }
         }
 
@@ -192,7 +182,7 @@ export const addMultipleTopics = async (req, res) => {
           slug: savedTopic.slug,
           index: savedTopic.index,
           notesId: savedNotes._id,
-          quizId,
+          mcqId,
           status: "success",
         });
       } catch (error) {
@@ -242,15 +232,14 @@ export const getCourseById = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    // Fetch topics using topicIds array and populate quizId and notesId
-    const topics = await Topic.find({ _id: { $in: course.topicIds } })
-      .populate("quizId")
-      .populate("notesId");
+    // Fetch topics using topicIds array and populate notesId
+    const topics = await Topic.find({ _id: { $in: course.topicIds } }).populate(
+      "notesId"
+    );
 
     const formattedTopics = topics.map((topic) => ({
       topicId: topic._id,
       title: topic.title,
-      quizId: topic.quizId ? topic.quizId._id : null,
       notesId: topic.notesId ? topic.notesId._id : null,
       notes:
         topic.notesId && topic.notesId.parsedContent
@@ -275,60 +264,3 @@ export const getCourseById = async (req, res) => {
     });
   }
 };
-
-//////get quizById moved to the checkpoint controller
-
-// export const submitQuiz = async (req, res) => {
-//   try {
-//     const { courseId } = req.params;
-//     const { quizId, questionId, selectedOption } = req.body;
-
-//     const quiz = await Quiz.findById(quizId);
-//     if (!quiz) return res.status(404).json({ message: "Quiz not found" });
-
-//     const question = quiz.questions.id(questionId);
-//     if (!question)
-//       return res.status(404).json({ message: "Question not found" });
-
-//     // FIX: Convert selectedOption to number for proper comparison
-//     const selectedOptionNumber = parseInt(selectedOption);
-//     const isCorrect = question.correctAnswer === selectedOptionNumber;
-
-//     const alreadyAnswered = await checkIfQuestionAnswered({
-//       userId: req.user._id,
-//       quizId,
-//       questionId,
-//     });
-
-//     if (alreadyAnswered.error) {
-//       return res.status(400).json({ message: alreadyAnswered.error });
-//     }
-
-//     const xpAwarded = isCorrect ? 10 : 0;
-//     const result = await recordQuizAttempt({
-//       userId: req.user._id,
-//       courseId,
-//       quizId,
-//       questionId,
-//       xp: xpAwarded,
-//     });
-
-//     res.status(200).json({
-//       isCorrect,
-//       correctAnswer: question.correctAnswer,
-//       xpAwarded,
-//       explanation: question.explanation || null,
-//       quizData: {
-//         quizId: quiz._id,
-//         totalQuestions: quiz.questions.length,
-//         answeredQuestions: result.totalAnswered,
-//         remainingQuestions: quiz.questions.length - result.totalAnswered,
-//         isQuizComplete: result.quizComplete,
-//       },
-//     });
-//   } catch (error) {
-//     res
-//       .status(500)
-//       .json({ message: "Quiz submission failed", error: error.message });
-//   }
-// };

@@ -708,3 +708,33 @@ export const deleteCollegeMcq = async (req, res) => {
     });
   }
 };
+
+// Admin: Get info of one college MCQ by ID
+export const getCollegeMcqById = async (req, res) => {
+  try {
+    const { mcqId } = req.params;
+    if (!mcqId || !mcqId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid MCQ ID",
+      });
+    }
+    const mcq = await CollegeMcq.findById(mcqId);
+    if (!mcq) {
+      return res.status(404).json({
+        success: false,
+        message: "College MCQ not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: mcq,
+    });
+  } catch (error) {
+    console.error("Error fetching college MCQ:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

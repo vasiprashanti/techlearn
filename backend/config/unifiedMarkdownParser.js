@@ -49,7 +49,6 @@ export const parseNotesMarkdownFile = (filePath, title) => {
   }
 };
 
-// each quiz file is being parser
 export const parseMcqMarkdownFile = async (filePath, topicId) => {
   try {
     const content = fs.readFileSync(filePath, "utf-8");

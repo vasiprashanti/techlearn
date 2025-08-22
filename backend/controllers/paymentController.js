@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import Payment from "../models/Payment.js";
 import Course from "../models/Course.js";
-import Quiz from "../models/Quiz.js";
 import Exercise from "../models/Exercise.js";
 import UserProgress from "../models/UserProgress.js";
 import Topic from "../models/Topic.js";

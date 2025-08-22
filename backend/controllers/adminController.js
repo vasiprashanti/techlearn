@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Notes from "../models/Notes.js";
-import Quiz from "../models/Quiz.js";
 import Exercise from "../models/Exercise.js";
 import {
   generateSlug,
@@ -77,9 +76,7 @@ export const editTopicDetails = async (req, res) => {
     const notesFile = files.find(
       (f) => f.fieldname === "file" || f.fieldname === "notesFile"
     );
-    const mcqFile = files.find(
-      (f) => f.fieldname === "quizFile" || f.fieldname === "mcqFile"
-    );
+    const mcqFile = files.find((f) => f.fieldname === "mcqFile");
 
     // Parse notes and MCQs if files provided
     let notesContent = null;

@@ -22,11 +22,6 @@ const topicSchema = mongoose.Schema(
       ref: "Exercise",
       required: false,
     },
-    quizId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Quiz",
-      required: false, // Not all topics need quizzes
-    },
     slug: {
       type: String, // to create a unique frontend friendly url for each topic
       required: true,

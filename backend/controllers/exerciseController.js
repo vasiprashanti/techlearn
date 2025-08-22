@@ -3,7 +3,6 @@ import axios from "axios";
 import Exercise from "../models/Exercise.js";
 import UserProgress from "../models/UserProgress.js";
 import Course from "../models/Course.js";
-import Quiz from "../models/Quiz.js";
 
 // This function manually marks exercises as completed without code validation
 export const submitExercise = async (req, res) => {
