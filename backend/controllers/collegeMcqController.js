@@ -1,3 +1,4 @@
+console.log("FRONTEND_URL from env:", process.env.FRONTEND_URL);
 import CollegeMcq from "../models/CollegeMcq.js";
 import StudentMcqSubmission from "../models/StudentMcqSubmission.js";
 import { sendMail } from "../utils/mailer.js";

@@ -12,7 +12,7 @@ const McqUpload = () => {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Previous quizzes
+  // Previous quizzes - Initialize as empty array
   const [previousQuizzes, setPreviousQuizzes] = useState([]);
   const [loadingPrev, setLoadingPrev] = useState(true);
   const [expandedQuiz, setExpandedQuiz] = useState(null);
@@ -23,12 +23,30 @@ const McqUpload = () => {
   useEffect(() => {
     const fetchPreviousQuizzes = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/mcq`);
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${BASE_URL}/college-mcq/admin/allCollegeMcqs`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        
         if (!res.ok) throw new Error("Failed to fetch quizzes");
-        const data = await res.json();
-        setPreviousQuizzes(data);
+        
+        const responseBody = await res.json();
+        console.log("Previous quizzes response:", responseBody); // Debug log
+        
+        // Handle different response structures
+        let quizData = [];
+        if (responseBody.success && Array.isArray(responseBody.data)) {
+          quizData = responseBody.data;
+        } else if (Array.isArray(responseBody)) {
+          quizData = responseBody;
+        } else if (responseBody.data && Array.isArray(responseBody.data)) {
+          quizData = responseBody.data;
+        }
+        
+        setPreviousQuizzes(quizData);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching previous quizzes:", err);
+        setPreviousQuizzes([]); // Ensure it's always an array
       } finally {
         setLoadingPrev(false);
       }
@@ -106,6 +124,29 @@ const McqUpload = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Refresh quizzes helper function
+  const refreshQuizzes = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${BASE_URL}/college-mcq/admin/allCollegeMcqs`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      
+      if (res.ok) {
+        const responseBody = await res.json();
+        let quizData = [];
+        if (responseBody.success && Array.isArray(responseBody.data)) {
+          quizData = responseBody.data;
+        } else if (Array.isArray(responseBody)) {
+          quizData = responseBody;
+        }
+        setPreviousQuizzes(quizData);
+      }
+    } catch (err) {
+      console.error("Failed to refresh quizzes:", err);
+    }
+  };
+
   // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,15 +158,24 @@ const McqUpload = () => {
       setSubmitting(true);
       setMessage("");
 
-      const res = await fetch(`${BASE_URL}/api/mcq`, {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${BASE_URL}/college-mcq`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to upload quiz");
+      const responseBody = await res.json();
+      console.log("MCQ Submission Response:", responseBody);
 
-      setMessage("Quiz uploaded successfully!");
+      if (!res.ok || !responseBody.success) {
+        throw new Error(responseBody.message || "Failed to upload quiz");
+      }
+
+      setMessage(responseBody.message || "Quiz uploaded successfully!");
       setTitle("");
       setCollege("");
       setDate("");
@@ -133,9 +183,9 @@ const McqUpload = () => {
       setNumQuestions(0);
       setQuestions([]);
 
-      // Refresh quizzes
-      const updated = await fetch(`${BASE_URL}/api/mcq`).then((r) => r.json());
-      setPreviousQuizzes(updated);
+      // Refresh the previous quizzes list after successful submission
+      await refreshQuizzes();
+
     } catch (err) {
       setMessage("Error: " + err.message);
     } finally {
@@ -218,6 +268,7 @@ const McqUpload = () => {
                   onChange={(e) => setDuration(e.target.value)}
                   className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   placeholder="e.g. 60"
+                  min="1"
                 />
                 {errors.duration && <p className="text-red-500 text-sm">{errors.duration}</p>}
               </div>
@@ -229,6 +280,7 @@ const McqUpload = () => {
               <input
                 type="number"
                 min="1"
+                max="100"
                 value={numQuestions}
                 onChange={handleNumQuestionsChange}
                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -274,13 +326,13 @@ const McqUpload = () => {
                   <label className="block text-sm font-semibold mb-2">Correct Answer *</label>
                   <select
                     value={q.correct}
-                    onChange={(e) => handleQuestionChange(qIndex, "correct", e.target.value)}
+                    onChange={(e) => handleQuestionChange(qIndex, "correct", parseInt(e.target.value))}
                     className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   >
-                    <option value="0">Option 1</option>
-                    <option value="1">Option 2</option>
-                    <option value="2">Option 3</option>
-                    <option value="3">Option 4</option>
+                    <option value={0}>Option 1</option>
+                    <option value={1}>Option 2</option>
+                    <option value={2}>Option 3</option>
+                    <option value={3}>Option 4</option>
                   </select>
                 </div>
 
@@ -329,7 +381,7 @@ const McqUpload = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition w-full sm:w-auto"
             >
               {submitting ? "Submitting..." : "Submit Quiz"}
             </button>
@@ -341,7 +393,7 @@ const McqUpload = () => {
           <h2 className="text-xl sm:text-2xl font-bold mb-4">Previous MCQ</h2>
           {loadingPrev ? (
             <p>Loading...</p>
-          ) : previousQuizzes.length === 0 ? (
+          ) : !Array.isArray(previousQuizzes) || previousQuizzes.length === 0 ? (
             <p className="text-gray-500">No previous MCQ found.</p>
           ) : (
             <div className="space-y-4">
@@ -364,20 +416,22 @@ const McqUpload = () => {
                     </button>
                   </div>
 
-                  {expandedQuiz === quiz._id && (
+                  {expandedQuiz === quiz._id && Array.isArray(quiz.questions) && (
                     <div className="mt-4 space-y-3">
                       {quiz.questions.map((q, i) => (
                         <div key={i} className="p-3 border rounded bg-white dark:bg-gray-800">
                           <p className="font-semibold">{i + 1}. {q.text}</p>
-                          <ul className="list-disc ml-6 text-sm">
-                            {q.options.map((opt, j) => (
-                              <li key={j} className={q.correct == j ? "font-bold text-green-600" : ""}>
-                                {opt}
-                              </li>
-                            ))}
-                          </ul>
+                          {Array.isArray(q.options) && (
+                            <ul className="list-disc ml-6 text-sm">
+                              {q.options.map((opt, j) => (
+                                <li key={j} className={q.correct == j ? "font-bold text-green-600" : ""}>
+                                  {opt}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                           <p className="text-xs mt-1">Difficulty: {q.difficulty}</p>
-                          {q.tags.length > 0 && (
+                          {Array.isArray(q.tags) && q.tags.length > 0 && (
                             <div className="flex flex-wrap gap-2 mt-1">
                               {q.tags.map((tag, tIdx) => (
                                 <span key={tIdx} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">{tag}</span>
