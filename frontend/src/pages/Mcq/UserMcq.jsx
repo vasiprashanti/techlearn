@@ -165,7 +165,7 @@ const UserMcq = () => {
 
       console.log("Submitting quiz results:", submissionData);
 
-      const res = await fetch(`${BASE_URL}/api/college-mcq/submit`, {
+      const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submissionData),
