@@ -29,6 +29,7 @@ import uiLibraryRoutes from "./routes/uiLibraryRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import mcqRouter from "./routes/checkpointMcqRoutes.js";
 import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
+import collegeRouter from "./routes/collegeRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -92,6 +93,7 @@ app.use("/api/xp", xpRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", mcqRouter);
 app.use("/api/college-mcq", collegeMcqRoutes);
+app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 
 // ✅ BUILD PAGE Routes

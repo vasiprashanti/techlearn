@@ -1,4 +1,3 @@
-console.log("FRONTEND_URL from env:", process.env.FRONTEND_URL);
 import CollegeMcq from "../models/CollegeMcq.js";
 import StudentMcqSubmission from "../models/StudentMcqSubmission.js";
 import { sendMail } from "../utils/mailer.js";
@@ -710,7 +709,6 @@ export const deleteCollegeMcq = async (req, res) => {
   }
 };
 
-// Admin: Get info of one college MCQ by ID
 export const getCollegeMcqById = async (req, res) => {
   try {
     const { mcqId } = req.params;
