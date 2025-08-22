@@ -622,7 +622,7 @@ function LayoutWrapper() {
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
-          <Route path="/mcq" element={<UserMcq />} />
+          <Route path="/mcq/:linkId" element={<UserMcq />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>

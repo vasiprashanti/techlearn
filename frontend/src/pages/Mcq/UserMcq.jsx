@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 import { Clock, ArrowRight, ArrowLeft, Loader } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 // Login Page
 const LoginPage = ({ onSuccess }) => {
@@ -10,13 +11,13 @@ const LoginPage = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const { linkId } = useParams();
 
   // Regex for validating college email (adjust domain if needed)
   const validateEmail = (email) => {
-  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
-  return regex.test(email);
-};
-
+    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
+    return regex.test(email);
+  };
 
   const handleAction = async () => {
     if (!validateEmail(email)) {
@@ -30,7 +31,7 @@ const LoginPage = ({ onSuccess }) => {
     try {
       if (!codeSent) {
         // Send OTP for college MCQ
-        const res = await fetch(`${BASE_URL}/LinkId/send-otp`, {
+        const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -48,14 +49,17 @@ const LoginPage = ({ onSuccess }) => {
           setLoading(false);
           return;
         }
-        const res = await fetch(`${BASE_URL}/LinkId/verify-otp`, {
+        const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/verify-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, otp: code }),
         });
         const data = await res.json();
+        console.log("Verification response:", data);
+        
         if (res.ok && data.success) {
-          onSuccess(email);
+          // Pass both email and quiz data from verification response
+          onSuccess(email, data.collegeMcq);
         } else {
           setError(data.message || "Invalid OTP");
         }
@@ -128,7 +132,7 @@ const LoginPage = ({ onSuccess }) => {
   );
 };
 
-//  Quiz Component with Backend Integration
+// Quiz Component with Backend Integration
 const UserMcq = () => {
   const [step, setStep] = useState("login"); // login → instructions → quiz → result
   const [quiz, setQuiz] = useState(null);
@@ -138,35 +142,6 @@ const UserMcq = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
-
-  // Fetch quiz data from backend
-  const fetchQuizData = async (email, quizId = null) => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const url = quizId
-        ? `/api/quiz/${quizId}?email=${encodeURIComponent(email)}`
-        : `/api/quiz?email=${encodeURIComponent(email)}`;
-
-      const res = await fetch(url, {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setQuiz(data.quiz);
-        setTimeLeft(data.quiz.timeLimit);
-      } else {
-        setError(data.message || "Failed to load quiz");
-      }
-    } catch (err) {
-      setError("Server error. Unable to load quiz.");
-    }
-    setLoading(false);
-  };
 
   // Submit quiz results to backend
   const submitQuizResults = async () => {
@@ -179,22 +154,31 @@ const UserMcq = () => {
 
       const score = calculateScore();
 
-      const res = await fetch("/api/quiz/submit", {
+      const submissionData = {
+        email: userEmail,
+        mcqId: quiz.id,
+        answers,
+        score,
+        timeSpent: quiz.timeLimit - timeLeft,
+        completedAt: new Date().toISOString(),
+      };
+
+      console.log("Submitting quiz results:", submissionData);
+
+      const res = await fetch(`${BASE_URL}/api/college-mcq/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: userEmail,
-          quizId: quiz.id,
-          answers,
-          score,
-          timeSpent: quiz.timeLimit - timeLeft,
-          completedAt: new Date().toISOString(),
-        }),
+        body: JSON.stringify(submissionData),
       });
 
       const data = await res.json();
+      console.log("Submission response:", res);
+      console.log("Submission response data:", data);
+      
       if (!res.ok) {
         console.error("Failed to submit quiz results:", data.message);
+      } else {
+        console.log("Quiz submitted successfully:", data);
       }
     } catch (err) {
       console.error("Error submitting quiz results:", err);
@@ -202,25 +186,25 @@ const UserMcq = () => {
   };
 
   // Timer effect
-useEffect(() => {
-  if (step === "quiz" && timeLeft > 0) {
-    const timer = setInterval(async () => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Time's up - auto submit
-          (async () => {
-            await submitQuizResults();  // save result
-            setStep("result");
-          })();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+  useEffect(() => {
+    if (step === "quiz" && timeLeft > 0) {
+      const timer = setInterval(async () => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            // Time's up - auto submit
+            (async () => {
+              await submitQuizResults(); // save result
+              setStep("result");
+            })();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-    return () => clearInterval(timer);
-  }
-}, [step, timeLeft]);
+      return () => clearInterval(timer);
+    }
+  }, [step, timeLeft]);
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -236,13 +220,13 @@ useEffect(() => {
   };
 
   const handleNext = async () => {
-  if (currentQuestion < quiz.questions.length - 1) {
-    setCurrentQuestion((prev) => prev + 1);
-  } else {
-    await submitQuizResults();  // ensure backend submission
-    setStep("result");
-  }
-};
+    if (currentQuestion < quiz.questions.length - 1) {
+      setCurrentQuestion((prev) => prev + 1);
+    } else {
+      await submitQuizResults(); // ensure backend submission
+      setStep("result");
+    }
+  };
 
   const handlePrevious = () => {
     if (currentQuestion > 0) {
@@ -260,10 +244,28 @@ useEffect(() => {
     return Math.round((correct / total) * 100);
   };
 
-  const handleLoginSuccess = (email) => {
+  const handleLoginSuccess = (email, quizData) => {
     setUserEmail(email);
-    setStep("loading");
-    fetchQuizData(email);
+    // Process the quiz data from verification response
+    const processedQuiz = {
+      id: quizData.id,
+      title: quizData.title || "College Quiz",
+      timeLimit: quizData.timeLimit || quizData.duration || 7200, // Use duration if timeLimit not available
+      questions: quizData.questions.map((q, index) => ({
+        id: q.id || index,
+        question: q.text || q.question,
+        options: q.options,
+        correct: q.correct || 0, // Assuming correct answer index
+        difficulty: q.difficulty,
+        tags: q.tags
+      })),
+      passingScore: 60, // Default passing score
+      college: quizData.college
+    };
+    
+    setQuiz(processedQuiz);
+    setTimeLeft(processedQuiz.timeLimit);
+    setStep("instructions");
   };
 
   const resetQuiz = () => {
@@ -276,60 +278,12 @@ useEffect(() => {
     setError("");
   };
 
-  //  Step 1: Login Page
+  // Step 1: Login Page
   if (step === "login") {
     return <LoginPage onSuccess={handleLoginSuccess} />;
   }
 
-  //  Loading Quiz Data
-  if (step === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl rounded-2xl p-8 shadow-lg border border-white/20 dark:border-gray-700/20 max-w-md text-center"
-        >
-          {loading ? (
-            <>
-              <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Loading Quiz...
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Please wait while we prepare your quiz
-              </p>
-            </>
-          ) : error ? (
-            <>
-              <div className="text-4xl mb-4">❌</div>
-              <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-4">
-                Error Loading Quiz
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
-              <button
-                onClick={() => fetchQuizData(userEmail)}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
-              >
-                Retry
-              </button>
-              <button
-                onClick={resetQuiz}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
-              >
-                Back to Login
-              </button>
-            </>
-          ) : quiz ? (
-            setStep("instructions")
-          ) : null}
-        </motion.div>
-      </div>
-    );
-  }
-
-  //  Step 2: Instructions Page
+  // Step 2: Instructions Page
   if (step === "instructions" && quiz) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
@@ -361,12 +315,8 @@ useEffect(() => {
           <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
             <li>Read each question carefully and select the best answer.</li>
             <li>You will have a limited time to complete the quiz.</li>
-            <li>
-              You cannot go back to previous questions once you move forward.
-            </li>
-            <li>
-              Make sure you have a stable internet connection before starting.
-            </li>
+            <li>You can navigate between questions during the quiz.</li>
+            <li>Make sure you have a stable internet connection before starting.</li>
             <li>Your progress will be automatically saved.</li>
           </ul>
 
@@ -376,11 +326,11 @@ useEffect(() => {
               Important Notes:
             </h3>
             <ul className="list-disc list-inside text-yellow-800 space-y-1 text-sm">
-              <li>You cannot go back to previous questions.</li>
               <li>The timer will start when you begin the quiz.</li>
               <li>Make sure you have a stable internet connection.</li>
               <li>Your progress will be automatically saved.</li>
-              <li>Select your answers carefully as they cannot be changed.</li>
+              <li>Submit your quiz before time runs out.</li>
+              <li>Review your answers before final submission.</li>
             </ul>
           </div>
 
@@ -388,13 +338,13 @@ useEffect(() => {
           <div className="flex justify-between">
             <button
               onClick={resetQuiz}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
+              className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition w-full sm:w-auto"
             >
               Back
             </button>
             <button
               onClick={() => setStep("quiz")}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto flex items-center gap-2"
             >
               Start Quiz <ArrowRight className="w-5 h-5" />
             </button>
@@ -404,7 +354,7 @@ useEffect(() => {
     );
   }
 
-  //  Step 3: Quiz Page
+  // Step 3: Quiz Page
   if (step === "quiz" && quiz) {
     const question = quiz.questions[currentQuestion];
     return (
@@ -485,7 +435,7 @@ useEffect(() => {
     );
   }
 
-  //  Step 4: Result Page
+  // Step 4: Result Page
   if (step === "result" && quiz) {
     const score = calculateScore();
     const passed = score >= quiz.passingScore;
