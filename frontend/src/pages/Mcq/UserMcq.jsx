@@ -158,7 +158,7 @@ const UserMcq = () => {
         email: userEmail,
         mcqId: quiz.id,
         answers,
-        score,
+        score: Math.round((score.correct / score.total) * 100), // Send percentage to backend
         timeSpent: quiz.timeLimit - timeLeft,
         completedAt: new Date().toISOString(),
       };
@@ -229,19 +229,17 @@ const UserMcq = () => {
   };
 
   const handlePrevious = () => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion((prev) => prev - 1);
-    }
+    // Removed - no previous functionality
   };
 
   const calculateScore = () => {
-    if (!quiz) return 0;
+    if (!quiz) return { correct: 0, total: 0 };
     const total = quiz.questions.length;
     let correct = 0;
     quiz.questions.forEach((q, idx) => {
       if (selectedAnswers[idx] === q.correct) correct++;
     });
-    return Math.round((correct / total) * 100);
+    return { correct, total };
   };
 
   const handleLoginSuccess = (email, quizData) => {
@@ -405,20 +403,7 @@ const UserMcq = () => {
           </div>
 
           {/* Navigation */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handlePrevious}
-              disabled={currentQuestion === 0}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                currentQuestion === 0
-                  ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                  : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Previous
-            </button>
-
+          <div className="flex justify-center">
             <button
               onClick={handleNext}
               disabled={selectedAnswers[currentQuestion] === undefined}
@@ -438,7 +423,8 @@ const UserMcq = () => {
   // Step 4: Result Page
   if (step === "result" && quiz) {
     const score = calculateScore();
-    const passed = score >= quiz.passingScore;
+    const percentage = Math.round((score.correct / score.total) * 100);
+    const passed = percentage >= quiz.passingScore;
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
@@ -459,7 +445,7 @@ const UserMcq = () => {
             {passed ? "Congratulations!" : "Keep Trying!"}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Your Score: <span className="font-semibold">{score}%</span>
+            Your Score: <span className="font-semibold">{score.correct}/{score.total}</span>
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
             Time Spent: {formatTime(quiz.timeLimit - timeLeft)}
