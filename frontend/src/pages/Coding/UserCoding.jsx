@@ -4,7 +4,9 @@ import { motion } from "framer-motion";
 import CodingCompiler from "./CodingCompiler";
 
 //  BASE_URL should come from your config/env
-const BASE_URL = process.import.meta.env.VITE_API_BASE_URL;
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
 // ---------------- LOGIN PAGE ----------------
 const LoginPage = ({ onSuccess }) => {
