@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -18,6 +18,164 @@ import { courseAPI, progressAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
 
+// MOCK MCQ DATA FOR TESTING
+const mockPythonQuestions = [
+  {
+    id: "q1_python_variables",
+    text: "What will be the output of the following Python code?\n\nx = 5\ny = '5'\nprint(x == y)",
+    options: [
+      "True",
+      "False", 
+      "Error",
+      "5"
+    ],
+    correctAnswer: 1,
+    explanation: "x is an integer (5) and y is a string ('5'). When comparing with ==, Python checks both value and type, so 5 == '5' returns False."
+  },
+  {
+    id: "q2_python_functions", 
+    text: "Which of the following is the correct way to define a function in Python that returns the square of a number?",
+    options: [
+      "function square(x): return x * x",
+      "def square(x): return x * x",
+      "def square(x) -> return x * x", 
+      "square(x) = x * x"
+    ],
+    correctAnswer: 1,
+    explanation: "In Python, functions are defined using the 'def' keyword followed by the function name and parameters."
+  },
+  {
+    id: "q3_python_loops",
+    text: "What will be printed by this code?\n\nfor i in range(3):\n    if i == 1:\n        continue\n    print(i)",
+    options: [
+      "0 1 2",
+      "0 2",
+      "1 2", 
+      "0 1"
+    ],
+    correctAnswer: 1,
+    explanation: "The continue statement skips the rest of the loop iteration when i equals 1, so only 0 and 2 are printed."
+  },
+  {
+    id: "q4_python_classes",
+    text: "In Python classes, what does the 'self' parameter represent?",
+    options: [
+      "The class itself",
+      "The current instance of the class",
+      "The parent class",
+      "A static method"
+    ],
+    correctAnswer: 1,
+    explanation: "'self' refers to the current instance of the class and is used to access instance variables and methods."
+  }
+];
+
+// Inline Question Component
+const InlineQuestionComponent = ({ question, onAnswer, isAnswering, questionId, checkpointId }) => {
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [showAnswer, setShowAnswer] = useState(false);
+
+  const handleSubmit = () => {
+    if (selectedOption !== null) {
+      setShowAnswer(true);
+      onAnswer(questionId, selectedOption, checkpointId);
+    }
+  };
+
+  if (!question) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="my-8 p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl shadow-lg"
+    >
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+          <Lightbulb className="w-4 h-4 text-white" />
+        </div>
+        <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
+          Quick Check
+        </h4>
+      </div>
+      
+      <div className="text-gray-700 dark:text-gray-300 mb-4 font-medium whitespace-pre-line">
+        {question.text || question.question}
+      </div>
+      
+      <div className="space-y-3 mb-4">
+        {(question.options || question.choices || []).map((option, index) => {
+          let optionClass = `w-full text-left p-3 rounded-lg border transition-all duration-200 `;
+          
+          if (showAnswer) {
+            if (index === question.correctAnswer) {
+              optionClass += 'bg-green-100 dark:bg-green-800/30 border-green-300 dark:border-green-600 text-green-800 dark:text-green-200';
+            } else if (selectedOption === index && index !== question.correctAnswer) {
+              optionClass += 'bg-red-100 dark:bg-red-800/30 border-red-300 dark:border-red-600 text-red-800 dark:text-red-200';
+            } else {
+              optionClass += 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400';
+            }
+          } else {
+            if (selectedOption === index) {
+              optionClass += 'bg-blue-100 dark:bg-blue-800/50 border-blue-300 dark:border-blue-600';
+            } else {
+              optionClass += 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700';
+            }
+          }
+
+          return (
+            <button
+              key={index}
+              onClick={() => !showAnswer && setSelectedOption(index)}
+              disabled={showAnswer}
+              className={optionClass}
+            >
+              <span className="flex items-center gap-2">
+                <span className="font-semibold">
+                  {String.fromCharCode(65 + index)}.
+                </span>
+                <span>{option}</span>
+                {showAnswer && index === question.correctAnswer && (
+                  <CheckCircle className="w-4 h-4 text-green-600 ml-auto" />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      
+      {!showAnswer ? (
+        <button
+          onClick={handleSubmit}
+          disabled={selectedOption === null || isAnswering}
+          className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
+            selectedOption !== null && !isAnswering
+              ? 'bg-blue-500 hover:bg-blue-600 text-white'
+              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {isAnswering ? 'Submitting...' : 'Submit Answer'}
+        </button>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="font-semibold text-blue-700 dark:text-blue-300">Explanation:</span>
+          </div>
+          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+            {question.explanation}
+          </p>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+};
+
 const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -25,6 +183,9 @@ const CourseTopics = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [titleRef, isTitleInViewport] = useInViewport();
+
+  // Ref for the notes content container
+  const notesContentRef = useRef(null);
 
   // Authentication hooks
   const { isAuthenticated } = useAuth();
@@ -43,7 +204,17 @@ const CourseTopics = () => {
     isCompleted: false
   });
 
-  // Fetch course data from backend to get real topic IDs
+  // Inline Questions State
+  const [inlineQuestions, setInlineQuestions] = useState({});
+  const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [questionCheckpoints, setQuestionCheckpoints] = useState([]);
+  const [answeredQuestions, setAnsweredQuestions] = useState(new Set());
+  const [showQuestionAt, setShowQuestionAt] = useState(null);
+  const [isAnswering, setIsAnswering] = useState(false);
+  const [scrollCheckpoints] = useState([15, 35, 55, 75]);
+  const [triggeredCheckpoints, setTriggeredCheckpoints] = useState(new Set());
+
+  // Fetch course data from backend
   useEffect(() => {
     const fetchCourse = async () => {
       try {
@@ -51,7 +222,6 @@ const CourseTopics = () => {
         const response = await courseAPI.getCourse(courseId);
         console.log('Course response in CourseTopics:', response);
 
-        // Extract the course data from the response
         const courseData = response.course || response;
         console.log('Extracted course data:', courseData);
 
@@ -71,7 +241,7 @@ const CourseTopics = () => {
     }
   }, [courseId]);
 
-  // Fetch user progress to check completed quizzes
+  // Fetch user progress
   useEffect(() => {
     const fetchUserProgress = async () => {
       if (!isAuthenticated) return;
@@ -90,7 +260,169 @@ const CourseTopics = () => {
     fetchUserProgress();
   }, [isAuthenticated]);
 
+  // Scroll Detection for Notes Content Container
+  useEffect(() => {
+    console.log('Setting up scroll detection for notes content...');
+    
+    const handleContentScroll = () => {
+      const contentElement = notesContentRef.current;
+      if (!contentElement) {
+        console.log('No content element found');
+        return;
+      }
 
+      const scrollPosition = contentElement.scrollTop;
+      const scrollHeight = contentElement.scrollHeight - contentElement.clientHeight;
+      const scrollPercentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0;
+      
+      console.log(`📊 Content Scroll: ${scrollPercentage.toFixed(1)}% (${scrollPosition}px of ${scrollHeight}px)`);
+      
+      scrollCheckpoints.forEach((checkpoint, index) => {
+        const checkpointId = `checkpoint_${index}_topic_${selectedTopic}`;
+        
+        if (scrollPercentage >= checkpoint && 
+            !answeredQuestions.has(checkpointId) && 
+            !triggeredCheckpoints.has(checkpointId) &&
+            showQuestionAt !== checkpointId) {
+          
+          console.log(`🎯 TRIGGERING QUESTION at content checkpoint ${checkpoint}%!`);
+          setTriggeredCheckpoints(prev => new Set([...prev, checkpointId]));
+          fetchQuestionForCheckpoint(checkpointId, checkpoint);
+        }
+      });
+    };
+
+    const throttle = (func, limit) => {
+      let inThrottle;
+      return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+          func.apply(context, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    };
+
+    const throttledContentScroll = throttle(handleContentScroll, 300);
+
+    const setupScrollListener = () => {
+      const contentElement = notesContentRef.current;
+      if (contentElement) {
+        console.log('✅ Found content element, attaching scroll listener');
+        contentElement.addEventListener('scroll', throttledContentScroll);
+        
+        setTimeout(handleContentScroll, 500);
+        
+        return () => {
+          console.log('🧹 Cleaning up content scroll listener');
+          contentElement.removeEventListener('scroll', throttledContentScroll);
+        };
+      } else {
+        console.log('❌ Content element not found yet, retrying...');
+        setTimeout(setupScrollListener, 1000);
+      }
+    };
+
+    const cleanup = setupScrollListener();
+    
+    return () => {
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+    };
+  }, [answeredQuestions, showQuestionAt, selectedTopic, scrollCheckpoints, triggeredCheckpoints]);
+
+  // Reset checkpoints when topic changes
+  useEffect(() => {
+    console.log('🔄 Resetting checkpoints for new topic');
+    setTriggeredCheckpoints(new Set());
+    setAnsweredQuestions(new Set());
+    setShowQuestionAt(null);
+    setCurrentQuestion(null);
+  }, [selectedTopic]);
+
+  // Fetch question for checkpoint
+  const fetchQuestionForCheckpoint = async (checkpointId, scrollPercentage) => {
+    try {
+      console.log(`Fetching question for checkpoint ${checkpointId} at ${scrollPercentage}%`);
+
+      const topicId = backendCourse?.topics[selectedTopic]?._id || 
+                     backendCourse?.topics[selectedTopic]?.topicId || 
+                     currentCourse?.topics[selectedTopic]?.id ||
+                     'fallback_topic';
+      
+      console.log(`📚 Topic ID: ${topicId}`);
+
+      // Using mock data for testing
+      const questionIndex = Math.floor(Math.random() * mockPythonQuestions.length);
+      const questionData = mockPythonQuestions[questionIndex];
+      
+      console.log(' Using mock question data:', questionData);
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (questionData) {
+        setInlineQuestions(prev => ({
+          ...prev,
+          [checkpointId]: questionData
+        }));
+        setShowQuestionAt(checkpointId);
+        setCurrentQuestion(questionData);
+        
+        console.log('Question set! Should appear now.');
+        
+        setTimeout(() => {
+          const questionElement = document.querySelector('.inline-question');
+          if (questionElement && notesContentRef.current) {
+            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            console.log('Scrolled to question element within content');
+          } else {
+            console.log('Could not find question element or content ref');
+          }
+        }, 100);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching inline question:', error);
+      setAnsweredQuestions(prev => new Set([...prev, checkpointId]));
+    }
+  };
+
+  // Answer submission handler
+  const handleAnswerSubmission = async (questionId, selectedAnswer, checkpointId) => {
+    if (isAnswering) return;
+    
+    setIsAnswering(true);
+    console.log('📝 Submitting answer:', { questionId, selectedAnswer, checkpointId });
+    
+    try {
+      const topicId = backendCourse?.topics[selectedTopic]?._id || 
+                     backendCourse?.topics[selectedTopic]?.topicId || 
+                     currentCourse?.topics[selectedTopic]?.id;
+
+      const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
+      const result = { isCorrect, explanation: currentQuestion?.explanation };
+      
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('✅ Mock answer result:', result);
+      
+      setAnsweredQuestions(prev => new Set([...prev, checkpointId]));
+      
+      setTimeout(() => {
+        console.log('⏰ Hiding question after showing result');
+        setShowQuestionAt(null);
+        setCurrentQuestion(null);
+      }, 8000);
+      
+    } catch (error) {
+      console.error('❌ Error submitting answer:', error);
+    } finally {
+      setIsAnswering(false);
+    }
+  };
 
   // Course topics data
   const courseTopicsData = {
@@ -106,7 +438,7 @@ const CourseTopics = () => {
           maxXP: 50,
           completed: false,
           content: {
-            theory: "Variables are containers for storing data values. In Python, you don't need to declare variables explicitly - they are created automatically when you assign a value to them.\n\nPython has several built-in data types:\n• Integers (int): Whole numbers like 42, -17, 0\n• Floats (float): Decimal numbers like 3.14, -2.5\n• Strings (str): Text like \"Hello\", 'Python'\n• Booleans (bool): True or False values",
+            theory: "Variables are containers for storing data values. In Python, you don't need to declare variables explicitly - they are created automatically when you assign a value to them.\n\nPython has several built-in data types:\n• Integers (int): Whole numbers like 42, -17, 0\n• Floats (float): Decimal numbers like 3.14, -2.5\n• Strings (str): Text like \"Hello\", 'Python'\n• Booleans (bool): True or False values\n\nVariable Assignment Examples:\nYou can assign values to variables using the equals sign (=). Python automatically determines the data type based on the value you assign.\n\nNaming Rules:\n• Variable names must start with a letter or underscore\n• Can contain letters, numbers, and underscores\n• Case-sensitive (age and Age are different)\n• Cannot use Python keywords like 'if', 'for', 'while'\n\nType Checking:\nYou can check the type of any variable using the type() function. This is useful for debugging and understanding your data.\n\nDynamic Typing:\nPython is dynamically typed, meaning you can change the type of a variable by assigning it a new value of a different type.\n\nCommon Operations:\nYou can perform various operations on variables depending on their type. For example, you can add numbers, concatenate strings, and perform logical operations on booleans.\n\nBest Practices:\n• Use descriptive variable names\n• Follow naming conventions (snake_case)\n• Initialize variables before using them\n• Be mindful of variable scope\n• Use meaningful names that describe the data\n\nString Operations:\nStrings in Python are immutable, meaning they cannot be changed after creation. However, you can create new strings based on existing ones using various string methods.\n\nNumeric Operations:\nPython supports various numeric operations including addition, subtraction, multiplication, division, and more. You can also use mathematical functions from the math module.\n\nBoolean Logic:\nBoolean values are essential for control flow in programming. They represent True or False states and are used in conditional statements and loops.",
             codeExample: `# Creating variables
 name = "Alice"        # String
 age = 25             # Integer  
@@ -135,7 +467,7 @@ print(type(is_student))  # <class 'bool'>`,
           maxXP: 40,
           completed: false,
           content: {
-            theory: "Functions are reusable blocks of code that perform specific tasks. They help organize code, avoid repetition, and make programs more modular and easier to maintain.",
+            theory: "Functions are reusable blocks of code that perform specific tasks. They help organize code, avoid repetition, and make programs more modular and easier to maintain.\n\nFunction Definition:\nFunctions are defined using the 'def' keyword followed by the function name and parameters in parentheses. The code block within every function starts with a colon (:) and is indented.\n\nParameters and Arguments:\nParameters are variables listed inside the parentheses in the function definition. Arguments are the values passed to the function when it is called.\n\nReturn Statement:\nFunctions can return values using the 'return' statement. If no return statement is used, the function returns None by default.\n\nFunction Benefits:\n• Code reusability\n• Better organization\n• Easier testing and debugging\n• Modular programming approach\n\nFunction Scope:\nVariables defined inside a function have local scope, meaning they are only accessible within that function. Variables defined outside functions have global scope.\n\nDefault Parameters:\nYou can provide default values for function parameters. If no argument is provided for a parameter with a default value, the default is used.\n\nKeyword Arguments:\nYou can call functions using keyword arguments, which allows you to specify arguments by parameter name rather than position.\n\nVariable-Length Arguments:\nPython allows functions to accept a variable number of arguments using *args for positional arguments and **kwargs for keyword arguments.\n\nDocstrings:\nIt's good practice to include docstrings in your functions to document what they do, their parameters, and return values.",
             codeExample: `# Defining a function
 def greet(name):
     return f"Hello, {name}!"
@@ -168,7 +500,7 @@ print(f"Area: {result}")  # Output: Area: 15`,
           maxXP: 60,
           completed: false,
           content: {
-            theory: "Loops allow you to repeat code multiple times. Python has two main types of loops: 'for' loops for iterating over sequences, and 'while' loops for repeating until a condition is false.",
+            theory: "Loops allow you to repeat code multiple times. Python has two main types of loops: 'for' loops for iterating over sequences, and 'while' loops for repeating until a condition is false.\n\nFor Loops:\nFor loops iterate over a sequence (like a list, tuple, string, or range). They are ideal when you know how many times you want to execute a block of code.\n\nWhile Loops:\nWhile loops repeat as long as a certain condition is true. They are useful when you don't know in advance how many iterations you need.\n\nLoop Control:\n• break: Exit the loop immediately\n• continue: Skip the rest of the current iteration\n• else: Execute code when loop completes normally\n\nRange Function:\nThe range() function generates a sequence of numbers, commonly used with for loops. It can take one, two, or three arguments: start, stop, and step.\n\nNested Loops:\nYou can place loops inside other loops to create nested structures. This is useful for working with multi-dimensional data structures.\n\nList Comprehensions:\nPython provides a concise way to create lists using list comprehensions, which combine loops and conditional logic in a single line.\n\nIteration Patterns:\nCommon patterns include iterating over indices, iterating over items, and iterating over both indices and items using enumerate().\n\nLoop Performance:\nWhile loops can be less efficient than for loops in some cases. It's important to choose the right loop type for your specific use case.\n\nInfinite Loops:\nBe careful to avoid infinite loops by ensuring that the loop condition will eventually become false or that you have a proper exit mechanism.",
             codeExample: `# For loop example
 fruits = ["apple", "banana", "orange"]
 for fruit in fruits:
@@ -200,7 +532,7 @@ for i in range(1, 6):
           maxXP: 50,
           completed: false,
           content: {
-            theory: "Classes are blueprints for creating objects. They encapsulate data (attributes) and functions (methods) that work on that data. This is the foundation of object-oriented programming.",
+            theory: "Classes are blueprints for creating objects. They encapsulate data (attributes) and functions (methods) that work on that data. This is the foundation of object-oriented programming.\n\nClass Definition:\nClasses are defined using the 'class' keyword followed by the class name. By convention, class names use CamelCase.\n\nThe __init__ Method:\nThis special method is called when a new object is created. It's used to initialize the object's attributes.\n\nSelf Parameter:\nThe 'self' parameter refers to the current instance of the class. It must be the first parameter in all instance methods.\n\nObject Creation:\nTo create an object, call the class like a function. This automatically calls the __init__ method.\n\nOOP Benefits:\n• Code organization and reusability\n• Data encapsulation\n• Inheritance and polymorphism\n• Easier maintenance and debugging\n\nInstance vs Class Attributes:\nInstance attributes are specific to each object, while class attributes are shared among all instances of a class.\n\nMethod Types:\nPython classes can have instance methods, class methods, and static methods, each serving different purposes.\n\nInheritance:\nClasses can inherit from other classes, allowing you to create specialized versions while reusing common functionality.\n\nEncapsulation:\nPython uses naming conventions to indicate private attributes and methods, though true privacy is not enforced.\n\nPolymorphism:\nDifferent classes can implement the same method names, allowing objects to be used interchangeably in certain contexts.",
             codeExample: `# Defining a class
 class Person:
     def __init__(self, name, age):
@@ -271,22 +603,18 @@ print(df.describe())    # Statistical summary`,
     }
   };
 
-  // Create a hybrid course object using backend data when available
+  // Create hybrid course object
   const currentCourse = (() => {
     if (backendCourse && backendCourse.topics) {
-      // Use backend course data with placeholder content for now
       return {
         title: backendCourse.title,
         description: `Master ${backendCourse.title} fundamentals with hands-on coding exercises`,
         topics: backendCourse.topics.map((topic, index) => {
           const topicId = topic._id || topic.topicId || topic.id || `topic_${index}`;
 
-          // Clean the title by removing numbers and patterns
           const cleanTitle = (() => {
             let title = topic.title || '';
-            // Remove "CORE JAVA NOTES - 02" pattern and extract just the subject
             title = title.replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1');
-            // Remove other number patterns
             title = title.replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
             return title;
           })();
@@ -298,8 +626,8 @@ print(df.describe())    # Statistical summary`,
             exercises: 5,
             maxXP: 50,
             completed: false,
-            hasNotes: !!topic.notesId, // Check if this topic has notes in the backend
-            notesContent: topic.notes, // Store the actual notes content (backend returns it as 'notes')
+            hasNotes: !!topic.notesId,
+            notesContent: topic.notes,
             content: {
               theory: topic.notes || `Learn the fundamentals of ${cleanTitle}. This topic covers essential concepts and practical applications.`,
               codeExample: `// Example code for ${cleanTitle}\nconsole.log("Learning ${cleanTitle}");`,
@@ -315,7 +643,6 @@ print(df.describe())    # Statistical summary`,
       };
     }
 
-    // Fallback to hardcoded data for simple course IDs
     return courseTopicsData[courseId];
   })();
 
@@ -378,95 +705,9 @@ print(df.describe())    # Statistical summary`,
     );
   }
 
-  const handleTakeQuiz = () => {
-    // Check if user is authenticated
-    if (!isAuthenticated) {
-      openLogin();
-      return;
-    }
-
-    // Use real backend topic ID if available, otherwise fallback to hardcoded
-    let topicId = null;
-    let topicTitle = 'Quiz';
-    let quizId = null;
-
-    if (backendCourse && backendCourse.topics && backendCourse.topics[selectedTopic]) {
-      // Use real backend topic ID
-      const backendTopic = backendCourse.topics[selectedTopic];
-      topicId = backendTopic._id || backendTopic.topicId || backendTopic.id;
-      topicTitle = backendTopic.title;
-      quizId = backendTopic.quizId; // Get quiz ID for completion check
-      console.log('Using backend topic ID:', topicId, 'for topic:', topicTitle);
-      console.log('Quiz ID for completion check:', quizId);
-      console.log('Backend topic object:', backendTopic);
-    } else {
-      // Fallback to hardcoded data
-      const currentTopicData = currentCourse?.topics[selectedTopic];
-      if (!currentTopicData) {
-        console.error('No topic selected for quiz');
-        return;
-      }
-      topicId = `topic_${currentTopicData.id}`;
-      topicTitle = currentTopicData.title;
-      console.log('Using fallback topic ID:', topicId, 'for topic:', topicTitle);
-    }
-
-    if (!topicId) {
-      console.error('Could not determine topic ID for quiz');
-      return;
-    }
-
-    // Check if quiz is already completed (only block if fully completed)
-    if (quizId && userProgress) {
-      const isFullyCompleted = userProgress.completedQuizzes?.some(
-        completedQuizId => completedQuizId.toString() === quizId.toString()
-      );
-
-      // Check if any questions have been answered for this quiz (for logging purposes)
-      const answeredQuestions = userProgress.answeredQuestions?.[quizId.toString()] || [];
-      const hasPartialProgress = answeredQuestions.length > 0 && !isFullyCompleted;
-
-      console.log('Quiz access check in CourseTopics:', {
-        quizId,
-        completedQuizzes: userProgress.completedQuizzes,
-        answeredQuestions: answeredQuestions,
-        isFullyCompleted,
-        hasPartialProgress,
-        shouldBlockAccess: isFullyCompleted // Only block if fully completed
-      });
-
-      // Only block access if quiz is fully completed
-      if (isFullyCompleted) {
-        setQuizAlreadyAttempted({
-          show: true,
-          title: topicTitle,
-          isCompleted: true
-        });
-        return;
-      }
-
-      // If there's partial progress, allow access (quiz will show resume option)
-      if (hasPartialProgress) {
-        console.log(`Quiz has partial progress (${answeredQuestions.length} questions answered). Allowing access to resume.`);
-      }
-    }
-
-    // Scroll to top before navigating to quiz
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    // Small delay to ensure scroll completes before navigation
-    setTimeout(() => {
-      navigate(`/learn/courses/${courseId}/quiz?topicId=${topicId}`, {
-        state: { topicId, topicTitle }
-      });
-    }, 100);
-  };
-
   const handleStartPractice = () => {
-    // Scroll to top before navigating to exercises
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    // Small delay to ensure scroll completes before navigation
     setTimeout(() => {
-      // Navigate to exercises page (to be implemented)
       navigate(`/learn/exercises/${courseId}`);
     }, 100);
   };
@@ -534,7 +775,6 @@ print(df.describe())    # Statistical summary`,
                   key={topic.id}
                   onClick={() => {
                     setSelectedTopic(index);
-                    // Scroll to top when changing topics
                     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
                   }}
                   whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
@@ -573,7 +813,6 @@ print(df.describe())    # Statistical summary`,
                     </AnimatePresence>
                   </div>
 
-                  {/* Tooltip for collapsed state */}
                   {sidebarCollapsed && (
                     <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs truncate">
                       {topic.title}
@@ -627,7 +866,6 @@ print(df.describe())    # Statistical summary`,
                         onClick={() => {
                           setSelectedTopic(index);
                           setMobileMenuOpen(false);
-                          // Scroll to top when changing topics on mobile
                           window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
                         }}
                         className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
@@ -697,49 +935,10 @@ print(df.describe())    # Statistical summary`,
                         {currentTopic?.title}
                       </h1>
                     </div>
-                    {/* Stats Cards and Quiz Button - Side by Side */}
-                      {/* Take Quiz Button */}
-                      {/*<button
-                        onClick={handleTakeQuiz}
-                        className="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-blue-400/50 dark:border-blue-500/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex-1 sm:flex-none sm:min-w-[160px]"
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-md lg:rounded-lg bg-white/20 flex items-center justify-center">
-                            <Trophy className="w-3 h-3 lg:w-4 lg:h-4 text-white" />
-                          </div>
-                          <div className="text-sm lg:text-base font-medium text-white">
-                            Take Quiz
-                          </div>
-                        </div>
-                      </button>*/}
-
-                      {/* Questions Card */}
-                      {/*<div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
-                        <div className="flex items-center justify-center gap-2 text-center">
-                          <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                            <Code2 className="w-3 h-3 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div className="text-xs lg:text-sm font-medium text-gray-900 dark:text-white">
-                            10 Questions
-                          </div>
-                        </div>
-                      </div>*/}
-
-                      {/* Max XP Card */}
-                      {/*<div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-lg lg:rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-lg flex-1 sm:flex-none sm:min-w-[140px]">
-                        <div className="flex items-center justify-center gap-2 text-center">
-                          <div className="w-5 h-5 lg:w-6 lg:h-6 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                            <Trophy className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
-                          </div>
-                          <div className="text-xs lg:text-sm font-medium text-gray-900 dark:text-white">
-                            {currentTopic?.maxXP} Max XP
-                          </div>
-                        </div>
-                      </div>*/}
-                    </div>
+                  </div>
                 </motion.div>
+
                 {/* Content Sections */}
-                {/* Theory Section */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -748,90 +947,95 @@ print(df.describe())    # Statistical summary`,
                 >
                   <div className="max-w-none px-[5px] lg:px-8 lg:py-1 lg:flex-1 lg:overflow-hidden">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div className="h-full lg:overflow-y-auto scrollbar-hide">
+                      <div 
+                        ref={notesContentRef}
+                        className="h-full lg:overflow-y-auto scrollbar-hide"
+                      >
                         <div className="markdown-content lg:bg-transparent">
-                        <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
-                          components={{
-                            h1: ({children}) => null, // Hide h1 headings
-                            h2: ({children}) => null, // Hide h2 headings
-                            h3: ({children}) => {
-                              // Remove numbers and dashes from h3 headings
-                              const cleanText = typeof children === 'string'
-                                ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                : Array.isArray(children)
-                                  ? children.map(child =>
-                                      typeof child === 'string'
-                                        ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                        : child
-                                    )
-                                  : children;
-                              return <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">{cleanText}</h3>;
-                            },
-                            h4: ({children}) => {
-                              // Remove numbers and dashes from h4 headings
-                              const cleanText = typeof children === 'string'
-                                ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                : Array.isArray(children)
-                                  ? children.map(child =>
-                                      typeof child === 'string'
-                                        ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                        : child
-                                    )
-                                  : children;
-                              return <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">{cleanText}</h4>;
-                            },
-                            h5: ({children}) => {
-                              // Remove numbers and dashes from h5 headings
-                              const cleanText = typeof children === 'string'
-                                ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                : Array.isArray(children)
-                                  ? children.map(child =>
-                                      typeof child === 'string'
-                                        ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                        : child
-                                    )
-                                  : children;
-                              return <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h5>;
-                            },
-                            h6: ({children}) => {
-                              // Remove numbers and dashes from h6 headings
-                              const cleanText = typeof children === 'string'
-                                ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                : Array.isArray(children)
-                                  ? children.map(child =>
-                                      typeof child === 'string'
-                                        ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                        : child
-                                    )
-                                  : children;
-                              return <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h6>;
-                            },
-                            code: ({inline, className, children, ...props}) => {
-                              if (inline) {
-                                return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>
-                              }
-                              return <code className={className} {...props}>{children}</code>
-                            },
-                            pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                            p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
-                            ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                            ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                            li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                            blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                            strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
-                            table: ({children}) => (
-                              <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
-                                <table className="min-w-full">{children}</table>
-                              </div>
-                            )
-                          }}
-                          >
-                            {currentTopic.notesContent}
-                          </ReactMarkdown>
-                        </div>
+                          <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              rehypePlugins={[rehypeHighlight]}
+                              components={{
+                                h1: ({children}) => null,
+                                h2: ({children}) => null,
+                                h3: ({children}) => {
+                                  const cleanText = typeof children === 'string'
+                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                    : Array.isArray(children)
+                                      ? children.map(child =>
+                                          typeof child === 'string'
+                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                            : child
+                                        )
+                                      : children;
+                                  return <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">{cleanText}</h3>;
+                                },
+                                h4: ({children}) => {
+                                  const cleanText = typeof children === 'string'
+                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                    : Array.isArray(children)
+                                      ? children.map(child =>
+                                          typeof child === 'string'
+                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                            : child
+                                        )
+                                      : children;
+                                  return <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">{cleanText}</h4>;
+                                },
+                                h5: ({children}) => {
+                                  const cleanText = typeof children === 'string'
+                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                    : Array.isArray(children)
+                                      ? children.map(child =>
+                                          typeof child === 'string'
+                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                            : child
+                                        )
+                                      : children;
+                                  return <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h5>;
+                                },
+                                h6: ({children}) => {
+                                  const cleanText = typeof children === 'string'
+                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                    : Array.isArray(children)
+                                      ? children.map(child =>
+                                          typeof child === 'string'
+                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+                                            : child
+                                        )
+                                      : children;
+                                  return <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h6>;
+                                },
+                                code: ({inline, className, children, ...props}) => {
+                                  if (inline) {
+                                    return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>
+                                  }
+                                  return <code className={className} {...props}>{children}</code>
+                                },
+                                pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
+                                p: ({children}) => {
+                                  return (
+                                    <>
+                                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>
+                                    </>
+                                  );
+                                },
+                                ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
+                                ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
+                                li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+                                blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
+                                strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
+                                table: ({children}) => (
+                                  <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
+                                    <table className="min-w-full">{children}</table>
+                                  </div>
+                                )
+                              }}
+                            >
+                              {currentTopic.notesContent}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       </div>
                     ) : currentTopic?.hasNotes ? (
@@ -845,7 +1049,10 @@ print(df.describe())    # Statistical summary`,
                         </div>
                       </div>
                     ) : (
-                      <div className="h-full lg:overflow-y-auto lg:custom-scrollbar">
+                      <div 
+                        ref={notesContentRef}
+                        className="h-full lg:overflow-y-auto lg:custom-scrollbar"
+                      >
                         <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
                           {currentTopic?.content.theory}
                         </div>
@@ -853,6 +1060,21 @@ print(df.describe())    # Statistical summary`,
                     )}
                   </div>
                 </motion.div>
+
+                {/* Inline Question Display */}
+                <AnimatePresence>
+                  {showQuestionAt && currentQuestion && (
+                    <div className="inline-question mt-6">
+                      <InlineQuestionComponent
+                        question={currentQuestion}
+                        questionId={currentQuestion.id || currentQuestion._id}
+                        checkpointId={showQuestionAt}
+                        onAnswer={handleAnswerSubmission}
+                        isAnswering={isAnswering}
+                      />
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>
@@ -877,7 +1099,6 @@ print(df.describe())    # Statistical summary`,
               className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20 max-w-md w-full mx-4"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close button */}
               <button
                 onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
                 className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -885,7 +1106,6 @@ print(df.describe())    # Statistical summary`,
                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
 
-              {/* Icon */}
               <div className="text-center mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
                   <AlertCircle className="w-8 h-8 text-orange-600 dark:text-orange-400" />
@@ -904,7 +1124,6 @@ print(df.describe())    # Statistical summary`,
                 </p>
               </div>
 
-              {/* Action button */}
               <button
                 onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
