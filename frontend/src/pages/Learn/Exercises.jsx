@@ -183,9 +183,9 @@ const Exercises = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
               onClick={() => handleCourseClick(course._id)}
-              className="group cursor-pointer"
+              className="group cursor-pointer h-full"
             >
-              <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200/50 dark:border-gray-600/50 hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <div className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-4 sm:p-6 shadow-lg border border-gray-200/50 dark:border-gray-600/50 hover:shadow-xl transition-all duration-300 h-full hover:scale-105">
                 {/* Course Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 flex items-center justify-center">
