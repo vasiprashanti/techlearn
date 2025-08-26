@@ -109,7 +109,7 @@ const Exercises = () => {
             <span className="italic">code</span> WORKOUT
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 text-left">
-          Welcome to CodeWORKOUT! Confused? Don’t be — it’s simple: solve real-world problems, earn XP, and grow with every line of code.
+          Welcome to CodeWORKOUT! Confused?<br/>Don’t be — it’s simple: solve real-world problems, earn XP, and grow with every line of code.
           </p>
         </motion.div>
 
