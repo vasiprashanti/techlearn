@@ -5,7 +5,7 @@ import {
   HiOutlineBookOpen,
   HiOutlineChartBar,
 } from "react-icons/hi2";
-import { FiMenu, FiX } from "react-icons/fi";
+import { FiMenu, FiX,FiCode } from "react-icons/fi";
 import { MdQuiz } from "react-icons/md";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -13,7 +13,8 @@ const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
   { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/upload-exercises" },
-  {name : "MCQs", icon: MdQuiz, path: "/admin/mcqupload" }
+  {name : "MCQs", icon: MdQuiz, path: "/admin/mcqupload" },
+  {name:"Coding",icon: FiCode, path: "/admin/codingroundupload" }
 ];
 
 export default function Admin_Sidebar() {

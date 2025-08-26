@@ -43,6 +43,12 @@ const Sidebar = ({ onToggle }) => {
       title:'MCQ',
       icon:'/sidebar/quizzes.png',
       completed: false,
+    },
+ {
+      id:'coding',
+      title:'Coding Round',
+      icon:'/sidebar/coding.png',
+      completed: false,
     }
   ];
 

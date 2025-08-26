@@ -26,6 +26,7 @@ import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
 import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
 import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
+import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
 // Auth pages
 import Login from './pages/Auth/Login'
@@ -33,6 +34,8 @@ import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
+import UserCoding from './pages/Coding/UserCoding';
+
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
@@ -580,7 +583,9 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin'].includes(location.pathname);
+  const showNavbar = !['/dashboard', '/admin', '/coding','/mcq','/admin/codingroundupload'].includes(location.pathname);
+  const showFooter = !['/coding','/mcq'].includes(location.pathname);
+
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -595,7 +600,7 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
-          
+          <Route path="/coding" element={ <UserCoding />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
@@ -631,6 +636,7 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
+            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
             <Route path="/admin/mcqupload" element={<McqUpload/>} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
           </Route>
@@ -639,7 +645,7 @@ function LayoutWrapper() {
         </Routes>
       </main>
       
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 }
