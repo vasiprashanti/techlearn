@@ -55,51 +55,46 @@ export const createCodingRound = async (req, res) => {
         !problem.problemTitle ||
         !problem.description ||
         !problem.difficulty ||
-        !problem.expectedOutput ||
-        !Array.isArray(problem.expectedOutput) ||
+        !problem.inputDescription ||
+        !problem.outputDescription ||
+        !problem.visibleTestCases ||
+        !Array.isArray(problem.visibleTestCases) ||
+        problem.visibleTestCases.length === 0 ||
         !problem.hiddenTestCases ||
-        !Array.isArray(problem.hiddenTestCases)
+        !Array.isArray(problem.hiddenTestCases) ||
+        problem.hiddenTestCases.length === 0
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Each problem must have a title, description, difficulty, expectedOutput array (2 visible test cases), and hiddenTestCases array",
+            "Each problem must have problemTitle, description, difficulty, inputDescription, outputDescription, visibleTestCases, and hiddenTestCases",
         });
       }
 
-      // Check expectedOutput has exactly 2 test cases
-      if (problem.expectedOutput.length !== 2) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Each problem must have exactly 2 visible test cases in expectedOutput",
-        });
-      }
-
-      // Validate expectedOutput format
-      for (const testCase of problem.expectedOutput) {
-        if (!testCase.input || !testCase.output) {
+      // Validate visible test cases
+      for (const testCase of problem.visibleTestCases) {
+        if (
+          typeof testCase.input !== "string" ||
+          typeof testCase.expectedOutput !== "string"
+        ) {
           return res.status(400).json({
             success: false,
-            message: "Each visible test case must have input and output",
+            message:
+              "Each visible test case must have input and expectedOutput as strings",
           });
         }
       }
 
-      // Optionally, check for at least one hidden test case
-      if (problem.hiddenTestCases.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Each problem must have at least one hidden test case",
-        });
-      }
-
-      // Validate hiddenTestCases format
+      // Validate hidden test cases
       for (const testCase of problem.hiddenTestCases) {
-        if (!testCase.input || !testCase.output) {
+        if (
+          typeof testCase.input !== "string" ||
+          typeof testCase.expectedOutput !== "string"
+        ) {
           return res.status(400).json({
             success: false,
-            message: "Each hidden test case must have input and output",
+            message:
+              "Each hidden test case must have input and expectedOutput as strings",
           });
         }
       }
@@ -322,7 +317,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Process solutions - validate each solution against test cases using Judge0
+    // Process solutions - validate each solution against hidden test cases only
     const processedSolutions = [];
     let totalScore = 0;
 
@@ -356,20 +351,20 @@ export const submitCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Test against visible test cases (expectedOutput)
+      // Test against visible test cases (for student feedback)
       const visibleTestResults = [];
       let visibleTestsPassed = 0;
-      const totalVisibleTests = problem.expectedOutput.length;
+      const totalVisibleTests = problem.visibleTestCases.length;
 
-      for (let i = 0; i < problem.expectedOutput.length; i++) {
-        const testCase = problem.expectedOutput[i];
+      for (let i = 0; i < problem.visibleTestCases.length; i++) {
+        const testCase = problem.visibleTestCases[i];
 
         try {
           const testResult = await testCodeWithJudge0(
             submittedCode,
             languageId,
             testCase.input,
-            testCase.output
+            testCase.expectedOutput
           );
 
           const passed = testResult.success && testResult.outputMatches;
@@ -378,7 +373,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
           visibleTestResults.push({
             testCaseIndex: i,
             input: testCase.input,
-            expectedOutput: testCase.output,
+            expectedOutput: testCase.expectedOutput,
             actualOutput: testResult.actualOutput,
             passed,
             error: testResult.error || null,
@@ -387,7 +382,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
           visibleTestResults.push({
             testCaseIndex: i,
             input: testCase.input,
-            expectedOutput: testCase.output,
+            expectedOutput: testCase.expectedOutput,
             actualOutput: "",
             passed: false,
             error: `Test execution failed: ${error.message}`,
@@ -395,7 +390,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
         }
       }
 
-      // Test against hidden test cases
+      // Test against hidden test cases (for scoring)
       let hiddenTestsPassed = 0;
       const totalHiddenTests = problem.hiddenTestCases.length;
       const hiddenTestResults = [];
@@ -408,7 +403,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
             submittedCode,
             languageId,
             testCase.input,
-            testCase.output
+            testCase.expectedOutput
           );
 
           const passed = testResult.success && testResult.outputMatches;
@@ -430,7 +425,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
         }
       }
 
-      // Calculate score for this problem
+      // Calculate score for this problem (based on both visible and hidden test cases)
       const totalTests = totalVisibleTests + totalHiddenTests;
       const totalPassed = visibleTestsPassed + hiddenTestsPassed;
       const problemScore =
@@ -442,17 +437,17 @@ export const submitCodingRoundAnswers = async (req, res) => {
       // Store processed solution
       processedSolutions.push({
         problemIndex,
-        submittedCode, // Store the code for records
+        submittedCode,
         language,
-        testCasesPassed: totalPassed,
-        totalTestCases: totalTests,
+        testCasesPassed: totalPassed, // Total from both visible and hidden
+        totalTestCases: totalTests, // Total from both visible and hidden
         visibleTestsPassed,
         totalVisibleTests,
         hiddenTestsPassed,
         totalHiddenTests,
         isCorrect,
         problemScore,
-        visibleTestResults,
+        visibleTestResults, // Add this line
         hiddenTestSummary: {
           passed: hiddenTestsPassed,
           total: totalHiddenTests,
@@ -500,7 +495,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
           totalHiddenTests: sol.totalHiddenTests,
           isCorrect: sol.isCorrect,
           problemScore: sol.problemScore,
-          visibleTestResults: sol.visibleTestResults,
+          visibleTestResults: sol.visibleTestResults, // Add this line
           hiddenTestSummary: sol.hiddenTestSummary,
           feedback: sol.isCorrect
             ? "Perfect! All test cases passed."
@@ -555,50 +550,46 @@ export const updateCodingRound = async (req, res) => {
           !problem.problemTitle ||
           !problem.description ||
           !problem.difficulty ||
-          !problem.expectedOutput ||
-          !Array.isArray(problem.expectedOutput) ||
+          !problem.inputDescription ||
+          !problem.outputDescription ||
+          !problem.visibleTestCases ||
+          !Array.isArray(problem.visibleTestCases) ||
+          problem.visibleTestCases.length === 0 ||
           !problem.hiddenTestCases ||
-          !Array.isArray(problem.hiddenTestCases)
+          !Array.isArray(problem.hiddenTestCases) ||
+          problem.hiddenTestCases.length === 0
         ) {
           return res.status(400).json({
             success: false,
             message:
-              "Each problem must have a title, description, difficulty, expectedOutput array (2 visible test cases), and hiddenTestCases array",
+              "Each problem must have problemTitle, description, difficulty, inputDescription, outputDescription, visibleTestCases, and hiddenTestCases",
           });
         }
 
-        // Check expectedOutput has exactly 2 test cases
-        if (problem.expectedOutput.length !== 2) {
-          return res.status(400).json({
-            success: false,
-            message:
-              "Each problem must have exactly 2 visible test cases in expectedOutput",
-          });
-        }
-
-        // Validate expectedOutput format
-        for (const testCase of problem.expectedOutput) {
-          if (!testCase.input || !testCase.output) {
+        // Validate visible test cases
+        for (const testCase of problem.visibleTestCases) {
+          if (
+            typeof testCase.input !== "string" ||
+            typeof testCase.expectedOutput !== "string"
+          ) {
             return res.status(400).json({
               success: false,
-              message: "Each visible test case must have input and output",
+              message:
+                "Each visible test case must have input and expectedOutput as strings",
             });
           }
         }
 
-        if (problem.hiddenTestCases.length === 0) {
-          return res.status(400).json({
-            success: false,
-            message: "Each problem must have at least one hidden test case",
-          });
-        }
-
-        // Validate hiddenTestCases format
+        // Validate hidden test cases
         for (const testCase of problem.hiddenTestCases) {
-          if (!testCase.input || !testCase.output) {
+          if (
+            typeof testCase.input !== "string" ||
+            typeof testCase.expectedOutput !== "string"
+          ) {
             return res.status(400).json({
               success: false,
-              message: "Each hidden test case must have input and output",
+              message:
+                "Each hidden test case must have input and expectedOutput as strings",
             });
           }
         }

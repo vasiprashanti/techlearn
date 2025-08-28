@@ -29,17 +29,18 @@ const codingRoundSchema = new mongoose.Schema(
           enum: ["Easy", "Medium", "Hard"],
           default: "Medium",
         },
-        inputDescription: { type: String },
-        expectedOutput: [
+        inputDescription: { type: String, required: true },
+        outputDescription: { type: String, required: true },
+        visibleTestCases: [
           {
-            input: { type: String },
-            output: { type: String },
+            input: { type: String, required: true },
+            expectedOutput: { type: String, required: true },
           },
         ],
         hiddenTestCases: [
           {
-            input: { type: String },
-            output: { type: String },
+            input: { type: String, required: true },
+            expectedOutput: { type: String, required: true },
           },
         ],
         fileUrl: { type: String }, // For optional file upload
