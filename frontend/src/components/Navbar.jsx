@@ -13,8 +13,13 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  
+  //hide navbar on coding pages
+  if (location.pathname === "/coding") {
+    return null;
+  }
 
-  const isDashboardPage = location.pathname === '/dashboard' || location.pathname === '/coding';
+  const isDashboardPage = location.pathname === '/dashboard';
 
   const hideLogoRoutes = [
     "/admin/courses",
