@@ -14,19 +14,10 @@ import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
 
 // Helper function to convert IST to UTC
 const convertISTToUTC = (istDateString) => {
-  // If the string already has timezone info, return as-is
-  if (
-    istDateString.includes("Z") ||
-    istDateString.includes("+") ||
-    istDateString.includes("-")
-  ) {
-    return new Date(istDateString);
-  }
+  // Add IST timezone offset (+05:30) to the string
+  const istWithTimezone = istDateString + "+05:30";
+  const utcDate = new Date(istWithTimezone);
 
-  // Treat as IST and convert to UTC
-  const istDate = new Date(istDateString);
-  // IST is UTC+5:30, so subtract 5.5 hours to get UTC
-  const utcDate = new Date(istDate.getTime() - 5.5 * 60 * 60 * 1000);
   return utcDate;
 };
 
