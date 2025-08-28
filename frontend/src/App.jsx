@@ -600,7 +600,7 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
-          <Route path="/coding" element={ <UserCoding />} />
+          
           <Route path="/profile" element={<Profile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
@@ -628,6 +628,7 @@ function LayoutWrapper() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/mcq/:linkId" element={<UserMcq />} />
+          <Route path="/coding/:linkId" element={ <UserCoding />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>

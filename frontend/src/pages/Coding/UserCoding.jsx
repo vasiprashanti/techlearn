@@ -5,8 +5,6 @@ import CodingCompiler from "./CodingCompiler";
 
 //  BASE_URL should come from your config/env
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 
 // ---------------- LOGIN PAGE ----------------
 const LoginPage = ({ onSuccess }) => {
@@ -17,6 +15,9 @@ const LoginPage = ({ onSuccess }) => {
   const [codeSent, setCodeSent] = useState(false);
   const { linkId } = useParams();
 
+  
+
+  const BASE_URL = import.meta.env.VITE_API_URL;
   // Regex for validating college email (adjust domain if needed)
   const validateEmail = (email) => {
     const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.(com|in)$/;
@@ -35,7 +36,7 @@ const LoginPage = ({ onSuccess }) => {
     try {
       if (!codeSent) {
         // Send OTP
-        const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/send-otp`, {
+        const res = await fetch(`${BASE_URL}/college-coding/${linkId}/send-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
@@ -54,7 +55,7 @@ const LoginPage = ({ onSuccess }) => {
           return;
         }
         const res = await fetch(
-          `${BASE_URL}/college-mcq/${linkId}/verify-otp`,
+          `${BASE_URL}/college-coding/${linkId}/verify-otp`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

@@ -14,12 +14,12 @@ export default function CodingRoundForm() {
 
   const [problems, setProblems] = useState([
     {
-      title: "",
+      problemTitle: "",
       difficulty: "",
       description: "",
       input: "",
       output: "",
-      testcases: "",
+      hiddenTestCases: [{ input: "", expectedOutput: "" }],
     },
   ]);
 
@@ -31,6 +31,9 @@ export default function CodingRoundForm() {
   const [loadingRounds, setLoadingRounds] = useState(true);
   const [roundExpanded, setRoundExpanded] = useState([]); // for expanding previous rounds
 
+  // Get base URL from environment variables
+  const BASE_URL = import.meta.env.VITE_API_URL;
+  const token = localStorage.getItem("token");
   // number of questions handler
   const handleNumQuestionsChange = (e) => {
     const count = parseInt(e.target.value, 10);
@@ -39,12 +42,12 @@ export default function CodingRoundForm() {
     const newProblems = [...problems];
     while (newProblems.length < count) {
       newProblems.push({
-        title: "",
+        problemTitle: "",
         difficulty: "",
         description: "",
         input: "",
         output: "",
-        testcases: "",
+        hiddenTestCases: [{ input: "", expectedOutput: "" }],
       });
     }
     while (newProblems.length > count) {
@@ -64,6 +67,29 @@ export default function CodingRoundForm() {
     setProblems(updated);
   };
 
+  // Handle test cases changes
+  const handleTestCaseChange = (problemIndex, testCaseIndex, field, value) => {
+    const updated = [...problems];
+    updated[problemIndex].hiddenTestCases[testCaseIndex][field] = value;
+    setProblems(updated);
+  };
+
+  // Add new test case
+  const addTestCase = (problemIndex) => {
+    const updated = [...problems];
+    updated[problemIndex].hiddenTestCases.push({ input: "", expectedOutput: "" });
+    setProblems(updated);
+  };
+
+  // Remove test case
+  const removeTestCase = (problemIndex, testCaseIndex) => {
+    const updated = [...problems];
+    if (updated[problemIndex].hiddenTestCases.length > 1) {
+      updated[problemIndex].hiddenTestCases.splice(testCaseIndex, 1);
+      setProblems(updated);
+    }
+  };
+
   // validation
   const validate = () => {
     let newErrors = {};
@@ -75,7 +101,7 @@ export default function CodingRoundForm() {
     if (!duration) newErrors.duration = "Duration is required.";
 
     problems.forEach((p, i) => {
-      if (!p.title) newErrors[`p-${i}-title`] = "Problem title is required.";
+      if (!p.problemTitle) newErrors[`p-${i}-title`] = "Problem title is required.";
       if (!p.difficulty)
         newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
     });
@@ -91,21 +117,31 @@ export default function CodingRoundForm() {
 
     setSubmitting(true);
 
+    // Format the payload according to the API structure shown in the image
     const payload = {
-      college,
       title,
-      date,
-      startTime,
-      endTime,
-      duration,
-      problems,
+      college,
+      date: `${date}T${startTime}:00`, // Combine date and start time
+      duration: parseInt(duration), // Convert to number
+      problems: problems.map(problem => ({
+        problemTitle: problem.problemTitle,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        hiddenTestCases: problem.hiddenTestCases.filter(tc => tc.input && tc.expectedOutput) // Only include complete test cases
+      }))
     };
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/coding-rounds",
-        payload
+        `${BASE_URL}/college-coding/`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // attach token here
+          },
+        }
       );
+
       alert("Coding Test Created Successfully!");
       console.log("Response:", res.data);
 
@@ -119,12 +155,12 @@ export default function CodingRoundForm() {
       setNumQuestions(1);
       setProblems([
         {
-          title: "",
+          problemTitle: "",
           difficulty: "",
           description: "",
           input: "",
           output: "",
-          testcases: "",
+          hiddenTestCases: [{ input: "", expectedOutput: "" }],
         },
       ]);
       setExpanded([]);
@@ -143,13 +179,28 @@ export default function CodingRoundForm() {
   const fetchPreviousRounds = async () => {
     try {
       setLoadingRounds(true);
-      const res = await axios.get("http://localhost:5000/api/coding-rounds");
-      setPreviousRounds(res.data);
-
-      // set expanded state for each round
-      setRoundExpanded(new Array(res.data.length).fill(false));
+      const res = await axios.get(
+        `${BASE_URL}/college-coding/admin/getAllCodingRounds`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // send token to backend
+          },
+        }
+      );
+       console.log(res);     
+      // Handle the response structure from the API
+      if (res.data.success && res.data.data) {
+        setPreviousRounds(res.data.data);
+        // set expanded state for each round
+        setRoundExpanded(new Array(res.data.data.length).fill(false));
+      } else {
+        setPreviousRounds([]);
+        setRoundExpanded([]);
+      }
     } catch (error) {
       console.error("Error fetching coding rounds:", error);
+      setPreviousRounds([]);
+      setRoundExpanded([]);
     } finally {
       setLoadingRounds(false);
     }
@@ -282,8 +333,8 @@ export default function CodingRoundForm() {
                   <div className="space-y-4">
                     <input
                       type="text"
-                      value={p.title}
-                      onChange={(e) => handleProblemChange(i, "title", e.target.value)}
+                      value={p.problemTitle}
+                      onChange={(e) => handleProblemChange(i, "problemTitle", e.target.value)}
                       placeholder={`Problem ${i + 1} Title`}
                       className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
@@ -305,26 +356,51 @@ export default function CodingRoundForm() {
                       value={p.description}
                       onChange={(e) => handleProblemChange(i, "description", e.target.value)}
                       placeholder="Problem description"
+                      rows="3"
                       className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     />
-                    <textarea
-                      value={p.input}
-                      onChange={(e) => handleProblemChange(i, "input", e.target.value)}
-                      placeholder="Input description"
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                    <textarea
-                      value={p.output}
-                      onChange={(e) => handleProblemChange(i, "output", e.target.value)}
-                      placeholder="Expected output"
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                    <textarea
-                      value={p.testcases}
-                      onChange={(e) => handleProblemChange(i, "testcases", e.target.value)}
-                      placeholder="Hidden test cases (JSON)"
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
+
+                    {/* Hidden Test Cases Section */}
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">Hidden Test Cases:</h4>
+                      {p.hiddenTestCases.map((testCase, tcIndex) => (
+                        <div key={tcIndex} className="border rounded-md p-3 bg-white dark:bg-gray-600 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Test Case {tcIndex + 1}</span>
+                            {p.hiddenTestCases.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTestCase(i, tcIndex)}
+                                className="text-red-500 hover:text-red-700 text-sm"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={testCase.input}
+                            onChange={(e) => handleTestCaseChange(i, tcIndex, "input", e.target.value)}
+                            placeholder="Input (e.g., '1 2 3 4 5')"
+                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={testCase.expectedOutput}
+                            onChange={(e) => handleTestCaseChange(i, tcIndex, "expectedOutput", e.target.value)}
+                            placeholder="Expected Output (e.g., '15')"
+                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                          />
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addTestCase(i)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        + Add Test Case
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -373,17 +449,14 @@ export default function CodingRoundForm() {
                     <div className="space-y-2 pl-3">
                       <p className="text-sm">College: {round.college}</p>
                       <p className="text-sm">
-                        Date: {round.date} | {round.startTime} - {round.endTime}
+                        Date: {new Date(round.date).toLocaleDateString()}
                       </p>
                       <p className="text-sm">Duration: {round.duration} minutes</p>
-                      <p className="text-sm font-semibold">Problems:</p>
-                      <ul className="list-disc pl-5">
-                        {round.problems?.map((p, idx) => (
-                          <li key={idx}>
-                            <span className="font-medium">{p.title}</span> ({p.difficulty})
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-sm">Status: {round.isActive ? "Active" : "Inactive"}</p>
+                      <p className="text-sm">Total Attempts: {round.totalAttempts}</p>
+                      <p className="text-sm">Problem Count: {round.problemCount}</p>
+                      <p className="text-sm">Link ID: {round.linkId}</p>
+                      <p className="text-sm">Created: {new Date(round.createdAt).toLocaleDateString()}</p>
                     </div>
                   )}
                 </div>
