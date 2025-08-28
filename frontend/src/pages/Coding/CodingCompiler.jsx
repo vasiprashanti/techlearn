@@ -161,7 +161,6 @@ const CodingCompiler = ({ user, contestData }) => {
         language: selectedLang,
         source_code: code,
         stdin:PROBLEM.example?.input || "",
-,
       });
 
       let outputText = "";
