@@ -160,7 +160,8 @@ const CodingCompiler = ({ user, contestData }) => {
       const result = await compilerAPI.compileCode({
         language: selectedLang,
         source_code: code,
-        stdin: PROBLEM.example.input,
+        stdin:PROBLEM.example?.input || "",
+,
       });
 
       let outputText = "";
@@ -173,14 +174,16 @@ const CodingCompiler = ({ user, contestData }) => {
       if (result.status?.description)
         outputText += `\n\n📊 Status: ${result.status.description}`;
 
-      if (result.stdout && result.stdout.trim()) {
-        outputText += "\n\n📋 Expected Output:\n" + PROBLEM.example.output;
-        const actualOutput = result.stdout.trim();
-        if (actualOutput === PROBLEM.example.output)
-          outputText += "\n\n✅ Output matches expected result!";
-        else outputText += "\n\n⚠️ Output differs from expected result.";
-      }
-
+     if (result.stdout && result.stdout.trim()) {
+  outputText += "\n\n📋 Expected Output:\n" + (PROBLEM.example?.output || "");
+  const actualOutput = result.stdout.trim();
+  if (actualOutput === PROBLEM.example?.output) {
+    outputText += "\n\n✅ Output matches expected result!";
+  } else {
+    outputText += "\n\n⚠️ Output differs from expected result.";
+  }
+}
+      
       if (!outputText.trim())
         outputText = "✅ Code executed successfully (no output)";
 
@@ -368,14 +371,14 @@ const CodingCompiler = ({ user, contestData }) => {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Input:</strong>
               <pre className="mt-1 text-xs">
-                {PROBLEM.example?.input?.replace(/\\n/g, "\n")}
-              </pre>
+  {PROBLEM.example?.input?.replace(/\\n/g, "\n") || "No example input provided"}
+</pre>
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
               <strong>Output:</strong>
               <pre className="mt-1 text-xs">
-                {PROBLEM.example?.output?.replace(/\\n/g, "\n")}
-              </pre>
+  {PROBLEM.example?.output?.replace(/\\n/g, "\n") || "No example output provided"}
+</pre>
             </p>
           </div>
         </div>
