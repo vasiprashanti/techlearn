@@ -144,16 +144,34 @@ export default function CodingRoundForm() {
       }
     }
 
-    // Problem validation
+    // Problem validation - ALL required fields
     problems.forEach((p, i) => {
-      if (!p.problemTitle) newErrors[`p-${i}-title`] = "Problem title is required.";
-      if (!p.difficulty) newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
-      if (!p.description) newErrors[`p-${i}-description`] = "Problem description is required.";
+      if (!p.problemTitle || p.problemTitle.trim() === '') {
+        newErrors[`p-${i}-title`] = "Problem title is required.";
+      }
+      if (!p.difficulty || p.difficulty.trim() === '') {
+        newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
+      }
+      if (!p.description || p.description.trim() === '') {
+        newErrors[`p-${i}-description`] = "Problem description is required.";
+      }
+      if (!p.inputDescription || p.inputDescription.trim() === '') {
+        newErrors[`p-${i}-inputDescription`] = "Input description is required.";
+      }
+      if (!p.outputDescription || p.outputDescription.trim() === '') {
+        newErrors[`p-${i}-outputDescription`] = "Output description is required.";
+      }
       
-      // Validate that at least one test case has both input and output
-      const hasValidHiddenTestCase = p.hiddenTestCases.some(tc => tc.input.trim() && tc.expectedOutput.trim());
+      // Validate visible test cases
+      const hasValidVisibleTestCase = p.visibleTestCases && p.visibleTestCases.some(tc => tc.input.trim() && tc.expectedOutput.trim());
+      if (!hasValidVisibleTestCase) {
+        newErrors[`p-${i}-visibleTestcases`] = "At least one complete visible test case is required.";
+      }
+      
+      // Validate hidden test cases
+      const hasValidHiddenTestCase = p.hiddenTestCases && p.hiddenTestCases.some(tc => tc.input.trim() && tc.expectedOutput.trim());
       if (!hasValidHiddenTestCase) {
-        newErrors[`p-${i}-testcases`] = "At least one complete hidden test case is required.";
+        newErrors[`p-${i}-hiddenTestcases`] = "At least one complete hidden test case is required.";
       }
     });
 
@@ -170,20 +188,23 @@ export default function CodingRoundForm() {
 
     // Format the payload according to the expected API structure
     const payload = {
-      title,
-      college,
+      title: title.trim(),
+      college: college.trim(),
       date: `${date}T${startTime}:00`, // Combine date and start time
       duration: parseInt(duration), // Convert to number
       problems: problems.map(problem => ({
-        problemTitle: problem.problemTitle,
-        description: problem.description,
-        difficulty: problem.difficulty,
-        inputDescription: problem.inputDescription || "",
-        outputDescription: problem.outputDescription || "",
+        problemTitle: problem.problemTitle.trim(),
+        description: problem.description.trim(),
+        difficulty: problem.difficulty.trim(),
+        inputDescription: problem.inputDescription.trim(),
+        outputDescription: problem.outputDescription.trim(),
         visibleTestCases: problem.visibleTestCases.filter(tc => tc.input.trim() && tc.expectedOutput.trim()),
         hiddenTestCases: problem.hiddenTestCases.filter(tc => tc.input.trim() && tc.expectedOutput.trim())
       }))
     };
+
+    // Debug: Log the payload before sending
+    console.log("Payload being sent:", JSON.stringify(payload, null, 2));
 
     try {
       const token = getToken();
@@ -452,7 +473,7 @@ export default function CodingRoundForm() {
                     {/* Input/Output Descriptions */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Input Description</label>
+                        <label className="block text-sm font-medium mb-1">Input Description *</label>
                         <textarea
                           value={p.inputDescription}
                           onChange={(e) => handleProblemChange(i, "inputDescription", e.target.value)}
@@ -460,9 +481,10 @@ export default function CodingRoundForm() {
                           rows="2"
                           className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                         />
+                        {errors[`p-${i}-inputDescription`] && <p className="text-red-500 text-sm">{errors[`p-${i}-inputDescription`]}</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">Output Description</label>
+                        <label className="block text-sm font-medium mb-1">Output Description *</label>
                         <textarea
                           value={p.outputDescription}
                           onChange={(e) => handleProblemChange(i, "outputDescription", e.target.value)}
@@ -470,6 +492,7 @@ export default function CodingRoundForm() {
                           rows="2"
                           className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                         />
+                        {errors[`p-${i}-outputDescription`] && <p className="text-red-500 text-sm">{errors[`p-${i}-outputDescription`]}</p>}
                       </div>
                     </div>
 
@@ -513,6 +536,7 @@ export default function CodingRoundForm() {
                       >
                         + Add Visible Test Case
                       </button>
+                      {errors[`p-${i}-visibleTestcases`] && <p className="text-red-500 text-sm">{errors[`p-${i}-visibleTestcases`]}</p>}
                     </div>
 
                     {/* Hidden Test Cases Section */}
@@ -555,7 +579,7 @@ export default function CodingRoundForm() {
                       >
                         + Add Hidden Test Case
                       </button>
-                      {errors[`p-${i}-testcases`] && <p className="text-red-500 text-sm">{errors[`p-${i}-testcases`]}</p>}
+                      {errors[`p-${i}-hiddenTestcases`] && <p className="text-red-500 text-sm">{errors[`p-${i}-hiddenTestcases`]}</p>}
                     </div>
                   </div>
                 )}
