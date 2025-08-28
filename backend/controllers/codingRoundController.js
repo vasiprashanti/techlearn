@@ -10,6 +10,7 @@ import {
   getRoundTimeStatus,
   validateSubmission,
 } from "../utils/mcqCodingUtils.js";
+import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
 
 // Helper function to convert IST to UTC
 const convertISTToUTC = (istDateString) => {
@@ -54,21 +55,53 @@ export const createCodingRound = async (req, res) => {
         !problem.problemTitle ||
         !problem.description ||
         !problem.difficulty ||
+        !problem.expectedOutput ||
+        !Array.isArray(problem.expectedOutput) ||
         !problem.hiddenTestCases ||
         !Array.isArray(problem.hiddenTestCases)
       ) {
         return res.status(400).json({
           success: false,
           message:
-            "Each problem must have a title, description, difficulty, and hiddenTestCases array",
+            "Each problem must have a title, description, difficulty, expectedOutput array (2 visible test cases), and hiddenTestCases array",
         });
       }
-      // Optionally, check for at least one test case
+
+      // Check expectedOutput has exactly 2 test cases
+      if (problem.expectedOutput.length !== 2) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Each problem must have exactly 2 visible test cases in expectedOutput",
+        });
+      }
+
+      // Validate expectedOutput format
+      for (const testCase of problem.expectedOutput) {
+        if (!testCase.input || !testCase.output) {
+          return res.status(400).json({
+            success: false,
+            message: "Each visible test case must have input and output",
+          });
+        }
+      }
+
+      // Optionally, check for at least one hidden test case
       if (problem.hiddenTestCases.length === 0) {
         return res.status(400).json({
           success: false,
           message: "Each problem must have at least one hidden test case",
         });
+      }
+
+      // Validate hiddenTestCases format
+      for (const testCase of problem.hiddenTestCases) {
+        if (!testCase.input || !testCase.output) {
+          return res.status(400).json({
+            success: false,
+            message: "Each hidden test case must have input and output",
+          });
+        }
       }
     }
 
@@ -239,7 +272,258 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
 };
 
 // Submit coding round answers
-export const submitCodingRoundAnswers = async (req, res) => {};
+export const submitCodingRoundAnswers = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { studentEmail, solutions } = req.body;
+
+    // Basic validation
+    if (!studentEmail || !solutions || !Array.isArray(solutions)) {
+      return res.status(400).json({
+        success: false,
+        message: "Student email and solutions are required",
+      });
+    }
+
+    if (solutions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one solution is required",
+      });
+    }
+
+    // Find coding round
+    const codingRound = await CodingRound.findOne({ linkId });
+    if (!codingRound) {
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
+    }
+
+    // Check if round is active
+    if (!isRoundActive(codingRound)) {
+      return res.status(400).json({
+        success: false,
+        message: "Coding round is not active",
+      });
+    }
+
+    // Check for duplicate submission
+    const existingSubmission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: studentEmail.toLowerCase(),
+    });
+
+    if (existingSubmission) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already submitted for this coding round",
+      });
+    }
+
+    // Process solutions - validate each solution against test cases using Judge0
+    const processedSolutions = [];
+    let totalScore = 0;
+
+    for (const solution of solutions) {
+      const { problemIndex, language, submittedCode } = solution;
+
+      // Validate solution structure
+      if (problemIndex === undefined || !language || !submittedCode) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Each solution must have problemIndex, language, and submittedCode",
+        });
+      }
+
+      // Find the problem
+      const problem = codingRound.problems[problemIndex];
+      if (!problem) {
+        return res.status(400).json({
+          success: false,
+          message: `Problem at index ${problemIndex} not found`,
+        });
+      }
+
+      // Get language ID for Judge0
+      const languageId = LANGUAGE_IDS[language?.toLowerCase()];
+      if (!languageId) {
+        return res.status(400).json({
+          success: false,
+          message: `Unsupported language: ${language}`,
+        });
+      }
+
+      // Test against visible test cases (expectedOutput)
+      const visibleTestResults = [];
+      let visibleTestsPassed = 0;
+      const totalVisibleTests = problem.expectedOutput.length;
+
+      for (let i = 0; i < problem.expectedOutput.length; i++) {
+        const testCase = problem.expectedOutput[i];
+
+        try {
+          const testResult = await testCodeWithJudge0(
+            submittedCode,
+            languageId,
+            testCase.input,
+            testCase.output
+          );
+
+          const passed = testResult.success && testResult.outputMatches;
+          if (passed) visibleTestsPassed++;
+
+          visibleTestResults.push({
+            testCaseIndex: i,
+            input: testCase.input,
+            expectedOutput: testCase.output,
+            actualOutput: testResult.actualOutput,
+            passed,
+            error: testResult.error || null,
+          });
+        } catch (error) {
+          visibleTestResults.push({
+            testCaseIndex: i,
+            input: testCase.input,
+            expectedOutput: testCase.output,
+            actualOutput: "",
+            passed: false,
+            error: `Test execution failed: ${error.message}`,
+          });
+        }
+      }
+
+      // Test against hidden test cases
+      let hiddenTestsPassed = 0;
+      const totalHiddenTests = problem.hiddenTestCases.length;
+      const hiddenTestResults = [];
+
+      for (let i = 0; i < problem.hiddenTestCases.length; i++) {
+        const testCase = problem.hiddenTestCases[i];
+
+        try {
+          const testResult = await testCodeWithJudge0(
+            submittedCode,
+            languageId,
+            testCase.input,
+            testCase.output
+          );
+
+          const passed = testResult.success && testResult.outputMatches;
+          if (passed) hiddenTestsPassed++;
+
+          // Store results but don't expose actual test case details
+          hiddenTestResults.push({
+            testCaseIndex: i,
+            passed,
+            error: testResult.error || null,
+            // Don't expose input/output for hidden test cases
+          });
+        } catch (error) {
+          hiddenTestResults.push({
+            testCaseIndex: i,
+            passed: false,
+            error: `Test execution failed: ${error.message}`,
+          });
+        }
+      }
+
+      // Calculate score for this problem
+      const totalTests = totalVisibleTests + totalHiddenTests;
+      const totalPassed = visibleTestsPassed + hiddenTestsPassed;
+      const problemScore =
+        totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+      const isCorrect = totalPassed === totalTests;
+
+      totalScore += problemScore;
+
+      // Store processed solution
+      processedSolutions.push({
+        problemIndex,
+        submittedCode, // Store the code for records
+        language,
+        testCasesPassed: totalPassed,
+        totalTestCases: totalTests,
+        visibleTestsPassed,
+        totalVisibleTests,
+        hiddenTestsPassed,
+        totalHiddenTests,
+        isCorrect,
+        problemScore,
+        visibleTestResults,
+        hiddenTestSummary: {
+          passed: hiddenTestsPassed,
+          total: totalHiddenTests,
+          failedTests: totalHiddenTests - hiddenTestsPassed,
+        },
+      });
+    }
+
+    // Save submission
+    const submission = new StudentCodingSubmission({
+      codingRoundId: codingRound._id,
+      studentEmail: studentEmail.toLowerCase(),
+      solutions: processedSolutions.map((sol) => ({
+        problemIndex: sol.problemIndex,
+        submittedCode: sol.submittedCode,
+        language: sol.language,
+        testCasesPassed: sol.testCasesPassed,
+        totalTestCases: sol.totalTestCases,
+        isCorrect: sol.isCorrect,
+      })),
+      totalScore,
+    });
+
+    await submission.save();
+
+    // Update attempts count
+    codingRound.totalAttempts = (codingRound.totalAttempts || 0) + 1;
+    await codingRound.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Solutions submitted and evaluated successfully",
+      data: {
+        submissionId: submission._id,
+        totalScore,
+        maxPossibleScore: codingRound.problems.length * 100,
+        solutions: processedSolutions.map((sol) => ({
+          problemIndex: sol.problemIndex,
+          language: sol.language,
+          testCasesPassed: sol.testCasesPassed,
+          totalTestCases: sol.totalTestCases,
+          visibleTestsPassed: sol.visibleTestsPassed,
+          totalVisibleTests: sol.totalVisibleTests,
+          hiddenTestsPassed: sol.hiddenTestsPassed,
+          totalHiddenTests: sol.totalHiddenTests,
+          isCorrect: sol.isCorrect,
+          problemScore: sol.problemScore,
+          visibleTestResults: sol.visibleTestResults,
+          hiddenTestSummary: sol.hiddenTestSummary,
+          feedback: sol.isCorrect
+            ? "Perfect! All test cases passed."
+            : `Passed ${sol.testCasesPassed}/${sol.totalTestCases} test cases.`,
+        })),
+        submittedAt: submission.submittedAt,
+        scoringSummary: {
+          totalProblems: codingRound.problems.length,
+          averageScore: Math.round(totalScore / codingRound.problems.length),
+          partialCreditAwarded: processedSolutions.some(
+            (sol) => sol.problemScore > 0 && sol.problemScore < 100
+          ),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error submitting coding round answers:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit solutions",
+    });
+  }
+};
 
 // Update a coding round by codingRoundId
 export const updateCodingRound = async (req, res) => {
@@ -271,20 +555,52 @@ export const updateCodingRound = async (req, res) => {
           !problem.problemTitle ||
           !problem.description ||
           !problem.difficulty ||
+          !problem.expectedOutput ||
+          !Array.isArray(problem.expectedOutput) ||
           !problem.hiddenTestCases ||
           !Array.isArray(problem.hiddenTestCases)
         ) {
           return res.status(400).json({
             success: false,
             message:
-              "Each problem must have a title, description, difficulty, and hiddenTestCases array",
+              "Each problem must have a title, description, difficulty, expectedOutput array (2 visible test cases), and hiddenTestCases array",
           });
         }
+
+        // Check expectedOutput has exactly 2 test cases
+        if (problem.expectedOutput.length !== 2) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Each problem must have exactly 2 visible test cases in expectedOutput",
+          });
+        }
+
+        // Validate expectedOutput format
+        for (const testCase of problem.expectedOutput) {
+          if (!testCase.input || !testCase.output) {
+            return res.status(400).json({
+              success: false,
+              message: "Each visible test case must have input and output",
+            });
+          }
+        }
+
         if (problem.hiddenTestCases.length === 0) {
           return res.status(400).json({
             success: false,
             message: "Each problem must have at least one hidden test case",
           });
+        }
+
+        // Validate hiddenTestCases format
+        for (const testCase of problem.hiddenTestCases) {
+          if (!testCase.input || !testCase.output) {
+            return res.status(400).json({
+              success: false,
+              message: "Each hidden test case must have input and output",
+            });
+          }
         }
       }
     }

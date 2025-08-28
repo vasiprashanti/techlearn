@@ -30,7 +30,12 @@ const codingRoundSchema = new mongoose.Schema(
           default: "Medium",
         },
         inputDescription: { type: String },
-        expectedOutput: { type: String },
+        expectedOutput: [
+          {
+            input: { type: String },
+            output: { type: String },
+          },
+        ],
         hiddenTestCases: [
           {
             input: { type: String },
