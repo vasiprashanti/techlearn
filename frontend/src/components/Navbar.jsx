@@ -14,7 +14,7 @@ const Navbar = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  const isDashboardPage = location.pathname === '/dashboard';
+  const isDashboardPage = location.pathname === '/dashboard' || location.pathname === '/coding';
 
   const hideLogoRoutes = [
     "/admin/courses",
