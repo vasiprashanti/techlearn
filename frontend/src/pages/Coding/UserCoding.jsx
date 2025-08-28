@@ -65,8 +65,11 @@ const LoginPage = ({ onSuccess }) => {
         const data = await res.json();
 
         if (res.ok && data.success) {
-          // ✅ Pass email + quiz data forward
-          onSuccess(email, data.collegeMcq);
+          // ✅ Pass email + contest data (including problems) forward
+          console.log("Login success data:", data);
+          console.log("codingRound data:", data.codingRound);
+          // Pass the codingRound object which contains the problems
+          onSuccess(email, data.codingRound);
         } else {
           setError(data.message || "Invalid OTP");
         }
@@ -143,11 +146,11 @@ const LoginPage = ({ onSuccess }) => {
 const UserCoding = () => {
   const [step, setStep] = useState("login"); // login | instructions | compiler
   const [user, setUser] = useState(null);
-  const [quiz, setQuiz] = useState(null);
+  const [contestData, setContestData] = useState(null);
 
-  const handleLoginSuccess = (email, quizData) => {
+  const handleLoginSuccess = (email, data) => {
     setUser({ email });
-    setQuiz(quizData);
+    setContestData(data);
     setStep("instructions");
   };
 
@@ -163,10 +166,10 @@ const UserCoding = () => {
             </h1>
             <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-3 mb-6 text-left">
               <li>
-                You will be given <b>2 coding problems</b> to solve.
+                You will be given <b>{contestData?.problems?.length || 2} coding problems</b> to solve.
               </li>
               <li>
-                Time limit: <b>60 minutes</b>.
+                Time limit: <b>{contestData?.duration || 120} minutes</b>.
               </li>
               <li>You can run and test your code before submitting.</li>
               <li>
@@ -189,7 +192,7 @@ const UserCoding = () => {
         </div>
       )}
 
-      {step === "compiler" && <CodingCompiler user={user} quiz={quiz} />}
+      {step === "compiler" && <CodingCompiler user={user} contestData={contestData} />}
     </>
   );
 };

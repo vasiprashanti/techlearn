@@ -36,7 +36,7 @@ const LANGUAGES = {
   },
 };
 
-const CodingCompiler = () => {
+const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
@@ -50,13 +50,20 @@ const CodingCompiler = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const language = LANGUAGES[selectedLang];
 
-  // problems state
+  
+  const BASE_URL = import.meta.env.VITE_API_URL;
+
+  // problems state - now using passed data instead of fetching
   const [problems, setProblems] = useState([]);
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const PROBLEM = problems[currentProblemIndex];
 
-  // Timer
-  const [timeLeft, setTimeLeft] = useState(30 * 60);
+  // Debug logging
+  console.log("Contest Data:", contestData);
+  console.log("Problems:", problems);
+
+  // Timer - using duration from contestData
+  const [timeLeft, setTimeLeft] = useState((contestData?.duration || 120) * 60);
   const [timerWarning, setTimerWarning] = useState(false);
 
   useEffect(() => {
@@ -70,19 +77,17 @@ const CodingCompiler = () => {
     return () => clearInterval(t);
   }, [timeLeft, timerWarning]);
 
-  // Fetch problems from backend
+  // Set problems from contestData on component mount
   useEffect(() => {
-    const fetchProblems = async () => {
-      try {
-        const res = await fetch("/api/problems");
-        const data = await res.json();
-        setProblems(data);
-      } catch (err) {
-        console.error("Error fetching problems", err);
-      }
-    };
-    fetchProblems();
-  }, []);
+    console.log("useEffect triggered with contestData:", contestData);
+    if (contestData?.problems && Array.isArray(contestData.problems)) {
+      console.log("Setting problems from contestData.problems");
+      setProblems(contestData.problems);
+    } else {
+      console.log("No valid problems found in contestData");
+      console.log("Available keys in contestData:", contestData ? Object.keys(contestData) : "contestData is null/undefined");
+    }
+  }, [contestData]);
 
   const formatTime = (s) =>
     `${Math.floor(s / 60)
@@ -108,8 +113,8 @@ const CodingCompiler = () => {
     try {
       let passedCount = 0;
 
-      for (let i = 0; i < PROBLEM.hiddenTests.length; i++) {
-        const test = PROBLEM.hiddenTests[i];
+      for (let i = 0; i < PROBLEM.hiddenTestCases.length; i++) {
+        const test = PROBLEM.hiddenTestCases[i];
         const result = await compilerAPI.compileCode({
           language: selectedLang,
           source_code: code,
@@ -123,19 +128,19 @@ const CodingCompiler = () => {
       }
 
       let status = "❌ Failed";
-      if (passedCount === PROBLEM.hiddenTests.length) status = "✅ Passed";
+      if (passedCount === PROBLEM.hiddenTestCases.length) status = "✅ Passed";
       else if (passedCount > 0) status = "⚠️ Partial Accepted";
 
-      const resultsText = `${status}\n📊 Score: ${passedCount}/${PROBLEM.hiddenTests.length}`;
+      const resultsText = `${status}\n📊 Score: ${passedCount}/${PROBLEM.hiddenTestCases.length}`;
       setOutput(resultsText);
 
       setResults((prev) => [
         ...prev,
         {
-          problem: PROBLEM.title,
-          passed: passedCount === PROBLEM.hiddenTests.length,
+          problem: PROBLEM.problemTitle || PROBLEM.title,
+          passed: passedCount === PROBLEM.hiddenTestCases.length,
           score: passedCount,
-          total: PROBLEM.hiddenTests.length,
+          total: PROBLEM.hiddenTestCases.length,
         },
       ]);
     } catch (error) {
@@ -196,10 +201,15 @@ const CodingCompiler = () => {
 
   const handleEndRound = async () => {
     try {
-      await fetch("/api/contest/submit", {
+      // Submit results with contest ID and user email
+      await fetch(`${BASE_URL}/college-coding/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ results }),
+        body: JSON.stringify({ 
+          contestId: contestData?._id,
+          email: user.email,
+          results 
+        }),
       });
     } catch (err) {
       console.error("Error submitting contest results", err);
@@ -255,10 +265,19 @@ const CodingCompiler = () => {
 
   if (!PROBLEM) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-lg text-gray-600 dark:text-gray-300">
-          Loading problems...
-        </p>
+      <div className="flex items-center justify-center h-screen bg-white/20 dark:bg-gray-900/40">
+        <div className="text-center">
+          <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
+            {problems.length === 0 ? "Loading problems..." : "No problems available"}
+          </p>
+          {contestData && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              <p>Debug Info:</p>
+              <p>Contest Data Keys: {Object.keys(contestData).join(", ")}</p>
+              <p>Problems Array Length: {problems.length}</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -317,7 +336,7 @@ const CodingCompiler = () => {
         {/* LEFT PANEL */}
         <div className="w-1/2 bg-white/20 dark:bg-gray-900/40 p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700">
           <h1 className="text-2xl font-bold mb-4 dark:text-white">
-            {PROBLEM.title}
+            {PROBLEM.problemTitle || PROBLEM.title}
           </h1>
           <p className="text-gray-700 dark:text-gray-300 mb-4">
             {PROBLEM.description}
@@ -325,21 +344,21 @@ const CodingCompiler = () => {
 
           <h2 className="font-semibold mt-3 dark:text-white">Input Format:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.inputFormat.map((line, i) => (
+            {PROBLEM.inputFormat?.map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
 
           <h2 className="font-semibold mt-3 dark:text-white">Output Format:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.outputFormat.map((line, i) => (
+            {PROBLEM.outputFormat?.map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
 
           <h2 className="font-semibold mt-3 dark:text-white">Constraints:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.constraints.map((line, i) => (
+            {PROBLEM.constraints?.map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
@@ -349,13 +368,13 @@ const CodingCompiler = () => {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Input:</strong>
               <pre className="mt-1 text-xs">
-                {PROBLEM.example.input.replace(/\\n/g, "\n")}
+                {PROBLEM.example?.input?.replace(/\\n/g, "\n")}
               </pre>
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
               <strong>Output:</strong>
               <pre className="mt-1 text-xs">
-                {PROBLEM.example.output.replace(/\\n/g, "\n")}
+                {PROBLEM.example?.output?.replace(/\\n/g, "\n")}
               </pre>
             </p>
           </div>
