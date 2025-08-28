@@ -202,7 +202,7 @@ const CodingCompiler = ({ user, contestData }) => {
   const handleEndRound = async () => {
     try {
       // Submit results with contest ID and user email
-      await fetch(`${BASE_URL}/college-coding/submit`, {
+      await fetch(`college-coding/${linkId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
