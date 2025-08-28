@@ -17,9 +17,9 @@ export default function CodingRoundForm() {
       problemTitle: "",
       difficulty: "",
       description: "",
-      inputDescription: "",
-      outputDescription: "",
-      expectedOutput: [{ input: "", expectedOutput: "" }, { input: "", expectedOutput: "" }], // 2 visible test cases
+      inputDescription: "", // Added missing field
+      outputDescription: "", // Added missing field
+      visibleTestCases: [{ input: "", expectedOutput: "" }], // Added visible test cases
       hiddenTestCases: [{ input: "", expectedOutput: "" }],
     },
   ]);
@@ -27,16 +27,18 @@ export default function CodingRoundForm() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  // 🔹 Previous coding rounds state
+  // Previous coding rounds state
   const [previousRounds, setPreviousRounds] = useState([]);
   const [loadingRounds, setLoadingRounds] = useState(true);
-  const [roundExpanded, setRoundExpanded] = useState([]); // for expanding previous rounds
+  const [roundExpanded, setRoundExpanded] = useState([]);
 
   // Get base URL from environment variables
   const BASE_URL = import.meta.env.VITE_API_URL;
-  const token = localStorage.getItem("token");
-  
-  // number of questions handler
+
+  // Fixed: Get token inside functions to ensure fresh token
+  const getToken = () => localStorage.getItem("token");
+
+  // Number of questions handler
   const handleNumQuestionsChange = (e) => {
     const count = parseInt(e.target.value, 10);
     setNumQuestions(count);
@@ -47,9 +49,9 @@ export default function CodingRoundForm() {
         problemTitle: "",
         difficulty: "",
         description: "",
-        inputDescription: "",
-        outputDescription: "",
-        expectedOutput: [{ input: "", expectedOutput: "" }, { input: "", expectedOutput: "" }], // 2 visible test cases
+        inputDescription: "", // Added missing field
+        outputDescription: "", // Added missing field
+        visibleTestCases: [{ input: "", expectedOutput: "" }], // Added visible test cases
         hiddenTestCases: [{ input: "", expectedOutput: "" }],
       });
     }
@@ -73,7 +75,7 @@ export default function CodingRoundForm() {
   // Handle visible test cases changes
   const handleVisibleTestCaseChange = (problemIndex, testCaseIndex, field, value) => {
     const updated = [...problems];
-    updated[problemIndex].expectedOutput[testCaseIndex][field] = value;
+    updated[problemIndex].visibleTestCases[testCaseIndex][field] = value;
     setProblems(updated);
   };
 
@@ -82,6 +84,22 @@ export default function CodingRoundForm() {
     const updated = [...problems];
     updated[problemIndex].hiddenTestCases[testCaseIndex][field] = value;
     setProblems(updated);
+  };
+
+  // Add new visible test case
+  const addVisibleTestCase = (problemIndex) => {
+    const updated = [...problems];
+    updated[problemIndex].visibleTestCases.push({ input: "", expectedOutput: "" });
+    setProblems(updated);
+  };
+
+  // Remove visible test case
+  const removeVisibleTestCase = (problemIndex, testCaseIndex) => {
+    const updated = [...problems];
+    if (updated[problemIndex].visibleTestCases.length > 1) {
+      updated[problemIndex].visibleTestCases.splice(testCaseIndex, 1);
+      setProblems(updated);
+    }
   };
 
   // Add new hidden test case
@@ -100,31 +118,60 @@ export default function CodingRoundForm() {
     }
   };
 
-  // validation
+  // Enhanced validation
   const validate = () => {
     let newErrors = {};
+    
+    // Basic field validation
     if (!college) newErrors.college = "College is required.";
     if (!title) newErrors.title = "Test title is required.";
     if (!date) newErrors.date = "Date is required.";
     if (!startTime) newErrors.startTime = "Start time is required.";
     if (!endTime) newErrors.endTime = "End time is required.";
-    if (!duration) newErrors.duration = "Duration is required.";
+    if (!duration || duration <= 0) newErrors.duration = "Duration must be a positive number.";
 
+    // Time validation
+    if (startTime && endTime && startTime >= endTime) {
+      newErrors.endTime = "End time must be after start time.";
+    }
+
+    // Date validation (ensure it's not in the past)
+    if (date) {
+      const testDate = new Date(`${date}T${startTime || '00:00'}`);
+      const now = new Date();
+      if (testDate < now) {
+        newErrors.date = "Test date and time cannot be in the past.";
+      }
+    }
+
+    // Problem validation - ALL required fields
     problems.forEach((p, i) => {
-      if (!p.problemTitle) newErrors[`p-${i}-title`] = "Problem title is required.";
-      if (!p.difficulty) newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
-      if (!p.description) newErrors[`p-${i}-description`] = "Problem description is required.";
-      
-      // Validate visible test cases (must have exactly 2)
-      const validVisibleTests = p.expectedOutput.filter(tc => tc.input && tc.expectedOutput);
-      if (validVisibleTests.length < 2) {
-        newErrors[`p-${i}-visible`] = "Must have exactly 2 complete visible test cases.";
+      if (!p.problemTitle || p.problemTitle.trim() === '') {
+        newErrors[`p-${i}-title`] = "Problem title is required.";
+      }
+      if (!p.difficulty || p.difficulty.trim() === '') {
+        newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
+      }
+      if (!p.description || p.description.trim() === '') {
+        newErrors[`p-${i}-description`] = "Problem description is required.";
+      }
+      if (!p.inputDescription || p.inputDescription.trim() === '') {
+        newErrors[`p-${i}-inputDescription`] = "Input description is required.";
+      }
+      if (!p.outputDescription || p.outputDescription.trim() === '') {
+        newErrors[`p-${i}-outputDescription`] = "Output description is required.";
       }
       
-      // Validate hidden test cases (must have at least 1)
-      const validHiddenTests = p.hiddenTestCases.filter(tc => tc.input && tc.expectedOutput);
-      if (validHiddenTests.length < 1) {
-        newErrors[`p-${i}-hidden`] = "Must have at least 1 complete hidden test case.";
+      // Validate visible test cases
+      const hasValidVisibleTestCase = p.visibleTestCases && p.visibleTestCases.some(tc => tc.input.trim() && tc.expectedOutput.trim());
+      if (!hasValidVisibleTestCase) {
+        newErrors[`p-${i}-visibleTestcases`] = "At least one complete visible test case is required.";
+      }
+      
+      // Validate hidden test cases
+      const hasValidHiddenTestCase = p.hiddenTestCases && p.hiddenTestCases.some(tc => tc.input.trim() && tc.expectedOutput.trim());
+      if (!hasValidHiddenTestCase) {
+        newErrors[`p-${i}-hiddenTestcases`] = "At least one complete hidden test case is required.";
       }
     });
 
@@ -139,31 +186,40 @@ export default function CodingRoundForm() {
 
     setSubmitting(true);
 
-    // Format the payload according to the API structure
+    // Format the payload according to the expected API structure
     const payload = {
-      title,
-      college,
-      date: `${date}T${startTime}:00.000Z`, // Proper ISO format with timezone
+      title: title.trim(),
+      college: college.trim(),
+      date: `${date}T${startTime}:00`, // Combine date and start time
       duration: parseInt(duration), // Convert to number
       problems: problems.map(problem => ({
-        problemTitle: problem.problemTitle,
-        description: problem.description,
-        difficulty: problem.difficulty,
-        inputDescription: problem.inputDescription || "Input format description",
-        outputDescription: problem.outputDescription || "Output format description",
-        expectedOutput: problem.expectedOutput.filter(tc => tc.input && tc.expectedOutput), // Only include complete visible test cases
-        hiddenTestCases: problem.hiddenTestCases.filter(tc => tc.input && tc.expectedOutput) // Only include complete hidden test cases
+        problemTitle: problem.problemTitle.trim(),
+        description: problem.description.trim(),
+        difficulty: problem.difficulty.trim(),
+        inputDescription: problem.inputDescription.trim(),
+        outputDescription: problem.outputDescription.trim(),
+        visibleTestCases: problem.visibleTestCases.filter(tc => tc.input.trim() && tc.expectedOutput.trim()),
+        hiddenTestCases: problem.hiddenTestCases.filter(tc => tc.input.trim() && tc.expectedOutput.trim())
       }))
     };
 
+    // Debug: Log the payload before sending
+    console.log("Payload being sent:", JSON.stringify(payload, null, 2));
+
     try {
+      const token = getToken();
+      if (!token) {
+        alert("Authentication token not found. Please login again.");
+        return;
+      }
+
       const res = await axios.post(
-        `${BASE_URL}/college-coding/`, // Fixed endpoint path
+        `${BASE_URL}/college-coding/`,
         payload,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // must match protect middleware
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         }
       );
@@ -171,7 +227,7 @@ export default function CodingRoundForm() {
       alert("Coding Test Created Successfully!");
       console.log("Response:", res.data);
 
-      // reset form
+      // Reset form
       setCollege("");
       setTitle("");
       setDate("");
@@ -186,44 +242,65 @@ export default function CodingRoundForm() {
           description: "",
           inputDescription: "",
           outputDescription: "",
-          expectedOutput: [{ input: "", expectedOutput: "" }, { input: "", expectedOutput: "" }],
+          visibleTestCases: [{ input: "", expectedOutput: "" }],
           hiddenTestCases: [{ input: "", expectedOutput: "" }],
         },
       ]);
       setExpanded([]);
+      setErrors({}); // Clear errors
 
-      // 🔹 Refresh rounds after creating a new one
+      // Refresh rounds after creating a new one
       fetchPreviousRounds();
     } catch (error) {
       console.error("Error saving coding round:", error);
+      let errorMessage = "Something went wrong while saving the test.";
+      
       if (error.response) {
-        alert(`Error: ${error.response.data.message || "Server error"}`);
-      } else {
-        alert("Something went wrong while saving the test.");
+        // Server responded with error status
+        errorMessage = error.response.data?.message || `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Network error
+        errorMessage = "Network error. Please check your connection.";
       }
+      
+      alert(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 🔹 Fetch previous rounds
+  // Fetch previous rounds
   const fetchPreviousRounds = async () => {
     try {
       setLoadingRounds(true);
+      const token = getToken();
+      
+      if (!token) {
+        console.warn("No authentication token found");
+        setPreviousRounds([]);
+        setRoundExpanded([]);
+        return;
+      }
+
       const res = await axios.get(
-        `${BASE_URL}/api/college-coding/admin/getAllCodingRounds`, // Fixed endpoint path
+        `${BASE_URL}/college-coding/admin/getAllCodingRounds`,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // send token to backend
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      console.log(res);
+      
+      console.log("Previous rounds response:", res);
+      
       // Handle the response structure from the API
-      if (res.data.success && res.data.data) {
+      if (res.data && res.data.success && Array.isArray(res.data.data)) {
         setPreviousRounds(res.data.data);
-        // set expanded state for each round
         setRoundExpanded(new Array(res.data.data.length).fill(false));
+      } else if (Array.isArray(res.data)) {
+        // Handle case where data is directly an array
+        setPreviousRounds(res.data);
+        setRoundExpanded(new Array(res.data.length).fill(false));
       } else {
         setPreviousRounds([]);
         setRoundExpanded([]);
@@ -253,7 +330,7 @@ export default function CodingRoundForm() {
           </h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* --- College --- */}
+            {/* College */}
             <div>
               <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">College *</label>
               <select
@@ -269,7 +346,7 @@ export default function CodingRoundForm() {
               {errors.college && <p className="text-red-500 text-sm">{errors.college}</p>}
             </div>
 
-            {/* --- Test Title --- */}
+            {/* Test Title */}
             <div>
               <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">Test Title *</label>
               <input
@@ -282,7 +359,7 @@ export default function CodingRoundForm() {
               {errors.title && <p className="text-red-500 text-sm">{errors.title}</p>}
             </div>
 
-            {/* --- Date & Time --- */}
+            {/* Date & Time */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">Test Date *</label>
@@ -318,11 +395,12 @@ export default function CodingRoundForm() {
               </div>
             </div>
 
-            {/* --- Duration --- */}
+            {/* Duration */}
             <div>
               <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">Duration (minutes) *</label>
               <input
                 type="number"
+                min="1"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -331,7 +409,7 @@ export default function CodingRoundForm() {
               {errors.duration && <p className="text-red-500 text-sm">{errors.duration}</p>}
             </div>
 
-            {/* --- Number of Problems --- */}
+            {/* Number of Problems */}
             <div>
               <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">Number of Problems *</label>
               <input
@@ -343,7 +421,7 @@ export default function CodingRoundForm() {
               />
             </div>
 
-            {/* --- Problems Section --- */}
+            {/* Problems Section */}
             {problems.map((p, i) => (
               <div key={i} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40 space-y-4">
                 <button
@@ -392,10 +470,10 @@ export default function CodingRoundForm() {
                     />
                     {errors[`p-${i}-description`] && <p className="text-red-500 text-sm">{errors[`p-${i}-description`]}</p>}
 
-                    {/* Input/Output Description Fields */}
+                    {/* Input/Output Descriptions */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Input Description</label>
+                        <label className="block text-sm font-medium mb-1">Input Description *</label>
                         <textarea
                           value={p.inputDescription}
                           onChange={(e) => handleProblemChange(i, "inputDescription", e.target.value)}
@@ -403,52 +481,71 @@ export default function CodingRoundForm() {
                           rows="2"
                           className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                         />
+                        {errors[`p-${i}-inputDescription`] && <p className="text-red-500 text-sm">{errors[`p-${i}-inputDescription`]}</p>}
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1 dark:text-gray-300">Output Description</label>
+                        <label className="block text-sm font-medium mb-1">Output Description *</label>
                         <textarea
                           value={p.outputDescription}
                           onChange={(e) => handleProblemChange(i, "outputDescription", e.target.value)}
-                          placeholder="Describe the expected output format"
+                          placeholder="Describe the output format"
                           rows="2"
                           className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                         />
+                        {errors[`p-${i}-outputDescription`] && <p className="text-red-500 text-sm">{errors[`p-${i}-outputDescription`]}</p>}
                       </div>
                     </div>
 
                     {/* Visible Test Cases Section */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">Visible Test Cases (Students can see these):</h4>
-                      {errors[`p-${i}-visible`] && <p className="text-red-500 text-sm">{errors[`p-${i}-visible`]}</p>}
-                      {p.expectedOutput.map((testCase, tcIndex) => (
-                        <div key={tcIndex} className="border rounded-md p-3 bg-blue-50 dark:bg-blue-900/20 space-y-2">
-                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Visible Test Case {tcIndex + 1}</span>
-                          <input
-                            type="text"
+                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">Visible Test Cases:</h4>
+                      {p.visibleTestCases.map((testCase, tcIndex) => (
+                        <div key={tcIndex} className="border rounded-md p-3 bg-white dark:bg-gray-600 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Visible Test Case {tcIndex + 1}</span>
+                            {p.visibleTestCases.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeVisibleTestCase(i, tcIndex)}
+                                className="text-red-500 hover:text-red-700 text-sm"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                          <textarea
                             value={testCase.input}
                             onChange={(e) => handleVisibleTestCaseChange(i, tcIndex, "input", e.target.value)}
-                            placeholder="Input (e.g., '1 2 3 4 5')"
+                            placeholder="Input (e.g., '9\n2 7 11 15')"
+                            rows="2"
                             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                           />
-                          <input
-                            type="text"
+                          <textarea
                             value={testCase.expectedOutput}
                             onChange={(e) => handleVisibleTestCaseChange(i, tcIndex, "expectedOutput", e.target.value)}
-                            placeholder="Expected Output (e.g., '15')"
+                            placeholder="Expected Output (e.g., '0 1')"
+                            rows="2"
                             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                           />
                         </div>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => addVisibleTestCase(i)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        + Add Visible Test Case
+                      </button>
+                      {errors[`p-${i}-visibleTestcases`] && <p className="text-red-500 text-sm">{errors[`p-${i}-visibleTestcases`]}</p>}
                     </div>
 
                     {/* Hidden Test Cases Section */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">Hidden Test Cases (For evaluation):</h4>
-                      {errors[`p-${i}-hidden`] && <p className="text-red-500 text-sm">{errors[`p-${i}-hidden`]}</p>}
+                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">Hidden Test Cases:</h4>
                       {p.hiddenTestCases.map((testCase, tcIndex) => (
-                        <div key={tcIndex} className="border rounded-md p-3 bg-red-50 dark:bg-red-900/20 space-y-2">
+                        <div key={tcIndex} className="border rounded-md p-3 bg-white dark:bg-gray-600 space-y-2">
                           <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-red-700 dark:text-red-300">Hidden Test Case {tcIndex + 1}</span>
+                            <span className="text-sm font-medium">Hidden Test Case {tcIndex + 1}</span>
                             {p.hiddenTestCases.length > 1 && (
                               <button
                                 type="button"
@@ -459,18 +556,18 @@ export default function CodingRoundForm() {
                               </button>
                             )}
                           </div>
-                          <input
-                            type="text"
+                          <textarea
                             value={testCase.input}
                             onChange={(e) => handleHiddenTestCaseChange(i, tcIndex, "input", e.target.value)}
-                            placeholder="Input (e.g., '1 2 3 4 5')"
+                            placeholder="Input (e.g., '6\n3 3')"
+                            rows="2"
                             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                           />
-                          <input
-                            type="text"
+                          <textarea
                             value={testCase.expectedOutput}
                             onChange={(e) => handleHiddenTestCaseChange(i, tcIndex, "expectedOutput", e.target.value)}
-                            placeholder="Expected Output (e.g., '15')"
+                            placeholder="Expected Output (e.g., '0 1')"
+                            rows="2"
                             className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
                           />
                         </div>
@@ -478,28 +575,29 @@ export default function CodingRoundForm() {
                       <button
                         type="button"
                         onClick={() => addHiddenTestCase(i)}
-                        className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         + Add Hidden Test Case
                       </button>
+                      {errors[`p-${i}-hiddenTestcases`] && <p className="text-red-500 text-sm">{errors[`p-${i}-hiddenTestcases`]}</p>}
                     </div>
                   </div>
                 )}
               </div>
             ))}
 
-            {/* --- Submit --- */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={submitting}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto"
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
               {submitting ? "Submitting..." : "Create Coding Test"}
             </button>
           </form>
         </div>
 
-        {/* 🔹 Previous Coding Rounds */}
+        {/* Previous Coding Rounds */}
         <div className="bg-white/50 dark:bg-gray-800/70 rounded-2xl shadow-xl p-6 w-full max-w-4xl">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-6">
             Previous Coding Rounds
@@ -535,9 +633,9 @@ export default function CodingRoundForm() {
                       </p>
                       <p className="text-sm">Duration: {round.duration} minutes</p>
                       <p className="text-sm">Status: {round.isActive ? "Active" : "Inactive"}</p>
-                      <p className="text-sm">Total Attempts: {round.totalAttempts}</p>
-                      <p className="text-sm">Problem Count: {round.problemCount}</p>
-                      <p className="text-sm">Link ID: {round.linkId}</p>
+                      <p className="text-sm">Total Attempts: {round.totalAttempts || 0}</p>
+                      <p className="text-sm">Problem Count: {round.problemCount || round.problems?.length || 0}</p>
+                      {round.linkId && <p className="text-sm">Link ID: {round.linkId}</p>}
                       <p className="text-sm">Created: {new Date(round.createdAt).toLocaleDateString()}</p>
                     </div>
                   )}
