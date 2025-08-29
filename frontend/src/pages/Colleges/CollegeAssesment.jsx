@@ -39,17 +39,18 @@ const CollegeAssessment = () => {
   useEffect(() => {
     const fetchCollegeData = async () => {
       try {
-        const res = await axios.get(`${BASE_URL}/api/college/${collegeId}`);
+        const res = await axios.get(`${BASE_URL}/college/${collegeId}`);
+        console.log("ipd kavalsindi",res);
         const result = res.data;
 
         if (result.success) {
-          // Merge mcqs and coding rounds
+          // Merge mcqs and coding rounds (access directly from result)
           const mergedRounds = [
-            ...(result.data.mcqs || []).map((mcq) => ({
+            ...(result.mcqs || []).map((mcq) => ({
               ...mcq,
               type: "MCQ",
             })),
-            ...(result.data.codingRounds || []).map((coding) => ({
+            ...(result.codingRounds || []).map((coding) => ({
               ...coding,
               type: "Coding",
             })),
