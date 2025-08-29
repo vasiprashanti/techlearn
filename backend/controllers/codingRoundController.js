@@ -14,6 +14,7 @@ import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
 
 // Helper function to convert IST to UTC
 const convertISTToUTC = (istDateString) => {
+  // Create date by explicitly treating the input as IST
   // Add IST timezone offset (+05:30) to the string
   const istWithTimezone = istDateString + "+05:30";
   const utcDate = new Date(istWithTimezone);
@@ -206,7 +207,6 @@ export const sendCodingRoundOTP = async (req, res) => {
         message: "You have already submitted this coding round",
       });
     }
-
     // Generate OTP
     const otp = generateOTP();
     storeOTP(`${linkId}:${email}`, otp);
@@ -296,7 +296,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Check for duplicate submission
+    // Check for existing submission - only allow one submission
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: studentEmail.toLowerCase(),
@@ -305,7 +305,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
     if (existingSubmission) {
       return res.status(400).json({
         success: false,
-        message: "You have already submitted for this coding round",
+        message:
+          "You have already submitted for this coding round. Only one submission is allowed.",
       });
     }
 
@@ -343,46 +344,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Test against visible test cases (for student feedback)
-      const visibleTestResults = [];
-      let visibleTestsPassed = 0;
-      const totalVisibleTests = problem.visibleTestCases.length;
-
-      for (let i = 0; i < problem.visibleTestCases.length; i++) {
-        const testCase = problem.visibleTestCases[i];
-
-        try {
-          const testResult = await testCodeWithJudge0(
-            submittedCode,
-            languageId,
-            testCase.input,
-            testCase.expectedOutput
-          );
-
-          const passed = testResult.success && testResult.outputMatches;
-          if (passed) visibleTestsPassed++;
-
-          visibleTestResults.push({
-            testCaseIndex: i,
-            input: testCase.input,
-            expectedOutput: testCase.expectedOutput,
-            actualOutput: testResult.actualOutput,
-            passed,
-            error: testResult.error || null,
-          });
-        } catch (error) {
-          visibleTestResults.push({
-            testCaseIndex: i,
-            input: testCase.input,
-            expectedOutput: testCase.expectedOutput,
-            actualOutput: "",
-            passed: false,
-            error: `Test execution failed: ${error.message}`,
-          });
-        }
-      }
-
-      // Test against hidden test cases (for scoring)
+      // Test against hidden test cases only
       let hiddenTestsPassed = 0;
       const totalHiddenTests = problem.hiddenTestCases.length;
       const hiddenTestResults = [];
@@ -395,7 +357,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
             submittedCode,
             languageId,
             testCase.input,
-            testCase.expectedOutput
+            testCase.output
           );
 
           const passed = testResult.success && testResult.outputMatches;
@@ -417,12 +379,12 @@ export const submitCodingRoundAnswers = async (req, res) => {
         }
       }
 
-      // Calculate score for this problem (based on both visible and hidden test cases)
-      const totalTests = totalVisibleTests + totalHiddenTests;
-      const totalPassed = visibleTestsPassed + hiddenTestsPassed;
+      // Calculate score for this problem (based only on hidden test cases)
       const problemScore =
-        totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
-      const isCorrect = totalPassed === totalTests;
+        totalHiddenTests > 0
+          ? Math.round((hiddenTestsPassed / totalHiddenTests) * 100)
+          : 0;
+      const isCorrect = hiddenTestsPassed === totalHiddenTests;
 
       totalScore += problemScore;
 
@@ -431,15 +393,12 @@ export const submitCodingRoundAnswers = async (req, res) => {
         problemIndex,
         submittedCode,
         language,
-        testCasesPassed: totalPassed, // Total from both visible and hidden
-        totalTestCases: totalTests, // Total from both visible and hidden
-        visibleTestsPassed,
-        totalVisibleTests,
+        testCasesPassed: hiddenTestsPassed,
+        totalTestCases: totalHiddenTests,
         hiddenTestsPassed,
         totalHiddenTests,
         isCorrect,
         problemScore,
-        visibleTestResults, // Add this line
         hiddenTestSummary: {
           passed: hiddenTestsPassed,
           total: totalHiddenTests,
@@ -481,13 +440,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
           language: sol.language,
           testCasesPassed: sol.testCasesPassed,
           totalTestCases: sol.totalTestCases,
-          visibleTestsPassed: sol.visibleTestsPassed,
-          totalVisibleTests: sol.totalVisibleTests,
           hiddenTestsPassed: sol.hiddenTestsPassed,
           totalHiddenTests: sol.totalHiddenTests,
           isCorrect: sol.isCorrect,
           problemScore: sol.problemScore,
-          visibleTestResults: sol.visibleTestResults, // Add this line
           hiddenTestSummary: sol.hiddenTestSummary,
           feedback: sol.isCorrect
             ? "Perfect! All test cases passed."
@@ -670,3 +626,144 @@ export const deleteCodingRound = async (req, res) => {
 
 // Admin: Get student scores for a specific coding round
 export const getCodingRoundScores = async (req, res) => {};
+
+// Run coding round answers (validate against visible test cases only)
+export const runCodingRoundAnswers = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { studentEmail, solutions } = req.body;
+
+    // Basic validation
+    if (!studentEmail || !solutions || !Array.isArray(solutions)) {
+      return res.status(400).json({
+        success: false,
+        message: "Student email and solutions are required",
+      });
+    }
+
+    if (solutions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one solution is required",
+      });
+    }
+
+    // Find coding round
+    const codingRound = await CodingRound.findOne({ linkId });
+    if (!codingRound) {
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
+    }
+
+    // Check if round is active
+    if (!isRoundActive(codingRound)) {
+      return res.status(400).json({
+        success: false,
+        message: "Coding round is not active",
+      });
+    }
+
+    // Process solutions - validate each solution against visible test cases only
+    const runResults = [];
+
+    for (const solution of solutions) {
+      const { problemIndex, language, submittedCode } = solution;
+
+      // Validate solution structure
+      if (problemIndex === undefined || !language || !submittedCode) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Each solution must have problemIndex, language, and submittedCode",
+        });
+      }
+
+      // Find the problem
+      const problem = codingRound.problems[problemIndex];
+      if (!problem) {
+        return res.status(400).json({
+          success: false,
+          message: `Problem at index ${problemIndex} not found`,
+        });
+      }
+
+      // Get language ID for Judge0
+      const languageId = LANGUAGE_IDS[language?.toLowerCase()];
+      if (!languageId) {
+        return res.status(400).json({
+          success: false,
+          message: `Unsupported language: ${language}`,
+        });
+      }
+
+      // Test against visible test cases only
+      const visibleTestResults = [];
+      let visibleTestsPassed = 0;
+      const totalVisibleTests = problem.visibleTestCases.length;
+
+      for (const testCase of problem.visibleTestCases) {
+        try {
+          const result = await testCodeWithJudge0(
+            submittedCode,
+            languageId,
+            testCase.input,
+            testCase.expectedOutput
+          );
+
+          visibleTestResults.push({
+            input: testCase.input,
+            expectedOutput: testCase.expectedOutput,
+            actualOutput: result.actualOutput,
+            passed: result.passed,
+            error: result.error,
+            executionTime: result.executionTime,
+          });
+
+          if (result.passed) {
+            visibleTestsPassed++;
+          }
+        } catch (error) {
+          console.error(`Error testing visible test case:`, error);
+          visibleTestResults.push({
+            input: testCase.input,
+            expectedOutput: testCase.expectedOutput,
+            actualOutput: "",
+            passed: false,
+            error: "Execution error",
+            executionTime: null,
+          });
+        }
+      }
+
+      runResults.push({
+        problemIndex,
+        language,
+        visibleTestsPassed,
+        totalVisibleTests,
+        visibleTestResults,
+        feedback:
+          visibleTestsPassed === totalVisibleTests
+            ? "All visible test cases passed! 🎉"
+            : `Passed ${visibleTestsPassed}/${totalVisibleTests} visible test cases.`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Code execution completed",
+      data: {
+        results: runResults,
+        totalProblems: solutions.length,
+        executedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error("Error running coding round answers:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

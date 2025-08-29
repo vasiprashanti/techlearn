@@ -1,4 +1,5 @@
 import axios from "axios";
+import { LANGUAGE_IDS } from "../utils/judgeUtil.js";
 
 const JUDGE0_API =
   "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true";
@@ -7,11 +8,6 @@ const HEADERS = {
   "Content-Type": "application/json",
   "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
   "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
-};
-
-const LANGUAGE_IDS = {
-  python: 71,
-  java: 62,
 };
 
 export const compileCode = async (req, res) => {

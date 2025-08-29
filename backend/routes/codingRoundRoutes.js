@@ -8,6 +8,7 @@ import {
   sendCodingRoundOTP,
   verifyOTPAndGetCodingRound,
   submitCodingRoundAnswers,
+  runCodingRoundAnswers,
   getCodingRoundScores,
 } from "../controllers/codingRoundController.js";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
@@ -45,6 +46,7 @@ codingRoundRoutes.get(
 codingRoundRoutes.get("/:linkId", getOneCodingRound);
 codingRoundRoutes.post("/:linkId/send-otp", sendCodingRoundOTP);
 codingRoundRoutes.post("/:linkId/verify-otp", verifyOTPAndGetCodingRound);
+codingRoundRoutes.post("/:linkId/run", runCodingRoundAnswers);
 codingRoundRoutes.post("/:linkId/submit", submitCodingRoundAnswers);
 
 export default codingRoundRoutes;

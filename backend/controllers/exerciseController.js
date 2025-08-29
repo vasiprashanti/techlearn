@@ -3,6 +3,7 @@ import axios from "axios";
 import Exercise from "../models/Exercise.js";
 import UserProgress from "../models/UserProgress.js";
 import Course from "../models/Course.js";
+import { LANGUAGE_IDS } from "../utils/judgeUtil.js";
 
 // This function manually marks exercises as completed without code validation
 export const submitExercise = async (req, res) => {
@@ -88,16 +89,12 @@ export const submitExerciseCode = async (req, res) => {
   const { language, code, input } = req.body;
   const userId = req.user._id;
 
-  const languageMap = {
-    python: 71,
-    java: 62,
-    c: 50,
-  };
-
-  const languageId = languageMap[language?.toLowerCase()];
+  const languageId = LANGUAGE_IDS[language?.toLowerCase()];
   if (!languageId) {
     return res.status(400).json({
-      error: "Unsupported language. Please use 'python', 'java', or 'c'.",
+      error: `Unsupported language: ${language}. Supported languages: ${Object.keys(
+        LANGUAGE_IDS
+      ).join(", ")}`,
     });
   }
 
