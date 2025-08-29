@@ -45,7 +45,8 @@ const CodingCompiler = ({ user, contestData }) => {
   const [isRoundComplete, setIsRoundComplete] = useState(false);
   const [results, setResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const language = LANGUAGES[selectedLang];
+  // Add state to track if problem has been submitted
+  const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
   
   const BASE_URL = import.meta.env.VITE_API_URL;
@@ -102,8 +103,83 @@ const CodingCompiler = ({ user, contestData }) => {
     setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
+  // Swapped: handleSubmit now does what handleRun used to do (visible test cases with detailed feedback)
   const handleSubmit = async () => {
     if (!PROBLEM) return;
+    setIsRunning(true);
+    setOutput("🔍 Running visible test cases...\n");
+
+    try {
+      let passedCount = 0;
+      let outputText = "📊 Test Results:\n\n";
+
+      // Use visible test cases if available, otherwise fall back to example
+      const testCases = PROBLEM.visibleTestCases || (PROBLEM.example ? [{
+        input: PROBLEM.example.input,
+        expected: PROBLEM.example.output
+      }] : []);
+
+      for (let i = 0; i < testCases.length; i++) {
+        const test = testCases[i];
+        outputText += `Test Case ${i + 1}:\n`;
+        outputText += `Input: ${test.input || test.stdin || ""}\n`;
+        outputText += `Expected: ${test.expected || test.output || ""}\n`;
+
+        const result = await compilerAPI.compileCode({
+          language: selectedLang,
+          source_code: code,
+          stdin: test.input || test.stdin || "",
+        });
+
+        if (result.stderr && result.stderr.trim()) {
+          outputText += `❌ Error: ${result.stderr.trim()}\n`;
+          outputText += `Status: FAILED\n\n`;
+          continue;
+        }
+
+        const actualOutput = (result.stdout || "").trim();
+        const expectedOutput = (test.expected || test.output || "").trim();
+        
+        outputText += `Actual: ${actualOutput}\n`;
+        
+        if (actualOutput === expectedOutput) {
+          outputText += `✅ Status: PASSED\n`;
+          if (result.time) outputText += `⏱️ Execution Time: ${result.time}s\n`;
+          passedCount++;
+        } else {
+          outputText += `❌ Status: FAILED\n`;
+        }
+        outputText += "\n";
+      }
+
+      outputText += `📋 Summary: ${passedCount}/${testCases.length} test cases passed\n`;
+      
+      if (passedCount === testCases.length) {
+        outputText += "🎉 All visible test cases passed!";
+      } else {
+        outputText += "⚠️ Some test cases failed. Check your logic.";
+      }
+
+      setOutput(outputText);
+    } catch (error) {
+      console.error("Code execution error:", error);
+      setOutput(`❌ Execution failed: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  // Swapped: handleRun now does what handleSubmit used to do (hidden test cases with limited feedback)
+  const handleRun = async () => {
+    if (!PROBLEM) return;
+    
+    // Check if this problem has already been submitted (one-time only)
+    const problemId = PROBLEM.problemTitle || PROBLEM.title;
+    if (submittedProblems.has(problemId)) {
+      setOutput("❌ This problem has already been submitted. Only one submission allowed per problem.");
+      return;
+    }
+
     setIsRunning(true);
     setOutput("🔍 Running hidden test cases...\n");
 
@@ -128,9 +204,14 @@ const CodingCompiler = ({ user, contestData }) => {
       if (passedCount === PROBLEM.hiddenTestCases.length) status = "✅ Passed";
       else if (passedCount > 0) status = "⚠️ Partial Accepted";
 
-      const resultsText = `${status}\n📊 Score: ${passedCount}/${PROBLEM.hiddenTestCases.length}`;
+      // Limited summary feedback only
+      const resultsText = `${status}\n📊 Score: ${passedCount}/${PROBLEM.hiddenTestCases.length}\n\n🔒 Submission recorded permanently`;
       setOutput(resultsText);
 
+      // Mark this problem as submitted
+      setSubmittedProblems(prev => new Set([...prev, problemId]));
+
+      // Store results
       setResults((prev) => [
         ...prev,
         {
@@ -140,53 +221,30 @@ const CodingCompiler = ({ user, contestData }) => {
           total: PROBLEM.hiddenTestCases.length,
         },
       ]);
+
+      // Submit to database immediately
+      try {
+        await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            contestId: contestData?._id,
+            email: user.email,
+            problemId: problemId,
+            code: code,
+            language: selectedLang,
+            score: passedCount,
+            totalTests: PROBLEM.hiddenTestCases.length,
+            passed: passedCount === PROBLEM.hiddenTestCases.length
+          }),
+        });
+      } catch (err) {
+        console.error("Error submitting to database:", err);
+      }
+
     } catch (error) {
       console.error("Submission error:", error);
       setOutput(`❌ Submission failed: ${error.message || "Unknown error"}`);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-
-  const handleRun = async () => {
-    if (!PROBLEM) return;
-    setIsRunning(true);
-
-    try {
-      setOutput("⏳ Running code with example input...\n");
-      const result = await compilerAPI.compileCode({
-        language: selectedLang,
-        source_code: code,
-        stdin: PROBLEM.example?.input || "",
-      });
-
-      let outputText = "";
-      if (result.stdout && result.stdout.trim())
-        outputText += "📤 Output:\n" + result.stdout.trim();
-      if (result.stderr && result.stderr.trim())
-        outputText += "\n❌ Error:\n" + result.stderr.trim();
-      if (result.compile_output && result.compile_output.trim())
-        outputText += "\n📝 Compilation:\n" + result.compile_output.trim();
-      if (result.status?.description)
-        outputText += `\n\n📊 Status: ${result.status.description}`;
-
-     if (result.stdout && result.stdout.trim()) {
-  outputText += "\n\n📋 Expected Output:\n" + (PROBLEM.example?.output || "");
-  const actualOutput = result.stdout.trim();
-  if (actualOutput === PROBLEM.example?.output) {
-    outputText += "\n\n✅ Output matches expected result!";
-  } else {
-    outputText += "\n\n⚠️ Output differs from expected result.";
-  }
-}
-      
-      if (!outputText.trim())
-        outputText = "✅ Code executed successfully (no output)";
-
-      setOutput(outputText);
-    } catch (error) {
-      console.error("Code execution error:", error);
-      setOutput(`❌ Execution failed: ${error.message || "Unknown error"}`);
     } finally {
       setIsRunning(false);
     }
@@ -428,13 +486,13 @@ const CodingCompiler = ({ user, contestData }) => {
               </button>
             </div>
 
-            {/* Run button with aligned height */}
+            {/* Submit button (was Run) with aligned height */}
             <button
-              onClick={handleRun}
+              onClick={handleSubmit}
               disabled={isRunning}
               className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition"
             >
-              <Play className="w-4 h-4" /> {isRunning ? "Running..." : "Run"}
+              <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Submit"}
             </button>
           </div>
 
@@ -493,11 +551,13 @@ const CodingCompiler = ({ user, contestData }) => {
       {/* Replace End Round button with handleEndRound */}
       <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
         <button
-          onClick={handleSubmit}
-          disabled={isRunning}
+          onClick={handleRun}
+          disabled={isRunning || submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)}
           className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50"
         >
-          {isRunning ? "Submitting..." : "Submit"}
+          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title) 
+            ? "Already Submitted" 
+            : isRunning ? "Submitting..." : "Run"}
         </button>
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
