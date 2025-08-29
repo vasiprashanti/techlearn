@@ -152,47 +152,46 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleRun = async () => {
-    if (!PROBLEM) return;
     setIsRunning(true);
-
+    setOutput("");
     try {
-      setOutput("⏳ Running code with example input...\n");
-      const result = await compilerAPI.compileCode({
-        language: selectedLang,
-        source_code: code,
-        stdin:PROBLEM.example?.input || "",
-      });
+      const linkId = contestData?.linkId;
+      const studentEmail = user?.email;
+      const solutions = [
+        {
+          problemIndex: currentProblemIndex,
+          language: selectedLang,
+          submittedCode: code,
+        }
+      ];
 
-      let outputText = "";
-      if (result.stdout && result.stdout.trim())
-        outputText += "📤 Output:\n" + result.stdout.trim();
-      if (result.stderr && result.stderr.trim())
-        outputText += "\n❌ Error:\n" + result.stderr.trim();
-      if (result.compile_output && result.compile_output.trim())
-        outputText += "\n📝 Compilation:\n" + result.compile_output.trim();
-      if (result.status?.description)
-        outputText += `\n\n📊 Status: ${result.status.description}`;
+      const res = await fetch(
+        `${BASE_URL}/coding-round/${linkId}/run`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentEmail, solutions }),
+        }
+      );
+      const data = await res.json();
+      console.log("Run response:", data);
 
-     if (result.stdout && result.stdout.trim()) {
-  outputText += "\n\n📋 Expected Output:\n" + (PROBLEM.example?.output || "");
-  const actualOutput = result.stdout.trim();
-  if (actualOutput === PROBLEM.example?.output) {
-    outputText += "\n\n✅ Output matches expected result!";
-  } else {
-    outputText += "\n\n⚠️ Output differs from expected result.";
-  }
-}
-      
-      if (!outputText.trim())
-        outputText = "✅ Code executed successfully (no output)";
-
-      setOutput(outputText);
-    } catch (error) {
-      console.error("Code execution error:", error);
-      setOutput(`❌ Execution failed: ${error.message || "Unknown error"}`);
-    } finally {
-      setIsRunning(false);
+      if (data.success && data.data?.results?.length) {
+        const result = data.data.results[0];
+        let outputText = result.feedback + "\n";
+        result.visibleTestResults.forEach((test, idx) => {
+          outputText += `\nTest ${idx + 1}: ${test.passed ? "✅" : "❌"}\n`;
+          outputText += `Input: ${test.input}\nExpected: ${test.expectedOutput}\nActual: ${test.actualOutput}\n`;
+          if (test.error) outputText += `Error: ${test.error}\n`;
+        });
+        setOutput(outputText);
+      } else {
+        setOutput(data.message || "Run failed");
+      }
+    } catch (err) {
+      setOutput("Error running code");
     }
+    setIsRunning(false);
   };
 
   const handleLanguageChange = (lang) => {
