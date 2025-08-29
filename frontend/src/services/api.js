@@ -3,12 +3,7 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Debug logging
-console.log('🔧 API Configuration Debug:');
-console.log('Environment VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('Final API_BASE:', API_BASE);
-console.log('Mode:', import.meta.env.MODE);
-console.log('All env vars:', import.meta.env);
+
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {

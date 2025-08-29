@@ -34,11 +34,12 @@ const CollegeAssessment = () => {
   };
 
   const currentCollege = collegeConfig[collegeId];
-
+  
+  const BASE_URL = import.meta.env.VITE_API_URL;
   useEffect(() => {
     const fetchCollegeData = async () => {
       try {
-        const res = await axios.get(`/api/college/${collegeId}`);
+        const res = await axios.get(`${BASE_URL}/api/college/${collegeId}`);
         const result = res.data;
 
         if (result.success) {
