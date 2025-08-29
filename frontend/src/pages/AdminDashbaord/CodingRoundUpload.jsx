@@ -223,7 +223,8 @@ export default function CodingRoundForm() {
   };
   // API call using axios
   // Handle Edit (prefill form)
-  const handleEdit = (round) => {
+  // Handle Update (prefill form for updating)
+  const handleUpdate = (round) => {
     setEditingId(round._id);
     setCollege(round.college);
     setTitle(round.title);
@@ -764,7 +765,11 @@ export default function CodingRoundForm() {
               disabled={submitting}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition w-full sm:w-auto disabled:bg-blue-400 disabled:cursor-not-allowed"
             >
-              {submitting ? "Submitting..." : "Create Coding Test"}
+              {submitting
+                ? "Submitting..."
+                : editingId
+                ? "Update Coding Test"
+                : "Create Coding Test"}
             </button>
           </form>
         </div>
@@ -815,11 +820,12 @@ export default function CodingRoundForm() {
 
                       <div className="flex gap-3 mt-3">
                         <button
-                          onClick={() => handleEdit(round)}
-                          className="px-3 py-1 text-white bg-green-600 rounded-md hover:bg-green-700 text-sm"
+                          onClick={() => handleUpdate(round)}
+                          className="px-3 py-1 text-white bg-blue-600 rounded-md hover:bg-blue-700 text-sm"
                         >
-                          Edit
+                          Update
                         </button>
+
                         <button
                           onClick={() => handleDelete(round._id)}
                           className="px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700 text-sm"
