@@ -15,7 +15,7 @@ export const getCollegeByName = async (req, res) => {
       college: new RegExp(`^${collegeName}$`, "i"),
     });
 
-    // Optionally, search for coding rounds if model exists
+    // Search for coding rounds if model exists
     let allCodingRounds = [];
     try {
       const CodingRound = (await import("../models/CodingRound.js")).default;
@@ -23,18 +23,24 @@ export const getCollegeByName = async (req, res) => {
         college: new RegExp(`^${collegeName}$`, "i"),
       });
     } catch (err) {
+      console.log("CodingRound model error:", err.message);
       allCodingRounds = [];
     }
 
-    // If no MCQs found, treat as not found
-    if (!allMcqs || allMcqs.length === 0) {
+    // If no MCQs AND no coding rounds found, return not found
+    if (
+      (!allMcqs || allMcqs.length === 0) &&
+      (!allCodingRounds || allCodingRounds.length === 0)
+    ) {
       return res.status(404).json({
         success: false,
-        message: "No MCQs found for this college",
+        message: `No tests found for college: "${collegeName}"`,
+        foundMcqs: 0,
+        foundCodingRounds: 0,
       });
     }
 
-    // Return only summary details for each MCQ (no questions)
+    // Return summary details for MCQs (no questions)
     const allMcqDetails = allMcqs.map((mcq) => ({
       _id: mcq._id,
       title: mcq.title,
@@ -46,12 +52,30 @@ export const getCollegeByName = async (req, res) => {
       totalAttempts: mcq.totalAttempts,
       createdAt: mcq.createdAt,
       updatedAt: mcq.updatedAt,
+      type: "mcq",
+    }));
+
+    // Return summary details for coding rounds (no problems)
+    const allCodingRoundDetails = allCodingRounds.map((round) => ({
+      _id: round._id,
+      title: round.title,
+      college: round.college,
+      date: round.date,
+      duration: round.duration,
+      isActive: round.isActive,
+      linkId: round.linkId,
+      totalAttempts: round.totalAttempts,
+      createdAt: round.createdAt,
+      updatedAt: round.updatedAt,
+      type: "coding",
     }));
 
     return res.status(200).json({
       success: true,
-      allMcqs: allMcqDetails,
-      allCodingRounds,
+      college: collegeName,
+      totalTests: allMcqDetails.length + allCodingRoundDetails.length,
+      mcqs: allMcqDetails,
+      codingRounds: allCodingRoundDetails,
     });
   } catch (error) {
     console.error("Error fetching college by name:", error);
