@@ -94,8 +94,8 @@ app.use("/api/xp", xpRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", mcqRouter);
 app.use("/api/college-mcq", collegeMcqRoutes);
-app.use("/api/college-mcq", collegeMcqRoutes);
 app.use("/api/college-coding", codingRoundRoutes);
+app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 
 // ✅ BUILD PAGE Routes
@@ -136,6 +136,9 @@ app.use((req, res) => {
       "/api/compiler",
       "/api/xp",
       "/api/dashboard",
+      "/api/college",
+      "/api/college-mcq",
+      "/api/college-coding",
       "/api/mini-projects",
       "/api/major-projects",
       "/api/bookings",

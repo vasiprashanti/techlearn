@@ -10,13 +10,16 @@ const JUDGE0_HEADERS = {
 };
 
 const LANGUAGE_IDS = {
-  python: 71,
-  java: 62,
+  html: 43,
+  css: 44,
   javascript: 63,
-  cpp: 54,
-  c: 50,
-  "c++": 54,
   js: 63,
+  java: 62,
+  python: 71,
+  python3: 71,
+  c: 50,
+  cpp: 54,
+  "c++": 54,
 };
 
 // Simple function to normalize output for comparison
@@ -60,23 +63,27 @@ const testCodeWithJudge0 = async (
 
     return {
       success: isAccepted,
+      passed: isAccepted && outputMatches, // Combined check for both execution success and output match
       outputMatches,
       actualOutput: stdout || "",
       expectedOutput,
       error: stderr || compile_output || "",
       statusId: status.id,
       statusDescription: status.description,
+      executionTime: response.data.time || null, // Add execution time if available
     };
   } catch (error) {
     console.error("Judge0 API Error:", error.message);
     return {
       success: false,
+      passed: false, // Always false on error
       outputMatches: false,
       actualOutput: "",
       expectedOutput,
       error: `API Error: ${error.message}`,
       statusId: null,
       statusDescription: "API Error",
+      executionTime: null,
     };
   }
 };

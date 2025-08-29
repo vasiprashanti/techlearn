@@ -14,7 +14,6 @@ const LANGUAGES = {
     extension: ".js",
     defaultCode: `// Write your code here\n`,
     monacoLanguage: "javascript",
-    judge0Id: 63,
   },
   python: {
     id: "python",
@@ -23,7 +22,6 @@ const LANGUAGES = {
     extension: ".py",
     defaultCode: `# Write your code here\n`,
     monacoLanguage: "python",
-    judge0Id: 71,
   },
   java: {
     id: "java",
@@ -32,7 +30,6 @@ const LANGUAGES = {
     extension: ".java",
     defaultCode: `// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        // your code here\n    }\n}\n`,
     monacoLanguage: "java",
-    judge0Id: 62,
   },
 };
 
@@ -48,7 +45,8 @@ const CodingCompiler = ({ user, contestData }) => {
   const [isRoundComplete, setIsRoundComplete] = useState(false);
   const [results, setResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const language = LANGUAGES[selectedLang];
+  // Add state to track if problem has been submitted
+  const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
   
   const BASE_URL = import.meta.env.VITE_API_URL;
@@ -95,9 +93,10 @@ const CodingCompiler = ({ user, contestData }) => {
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleReset = () => {
-    setCode(language.defaultCode);
-    setOutput("");
-  };
+  setCode(LANGUAGES[selectedLang].defaultCode);
+  setOutput("");
+};
+
 
   const handleNextQuestion = () => {
     setCurrentProblemIndex((prev) => (prev + 1) % problems.length);
@@ -105,51 +104,72 @@ const CodingCompiler = ({ user, contestData }) => {
     setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
+  // Swapped: handleSubmit now does what handleRun used to do (visible test cases with detailed feedback)
   const handleSubmit = async () => {
     if (!PROBLEM) return;
     setIsRunning(true);
-    setOutput("🔍 Running hidden test cases...\n");
+    setOutput("🔍 Running visible test cases...\n");
 
     try {
       let passedCount = 0;
+      let outputText = "📊 Test Results:\n\n";
 
-      for (let i = 0; i < PROBLEM.hiddenTestCases.length; i++) {
-        const test = PROBLEM.hiddenTestCases[i];
+      // Use visible test cases if available, otherwise fall back to example
+      const testCases = PROBLEM.visibleTestCases || (PROBLEM.example ? [{
+        input: PROBLEM.example.input,
+        expected: PROBLEM.example.output
+      }] : []);
+
+      for (let i = 0; i < testCases.length; i++) {
+        const test = testCases[i];
+        outputText += `Test Case ${i + 1}:\n`;
+        outputText += `Input: ${test.input || test.stdin || ""}\n`;
+        outputText += `Expected: ${test.expected || test.output || ""}\n`;
+
         const result = await compilerAPI.compileCode({
           language: selectedLang,
           source_code: code,
-          stdin: test.stdin,
+          stdin: test.input || test.stdin || "",
         });
 
-        const actualOutput = (result.stdout || "").trim();
-        const expectedOutput = (test.expected || "").trim();
+        if (result.stderr && result.stderr.trim()) {
+          outputText += `❌ Error: ${result.stderr.trim()}\n`;
+          outputText += `Status: FAILED\n\n`;
+          continue;
+        }
 
-        if (actualOutput === expectedOutput) passedCount++;
+        const actualOutput = (result.stdout || "").trim();
+        const expectedOutput = (test.expected || test.output || "").trim();
+        
+        outputText += `Actual: ${actualOutput}\n`;
+        
+        if (actualOutput === expectedOutput) {
+          outputText += `✅ Status: PASSED\n`;
+          if (result.time) outputText += `⏱️ Execution Time: ${result.time}s\n`;
+          passedCount++;
+        } else {
+          outputText += `❌ Status: FAILED\n`;
+        }
+        outputText += "\n";
       }
 
-      let status = "❌ Failed";
-      if (passedCount === PROBLEM.hiddenTestCases.length) status = "✅ Passed";
-      else if (passedCount > 0) status = "⚠️ Partial Accepted";
+      outputText += `📋 Summary: ${passedCount}/${testCases.length} test cases passed\n`;
+      
+      if (passedCount === testCases.length) {
+        outputText += "🎉 All visible test cases passed!";
+      } else {
+        outputText += "⚠️ Some test cases failed. Check your logic.";
+      }
 
-      const resultsText = `${status}\n📊 Score: ${passedCount}/${PROBLEM.hiddenTestCases.length}`;
-      setOutput(resultsText);
-
-      setResults((prev) => [
-        ...prev,
-        {
-          problem: PROBLEM.problemTitle || PROBLEM.title,
-          passed: passedCount === PROBLEM.hiddenTestCases.length,
-          score: passedCount,
-          total: PROBLEM.hiddenTestCases.length,
-        },
-      ]);
+      setOutput(outputText);
     } catch (error) {
-      console.error("Submission error:", error);
-      setOutput(`❌ Submission failed: ${error.message || "Unknown error"}`);
+      console.error("Code execution error:", error);
+      setOutput(`❌ Execution failed: ${error.message || "Unknown error"}`);
     } finally {
       setIsRunning(false);
     }
   };
+
 
   const handleRun = async () => {
     setIsRunning(true);
@@ -202,8 +222,8 @@ const CodingCompiler = ({ user, contestData }) => {
 
   const handleEndRound = async () => {
     try {
-      // Submit results with contest ID and user email
-      await fetch(`college-coding/${linkId}/submit`, {
+      // Submit results with contest ID and user email - Fixed: removed undefined linkId
+      await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -389,16 +409,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <div className="flex items-center gap-3 relative">
               <div className="relative">
                 <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
-                >
-                  <img
-                    src={language.icon}
-                    alt={language.name}
-                    className="w-5 h-5"
-                  />
-                  <ChevronDown className="w-4 h-4 dark:text-white" />
-                </button>
+  onClick={() => setShowDropdown(!showDropdown)}
+  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
+>
+  <img
+    src={LANGUAGES[selectedLang].icon}
+    alt={LANGUAGES[selectedLang].name}
+    className="w-5 h-5"
+  />
+  <ChevronDown className="w-4 h-4 dark:text-white" />
+</button>
                 {showDropdown && (
                   <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50">
                     {Object.values(LANGUAGES).map((lang) => (
@@ -430,55 +450,53 @@ const CodingCompiler = ({ user, contestData }) => {
               </button>
             </div>
 
-            {/* Run button with aligned height */}
+            {/* Submit button (was Run) with aligned height */}
             <button
-              onClick={handleRun}
+              onClick={handleSubmit}
               disabled={isRunning}
               className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition"
             >
-              <Play className="w-4 h-4" /> {isRunning ? "Running..." : "Run"}
+              <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Submit"}
             </button>
           </div>
 
           {/* Code Editor */}
           <div className="flex-1 bg-white/20 dark:bg-gray-900/40 rounded-lg m-3 overflow-hidden">
             <Editor
-              height="100%"
-              language={language.monacoLanguage}
-              value={code}
-              onChange={(v) => setCode(v || "")}
-              theme={editorTheme}
-              options={{
-                minimap: { enabled: false },
-                wordWrap: "on",
-                tabSize: 2,
-                insertSpaces: true,
-              }}
-              onMount={(editor, monaco) => {
-                // 1. Disable tab key (prevent tab switching / indentation)
-                editor.addCommand(monaco.KeyCode.Tab, () => {
-                  return; // does nothing
-                });
+  height="100%"
+  language={LANGUAGES[selectedLang].monacoLanguage}
+  value={code}
+  onChange={(v) => setCode(v || "")}
+  theme={editorTheme}
+  options={{
+    minimap: { enabled: false },
+    wordWrap: "on",
+    tabSize: 2,
+    insertSpaces: true,
+  }}
+  onMount={(editor, monaco) => {
+    // disable Tab
+    editor.addCommand(monaco.KeyCode.Tab, () => {});
 
-                // 2. Prevent copy (Ctrl/Cmd + C), paste (Ctrl/Cmd + V), cut (Ctrl/Cmd + X)
-                editor.onKeyDown((e) => {
-                  if (
-                    (e.ctrlKey || e.metaKey) &&
-                    (e.keyCode === monaco.KeyCode.KeyC ||
-                      e.keyCode === monaco.KeyCode.KeyV ||
-                      e.keyCode === monaco.KeyCode.KeyX)
-                  ) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                });
+    // prevent copy, paste, cut
+    editor.onKeyDown((e) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.keyCode === monaco.KeyCode.KeyC ||
+          e.keyCode === monaco.KeyCode.KeyV ||
+          e.keyCode === monaco.KeyCode.KeyX)
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
 
-                // 3. Disable mouse-based copy/paste (context menu)
-                editor.onDidPaste(() => {
-                  editor.setValue(code); // reset to current state if someone tries to paste
-                });
-              }}
-            />
+    // prevent paste
+    editor.onDidPaste(() => {
+      editor.setValue(code);
+    });
+  }}
+/>
           </div>
 
           {/* Output */}
@@ -495,11 +513,13 @@ const CodingCompiler = ({ user, contestData }) => {
       {/* Replace End Round button with handleEndRound */}
       <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
         <button
-          onClick={handleSubmit}
-          disabled={isRunning}
+          onClick={handleRun}
+          disabled={isRunning || submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)}
           className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50"
         >
-          {isRunning ? "Submitting..." : "Submit"}
+          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title) 
+            ? "Already Submitted" 
+            : isRunning ? "Submitting..." : "Run"}
         </button>
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
