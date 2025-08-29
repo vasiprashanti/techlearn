@@ -78,6 +78,10 @@ import TermsAndConditions from './pages/About/TermsAndConditons';
 import PrivacyPolicy from './pages/About/PrivacyPolicy';
 import UserMcq from './pages/Mcq/UserMcq'
 
+//College list
+import CollegeAssessment from "./pages/Colleges/CollegeAssessment";
+
+
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
@@ -113,12 +117,33 @@ const HomePage = () => {
 
   // Marquee sections data
   const marqueeData = [
-    {
-      title: "tech PREP",
-      subtitle: "Struggling with technical rounds or job interviews?",
-      description: "Tech Prep is your comprehensive solution for mastering technical interviews and landing your dream job. Our carefully curated curriculum covers data structures, algorithms, system design, and behavioral interview techniques. With real-world coding challenges, mock interviews, and personalized feedback from industry experts, you'll build the confidence and skills needed to excel in any technical interview. From FAANG companies to startups, our proven methodology has helped thousands of students secure positions at top tech companies.",
-      features: ["Placement-focused courses with 90% success rate", "Live classes with real hiring patterns from top companies", "1-on-1 mock interviews with industry professionals", "Comprehensive system design workshops"],
-      link: "/learn"
+   {
+      title: "techPREP",
+      subtitle: "Already learned with us? Time to prove it.",
+      description:
+        "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
+      logos: [
+        {
+          name: "Vidya Jyothi Institute of Technology",
+          src: "/vjit.png",
+          link: "/colleges/vjit",
+        },
+        {
+          name: "University of Hyderabad",
+          src: "uh.png",
+          link: "/colleges/uoh",
+        },
+        {
+          name: "VNR Vignana Jyothi Institute of Engineering and Technology",
+          src: "/vnrvjiet.png",
+          link: "/colleges/vnr",
+        },
+        {
+          name: "Mahindra University",
+          src: "/mu.png",
+          link: "/colleges/mahindra",
+        },
+      ],
     },
     {
       title: "mini PROJECTS",
@@ -386,40 +411,134 @@ const HomePage = () => {
         <div
           key={index}
           className={item.reverse ? "marquee-header-2" : "marquee-header"}
-          ref={el => marqueeRefs.current[index] = el}
+          ref={(el) => (marqueeRefs.current[index] = el)}
         >
-          <a
-            href={item.link}
-            className="marquee-link"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(item.link);
-            }}
-          >
-            <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
-              <span>
-                <i>{item.title.split(' ')[0]}</i> {item.title.split(' ').slice(1).join(' ')}
-              </span>
-            </h2>
-          </a>
-          <p className={item.reverse ? "marquee-subtext-2" : "marquee-subtext"}>
-            {item.subtitle}<br/><br/>
-            <strong>{item.description}</strong>
-            {item.features && (
-              <>
-                <br/>
-                {item.features.map((feature, idx) => (
-                  <span key={idx}>• {feature}<br/></span>
+          {/* Special layout for techPREP section with logos */}
+          {item.logos ? (
+            <div className="w-full">
+              {/* Text content */}
+              <div className="mb-12 max-w-4xl mx-auto px-8">
+                {/* TechPREP title first - left aligned */}
+                <a
+                  href={item.link}
+                  className="marquee-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(item.link);
+                  }}
+                >
+                  <h2
+                    className={`${
+                      item.reverse ? "marquee-title-2" : "marquee-title"
+                    } !text-left`}
+                  >
+                    <span>
+                      <i>{item.title.split(" ")[0]}</i>{" "}
+                      {item.title.split(" ").slice(1).join(" ")}
+                    </span>
+                  </h2>
+                </a>
+                {/* Subtitle and description below - centered */}
+                <p
+                  className={`${
+                    item.reverse ? "marquee-subtext-2" : "marquee-subtext"
+                  } text-center`}
+                >
+                  {item.subtitle}
+                </p>
+                <p
+                  className={`${
+                    item.reverse ? "marquee-subtext-2" : "marquee-subtext"
+                  } text-center`}
+                >
+                  <strong>{item.description}</strong>
+                </p>
+              </div>
+              {/* College Logos Row */}
+              {/* College Logos Row */}
+              <div className="flex justify-between items-center mt-12 px-8 flex-wrap gap-8">
+                {item.logos.map((logo, logoIndex) => (
+                  <button
+                    key={logoIndex}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(logo.link);
+                    }}
+                    className="flex items-center justify-center bg-transparent transition-transform duration-300 hover:scale-105 hover:opacity-90"
+                  >
+                    <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
+                      <img
+                        src={logo.src}
+                        alt={logo.name}
+                        className="max-w-full max-h-full object-contain filter drop-shadow-md"
+                        style={{ mixBlendMode: "multiply" }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
+                        {logo.name
+                          .split(" ")
+                          .map((word) => word[0])
+                          .join("")
+                          .slice(0, 4)}
+                      </div>
+                    </div>
+                  </button>
                 ))}
-              </>
-            )}
-            {item.note && (
-              <>
-                <br/>
-                <em>{item.note}</em>
-              </>
-            )}
-          </p>
+              </div>
+            </div>
+          ) : (
+            /* Regular sections without logos */
+            <>
+              <a
+                href={item.link}
+                className="marquee-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(item.link);
+                }}
+              >
+                <h2
+                  className={item.reverse ? "marquee-title-2" : "marquee-title"}
+                >
+                  <span>
+                    <i>{item.title.split(" ")[0]}</i>{" "}
+                    {item.title.split(" ").slice(1).join(" ")}
+                  </span>
+                </h2>
+              </a>
+              <p
+                className={
+                  item.reverse ? "marquee-subtext-2" : "marquee-subtext"
+                }
+              >
+                {item.subtitle}
+                <br />
+                <br />
+                <strong>{item.description}</strong>
+                {item.features && (
+                  <>
+                    <br />
+                    {item.features.map((feature, idx) => (
+                      <span key={idx}>
+                        • {feature}
+                        <br />
+                      </span>
+                    ))}
+                  </>
+                )}
+                {item.note && (
+                  <>
+                    <br />
+                    <em>{item.note}</em>
+                  </>
+                )}
+              </p>
+            </>
+          )}
         </div>
       ))}
 
@@ -604,9 +723,13 @@ function LayoutWrapper() {
             <Route path="/dashboard" element={<Dashboard />} />
           </Route>
           
+          
           <Route path="/profile" element={<Profile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
+          <Route path="/colleges/:collegeId" element={<CollegeAssessment />} />
+
+          
           <Route path="/learn" element={<LearnMain />} />
           <Route path="/learn/courses" element={<Courses />} />
           <Route path="/learn/courses/all" element={<AllCourses />} />
