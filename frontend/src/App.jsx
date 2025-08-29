@@ -79,7 +79,7 @@ import PrivacyPolicy from './pages/About/PrivacyPolicy';
 import UserMcq from './pages/Mcq/UserMcq'
 
 //College list
-import CollegeAssessment from "./pages/Colleges/CollegeAssessment";
+import CollegeAssessment from "./pages/Colleges/CollegeAssesment";
 
 
 // Homepage component
