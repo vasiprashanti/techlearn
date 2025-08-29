@@ -196,12 +196,16 @@ export const sendCodingRoundOTP = async (req, res) => {
         .json({ success: false, message: "Coding round not active" });
     }
 
-    // Check if student has already submitted (one submission per coding round per student)
+    // Check if student has already submitted actual code (one submission per coding round per student)
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: email,
     });
-    if (existingSubmission) {
+    if (
+      existingSubmission &&
+      existingSubmission.solutions &&
+      existingSubmission.solutions.length > 0
+    ) {
       return res.status(409).json({
         success: false,
         message: "You have already submitted this coding round",
