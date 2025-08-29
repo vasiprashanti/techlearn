@@ -583,8 +583,11 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
-  const showFooter = !['/coding','/mcq'].includes(location.pathname);
+  // Hide header/footer for /coding/:linkId and /mcq/:linkId
+  const codingRegex = /^\/coding\/[^/]+$/;
+  const mcqRegex = /^\/mcq\/[^/]+$/;
+  const showNavbar = !(codingRegex.test(location.pathname) || mcqRegex.test(location.pathname) || location.pathname === '/dashboard' || location.pathname === '/admin' || location.pathname === '/admin/codingroundupload');
+  const showFooter = !(codingRegex.test(location.pathname) || mcqRegex.test(location.pathname));
 
 
   return (
