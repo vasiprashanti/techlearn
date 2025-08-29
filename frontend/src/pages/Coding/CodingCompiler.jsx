@@ -186,7 +186,7 @@ const CodingCompiler = ({ user, contestData }) => {
       ];
 
       const res = await fetch(
-        `${BASE_URL}/coding-round/${linkId}/run`,
+        `${BASE_URL}/college-coding/${linkId}/run`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
