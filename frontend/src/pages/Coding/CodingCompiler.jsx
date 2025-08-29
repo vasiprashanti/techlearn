@@ -14,7 +14,6 @@ const LANGUAGES = {
     extension: ".js",
     defaultCode: `// Write your code here\n`,
     monacoLanguage: "javascript",
-    judge0Id: 63,
   },
   python: {
     id: "python",
@@ -23,7 +22,6 @@ const LANGUAGES = {
     extension: ".py",
     defaultCode: `# Write your code here\n`,
     monacoLanguage: "python",
-    judge0Id: 71,
   },
   java: {
     id: "java",
@@ -32,7 +30,6 @@ const LANGUAGES = {
     extension: ".java",
     defaultCode: `// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        // your code here\n    }\n}\n`,
     monacoLanguage: "java",
-    judge0Id: 62,
   },
 };
 
@@ -160,7 +157,7 @@ const CodingCompiler = ({ user, contestData }) => {
       const result = await compilerAPI.compileCode({
         language: selectedLang,
         source_code: code,
-        stdin:PROBLEM.example?.input || "",
+        stdin: PROBLEM.example?.input || "",
       });
 
       let outputText = "";
@@ -203,8 +200,8 @@ const CodingCompiler = ({ user, contestData }) => {
 
   const handleEndRound = async () => {
     try {
-      // Submit results with contest ID and user email
-      await fetch(`college-coding/${linkId}/submit`, {
+      // Submit results with contest ID and user email - Fixed: removed undefined linkId
+      await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
