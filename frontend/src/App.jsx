@@ -583,7 +583,7 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin', '/coding','/mcq','/admin/codingroundupload'].includes(location.pathname);
+  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
   const showFooter = !['/coding','/mcq'].includes(location.pathname);
 
 
