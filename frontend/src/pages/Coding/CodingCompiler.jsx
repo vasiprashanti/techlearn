@@ -93,9 +93,10 @@ const CodingCompiler = ({ user, contestData }) => {
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleReset = () => {
-    setCode(language.defaultCode);
-    setOutput("");
-  };
+  setCode(LANGUAGES[selectedLang].defaultCode);
+  setOutput("");
+};
+
 
   const handleNextQuestion = () => {
     setCurrentProblemIndex((prev) => (prev + 1) % problems.length);
@@ -445,16 +446,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <div className="flex items-center gap-3 relative">
               <div className="relative">
                 <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
-                >
-                  <img
-                    src={language.icon}
-                    alt={language.name}
-                    className="w-5 h-5"
-                  />
-                  <ChevronDown className="w-4 h-4 dark:text-white" />
-                </button>
+  onClick={() => setShowDropdown(!showDropdown)}
+  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
+>
+  <img
+    src={LANGUAGES[selectedLang].icon}
+    alt={LANGUAGES[selectedLang].name}
+    className="w-5 h-5"
+  />
+  <ChevronDown className="w-4 h-4 dark:text-white" />
+</button>
                 {showDropdown && (
                   <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50">
                     {Object.values(LANGUAGES).map((lang) => (
@@ -499,42 +500,40 @@ const CodingCompiler = ({ user, contestData }) => {
           {/* Code Editor */}
           <div className="flex-1 bg-white/20 dark:bg-gray-900/40 rounded-lg m-3 overflow-hidden">
             <Editor
-              height="100%"
-              language={language.monacoLanguage}
-              value={code}
-              onChange={(v) => setCode(v || "")}
-              theme={editorTheme}
-              options={{
-                minimap: { enabled: false },
-                wordWrap: "on",
-                tabSize: 2,
-                insertSpaces: true,
-              }}
-              onMount={(editor, monaco) => {
-                // 1. Disable tab key (prevent tab switching / indentation)
-                editor.addCommand(monaco.KeyCode.Tab, () => {
-                  return; // does nothing
-                });
+  height="100%"
+  language={LANGUAGES[selectedLang].monacoLanguage}
+  value={code}
+  onChange={(v) => setCode(v || "")}
+  theme={editorTheme}
+  options={{
+    minimap: { enabled: false },
+    wordWrap: "on",
+    tabSize: 2,
+    insertSpaces: true,
+  }}
+  onMount={(editor, monaco) => {
+    // disable Tab
+    editor.addCommand(monaco.KeyCode.Tab, () => {});
 
-                // 2. Prevent copy (Ctrl/Cmd + C), paste (Ctrl/Cmd + V), cut (Ctrl/Cmd + X)
-                editor.onKeyDown((e) => {
-                  if (
-                    (e.ctrlKey || e.metaKey) &&
-                    (e.keyCode === monaco.KeyCode.KeyC ||
-                      e.keyCode === monaco.KeyCode.KeyV ||
-                      e.keyCode === monaco.KeyCode.KeyX)
-                  ) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                });
+    // prevent copy, paste, cut
+    editor.onKeyDown((e) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        (e.keyCode === monaco.KeyCode.KeyC ||
+          e.keyCode === monaco.KeyCode.KeyV ||
+          e.keyCode === monaco.KeyCode.KeyX)
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
 
-                // 3. Disable mouse-based copy/paste (context menu)
-                editor.onDidPaste(() => {
-                  editor.setValue(code); // reset to current state if someone tries to paste
-                });
-              }}
-            />
+    // prevent paste
+    editor.onDidPaste(() => {
+      editor.setValue(code);
+    });
+  }}
+/>
           </div>
 
           {/* Output */}
