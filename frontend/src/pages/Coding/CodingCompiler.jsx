@@ -274,12 +274,7 @@ const CodingCompiler = ({ user, contestData }) => {
             ))}
           </div>
         </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-8 px-6 py-3 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
-        >
-          🔄 Restart Round
-        </button>
+        
       </div>
     );
   }
