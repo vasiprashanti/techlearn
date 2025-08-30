@@ -1,24 +1,3 @@
-/*
- * ExerciseDetail Component
- *
- * Current Changes:
- * - Removed external container styling
- * - Moved Run Code button to top right of output area
- * - Removed Submit button (backend not connected)
- * - Made header areas gradient
- * - Removed symbols before output text
- * - Extended box widths to fit screen
- * - Removed live preview icon
- *
- * Next Phase Layout (TODO):
- * For laptops: Split into 2 parts
- * - Left side: Theory area
- * - Right side: Split into two sections
- *   - Top half: Code area
- *   - Bottom half: Output area
- * - Both sections must have draggers to adjust window size
- */
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -62,7 +41,7 @@ const ExerciseDetail = () => {
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
 
   // Resizer state (for desktop split)
-  const [leftWidth, setLeftWidth] = useState(380); // px, initial width of theory panel
+  const [leftWidth, setLeftWidth] = useState(380);
   const resizerRef = useRef(null);
   const containerRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -417,88 +396,13 @@ const ExerciseDetail = () => {
           <span>Back to Exercises</span>
         </motion.button>
 
-
-        {/* Desktop Split Layout with Resizer */}
-        <div ref={containerRef} className="desktop-split flex flex-row gap-0 w-full max-w-6xl mx-auto mb-6" style={{ minHeight: 480 }}>
-          {/* Left: Theory/Instructions */}
-          <div style={{ width: leftWidth, minWidth: 220, maxWidth: 600 }} className="transition-all duration-200 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-l-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/20 overflow-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h1 className="font-poppins text-2xl md:text-3xl font-medium brand-heading-primary mb-2 tracking-wider">
-                {exercise?.title}
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {exercise?.description}
-              </p>
-              <div className="flex items-center gap-4">
-                <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">
-                  {exercise?.difficulty}
-                </span>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <Clock className="w-4 h-4" />
-                  <span>{exercise?.estimatedTime}</span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <Trophy className="w-4 h-4" />
-                  <span>{exercise?.xp} XP</span>
-                </div>
-              </div>
-              {/* Theory/Instructions Markdown */}
-              <div className="mt-6 prose dark:prose-invert max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-                  {exercise?.theory || ''}
-                </ReactMarkdown>
-              </div>
-            </motion.div>
-          </div>
-          {/* Resizer Bar (desktop only) */}
-          <div
-            ref={resizerRef}
-            className="resizer-bar hidden lg:block"
-            style={{ cursor: 'col-resize', height: 'auto' }}
-            onMouseDown={startDragging}
-          />
-          {/* Right: Code/Output Section (flex-grow) */}
-          <div style={{ minWidth: 320 }} className="flex-1 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-r-2xl p-6 shadow-lg border border-white/20 dark:border-gray-700/20 overflow-auto">
-            {/* ...existing code for code editor, output, etc... */}
-            {/* Place your code editor, output, and controls here as before */}
-            {/* You may want to move the code/output JSX here from below */}
-          </div>
-        </div>
-
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Only for Mobile */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mb-6"
         >
-          {/* Desktop Tab Navigation */}
-          <div className="hidden md:flex gap-2">
-            {desktopTabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = (tab.id === 'theory' && activeTab === 'theory') ||
-                             (tab.id === 'codePreview' && (activeTab === 'compiler' || activeTab === 'preview' || activeTab === 'codePreview'));
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id === 'codePreview' ? 'codePreview' : tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200 border border-blue-200/50 dark:border-blue-700/50'
-                      : 'bg-white/60 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-white/20 dark:border-gray-700/20'
-                  } backdrop-blur-xl`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Mobile Tab Navigation with Slide Controls */}
           <div className="md:hidden">
             {/* Current Tab Display with Navigation Arrows */}
@@ -575,58 +479,326 @@ const ExerciseDetail = () => {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
         >
-          {/* Theory Tab */}
-          {activeTab === 'theory' && (
-            <div className="p-8 h-[700px] overflow-auto custom-scrollbar">
-              <div className="markdown-content bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 border border-gray-200/50 dark:border-gray-700/50">
-                <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={{
-                      pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                      code: ({node, inline, className, children, ...props}) => {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !inline && match ? (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        ) : (
-                          <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                      p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
-                      ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                      ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                      li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                      blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                    }}
-                  >
-                    {exercise?.theory}
-                  </ReactMarkdown>
-                  {/* Show expected solution if present */}
-                  {exercise?.expectedOutput && (
-                    <div className="mt-6">
-                      <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
-                      <div className="bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
-                        <pre className="p-5 text-sm font-mono text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
-                          {exercise.expectedOutput}
-                        </pre>
+
+          {/* Desktop Layout - Always show combined view */}
+          <div className="hidden md:block">
+            <div className="max-h-[1000px] flex gap-2 p-2">
+              
+              {/* Left Side - Theory area (50%) */}
+              
+              <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <h1 className="font-poppins text-2xl md:text-2xl font-medium brand-heading-primary p-4 mb-2 tracking-wider">
+                {exercise?.title}
+              </h1>
+              {/* <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {exercise?.description}
+              </p> */}
+              <div className="flex items-center gap-4 mt-2 mb-6 px-4">
+                <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">
+                  {exercise?.difficulty}
+                </span>
+                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                  <Clock className="w-4 h-4" />
+                  <span>{exercise?.estimatedTime}</span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                  <Trophy className="w-4 h-4" />
+                  <span>{exercise?.xp} XP</span>
+                </div>
+              </div>
+                
+                {/* Theory Content */}
+                <div className="h-[calc(100%-3.5rem)] overflow-auto p-4">
+                  <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
+                        code: ({node, inline, className, children, ...props}) => {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
+                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
+                        li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+                        blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
+                      }}
+                    >
+                      {exercise?.theory}
+                    </ReactMarkdown>
+                    {/* Show expected solution if present */}
+                    {exercise?.expectedOutput && (
+                      <div className="mt-6">
+                        <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
+                        <div className="bg-white/50 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                          <pre className="p-5 text-sm font-mono text-black/50 dark:text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
+                            {exercise.expectedOutput}
+                          </pre>
+                        </div>
                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right Side - Code and Preview containers (50%) */}
+              <div className="flex-1 flex flex-col gap-2">
+                {/* Top Right - Code Editor (70% height) */}
+                <div className="flex-none h-[60%] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {/* Code Editor Header */}
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4" />
+                      <span className="font-small">Code Editor</span>
                     </div>
-                  )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={runCode}
+                        disabled={isRunning}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
+                      >
+                        {isRunning ? 'Running...' : 'Run Code'}
+                        <Play className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Monaco Editor */}
+                  <div className="h-[calc(100%-3.5rem)] relative overflow-hidden">
+                    <Editor
+                      height="100%"
+                      defaultLanguage="javascript"
+                      theme={editorTheme}
+                      value={userCode}
+                      onChange={(value) => setUserCode(value || '')}
+                      options={{
+                        fontSize: 14,
+                        fontFamily: 'Fira Code, Monaco, Consolas, monospace',
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        tabSize: 2,
+                        insertSpaces: true,
+                        wordWrap: 'on',
+                        lineNumbers: 'on',
+                        overviewRulerLanes: 0,
+                        hideCursorInOverviewRuler: true,
+                        renderLineHighlight: 'all',
+                        selectOnLineNumbers: true,
+                        roundedSelection: false,
+                        readOnly: false,
+                        cursorStyle: 'line',
+                        contextmenu: false,
+                        copyWithSyntaxHighlighting: false,
+                        // Enable proper scrolling
+                        scrollbar: {
+                          vertical: 'visible',
+                          horizontal: 'visible',
+                          useShadows: false,
+                          verticalHasArrows: true,
+                          horizontalHasArrows: true,
+                          verticalScrollbarSize: 14,
+                          horizontalScrollbarSize: 14,
+                          alwaysConsumeMouseWheel: false
+                        },
+                        // Enable mouse wheel scrolling
+                        mouseWheelScrollSensitivity: 1,
+                        fastScrollSensitivity: 5,
+                        // Disable all IntelliSense and suggestions
+                        quickSuggestions: false,
+                        suggestOnTriggerCharacters: false,
+                        acceptSuggestionOnEnter: 'off',
+                        tabCompletion: 'off',
+                        wordBasedSuggestions: false,
+                        parameterHints: { enabled: false },
+                        autoClosingBrackets: 'never',
+                        autoClosingQuotes: 'never',
+                        autoSurround: 'never',
+                        snippetSuggestions: 'none',
+                        suggest: {
+                          showKeywords: false,
+                          showSnippets: false,
+                          showClasses: false,
+                          showFunctions: false,
+                          showVariables: false,
+                          showModules: false,
+                          showProperties: false,
+                          showEvents: false,
+                          showOperators: false,
+                          showUnits: false,
+                          showValues: false,
+                          showConstants: false,
+                          showEnums: false,
+                          showEnumMembers: false,
+                          showColors: false,
+                          showFiles: false,
+                          showReferences: false,
+                          showFolders: false,
+                          showTypeParameters: false,
+                          showIssues: false,
+                          showUsers: false,
+                          showWords: false
+                        },
+                        hover: { enabled: false },
+                        lightbulb: { enabled: false },
+                        find: {
+                          addExtraSpaceOnTop: false,
+                          autoFindInSelection: 'never',
+                          seedSearchStringFromSelection: 'never'
+                        }
+                      }}
+                      onMount={(editor, monaco) => {
+                        // Disable copy-paste and other shortcuts
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {});
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {});
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {});
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {});
+                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {});
+
+                        // Disable all language features
+                        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+                          noLib: true,
+                          allowNonTsExtensions: true
+                        });
+
+                        // Clear all language providers
+                        monaco.languages.registerCompletionItemProvider('javascript', {
+                          provideCompletionItems: () => ({ suggestions: [] })
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom Right - Live Preview (30% height) */}
+                <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {/* Output Header */}
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4" />
+                      <span className="font-medium">Output</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={resetCode}
+                        className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Output Content */}
+                  <div className="h-[calc(100%-3.5rem)] overflow-hidden">
+                    <div className="h-full p-4 overflow-auto custom-scrollbar">
+                      {output ? (
+                        <>
+                          <div className="mb-4">
+                            <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto">
+                              {output}
+                            </pre>
+                          </div>
+                          <div>
+                            <pre className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto border border-green-200 dark:border-green-700">
+                              {exercise?.expectedOutput}
+                            </pre>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center">
+                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                            Output
+                          </h3>
+                          <p className="text-gray-600 dark:text-gray-400">
+                            Run your code to see the output here.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Combined Code & Preview Tab (Desktop Only) */}
-          {activeTab === 'codePreview' && (
-            <div className="h-[700px] flex gap-2 p-2">
-              {/* Left Side - Code Editor (50%) */}
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          {/* Mobile Layout - Show different tabs based on activeTab */}
+          <div className="md:hidden">
+            {/* Theory Tab */}
+            {activeTab === 'theory' && (
+              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <h1 className="font-poppins text-2xl md:text-2xl font-medium brand-heading-primary p-4 mb-2 tracking-wider">
+                  {exercise?.title}
+                </h1>
+                <div className="flex items-center gap-4 mt-2 mb-6 px-4">
+                  <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">
+                    {exercise?.difficulty}
+                  </span>
+                  <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                    <Clock className="w-4 h-4" />
+                    <span>{exercise?.estimatedTime}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
+                    <Trophy className="w-4 h-4" />
+                    <span>{exercise?.xp} XP</span>
+                  </div>
+                </div>
+                
+                <div className="h-[calc(100%-3.5rem)] overflow-auto p-4">
+                  <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={{
+                        pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
+                        code: ({node, inline, className, children, ...props}) => {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          ) : (
+                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                        p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
+                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
+                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
+                        li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+                        blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
+                      }}
+                    >
+                      {exercise?.theory}
+                    </ReactMarkdown>
+                    {exercise?.expectedOutput && (
+                      <div className="mt-6">
+                        <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
+                        <div className="bg-white/50 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                          <pre className="p-5 text-sm font-mono text-black/50 dark:text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
+                            {exercise.expectedOutput}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Compiler Tab - Premium Code Editor */}
+            {activeTab === 'compiler' && (
+              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Code Editor Header */}
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
@@ -751,16 +923,18 @@ const ExerciseDetail = () => {
                   />
                 </div>
 
-                {/* Action Buttons - Removed Submit button */}
+                {/* Action Buttons - Removed Submit and Run Code buttons */}
                 <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex gap-3">
-                  {/* Submit button removed as backend is not connected */}
+                  {/* Run Code button moved to header, Submit button removed as backend is not connected */}
                 </div>
               </div>
+            )}
 
-              {/* Right Side - Live Preview (50%) */}
-              <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            {/* Live Preview Tab - Output Display */}
+            {activeTab === 'preview' && (
+              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Output Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
                     <Terminal className="w-4 h-4" />
                     <span className="font-medium">Output</span>
@@ -775,21 +949,19 @@ const ExerciseDetail = () => {
                   </div>
                 </div>
 
-                {/* Output Content */}
-                <div className="h-[calc(100%-3.5rem)] overflow-hidden">
-                  <div className="h-full p-4 overflow-auto custom-scrollbar">
+                {/* Terminal Output */}
+                <div className="h-[calc(100%-3.5rem)] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm">
+                  <div className="p-4 h-full overflow-auto custom-scrollbar">
                     {output ? (
                       <>
-                        <div className="mb-4">
-                          <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto">
-                            {output}
-                          </pre>
+                        <div className="text-gray-900 dark:text-white whitespace-pre-wrap">
+                          {output}
                         </div>
-                        <div>
-                          <pre className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto border border-green-200 dark:border-green-700">
-                            {exercise?.expectedOutput}
-                          </pre>
-                        </div>
+                        {exercise?.expectedOutput && (
+                          <div className="mt-4 pt-2 border-t border-gray-300 dark:border-gray-700">
+                            <div className="text-yellow-600 dark:text-yellow-400">{exercise.expectedOutput}</div>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-center">
@@ -804,190 +976,8 @@ const ExerciseDetail = () => {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Compiler Tab - Premium Code Editor */}
-          {activeTab === 'compiler' && (
-            <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {/* Code Editor Header */}
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                  <Code className="w-4 h-4" />
-                  <span className="font-medium">Code Editor</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={runCode}
-                    disabled={isRunning}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                  >
-                    {isRunning ? 'Running...' : 'Run Code'}
-                    <Play className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Monaco Editor */}
-              <div className="h-[calc(100%-7rem)] relative overflow-hidden">
-                <Editor
-                  height="100%"
-                  defaultLanguage="javascript"
-                  theme={editorTheme}
-                  value={userCode}
-                  onChange={(value) => setUserCode(value || '')}
-                  options={{
-                    fontSize: 14,
-                    fontFamily: 'Fira Code, Monaco, Consolas, monospace',
-                    minimap: { enabled: false },
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    tabSize: 2,
-                    insertSpaces: true,
-                    wordWrap: 'on',
-                    lineNumbers: 'on',
-                    overviewRulerLanes: 0,
-                    hideCursorInOverviewRuler: true,
-                    renderLineHighlight: 'all',
-                    selectOnLineNumbers: true,
-                    roundedSelection: false,
-                    readOnly: false,
-                    cursorStyle: 'line',
-                    contextmenu: false,
-                    copyWithSyntaxHighlighting: false,
-                    // Enable proper scrolling
-                    scrollbar: {
-                      vertical: 'visible',
-                      horizontal: 'visible',
-                      useShadows: false,
-                      verticalHasArrows: true,
-                      horizontalHasArrows: true,
-                      verticalScrollbarSize: 14,
-                      horizontalScrollbarSize: 14,
-                      alwaysConsumeMouseWheel: false
-                    },
-                    // Enable mouse wheel scrolling
-                    mouseWheelScrollSensitivity: 1,
-                    fastScrollSensitivity: 5,
-                    // Disable all IntelliSense and suggestions
-                    quickSuggestions: false,
-                    suggestOnTriggerCharacters: false,
-                    acceptSuggestionOnEnter: 'off',
-                    tabCompletion: 'off',
-                    wordBasedSuggestions: false,
-                    parameterHints: { enabled: false },
-                    autoClosingBrackets: 'never',
-                    autoClosingQuotes: 'never',
-                    autoSurround: 'never',
-                    snippetSuggestions: 'none',
-                    suggest: {
-                      showKeywords: false,
-                      showSnippets: false,
-                      showClasses: false,
-                      showFunctions: false,
-                      showVariables: false,
-                      showModules: false,
-                      showProperties: false,
-                      showEvents: false,
-                      showOperators: false,
-                      showUnits: false,
-                      showValues: false,
-                      showConstants: false,
-                      showEnums: false,
-                      showEnumMembers: false,
-                      showColors: false,
-                      showFiles: false,
-                      showReferences: false,
-                      showFolders: false,
-                      showTypeParameters: false,
-                      showIssues: false,
-                      showUsers: false,
-                      showWords: false
-                    },
-                    hover: { enabled: false },
-                    lightbulb: { enabled: false },
-                    find: {
-                      addExtraSpaceOnTop: false,
-                      autoFindInSelection: 'never',
-                      seedSearchStringFromSelection: 'never'
-                    }
-                  }}
-                  onMount={(editor, monaco) => {
-                    // Disable copy-paste and other shortcuts
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {});
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {});
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {});
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {});
-                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {});
-
-                    // Disable all language features
-                    monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-                      noLib: true,
-                      allowNonTsExtensions: true
-                    });
-
-                    // Clear all language providers
-                    monaco.languages.registerCompletionItemProvider('javascript', {
-                      provideCompletionItems: () => ({ suggestions: [] })
-                    });
-                  }}
-                />
-              </div>
-
-              {/* Action Buttons - Removed Submit and Run Code buttons */}
-              <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex gap-3">
-                {/* Run Code button moved to header, Submit button removed as backend is not connected */}
-              </div>
-            </div>
-          )}
-
-          {/* Live Preview Tab - Output Display */}
-          {activeTab === 'preview' && (
-            <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {/* Output Header */}
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-4 h-4" />
-                  <span className="font-medium">Output</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={resetCode}
-                    className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Terminal Output */}
-              <div className="h-[calc(100%-3.5rem)] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm">
-                <div className="p-4 h-full overflow-auto custom-scrollbar">
-                  {output ? (
-                    <>
-                      <div className="text-gray-900 dark:text-white whitespace-pre-wrap">
-                        {output}
-                      </div>
-                      {exercise?.expectedOutput && (
-                        <div className="mt-4 pt-2 border-t border-gray-300 dark:border-gray-700">
-                          <div className="text-yellow-600 dark:text-yellow-400">{exercise.expectedOutput}</div>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center">
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                        Output
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        Run your code to see the output here.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
       </div>
     </div>
