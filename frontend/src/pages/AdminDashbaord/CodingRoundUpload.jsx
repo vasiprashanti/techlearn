@@ -182,23 +182,15 @@ export default function CodingRoundForm() {
       newErrors.endTime = "End time must be after start time.";
     }
 
-    // Date validation (ensure it's not in the past) - improved with IST
+    // Date validation (ensure it's not in the past)
     if (date && startTime) {
-      // Create test datetime in IST
-      const [hours, minutes] = startTime.split(":").map(Number);
-      const [year, month, day] = date.split("-").map(Number);
+      const testDateTime = new Date(`${date}T${startTime}:00`);
 
-      // Construct IST datetime directly
-      const testDateTime = new Date(
-        Date.UTC(year, month - 1, day, hours - 5, minutes - 30)
-      );
-
-      // Current IST time
+      // Current time (no manual IST offset needed, browser already handles it)
       const now = new Date();
-      const istNow = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
 
-      // Add a small buffer (30 seconds instead of 1 min for fairness)
-      const minimumTime = new Date(istNow.getTime() + 30 * 1000);
+      // Add buffer (e.g., 1 minute)
+      const minimumTime = new Date(now.getTime() + 60 * 1000);
 
       if (testDateTime < minimumTime) {
         newErrors.date = "Test date and time must be in the future (IST).";
@@ -767,13 +759,12 @@ export default function CodingRoundForm() {
               </div>
             ))}
 
-            {/* Submit */}
+            {/* Submit button */}
             <button
               type="submit"
-              disabled={submitting || Object.keys(errors).length > 0}
               className={`px-6 py-2 rounded-lg font-semibold transition w-full sm:w-auto
     ${
-      submitting || Object.keys(errors).length > 0
+      submitting
         ? "bg-gray-400 cursor-not-allowed"
         : "bg-blue-600 hover:bg-blue-700 text-white"
     }`}
