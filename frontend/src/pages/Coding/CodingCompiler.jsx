@@ -488,7 +488,7 @@
 
               {/* Submit button (was Run) with aligned height */}
               <button
-                onClick={handleSubmit}
+                onClick={handleRun}
                 disabled={isRunning}
                 className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition"
               >
@@ -549,7 +549,7 @@
         {/* Replace End Round button with handleEndRound */}
         <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
           <button
-            onClick={handleRun}
+            onClick={handleSubmit}
             disabled={
               isRunning ||
               submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
