@@ -186,24 +186,26 @@ const CodingCompiler = ({ user, contestData }) => {
 
       const { data } = response;
 
-      if (data?.results?.[0]?.visibleTestResults) {
-  const testResults = data.results[0].visibleTestResults;
+      if (data?.results?.[0]) {
+   const res = data.results[0];
 
-  setResults(testResults);
+  // show only backend validation results
+   setResults(res.visibleTestResults);
 
-  setOutput(
-    testResults
+   setOutput(
+    res.visibleTestResults
       .map(
         (t, idx) =>
-          `Test ${idx + 1}:\nInput: ${t.input}\nExpected: ${t.expectedOutput}\nActual: ${t.actualOutput.trim()}\nStatus: ${
-            t.passed ? "✅ Passed" : "❌ Failed"
-          }\n`
+          `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
+          `Input: ${t.input}\nExpected: ${t.expectedOutput}\nActual: ${t.actualOutput.trim()}\n`
       )
-      .join("\n")
+      .join("\n") +
+      `\n\n${res.feedback || ""}`
   );
 } else {
   setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
 }
+
 
     } catch (err) {
       console.error("Run error:", err);
