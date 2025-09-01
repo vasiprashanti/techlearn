@@ -5,6 +5,9 @@ import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
 import { compilerAPI } from "../../services/api";
 
+  import { useParams } from "react-router-dom";
+
+
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
   javascript: {
@@ -35,6 +38,7 @@ const LANGUAGES = {
 
 const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
+  const { linkId } = useParams();
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
   const [output, setOutput] = useState("");
@@ -149,8 +153,7 @@ const CodingCompiler = ({ user, contestData }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          language: selectedLang,
-          problemId: PROBLEM.id, // so backend knows which visible cases to run
+          language: selectedLang
         }),
       });
 
@@ -200,8 +203,7 @@ const CodingCompiler = ({ user, contestData }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code,
-          language: selectedLang,
-          problemId: PROBLEM.id,
+          language: selectedLang
         }),
       });
 
