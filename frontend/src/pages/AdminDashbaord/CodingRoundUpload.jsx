@@ -46,6 +46,10 @@ export default function CodingRoundForm() {
   const [loadingRounds, setLoadingRounds] = useState(true);
   const [roundExpanded, setRoundExpanded] = useState([]);
 
+  //report
+  const [reports, setReports] = useState({});
+  const [loadingReports, setLoadingReports] = useState({});
+
   // Get base URL from environment variables
   const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -381,6 +385,31 @@ export default function CodingRoundForm() {
   useEffect(() => {
     fetchPreviousRounds();
   }, []);
+
+  // --- Function to fetch report for a round ---
+  const fetchReport = async (roundId) => {
+    try {
+      setLoadingReports((prev) => ({ ...prev, [roundId]: true }));
+      const token = getToken();
+      const res = await axios.get(
+        `${BASE_URL}/coding-rounds/admin/${roundId}/scores`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (res.data && res.data.success) {
+        setReports((prev) => ({ ...prev, [roundId]: res.data.scores }));
+      } else {
+        setReports((prev) => ({ ...prev, [roundId]: [] }));
+      }
+    } catch (error) {
+      console.error("Error fetching report:", error);
+      setReports((prev) => ({ ...prev, [roundId]: [] }));
+    } finally {
+      setLoadingReports((prev) => ({ ...prev, [roundId]: false }));
+    }
+  };
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
@@ -839,6 +868,7 @@ export default function CodingRoundForm() {
                         })}
                       </p>
 
+                      {/* Action Buttons */}
                       <div className="flex gap-3 mt-3">
                         <button
                           onClick={() => handleUpdate(round)}
@@ -853,7 +883,59 @@ export default function CodingRoundForm() {
                         >
                           Delete
                         </button>
+
+                        <button
+                          onClick={() => fetchReport(round._id)}
+                          className="px-3 py-1 text-white bg-green-600 rounded-md hover:bg-green-700 text-sm"
+                        >
+                          View Report
+                        </button>
                       </div>
+
+                      {/* Report Section */}
+                      {loadingReports[round._id] ? (
+                        <p className="text-gray-500 mt-2">Fetching report...</p>
+                      ) : reports[round._id] &&
+                        reports[round._id].length > 0 ? (
+                        <div className="overflow-x-auto mt-4">
+                          <table className="min-w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg">
+                            <thead>
+                              <tr className="bg-gray-200 dark:bg-gray-600">
+                                <th className="p-2 border">Rank</th>
+                                <th className="p-2 border">Name</th>
+                                <th className="p-2 border">Email</th>
+                                <th className="p-2 border">Score</th>
+                                <th className="p-2 border">Submitted At</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reports[round._id].map((user, idx) => (
+                                <tr
+                                  key={user._id || idx}
+                                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <td className="p-2 border">{idx + 1}</td>
+                                  <td className="p-2 border">{user.name}</td>
+                                  <td className="p-2 border">{user.email}</td>
+                                  <td className="p-2 border">{user.score}</td>
+                                  <td className="p-2 border">
+                                    {new Date(user.submittedAt).toLocaleString(
+                                      "en-IN",
+                                      {
+                                        timeZone: "Asia/Kolkata",
+                                      }
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : reports[round._id] ? (
+                        <p className="text-gray-500 mt-2">
+                          No report data found.
+                        </p>
+                      ) : null}
                     </div>
                   )}
                 </div>
