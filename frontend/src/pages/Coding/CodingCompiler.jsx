@@ -186,13 +186,12 @@ const CodingCompiler = ({ user, contestData }) => {
 
       const { data } = response;
 
-      if (data?.results?.[0]) {
-   const res = data.results[0];
+      if (data?.data?.results?.[0]) {
+  const res = data.data.results[0];
 
-  // show only backend validation results
-   setResults(res.visibleTestResults);
+  setResults(res.visibleTestResults);
 
-   setOutput(
+  setOutput(
     res.visibleTestResults
       .map(
         (t, idx) =>
