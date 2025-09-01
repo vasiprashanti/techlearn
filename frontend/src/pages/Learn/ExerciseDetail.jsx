@@ -496,7 +496,7 @@ const ExerciseDetail = () => {
 
           {/* Desktop Layout */}
           <div className="hidden md:block">
-            <div className="max-h-[1000px] flex gap-2 p-2">
+            <div className="max-h-[1500px] flex gap-2 p-2">
               
               {/* Left Side - Theory area */}
               <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -567,7 +567,7 @@ const ExerciseDetail = () => {
               {/* Right Side - Compiler and Preview */}
               <div className="flex-1 flex flex-col gap-2">
                 {/* Top Right - Code Editor */}
-                <div className="flex-none h-[60%] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="flex-none h-[50%] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {/* Code Editor Header */}
                   <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2">
