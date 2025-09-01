@@ -139,87 +139,101 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleRun = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before running.");
-      return;
-    }
+  if (!code.trim()) {
+    setOutput("⚠️ Please write some code before running.");
+    return;
+  }
 
-    setIsRunning(true);
-    setOutput("⏳ Running visible test cases...");
+  setIsRunning(true);
+  setOutput("⏳ Running visible test cases...");
 
-    try {
-      const { data } = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/run`,
+  try {
+    const payload = {
+      solutions: [
         {
-          code,
+          problemIndex: currentProblemIndex,
+          submittedCode: code,
           language: selectedLang,
-        }
+        },
+      ],
+    };
+
+    console.log("Run payload:", payload); // debug
+
+    const { data } = await axios.post(
+      `${BASE_URL}/coding-round/${linkId}/run`,
+      payload
+    );
+
+    if (data?.results) {
+      setResults(data.results);
+
+      setOutput(
+        data.results
+          .map(
+            (r, idx) =>
+              `Result ${idx + 1}:\nStatus: ${r.status?.description}\nStdout: ${
+                r.stdout || ""
+              }\nStderr: ${r.stderr || ""}\n`
+          )
+          .join("\n")
       );
-
-      if (data.success) {
-        setResults(data.data.results);
-
-        const passed = data.data.results.filter((r) => r.passed).length;
-        setOutput(
-          `📊 Visible Test Results:\n\n${data.data.results
-            .map(
-              (r, idx) =>
-                `Test Case ${idx + 1}:\nInput: ${r.input}\nExpected: ${
-                  r.expected
-                }\nActual: ${r.actual}\nStatus: ${
-                  r.passed ? "PASSED ✅" : "FAILED ❌"
-                }\n`
-            )
-            .join("\n")}\nSummary: ${passed}/${
-            data.data.results.length
-          } visible test cases passed`
-        );
-      } else {
-        setOutput("⚠️ Run failed: " + data.message);
-      }
-    } catch (err) {
-      setOutput("⚠️ Error running test cases: " + err.message);
+    } else {
+      setOutput("⚠️ Unexpected response: " + JSON.stringify(data));
     }
+  } catch (err) {
+    setOutput("⚠️ Error running test cases: " + err.message);
+  }
 
-    setIsRunning(false);
-  };
+  setIsRunning(false);
+};
+
+
+  
 
   // --- Submit (Hidden Test Cases) ---
-  const handleSubmit = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before submitting.");
-      return;
-    }
+ const handleSubmit = async () => {
+  if (!code.trim()) {
+    setOutput("⚠️ Please write some code before submitting.");
+    return;
+  }
 
-    setIsRunning(true);
-    setOutput("⏳ Submitting for hidden test validation...");
+  setIsRunning(true);
+  setOutput("⏳ Submitting for hidden test validation...");
 
-    try {
-      const { data } = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/submit`,
+  try {
+    const payload = {
+      studentEmail: user.email,
+      solutions: [
         {
-          code,
-          language: selectedLang,
+          problemIndex: currentProblemIndex,
+          submittedCode: code,
+          language: selectedLang
         }
+      ]
+    };
+
+    console.log("Submit payload:", payload); // debug
+
+    const { data } = await axios.post(
+      `${BASE_URL}/coding-round/${linkId}/submit`,
+      payload
+    );
+
+    if (data.message === "Submission successful") {
+      setOutput("✅ Submission successful!");
+      setSubmittedProblems(
+        (prev) => new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
       );
-
-      if (data.success) {
-        setResults(data.data.results);
-        setOutput("✅ Submission results:\n\n" + data.data.feedback);
-
-        // ✅ Mark problem as submitted
-        setSubmittedProblems((prev) =>
-          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-        );
-      } else {
-        setOutput("⚠️ Submission failed: " + data.message);
-      }
-    } catch (err) {
-      setOutput("⚠️ Error submitting code: " + err.message);
+    } else {
+      setOutput("⚠️ Submission failed: " + JSON.stringify(data));
     }
+  } catch (err) {
+    setOutput("⚠️ Error submitting code: " + err.message);
+  }
 
-    setIsRunning(false);
-  };
+  setIsRunning(false);
+};
 
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
