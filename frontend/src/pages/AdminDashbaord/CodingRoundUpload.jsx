@@ -175,48 +175,61 @@ export default function CodingRoundForm() {
   };
 
   // Enhanced validation with proper IST handling
-  const validate = () => {
-    let newErrors = {};
+  // Enhanced validation with IST handling
+const validate = () => {
+  let newErrors = {};
 
-    // Basic field validation
-    if (!college) newErrors.college = "College is required.";
-    if (!title) newErrors.title = "Test title is required.";
-    if (!date) newErrors.date = "Date is required.";
-    if (!startTime) newErrors.startTime = "Start time is required.";
-    if (!endTime) newErrors.endTime = "End time is required.";
-    if (!duration || duration <= 0)
-      newErrors.duration = "Duration must be a positive number.";
+  if (!college) newErrors.college = "College is required.";
+  if (!title) newErrors.title = "Test title is required.";
+  if (!date) newErrors.date = "Date is required.";
+  if (!startTime) newErrors.startTime = "Start time is required.";
+  if (!endTime) newErrors.endTime = "End time is required.";
+  if (!duration || duration <= 0)
+    newErrors.duration = "Duration must be a positive number.";
 
-    // Time validation
-    if (startTime && endTime && startTime >= endTime) {
-      newErrors.endTime = "End time must be after start time.";
+  if (date && startTime && endTime) {
+    const [year, month, day] = date.split("-").map(Number);
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+
+    // Create IST datetime → convert to UTC
+    const startDateTime = new Date(Date.UTC(year, month - 1, day, sh - 5, sm - 30));
+    const endDateTime = new Date(Date.UTC(year, month - 1, day, eh - 5, em - 30));
+
+    // Current IST
+    const now = new Date();
+    const nowIST = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+    const minimumTime = new Date(nowIST.getTime() + 60000);
+
+    if (startDateTime < minimumTime) {
+      newErrors.date = "Start time must be in the future (IST).";
     }
 
-    // Date validation (ensure it's not in the past) - Fixed IST handling
-    if (date && startTime) {
-      // Create the test datetime in IST
-      const testDateTime = new Date(`${date}T${startTime}:00`);
-      
-      // Get current time in IST
-      const now = new Date();
-      const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-      
-      // Convert current IST time to a comparable format
-      const currentISTDateTime = new Date(
-        istNow.getUTCFullYear(),
-        istNow.getUTCMonth(),
-        istNow.getUTCDate(),
-        istNow.getUTCHours(),
-        istNow.getUTCMinutes()
-      );
-
-      // Add a small buffer (1 minute) to account for processing time
-      const minimumTime = new Date(currentISTDateTime.getTime() + 60000);
-
-      if (testDateTime < minimumTime) {
-        newErrors.date = "Test date and time must be in the future (IST).";
-      }
+    if (startDateTime >= endDateTime) {
+      newErrors.endTime = "End time must be after start time (IST).";
     }
+  }
+
+  problems.forEach((p, i) => {
+    if (!p.problemTitle)
+      newErrors[`p-${i}-title`] = "Problem title is required.";
+    if (!p.difficulty)
+      newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
+    if (!p.description)
+      newErrors[`p-${i}-description`] = "Problem description is required.";
+
+    const hasValidHiddenTestCase = p.hiddenTestCases.some(
+      (tc) => tc.input.trim() && tc.expectedOutput.trim()
+    );
+    if (!hasValidHiddenTestCase) {
+      newErrors[`p-${i}-testcases`] =
+        "At least one complete hidden test case is required.";
+    }
+  });
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
 
     // Problem validation
     problems.forEach((p, i) => {
@@ -242,137 +255,143 @@ export default function CodingRoundForm() {
   };
 
   // Handle Update (prefill form for updating) - Fixed IST time conversion
-  const handleUpdate = (round) => {
-    setEditingId(round._id);
-    setCollege(round.college);
-    setTitle(round.title);
-    
-    // Parse the date properly for IST
-    const roundDate = new Date(round.date);
-    
-    // Convert to IST for display
-    const istDate = new Date(roundDate.getTime() + (5.5 * 60 * 60 * 1000));
-    
-    // Format date for input field
-    const year = istDate.getUTCFullYear();
-    const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(istDate.getUTCDate()).padStart(2, "0");
-    setDate(`${year}-${month}-${day}`);
-    
-    // Format time for input field
-    const hours = String(istDate.getUTCHours()).padStart(2, "0");
-    const minutes = String(istDate.getUTCMinutes()).padStart(2, "0");
-    setStartTime(`${hours}:${minutes}`);
-    
-    setDuration(round.duration);
-    setProblems(
-      round.problems.map((p) => ({
-        problemTitle: p.problemTitle,
-        difficulty: p.difficulty,
-        description: p.description,
-        inputDescription: p.inputDescription || "",
-        outputDescription: p.outputDescription || "",
-        visibleTestCases: p.visibleTestCases.length
-          ? p.visibleTestCases
-          : [{ input: "", expectedOutput: "" }],
-        hiddenTestCases: p.hiddenTestCases.length
-          ? p.hiddenTestCases
-          : [{ input: "", expectedOutput: "" }],
-      }))
-    );
-    setNumQuestions(round.problems.length);
-    setExpanded(new Array(round.problems.length).fill(true));
-  };
+ // Prefill form when updating (convert UTC → IST for inputs)
+const handleUpdate = (round) => {
+  setEditingId(round._id);
+  setCollege(round.college);
+  setTitle(round.title);
+
+  const startUTC = new Date(round.startTime);
+  const endUTC = new Date(round.endTime);
+
+  // Convert UTC → IST
+  const startIST = new Date(startUTC.getTime() + 5.5 * 60 * 60 * 1000);
+  const endIST = new Date(endUTC.getTime() + 5.5 * 60 * 60 * 1000);
+
+  // Set date
+  const year = startIST.getUTCFullYear();
+  const month = String(startIST.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(startIST.getUTCDate()).padStart(2, "0");
+  setDate(`${year}-${month}-${day}`);
+
+  // Set times
+  const sh = String(startIST.getUTCHours()).padStart(2, "0");
+  const sm = String(startIST.getUTCMinutes()).padStart(2, "0");
+  setStartTime(`${sh}:${sm}`);
+
+  const eh = String(endIST.getUTCHours()).padStart(2, "0");
+  const em = String(endIST.getUTCMinutes()).padStart(2, "0");
+  setEndTime(`${eh}:${em}`);
+
+  setDuration(round.duration);
+  setProblems(
+    round.problems.map((p) => ({
+      problemTitle: p.problemTitle,
+      difficulty: p.difficulty,
+      description: p.description,
+      inputDescription: p.inputDescription || "",
+      outputDescription: p.outputDescription || "",
+      visibleTestCases: p.visibleTestCases.length
+        ? p.visibleTestCases
+        : [{ input: "", expectedOutput: "" }],
+      hiddenTestCases: p.hiddenTestCases.length
+        ? p.hiddenTestCases
+        : [{ input: "", expectedOutput: "" }],
+    }))
+  );
+  setNumQuestions(round.problems.length);
+  setExpanded(new Array(round.problems.length).fill(true));
+};
+
 
   // Modified handleSubmit with proper IST to UTC conversion
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
+  e.preventDefault();
+  if (!validate()) return;
+  setSubmitting(true);
 
-    // Create the date-time in IST and convert to UTC for storage
-    const testDateTime = new Date(`${date}T${startTime}:00`);
-    // Subtract IST offset to get UTC time for storage
-    const utcDateTime = new Date(testDateTime.getTime() - (5.5 * 60 * 60 * 1000));
+  // Convert IST → UTC
+  const [year, month, day] = date.split("-").map(Number);
+  const [sh, sm] = startTime.split(":").map(Number);
+  const [eh, em] = endTime.split(":").map(Number);
 
-    const payload = {
-      title,
-      college,
-      date: utcDateTime.toISOString(),
-      duration: parseInt(duration),
-      problems: problems.map((problem) => ({
-        problemTitle: problem.problemTitle,
-        description: problem.description,
-        difficulty: problem.difficulty,
-        inputDescription: problem.inputDescription || "",
-        outputDescription: problem.outputDescription || "",
-        visibleTestCases: problem.visibleTestCases.filter(
-          (tc) => tc.input.trim() && tc.expectedOutput.trim()
-        ),
-        hiddenTestCases: problem.hiddenTestCases.filter(
-          (tc) => tc.input.trim() && tc.expectedOutput.trim()
-        ),
-      })),
-    };
+  const startDateTime = new Date(Date.UTC(year, month - 1, day, sh - 5, sm - 30));
+  const endDateTime = new Date(Date.UTC(year, month - 1, day, eh - 5, em - 30));
 
-    try {
-      const token = getToken();
-      if (!token) {
-        alert("Authentication token not found. Please login again.");
-        return;
-      }
-
-      let res;
-      if (editingId) {
-        // Update existing
-        res = await axios.put(
-          `${BASE_URL}/college-coding/${editingId}`,
-          payload,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        alert("Coding Test Updated Successfully!");
-      } else {
-        // Create new
-        res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("Coding Test Created Successfully!");
-      }
-
-      console.log("Response:", res.data);
-
-      // Reset form
-      setEditingId(null);
-      setCollege("");
-      setTitle("");
-      setDate(getTodayDate());
-      setStartTime("");
-      setEndTime("");
-      setDuration("");
-      setNumQuestions(1);
-      setProblems([
-        {
-          problemTitle: "",
-          difficulty: "",
-          description: "",
-          inputDescription: "",
-          outputDescription: "",
-          visibleTestCases: [{ input: "", expectedOutput: "" }],
-          hiddenTestCases: [{ input: "", expectedOutput: "" }],
-        },
-      ]);
-      setExpanded([]);
-      setErrors({});
-      fetchPreviousRounds();
-    } catch (error) {
-      console.error("Error saving coding round:", error);
-      alert("Something went wrong.");
-    } finally {
-      setSubmitting(false);
-    }
+  const payload = {
+    title,
+    college,
+    startTime: startDateTime.toISOString(),
+    endTime: endDateTime.toISOString(),
+    duration: parseInt(duration),
+    problems: problems.map((problem) => ({
+      problemTitle: problem.problemTitle,
+      description: problem.description,
+      difficulty: problem.difficulty,
+      inputDescription: problem.inputDescription || "",
+      outputDescription: problem.outputDescription || "",
+      visibleTestCases: problem.visibleTestCases.filter(
+        (tc) => tc.input.trim() && tc.expectedOutput.trim()
+      ),
+      hiddenTestCases: problem.hiddenTestCases.filter(
+        (tc) => tc.input.trim() && tc.expectedOutput.trim()
+      ),
+    })),
   };
+
+  try {
+    const token = getToken();
+    if (!token) {
+      alert("Authentication token not found. Please login again.");
+      return;
+    }
+
+    let res;
+    if (editingId) {
+      res = await axios.put(`${BASE_URL}/college-coding/${editingId}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Coding Test Updated Successfully!");
+    } else {
+      res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Coding Test Created Successfully!");
+    }
+
+    console.log("Response:", res.data);
+
+    // Reset form
+    setEditingId(null);
+    setCollege("");
+    setTitle("");
+    setDate(getTodayDate());
+    setStartTime("");
+    setEndTime("");
+    setDuration("");
+    setNumQuestions(1);
+    setProblems([
+      {
+        problemTitle: "",
+        difficulty: "",
+        description: "",
+        inputDescription: "",
+        outputDescription: "",
+        visibleTestCases: [{ input: "", expectedOutput: "" }],
+        hiddenTestCases: [{ input: "", expectedOutput: "" }],
+      },
+    ]);
+    setExpanded([]);
+    setErrors({});
+    fetchPreviousRounds();
+  } catch (error) {
+    console.error("Error saving coding round:", error);
+    alert("Something went wrong.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   // Fetch previous rounds
   const fetchPreviousRounds = async () => {
