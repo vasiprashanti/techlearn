@@ -148,8 +148,8 @@ const HomePage = () => {
     {
       title: "mini PROJECTS",
       subtitle: "Mini Projects — because upskilling is what we do.",
-      description: "Transform your learning journey with hands-on mini projects that bridge the gap between theory and practice. Each project is carefully designed to reinforce fundamental concepts while building real-world applications that showcase your skills to potential employers. From simple calculators to complex web applications, you'll progressively build a diverse portfolio that demonstrates your growth as a developer. Our project-based learning approach ensures you not only understand the concepts but can apply them effectively in professional environments.",
-      features: ["20+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
+      description: "Transform your learning with hands-on mini projects that bridge theory and practice. Build real-world applications, from simple tools to advanced web apps, and create a portfolio that highlights your skills. Our project-based approach ensures you understand concepts and apply them effectively in professional settings.",
+      features: ["10+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
       link: "/build",
       reverse: true
     },
@@ -455,40 +455,41 @@ const HomePage = () => {
                 </p>
               </div>
               {/* College Logos Row */}
-              {/* College Logos Row */}
-              <div className="flex justify-between items-center mt-12 px-8 flex-wrap gap-8">
-                {item.logos.map((logo, logoIndex) => (
-                  <button
-                    key={logoIndex}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      navigate(logo.link);
-                    }}
-                    className="flex items-center justify-center bg-transparent transition-transform duration-300 hover:scale-105 hover:opacity-90"
-                  >
-                    <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
-                      <img
-                        src={logo.src}
-                        alt={logo.name}
-                        className="max-w-full max-h-full object-contain filter drop-shadow-md"
-                        style={{ mixBlendMode: "multiply" }}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.nextSibling.style.display = "flex";
-                        }}
-                      />
-                      <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
-                        {logo.name
-                          .split(" ")
-                          .map((word) => word[0])
-                          .join("")
-                          .slice(0, 4)}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+{/* College Logos Row */}
+<div className="flex justify-start items-center mt-12 px-8 flex-wrap gap-8">
+  {item.logos.map((logo, logoIndex) => (
+    <button
+      key={logoIndex}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(logo.link);
+      }}
+      className="flex items-center justify-center bg-transparent transition-transform duration-300 hover:scale-105 hover:opacity-90"
+    >
+      <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
+        <img
+          src={logo.src}
+          alt={logo.name}
+          className="max-w-full max-h-full object-contain filter drop-shadow-md"
+          style={{ mixBlendMode: "multiply" }}
+          onError={(e) => {
+            e.target.style.display = "none";
+            e.target.nextSibling.style.display = "flex";
+          }}
+        />
+        <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
+          {logo.name
+            .split(" ")
+            .map((word) => word[0])
+            .join("")
+            .slice(0, 4)}
+        </div>
+      </div>
+    </button>
+  ))}
+</div>
+
             </div>
           ) : (
             /* Regular sections without logos */
