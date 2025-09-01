@@ -124,14 +124,14 @@ const HomePage = () => {
         "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
       logos: [
         {
-          name: "Vidya Jyothi Institute of Technology",
-          src: "/vjit.png",
-          link: "/colleges/vjit",
-        },
-        {
           name: "University of Hyderabad",
           src: "uh.png",
           link: "/colleges/uoh",
+        },
+        {
+          name: "Vidya Jyothi Institute of Technology",
+          src: "/vjit.png",
+          link: "/colleges/vjit",
         },
         {
           name: "VNR Vignana Jyothi Institute of Engineering and Technology",
