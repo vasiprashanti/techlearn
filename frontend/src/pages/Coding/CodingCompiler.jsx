@@ -5,6 +5,8 @@ import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
 import { compilerAPI } from "../../services/api";
 import axios from "axios";
+import { useParams } from "react-router-dom";
+const  {linkId} = useParams();
 
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
@@ -146,7 +148,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
     try {
       const { data } = await axios.post(
-        `${BASE_URL}/college-coding/${contestData?._id}/run`,
+        `${BASE_URL}/api/college-coding/${linkId}/run`,
         {
           code,
           language: selectedLang,
@@ -193,7 +195,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
     try {
       const { data } = await axios.post(
-        `${BASE_URL}/college-coding/${contestData?._id}/submit`,
+        `${BASE_URL}/api/college-coding/${linkId}/submit`,
         {
           code,
           language: selectedLang,
