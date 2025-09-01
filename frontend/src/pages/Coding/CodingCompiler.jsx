@@ -181,37 +181,47 @@ const handleRun = async () => {
       }
     );
 
-    // Display the backend response with pass/fail status
+    // Parse the specific response format from your backend
     const responseData = response.data;
+    console.log("Response data:", responseData);
     
-    // Check for pass/fail indicators in the response
-    let output = "";
+    // Extract test results from the nested structure
+    const testResults = responseData?.data?.results?.[0]?.visibleTestResults;
     
-    if (responseData.message) {
-      output = responseData.message;
-    } else if (responseData.output) {
-      output = responseData.output;
-    } else if (responseData.success !== undefined) {
-      output = responseData.success ? "✅ PASSED" : "❌ FAILED";
-      if (responseData.details) {
-        output += "\n\n" + responseData.details;
+    if (testResults && Array.isArray(testResults)) {
+      let output = "";
+      let passedCount = 0;
+      
+      testResults.forEach((test, idx) => {
+        if (test.passed) passedCount++;
+        
+        output += `Test Case ${idx + 1}: ${test.passed ? "✅ PASSED" : "❌ FAILED"}\n`;
+        output += `Input: ${test.input || 'N/A'}\n`;
+        output += `Expected: ${test.expectedOutput || 'N/A'}\n`;
+        output += `Your Output: ${test.actualOutput || 'N/A'}\n`;
+        
+        if (test.error) {
+          output += `Error: ${test.error}\n`;
+        }
+        
+        output += "\n";
+      });
+      
+      // Add summary
+      output += `\n📊 Summary: ${passedCount}/${testResults.length} test cases passed`;
+      
+      // Add feedback if available
+      const feedback = responseData?.data?.results?.[0]?.feedback;
+      if (feedback) {
+        output += `\n\n💡 ${feedback}`;
       }
-    } else if (responseData.passed !== undefined) {
-      output = responseData.passed ? "✅ PASSED" : "❌ FAILED";
-      if (responseData.details) {
-        output += "\n\n" + responseData.details;
-      }
-    } else if (responseData.status) {
-      output = responseData.status === "success" ? "✅ PASSED" : "❌ FAILED";
-      if (responseData.details) {
-        output += "\n\n" + responseData.details;
-      }
+      
+      setOutput(output);
+      setResults(testResults);
     } else {
-      // Fallback - display the entire response
-      output = JSON.stringify(responseData, null, 2);
+      // Fallback to display the message or raw response
+      setOutput(responseData.message || JSON.stringify(responseData, null, 2));
     }
-    
-    setOutput(output);
 
   } catch (err) {
     console.error("Run error:", err);
