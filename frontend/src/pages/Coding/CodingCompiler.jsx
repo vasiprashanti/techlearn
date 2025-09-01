@@ -173,7 +173,7 @@ const CodingCompiler = ({ user, contestData }) => {
       console.log("API URL:", `${BASE_URL}/coding-round/${linkId}/run`);
 
       const response = await axios.post(
-        `${BASE_URL}/coding-round/${linkId}/run`,
+        `${BASE_URL}/college-coding/${linkId}/run`,
         payload,
         {
           timeout: 30000, // 30 second timeout
@@ -267,7 +267,7 @@ const CodingCompiler = ({ user, contestData }) => {
       console.log("Submit API URL:", `${BASE_URL}/coding-round/${linkId}/submit`);
 
       const response = await axios.post(
-        `${BASE_URL}/coding-round/${linkId}/submit`,
+        `${BASE_URL}/college-coding/${linkId}/submit`,
         payload,
         {
           timeout: 30000, // 30 second timeout
