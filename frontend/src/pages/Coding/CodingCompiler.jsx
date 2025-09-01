@@ -149,7 +149,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
     try {
       const { data } = await axios.post(
-        `${BASE_URL}/api/college-coding/${linkId}/run`,
+        `${BASE_URL}/college-coding/${linkId}/run`,
         {
           code,
           language: selectedLang,
@@ -196,7 +196,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
     try {
       const { data } = await axios.post(
-        `${BASE_URL}/api/college-coding/${linkId}/submit`,
+        `${BASE_URL}/college-coding/${linkId}/submit`,
         {
           code,
           language: selectedLang,
