@@ -25,7 +25,7 @@ const convertISTToUTC = (istDateString) => {
 // Create a new coding round
 export const createCodingRound = async (req, res) => {
   try {
-    const { title, college, date, duration, problems } = req.body;
+    const { title, college, date, duration, problems, endTime } = req.body;
 
     // Validate required fields
     if (
@@ -104,6 +104,7 @@ export const createCodingRound = async (req, res) => {
       duration,
       problems,
       linkId,
+      endTime: endTime ? new Date(endTime) : undefined,
     });
 
     await codingRound.save();
@@ -629,7 +630,25 @@ export const deleteCodingRound = async (req, res) => {
 };
 
 // Admin: Get student scores for a specific coding round
-export const getCodingRoundScores = async (req, res) => {};
+export const getCodingRoundScores = async (req, res) => {
+  try {
+    const { codingRoundId } = req.params;
+    if (!codingRoundId || !codingRoundId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid codingRoundId" });
+    }
+    const submissions = await StudentCodingSubmission.find({ codingRoundId });
+    const scores = submissions.map((submission) => ({
+      studentEmail: submission.studentEmail,
+      studentScore: submission.totalScore,
+      submittedAt: submission.submittedAt,
+    }));
+    res.status(200).json({ success: true, codingRoundId, scores });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 // Run coding round answers (validate against visible test cases only)
 export const runCodingRoundAnswers = async (req, res) => {

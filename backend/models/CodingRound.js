@@ -50,6 +50,10 @@ const codingRoundSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    endTime: {
+      type: Date,
+      required: false,
+    },
     linkId: {
       type: String,
       unique: true,
