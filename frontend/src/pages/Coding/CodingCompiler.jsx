@@ -148,7 +148,7 @@ const CodingCompiler = ({ user, contestData }) => {
     setOutput("⏳ Running visible test cases...");
 
     try {
-      const response = await fetch(`${BASE_URL}/${linkId}/run`, {
+      const response = await fetch(`${BASE_URL}/college-coding/${linkId}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -198,7 +198,7 @@ const CodingCompiler = ({ user, contestData }) => {
     setOutput("⏳ Submitting for hidden test validation...");
 
     try {
-      const response = await fetch(`${BASE_URL}/${linkId}/submit`, {
+      const response = await fetch(`${BASE_URL}/college-coding/${linkId}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
