@@ -186,21 +186,25 @@ const CodingCompiler = ({ user, contestData }) => {
 
       const { data } = response;
 
-      if (data?.results) {
-        setResults(data.results);
-        setOutput(
-          data.results
-            .map(
-              (r, idx) =>
-                `Result ${idx + 1}:\nStatus: ${r.status?.description || 'Unknown'}\nStdout: ${
-                  r.stdout || ""
-                }\nStderr: ${r.stderr || ""}\n`
-            )
-            .join("\n")
-        );
-      } else {
-        setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
-      }
+      if (data?.results?.[0]?.visibleTestResults) {
+  const testResults = data.results[0].visibleTestResults;
+
+  setResults(testResults);
+
+  setOutput(
+    testResults
+      .map(
+        (t, idx) =>
+          `Test ${idx + 1}:\nInput: ${t.input}\nExpected: ${t.expectedOutput}\nActual: ${t.actualOutput.trim()}\nStatus: ${
+            t.passed ? "✅ Passed" : "❌ Failed"
+          }\n`
+      )
+      .join("\n")
+  );
+} else {
+  setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
+}
+
     } catch (err) {
       console.error("Run error:", err);
       
