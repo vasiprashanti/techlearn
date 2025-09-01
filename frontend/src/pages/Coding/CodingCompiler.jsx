@@ -7,7 +7,6 @@ import { compilerAPI } from "../../services/api";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 
-
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
   javascript: {
@@ -38,7 +37,7 @@ const LANGUAGES = {
 
 const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
-  const  { linkId } = useParams();
+  const { linkId } = useParams();
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
   const [output, setOutput] = useState("");
@@ -49,10 +48,9 @@ const CodingCompiler = ({ user, contestData }) => {
   const [isRoundComplete, setIsRoundComplete] = useState(false);
   const [results, setResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  // Add state to track if problem has been submitted
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
-  const BASE_URL = import.meta.env.VITE_API_URL;
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'; // Fallback URL
 
   // problems state - now using passed data instead of fetching
   const [problems, setProblems] = useState([]);
@@ -62,6 +60,8 @@ const CodingCompiler = ({ user, contestData }) => {
   // Debug logging
   console.log("Contest Data:", contestData);
   console.log("Problems:", problems);
+  console.log("Link ID:", linkId);
+  console.log("Base URL:", BASE_URL);
 
   // Timer - using duration from contestData
   const [timeLeft, setTimeLeft] = useState((contestData?.duration || 120) * 60);
@@ -139,101 +139,175 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleRun = async () => {
-  if (!code.trim()) {
-    setOutput("⚠️ Please write some code before running.");
-    return;
-  }
-
-  setIsRunning(true);
-  setOutput("⏳ Running visible test cases...");
-
-  try {
-    const payload = {
-      solutions: [
-        {
-          problemIndex: currentProblemIndex,
-          submittedCode: code,
-          language: selectedLang,
-        },
-      ],
-    };
-
-    console.log("Run payload:", payload); // debug
-
-    const { data } = await axios.post(
-      `${BASE_URL}/coding-round/${linkId}/run`,
-      payload
-    );
-
-    if (data?.results) {
-      setResults(data.results);
-
-      setOutput(
-        data.results
-          .map(
-            (r, idx) =>
-              `Result ${idx + 1}:\nStatus: ${r.status?.description}\nStdout: ${
-                r.stdout || ""
-              }\nStderr: ${r.stderr || ""}\n`
-          )
-          .join("\n")
-      );
-    } else {
-      setOutput("⚠️ Unexpected response: " + JSON.stringify(data));
+    if (!code.trim()) {
+      setOutput("⚠️ Please write some code before running.");
+      return;
     }
-  } catch (err) {
-    setOutput("⚠️ Error running test cases: " + err.message);
-  }
 
-  setIsRunning(false);
-};
+    // Validate required data
+    if (!linkId) {
+      setOutput("⚠️ Error: Missing contest link ID.");
+      return;
+    }
 
+    if (!BASE_URL) {
+      setOutput("⚠️ Error: API URL not configured.");
+      return;
+    }
 
-  
+    setIsRunning(true);
+    setOutput("⏳ Running visible test cases...");
+
+    try {
+      const payload = {
+        solutions: [
+          {
+            problemIndex: currentProblemIndex,
+            submittedCode: code,
+            language: selectedLang,
+          },
+        ],
+      };
+
+      console.log("Run payload:", payload);
+      console.log("API URL:", `${BASE_URL}/coding-round/${linkId}/run`);
+
+      const response = await axios.post(
+        `${BASE_URL}/coding-round/${linkId}/run`,
+        payload,
+        {
+          timeout: 30000, // 30 second timeout
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const { data } = response;
+
+      if (data?.results) {
+        setResults(data.results);
+        setOutput(
+          data.results
+            .map(
+              (r, idx) =>
+                `Result ${idx + 1}:\nStatus: ${r.status?.description || 'Unknown'}\nStdout: ${
+                  r.stdout || ""
+                }\nStderr: ${r.stderr || ""}\n`
+            )
+            .join("\n")
+        );
+      } else {
+        setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
+      }
+    } catch (err) {
+      console.error("Run error:", err);
+      
+      if (err.response) {
+        // Server responded with error status
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.statusText;
+        
+        if (status === 404) {
+          setOutput(`⚠️ Error 404: Contest not found. Please check if the contest link '${linkId}' is valid.`);
+        } else {
+          setOutput(`⚠️ Server error ${status}: ${message}`);
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        setOutput("⚠️ Network error: Unable to connect to server. Please check your connection.");
+      } else {
+        // Something else happened
+        setOutput("⚠️ Error running test cases: " + err.message);
+      }
+    }
+
+    setIsRunning(false);
+  };
 
   // --- Submit (Hidden Test Cases) ---
- const handleSubmit = async () => {
-  if (!code.trim()) {
-    setOutput("⚠️ Please write some code before submitting.");
-    return;
-  }
-
-  setIsRunning(true);
-  setOutput("⏳ Submitting for hidden test validation...");
-
-  try {
-    const payload = {
-      studentEmail: user.email,
-      solutions: [
-        {
-          problemIndex: currentProblemIndex,
-          submittedCode: code,
-          language: selectedLang
-        }
-      ]
-    };
-
-    console.log("Submit payload:", payload); // debug
-
-    const { data } = await axios.post(
-      `${BASE_URL}/coding-round/${linkId}/submit`,
-      payload
-    );
-
-    if (data.message === "Submission successful") {
-      setOutput("✅ Submission successful!");
-      setSubmittedProblems(
-        (prev) => new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-      );
-    } else {
-      setOutput("⚠️ Submission failed: " + JSON.stringify(data));
+  const handleSubmit = async () => {
+    if (!code.trim()) {
+      setOutput("⚠️ Please write some code before submitting.");
+      return;
     }
-  } catch (err) {
-    setOutput("⚠️ Error submitting code: " + err.message);
-  }
 
-  setIsRunning(false);
-};
+    // Validate required data
+    if (!linkId) {
+      setOutput("⚠️ Error: Missing contest link ID.");
+      return;
+    }
+
+    if (!user?.email) {
+      setOutput("⚠️ Error: User email not available.");
+      return;
+    }
+
+    if (!BASE_URL) {
+      setOutput("⚠️ Error: API URL not configured.");
+      return;
+    }
+
+    setIsRunning(true);
+    setOutput("⏳ Submitting for hidden test validation...");
+
+    try {
+      const payload = {
+        studentEmail: user.email,
+        solutions: [
+          {
+            problemIndex: currentProblemIndex,
+            submittedCode: code,
+            language: selectedLang
+          }
+        ]
+      };
+
+      console.log("Submit payload:", payload);
+      console.log("Submit API URL:", `${BASE_URL}/coding-round/${linkId}/submit`);
+
+      const response = await axios.post(
+        `${BASE_URL}/coding-round/${linkId}/submit`,
+        payload,
+        {
+          timeout: 30000, // 30 second timeout
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const { data } = response;
+
+      if (data.message === "Submission successful" || data.success) {
+        setOutput("✅ Submission successful!");
+        setSubmittedProblems(
+          (prev) => new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+        );
+      } else {
+        setOutput("⚠️ Submission failed: " + (data.message || JSON.stringify(data)));
+      }
+    } catch (err) {
+      console.error("Submit error:", err);
+      
+      if (err.response) {
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.statusText;
+        
+        if (status === 404) {
+          setOutput(`⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`);
+        } else {
+          setOutput(`⚠️ Server error ${status}: ${message}`);
+        }
+      } else if (err.request) {
+        setOutput("⚠️ Network error: Unable to connect to server. Please check your connection.");
+      } else {
+        setOutput("⚠️ Error submitting code: " + err.message);
+      }
+    }
+
+    setIsRunning(false);
+  };
 
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
@@ -242,22 +316,61 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleEndRound = async () => {
+    // Validate required data
+    if (!contestData?._id) {
+      console.error("Contest ID not available");
+      setIsRoundComplete(true);
+      return;
+    }
+
+    if (!user?.email) {
+      console.error("User email not available");
+      setIsRoundComplete(true);
+      return;
+    }
+
     try {
-      // Submit results with contest ID and user email - Fixed: removed undefined linkId
-      await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
+      console.log("Ending round with contest ID:", contestData._id);
+      
+      const response = await fetch(`${BASE_URL}/college-coding/${contestData._id}/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          contestId: contestData?._id,
+          contestId: contestData._id,
           email: user.email,
           results,
         }),
       });
+
+      if (!response.ok) {
+        console.error("End round failed with status:", response.status);
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+      } else {
+        console.log("Round ended successfully");
+      }
     } catch (err) {
-      console.error("Error submitting contest results", err);
+      console.error("Error submitting contest results:", err);
     }
+    
     setIsRoundComplete(true);
   };
+
+  // Add click outside handler for dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && !event.target.closest('.relative')) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   if (isRoundComplete) {
     return (
@@ -270,29 +383,35 @@ const CodingCompiler = ({ user, contestData }) => {
             Results Summary
           </h2>
           <div className="grid gap-4">
-            {results.map((res, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold dark:text-white">{res.problem}</p>
-                  <span
-                    className={`text-sm font-medium px-3 py-1 rounded-lg ${
-                      res.passed
-                        ? "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300"
-                        : "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300"
-                    }`}
-                  >
-                    {res.passed ? "✅ Passed" : "❌ Failed"}
-                  </span>
+            {results.length > 0 ? (
+              results.map((res, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold dark:text-white">{res.problem || `Problem ${idx + 1}`}</p>
+                    <span
+                      className={`text-sm font-medium px-3 py-1 rounded-lg ${
+                        res.passed
+                          ? "bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-300"
+                      }`}
+                    >
+                      {res.passed ? "✅ Passed" : "❌ Failed"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                    Score: <span className="font-bold">{res.score || 0}</span> /{" "}
+                    {res.total || 0}
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                  Score: <span className="font-bold">{res.score}</span> /{" "}
-                  {res.total}
-                </p>
+              ))
+            ) : (
+              <div className="text-center text-gray-500 dark:text-gray-400">
+                No results available
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -313,6 +432,8 @@ const CodingCompiler = ({ user, contestData }) => {
               <p>Debug Info:</p>
               <p>Contest Data Keys: {Object.keys(contestData).join(", ")}</p>
               <p>Problems Array Length: {problems.length}</p>
+              <p>Link ID: {linkId || "Not available"}</p>
+              <p>Base URL: {BASE_URL}</p>
             </div>
           )}
         </div>
@@ -335,6 +456,10 @@ const CodingCompiler = ({ user, contestData }) => {
             src={theme === "light" ? "/logoo.png" : "/logoo2.png"}
             alt="Logo"
             className="h-8 w-auto object-contain"
+            onError={(e) => {
+              console.warn("Logo failed to load:", e.target.src);
+              e.target.style.display = 'none';
+            }}
           />
         </div>
 
@@ -374,10 +499,10 @@ const CodingCompiler = ({ user, contestData }) => {
         {/* LEFT PANEL */}
         <div className="w-1/2 bg-white/20 dark:bg-gray-900/40 p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700">
           <h1 className="text-2xl font-bold mb-4 dark:text-white">
-            {PROBLEM.problemTitle || PROBLEM.title}
+            {PROBLEM.problemTitle || PROBLEM.title || "Problem"}
           </h1>
           <p className="text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.description}
+            {PROBLEM.description || "No description available"}
           </p>
 
           <h2 className="font-semibold mt-3 dark:text-white">Input Format:</h2>
@@ -386,7 +511,7 @@ const CodingCompiler = ({ user, contestData }) => {
               ? PROBLEM.inputFormat
               : PROBLEM.inputDescription
               ? PROBLEM.inputDescription.split("\n")
-              : []
+              : ["No input format specified"]
             ).map((line, i) => (
               <li key={i}>{line}</li>
             ))}
@@ -398,7 +523,7 @@ const CodingCompiler = ({ user, contestData }) => {
               ? PROBLEM.outputFormat
               : PROBLEM.outputDescription
               ? PROBLEM.outputDescription.split("\n")
-              : []
+              : ["No output format specified"]
             ).map((line, i) => (
               <li key={i}>{line}</li>
             ))}
@@ -441,21 +566,34 @@ const CodingCompiler = ({ user, contestData }) => {
                     src={LANGUAGES[selectedLang].icon}
                     alt={LANGUAGES[selectedLang].name}
                     className="w-5 h-5"
+                    onError={(e) => {
+                      console.warn("Language icon failed to load:", e.target.src);
+                      e.target.style.display = 'none';
+                    }}
                   />
+                  <span className="text-sm dark:text-white">
+                    {LANGUAGES[selectedLang].name}
+                  </span>
                   <ChevronDown className="w-4 h-4 dark:text-white" />
                 </button>
                 {showDropdown && (
-                  <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50">
+                  <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50 min-w-[150px]">
                     {Object.values(LANGUAGES).map((lang) => (
                       <button
                         key={lang.id}
                         onClick={() => handleLanguageChange(lang.id)}
-                        className="flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                        className={`flex items-center gap-2 px-3 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 ${
+                          selectedLang === lang.id ? 'bg-gray-200 dark:bg-gray-700' : ''
+                        }`}
                       >
                         <img
                           src={lang.icon}
                           alt={lang.name}
                           className="w-5 h-5"
+                          onError={(e) => {
+                            console.warn("Language icon failed to load:", e.target.src);
+                            e.target.style.display = 'none';
+                          }}
                         />
                         <span className="text-sm dark:text-white">
                           {lang.name}
@@ -470,16 +608,17 @@ const CodingCompiler = ({ user, contestData }) => {
               <button
                 onClick={handleReset}
                 className="flex items-center justify-center px-3 py-2 rounded-lg bg-gray-500/20 h-10 w-10"
+                title="Reset code"
               >
-                <RotateCcw className="w-5 h-5" />
+                <RotateCcw className="w-5 h-5 dark:text-white" />
               </button>
             </div>
 
-            {/* Submit button (was Run) with aligned height */}
+            {/* Run button with aligned height */}
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition"
+              className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition hover:bg-blue-700"
             >
               <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Run"}
             </button>
@@ -498,9 +637,12 @@ const CodingCompiler = ({ user, contestData }) => {
                 wordWrap: "on",
                 tabSize: 2,
                 insertSpaces: true,
+                fontSize: 14,
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
               }}
               onMount={(editor, monaco) => {
-                // disable Tab
+                // disable Tab key for navigation
                 editor.addCommand(monaco.KeyCode.Tab, () => {});
 
                 // prevent copy, paste, cut
@@ -529,13 +671,14 @@ const CodingCompiler = ({ user, contestData }) => {
             <span className="font-semibold dark:text-white mb-2 block">
               Output:
             </span>
-            <pre className="bg-gray-50 p-3 rounded-md text-sm overflow-x-auto whitespace-pre-wrap max-h-80 overflow-y-auto">
+            <pre className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-sm overflow-x-auto whitespace-pre-wrap max-h-80 overflow-y-auto">
               {output || "Output will appear here..."}
             </pre>
           </div>
         </div>
       </div>
-      {/* Replace End Round button with handleEndRound */}
+
+      {/* Bottom Controls */}
       <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
         <button
           onClick={handleSubmit}
@@ -543,7 +686,7 @@ const CodingCompiler = ({ user, contestData }) => {
             isRunning ||
             submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
           }
-          className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50"
+          className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
             ? "Already Submitted"
@@ -551,21 +694,22 @@ const CodingCompiler = ({ user, contestData }) => {
             ? "Submitting..."
             : "Submit"}
         </button>
+
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
           <span className={timerWarning ? "text-red-500" : ""}>
             {formatTime(timeLeft)}
           </span>
         </div>
-        {currentProblemIndex < problems.length - 1 && (
+
+        {currentProblemIndex < problems.length - 1 ? (
           <button
             onClick={handleNextQuestion}
             className="px-4 py-2 bg-emerald-500 text-white rounded-xl shadow font-semibold hover:bg-emerald-600 transition"
           >
             Next Question &gt;&gt;
           </button>
-        )}
-        {currentProblemIndex === problems.length - 1 && (
+        ) : (
           <button
             onClick={handleEndRound}
             className="px-4 py-2 bg-red-600 text-white rounded-xl shadow font-semibold hover:bg-red-700 transition"
