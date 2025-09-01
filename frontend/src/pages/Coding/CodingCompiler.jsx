@@ -451,7 +451,7 @@ const CodingCompiler = ({ user, contestData }) => {
               disabled={isRunning}
               className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition"
             >
-              <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Submit"}
+              <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Run"}
             </button>
           </div>
 
@@ -514,7 +514,7 @@ const CodingCompiler = ({ user, contestData }) => {
         >
           {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title) 
             ? "Already Submitted" 
-            : isRunning ? "Submitting..." : "Run"}
+            : isRunning ? "Submitting..." : "Submit"}
         </button>
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
