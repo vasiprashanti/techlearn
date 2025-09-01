@@ -87,6 +87,36 @@ const CodingCompiler = ({ user, contestData }) => {
     }
   }, [contestData]);
 
+
+  //Auto Fullscreen
+  useEffect(() => {
+    if (contestData?.problems?.length > 0) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.warn("Fullscreen request failed:", err);
+      });
+    }
+  }, [contestData]);
+
+  //Auto Submit
+   useEffect(() => {
+    if (timeLeft <= 0) {
+      handleEndRound();
+    }
+  }, [timeLeft]);
+
+  // Detect tab switch
+   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        alert("⚠️ Tab switching detected! Please return to the test window.");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   const formatTime = (s) =>
     `${Math.floor(s / 60)
       .toString()
