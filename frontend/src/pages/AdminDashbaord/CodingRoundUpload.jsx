@@ -812,14 +812,31 @@ export default function CodingRoundForm() {
                   {roundExpanded[i] && (
                     <div className="space-y-2 pl-3">
                       <p className="text-sm">College: {round.college}</p>
+                      <p className="text-sm">Title: {round.title}</p>
+                      <p className="text-sm">Link ID: {round.linkId}</p>
                       <p className="text-sm">
-                        Date: {new Date(round.date).toLocaleDateString()}
+                        Date:{" "}
+                        {new Date(round.date).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                        })}
                       </p>
                       <p className="text-sm">
                         Duration: {round.duration} minutes
                       </p>
                       <p className="text-sm">
                         Status: {round.isActive ? "Active" : "Inactive"}
+                      </p>
+                      <p className="text-sm">
+                        Created At:{" "}
+                        {new Date(round.createdAt).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                        })}
+                      </p>
+                      <p className="text-sm">
+                        Updated At:{" "}
+                        {new Date(round.updatedAt).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                        })}
                       </p>
 
                       <div className="flex gap-3 mt-3">
