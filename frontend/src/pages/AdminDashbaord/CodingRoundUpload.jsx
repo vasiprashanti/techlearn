@@ -4,14 +4,24 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 
 const getTodayDate = () => {
   // Get current date in IST (Indian Standard Time)
-  const today = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const istDate = new Date(today.getTime() + istOffset);
-
-  const year = istDate.getUTCFullYear();
-  const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(istDate.getUTCDate()).padStart(2, "0");
+  const now = new Date();
+  // Convert to IST by adding 5:30 hours offset
+  const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  
+  const year = istTime.getUTCFullYear();
+  const month = String(istTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(istTime.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+};
+
+const getCurrentISTTime = () => {
+  // Get current time in IST
+  const now = new Date();
+  const istTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+  
+  const hours = String(istTime.getUTCHours()).padStart(2, "0");
+  const minutes = String(istTime.getUTCMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
 };
 
 export default function CodingRoundForm() {
@@ -164,7 +174,7 @@ export default function CodingRoundForm() {
     }
   };
 
-  // Enhanced validation
+  // Enhanced validation with proper IST handling
   const validate = () => {
     let newErrors = {};
 
@@ -182,17 +192,26 @@ export default function CodingRoundForm() {
       newErrors.endTime = "End time must be after start time.";
     }
 
-    // Date validation (ensure it's not in the past) - improved with IST
+    // Date validation (ensure it's not in the past) - Fixed IST handling
     if (date && startTime) {
+      // Create the test datetime in IST
       const testDateTime = new Date(`${date}T${startTime}:00`);
-
+      
       // Get current time in IST
       const now = new Date();
-      const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-      const istNow = new Date(now.getTime() + istOffset);
+      const istNow = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
+      
+      // Convert current IST time to a comparable format
+      const currentISTDateTime = new Date(
+        istNow.getUTCFullYear(),
+        istNow.getUTCMonth(),
+        istNow.getUTCDate(),
+        istNow.getUTCHours(),
+        istNow.getUTCMinutes()
+      );
 
       // Add a small buffer (1 minute) to account for processing time
-      const minimumTime = new Date(istNow.getTime() + 60000);
+      const minimumTime = new Date(currentISTDateTime.getTime() + 60000);
 
       if (testDateTime < minimumTime) {
         newErrors.date = "Test date and time must be in the future (IST).";
@@ -221,15 +240,30 @@ export default function CodingRoundForm() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  // API call using axios
-  // Handle Edit (prefill form)
-  // Handle Update (prefill form for updating)
+
+  // Handle Update (prefill form for updating) - Fixed IST time conversion
   const handleUpdate = (round) => {
     setEditingId(round._id);
     setCollege(round.college);
     setTitle(round.title);
-    setDate(round.date.split("T")[0]);
-    setStartTime(new Date(round.date).toISOString().slice(11, 16)); // HH:MM
+    
+    // Parse the date properly for IST
+    const roundDate = new Date(round.date);
+    
+    // Convert to IST for display
+    const istDate = new Date(roundDate.getTime() + (5.5 * 60 * 60 * 1000));
+    
+    // Format date for input field
+    const year = istDate.getUTCFullYear();
+    const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(istDate.getUTCDate()).padStart(2, "0");
+    setDate(`${year}-${month}-${day}`);
+    
+    // Format time for input field
+    const hours = String(istDate.getUTCHours()).padStart(2, "0");
+    const minutes = String(istDate.getUTCMinutes()).padStart(2, "0");
+    setStartTime(`${hours}:${minutes}`);
+    
     setDuration(round.duration);
     setProblems(
       round.problems.map((p) => ({
@@ -250,16 +284,21 @@ export default function CodingRoundForm() {
     setExpanded(new Array(round.problems.length).fill(true));
   };
 
-  // Modified handleSubmit
+  // Modified handleSubmit with proper IST to UTC conversion
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
 
+    // Create the date-time in IST and convert to UTC for storage
+    const testDateTime = new Date(`${date}T${startTime}:00`);
+    // Subtract IST offset to get UTC time for storage
+    const utcDateTime = new Date(testDateTime.getTime() - (5.5 * 60 * 60 * 1000));
+
     const payload = {
       title,
       college,
-      date: `${date}T${startTime}:00`,
+      date: utcDateTime.toISOString(),
       duration: parseInt(duration),
       problems: problems.map((problem) => ({
         problemTitle: problem.problemTitle,
@@ -436,7 +475,7 @@ export default function CodingRoundForm() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
-                  Test Date *
+                  Test Date * (IST)
                 </label>
                 <input
                   type="date"
@@ -451,7 +490,7 @@ export default function CodingRoundForm() {
 
               <div>
                 <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
-                  Start Time *
+                  Start Time * (IST)
                 </label>
                 <input
                   type="time"
@@ -466,7 +505,7 @@ export default function CodingRoundForm() {
 
               <div>
                 <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
-                  End Time *
+                  End Time * (IST)
                 </label>
                 <input
                   type="time"
@@ -809,7 +848,20 @@ export default function CodingRoundForm() {
                     <div className="space-y-2 pl-3">
                       <p className="text-sm">College: {round.college}</p>
                       <p className="text-sm">
-                        Date: {new Date(round.date).toLocaleDateString()}
+                        Date: {new Date(round.date).toLocaleDateString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit'
+                        })}
+                      </p>
+                      <p className="text-sm">
+                        Time: {new Date(round.date).toLocaleTimeString('en-IN', {
+                          timeZone: 'Asia/Kolkata',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        })} IST
                       </p>
                       <p className="text-sm">
                         Duration: {round.duration} minutes
