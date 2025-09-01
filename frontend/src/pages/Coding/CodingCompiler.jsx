@@ -6,7 +6,7 @@ import ScrollProgress from "../../components/ScrollProgress";
 import { compilerAPI } from "../../services/api";
 import axios from "axios";
 import { useParams } from "react-router-dom";
-const  {linkId} = useParams();
+
 
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
@@ -38,6 +38,7 @@ const LANGUAGES = {
 
 const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
+  const  { linkId } = useParams();
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
   const [output, setOutput] = useState("");
