@@ -186,24 +186,26 @@ const CodingCompiler = ({ user, contestData }) => {
 
       const { data } = response;
 
-      if (data?.data?.results?.[0]) {
-  const res = data.data.results[0];
+      if (data?.data?.results?.[0]?.visibleTestResults) {
+        const res = data.data.results[0];
 
-  setResults(res.visibleTestResults);
+        setResults(res.visibleTestResults);
 
-  setOutput(
-    res.visibleTestResults
-      .map(
-        (t, idx) =>
-          `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
-          `Input: ${t.input}\nExpected: ${t.expectedOutput}\nActual: ${t.actualOutput.trim()}\n`
-      )
-      .join("\n") +
-      `\n\n${res.feedback || ""}`
-  );
-} else {
-  setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
-}
+        setOutput(
+          res.visibleTestResults
+            .map(
+              (t, idx) =>
+                `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
+                `Input: ${t.input}\nExpected: ${
+                  t.expectedOutput
+                }\nActual: ${t.actualOutput.trim()}\n`
+            )
+            .join("\n") + `\n\n${res.feedback || ""}`
+        );
+      } else {
+        console.log("Unexpected shape:", data);
+        setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
+      }
 
 
     } catch (err) {
