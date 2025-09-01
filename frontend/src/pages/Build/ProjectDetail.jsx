@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import useMiniProjects from "../../hooks/useMiniProjects";
 import useMidProjects from "../../hooks/useMidProjects";
 import LoadingScreen from "../../components/Loader/Loader3D";
+import { useNavigate } from 'react-router-dom';
 
 const headingStyle = {
   fontFamily: "'Poppins', sans-serif",
@@ -251,6 +252,7 @@ const ProjectDetail = () => {
   const { id } = useParams();
   const { miniProjects } = useMiniProjects();
   const { midProjects } = useMidProjects();
+  const navigate = useNavigate();
 
   let project = miniProjects.find((p) => String(p._id) === String(id));
   let isMid = false;
@@ -292,6 +294,21 @@ const ProjectDetail = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 pt-28">
+
+      {/* Breadcrumbs */}
+      <nav className="flex items-center gap-2 mb-6 ml-4 text-sm text-gray-600 dark:text-gray-400">
+        <button
+          onClick={() => navigate('/build')}
+          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+        >
+          Build
+        </button>
+        <span>/</span>
+        <span className="text-gray-900 dark:text-white font-medium">
+          {project.title || 'Project'}
+        </span>
+      </nav>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Project Details */}
         <div className="lg:col-span-2">
