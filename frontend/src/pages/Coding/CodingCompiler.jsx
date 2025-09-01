@@ -4,9 +4,7 @@ import Editor from "@monaco-editor/react";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
 import { compilerAPI } from "../../services/api";
-
-  import { useParams } from "react-router-dom";
-
+import axios from "axios";
 
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
@@ -38,7 +36,6 @@ const LANGUAGES = {
 
 const CodingCompiler = ({ user, contestData }) => {
   const { theme, toggleTheme } = useTheme();
-  const { linkId } = useParams();
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
   const [output, setOutput] = useState("");
@@ -148,16 +145,13 @@ const CodingCompiler = ({ user, contestData }) => {
     setOutput("⏳ Running visible test cases...");
 
     try {
-      const response = await fetch(`${BASE_URL}/api/college-coding/${linkId}/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data } = await axios.post(
+        `${BASE_URL}/college-coding/${contestData?._id}/run`,
+        {
           code,
-          language: selectedLang
-        }),
-      });
-
-      const data = await response.json();
+          language: selectedLang,
+        }
+      );
 
       if (data.success) {
         setResults(data.data.results);
@@ -198,20 +192,22 @@ const CodingCompiler = ({ user, contestData }) => {
     setOutput("⏳ Submitting for hidden test validation...");
 
     try {
-      const response = await fetch(`${BASE_URL}/api/college-coding/${linkId}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data } = await axios.post(
+        `${BASE_URL}/college-coding/${contestData?._id}/submit`,
+        {
           code,
-          language: selectedLang
-        }),
-      });
-
-      const data = await response.json();
+          language: selectedLang,
+        }
+      );
 
       if (data.success) {
         setResults(data.data.results);
         setOutput("✅ Submission results:\n\n" + data.data.feedback);
+
+        // ✅ Mark problem as submitted
+        setSubmittedProblems((prev) =>
+          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+        );
       } else {
         setOutput("⚠️ Submission failed: " + data.message);
       }
