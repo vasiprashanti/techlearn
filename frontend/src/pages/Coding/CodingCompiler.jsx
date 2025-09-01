@@ -138,101 +138,99 @@ const CodingCompiler = ({ user, contestData }) => {
     setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
-  const handleRun = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before running.");
-      return;
-    }
+const handleRun = async () => {
+  if (!code.trim()) {
+    setOutput("⚠️ Please write some code before running.");
+    return;
+  }
 
-    // Validate required data
-    if (!linkId) {
-      setOutput("⚠️ Error: Missing contest link ID.");
-      return;
-    }
+  // Validate required data
+  if (!linkId) {
+    setOutput("⚠️ Error: Missing contest link ID.");
+    return;
+  }
 
-    if (!BASE_URL) {
-      setOutput("⚠️ Error: API URL not configured.");
-      return;
-    }
+  if (!BASE_URL) {
+    setOutput("⚠️ Error: API URL not configured.");
+    return;
+  }
 
-    setIsRunning(true);
-    setOutput("⏳ Running visible test cases...");
+  setIsRunning(true);
+  setOutput("⏳ Running test cases...");
 
-    try {
-      const payload = {
-        studentEmail: user.email,
-        solutions: [
-          {
-            problemIndex: currentProblemIndex,
-            submittedCode: code,
-            language: selectedLang,
-          },
-        ],
-      };
-
-      console.log("Run payload:", payload);
-      console.log("API URL:", `${BASE_URL}/coding-round/${linkId}/run`);
-
-      const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/run`,
-        payload,
+  try {
+    const payload = {
+      studentEmail: user.email,
+      solutions: [
         {
-          timeout: 30000, // 30 second timeout
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+          problemIndex: currentProblemIndex,
+          submittedCode: code,
+          language: selectedLang,
+        },
+      ],
+    };
 
-      const { data } = response;
-
-      if (data?.data?.results?.[0]?.visibleTestResults) {
-        const res = data.data.results[0];
-
-        setResults(res.visibleTestResults);
-
-        setOutput(
-          res.visibleTestResults
-            .map(
-              (t, idx) =>
-                `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
-                `Input: ${t.input}\nExpected: ${
-                  t.expectedOutput
-                }\nActual: ${t.actualOutput.trim()}\n`
-            )
-            .join("\n") + `\n\n${res.feedback || ""}`
-        );
-      } else {
-        console.log("Unexpected shape:", data);
-        setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
+    const response = await axios.post(
+      `${BASE_URL}/college-coding/${linkId}/run`,
+      payload,
+      {
+        timeout: 30000,
+        headers: {
+          'Content-Type': 'application/json',
+        },
       }
+    );
 
-
-    } catch (err) {
-      console.error("Run error:", err);
-      
-      if (err.response) {
-        // Server responded with error status
-        const status = err.response.status;
-        const message = err.response.data?.message || err.response.statusText;
-        
-        if (status === 404) {
-          setOutput(`⚠️ Error 404: Contest not found. Please check if the contest link '${linkId}' is valid.`);
-        } else {
-          setOutput(`⚠️ Server error ${status}: ${message}`);
-        }
-      } else if (err.request) {
-        // Request was made but no response received
-        setOutput("⚠️ Network error: Unable to connect to server. Please check your connection.");
-      } else {
-        // Something else happened
-        setOutput("⚠️ Error running test cases: " + err.message);
+    // Display the backend response with pass/fail status
+    const responseData = response.data;
+    
+    // Check for pass/fail indicators in the response
+    let output = "";
+    
+    if (responseData.message) {
+      output = responseData.message;
+    } else if (responseData.output) {
+      output = responseData.output;
+    } else if (responseData.success !== undefined) {
+      output = responseData.success ? "✅ PASSED" : "❌ FAILED";
+      if (responseData.details) {
+        output += "\n\n" + responseData.details;
       }
+    } else if (responseData.passed !== undefined) {
+      output = responseData.passed ? "✅ PASSED" : "❌ FAILED";
+      if (responseData.details) {
+        output += "\n\n" + responseData.details;
+      }
+    } else if (responseData.status) {
+      output = responseData.status === "success" ? "✅ PASSED" : "❌ FAILED";
+      if (responseData.details) {
+        output += "\n\n" + responseData.details;
+      }
+    } else {
+      // Fallback - display the entire response
+      output = JSON.stringify(responseData, null, 2);
     }
+    
+    setOutput(output);
 
-    setIsRunning(false);
-  };
+  } catch (err) {
+    console.error("Run error:", err);
+    
+    if (err.response) {
+      const status = err.response.status;
+      const message = err.response.data?.message || err.response.statusText;
+      setOutput(`⚠️ Error ${status}: ${message}`);
+    } else if (err.request) {
+      setOutput("⚠️ Network error: Unable to connect to server.");
+    } else {
+      setOutput("⚠️ Error: " + err.message);
+    }
+  }
 
+  setIsRunning(false);
+};
+
+  
   // --- Submit (Hidden Test Cases) ---
   const handleSubmit = async () => {
     if (!code.trim()) {
