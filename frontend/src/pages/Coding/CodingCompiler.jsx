@@ -48,7 +48,6 @@ const CodingCompiler = ({ user, contestData }) => {
   // Add state to track if problem has been submitted
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
-  
   const BASE_URL = import.meta.env.VITE_API_URL;
 
   // problems state - now using passed data instead of fetching
@@ -83,10 +82,12 @@ const CodingCompiler = ({ user, contestData }) => {
       setProblems(contestData.problems);
     } else {
       console.log("No valid problems found in contestData");
-      console.log("Available keys in contestData:", contestData ? Object.keys(contestData) : "contestData is null/undefined");
+      console.log(
+        "Available keys in contestData:",
+        contestData ? Object.keys(contestData) : "contestData is null/undefined"
+      );
     }
   }, [contestData]);
-
 
   //Auto Fullscreen
   useEffect(() => {
@@ -98,14 +99,14 @@ const CodingCompiler = ({ user, contestData }) => {
   }, [contestData]);
 
   //Auto Submit
-   useEffect(() => {
+  useEffect(() => {
     if (timeLeft <= 0) {
       handleEndRound();
     }
   }, [timeLeft]);
 
   // Detect tab switch
-   useEffect(() => {
+  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         alert("⚠️ Tab switching detected! Please return to the test window.");
@@ -123,10 +124,9 @@ const CodingCompiler = ({ user, contestData }) => {
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleReset = () => {
-  setCode(LANGUAGES[selectedLang].defaultCode);
-  setOutput("");
-};
-
+    setCode(LANGUAGES[selectedLang].defaultCode);
+    setOutput("");
+  };
 
   const handleNextQuestion = () => {
     setCurrentProblemIndex((prev) => (prev + 1) % problems.length);
@@ -145,10 +145,16 @@ const CodingCompiler = ({ user, contestData }) => {
       let outputText = "📊 Test Results:\n\n";
 
       // Use visible test cases if available, otherwise fall back to example
-      const testCases = PROBLEM.visibleTestCases || (PROBLEM.example ? [{
-        input: PROBLEM.example.input,
-        expected: PROBLEM.example.output
-      }] : []);
+      const testCases =
+        PROBLEM.visibleTestCases ||
+        (PROBLEM.example
+          ? [
+              {
+                input: PROBLEM.example.input,
+                expected: PROBLEM.example.output,
+              },
+            ]
+          : []);
 
       for (let i = 0; i < testCases.length; i++) {
         const test = testCases[i];
@@ -170,9 +176,9 @@ const CodingCompiler = ({ user, contestData }) => {
 
         const actualOutput = (result.stdout || "").trim();
         const expectedOutput = (test.expected || test.output || "").trim();
-        
+
         outputText += `Actual: ${actualOutput}\n`;
-        
+
         if (actualOutput === expectedOutput) {
           outputText += `✅ Status: PASSED\n`;
           if (result.time) outputText += `⏱️ Execution Time: ${result.time}s\n`;
@@ -184,7 +190,7 @@ const CodingCompiler = ({ user, contestData }) => {
       }
 
       outputText += `📋 Summary: ${passedCount}/${testCases.length} test cases passed\n`;
-      
+
       if (passedCount === testCases.length) {
         outputText += "🎉 All visible test cases passed!";
       } else {
@@ -200,7 +206,6 @@ const CodingCompiler = ({ user, contestData }) => {
     }
   };
 
-
   const handleRun = async () => {
     setIsRunning(true);
     setOutput("");
@@ -212,17 +217,14 @@ const CodingCompiler = ({ user, contestData }) => {
           problemIndex: currentProblemIndex,
           language: selectedLang,
           submittedCode: code,
-        }
+        },
       ];
 
-      const res = await fetch(
-        `${BASE_URL}/college-coding/${linkId}/run`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentEmail, solutions }),
-        }
-      );
+      const res = await fetch(`${BASE_URL}/college-coding/${linkId}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentEmail, solutions }),
+      });
       const data = await res.json();
       console.log("Run response:", data);
 
@@ -256,10 +258,10 @@ const CodingCompiler = ({ user, contestData }) => {
       await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           contestId: contestData?._id,
           email: user.email,
-          results 
+          results,
         }),
       });
     } catch (err) {
@@ -304,7 +306,6 @@ const CodingCompiler = ({ user, contestData }) => {
             ))}
           </div>
         </div>
-        
       </div>
     );
   }
@@ -314,7 +315,9 @@ const CodingCompiler = ({ user, contestData }) => {
       <div className="flex items-center justify-center h-screen bg-white/20 dark:bg-gray-900/40">
         <div className="text-center">
           <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
-            {problems.length === 0 ? "Loading problems..." : "No problems available"}
+            {problems.length === 0
+              ? "Loading problems..."
+              : "No problems available"}
           </p>
           {contestData && (
             <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -390,21 +393,36 @@ const CodingCompiler = ({ user, contestData }) => {
 
           <h2 className="font-semibold mt-3 dark:text-white">Input Format:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.inputFormat?.map((line, i) => (
+            {(Array.isArray(PROBLEM.inputFormat)
+              ? PROBLEM.inputFormat
+              : PROBLEM.inputDescription
+              ? PROBLEM.inputDescription.split("\n")
+              : []
+            ).map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
 
           <h2 className="font-semibold mt-3 dark:text-white">Output Format:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.outputFormat?.map((line, i) => (
+            {(Array.isArray(PROBLEM.outputFormat)
+              ? PROBLEM.outputFormat
+              : PROBLEM.outputDescription
+              ? PROBLEM.outputDescription.split("\n")
+              : []
+            ).map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
 
           <h2 className="font-semibold mt-3 dark:text-white">Constraints:</h2>
           <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.constraints?.map((line, i) => (
+            {(Array.isArray(PROBLEM.constraints)
+              ? PROBLEM.constraints
+              : PROBLEM.constraints
+              ? PROBLEM.constraints.split("\n")
+              : []
+            ).map((line, i) => (
               <li key={i}>{line}</li>
             ))}
           </ul>
@@ -414,14 +432,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Input:</strong>
               <pre className="mt-1 text-xs">
-  {PROBLEM.example?.input?.replace(/\\n/g, "\n") || "No example input provided"}
-</pre>
+                {PROBLEM.example?.input?.replace(/\\n/g, "\n") ||
+                  "No example input provided"}
+              </pre>
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
               <strong>Output:</strong>
               <pre className="mt-1 text-xs">
-  {PROBLEM.example?.output?.replace(/\\n/g, "\n") || "No example output provided"}
-</pre>
+                {PROBLEM.example?.output?.replace(/\\n/g, "\n") ||
+                  "No example output provided"}
+              </pre>
             </p>
           </div>
         </div>
@@ -434,16 +454,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <div className="flex items-center gap-3 relative">
               <div className="relative">
                 <button
-  onClick={() => setShowDropdown(!showDropdown)}
-  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
->
-  <img
-    src={LANGUAGES[selectedLang].icon}
-    alt={LANGUAGES[selectedLang].name}
-    className="w-5 h-5"
-  />
-  <ChevronDown className="w-4 h-4 dark:text-white" />
-</button>
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
+                >
+                  <img
+                    src={LANGUAGES[selectedLang].icon}
+                    alt={LANGUAGES[selectedLang].name}
+                    className="w-5 h-5"
+                  />
+                  <ChevronDown className="w-4 h-4 dark:text-white" />
+                </button>
                 {showDropdown && (
                   <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50">
                     {Object.values(LANGUAGES).map((lang) => (
@@ -488,40 +508,40 @@ const CodingCompiler = ({ user, contestData }) => {
           {/* Code Editor */}
           <div className="flex-1 bg-white/20 dark:bg-gray-900/40 rounded-lg m-3 overflow-hidden">
             <Editor
-  height="100%"
-  language={LANGUAGES[selectedLang].monacoLanguage}
-  value={code}
-  onChange={(v) => setCode(v || "")}
-  theme={editorTheme}
-  options={{
-    minimap: { enabled: false },
-    wordWrap: "on",
-    tabSize: 2,
-    insertSpaces: true,
-  }}
-  onMount={(editor, monaco) => {
-    // disable Tab
-    editor.addCommand(monaco.KeyCode.Tab, () => {});
+              height="100%"
+              language={LANGUAGES[selectedLang].monacoLanguage}
+              value={code}
+              onChange={(v) => setCode(v || "")}
+              theme={editorTheme}
+              options={{
+                minimap: { enabled: false },
+                wordWrap: "on",
+                tabSize: 2,
+                insertSpaces: true,
+              }}
+              onMount={(editor, monaco) => {
+                // disable Tab
+                editor.addCommand(monaco.KeyCode.Tab, () => {});
 
-    // prevent copy, paste, cut
-    editor.onKeyDown((e) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.keyCode === monaco.KeyCode.KeyC ||
-          e.keyCode === monaco.KeyCode.KeyV ||
-          e.keyCode === monaco.KeyCode.KeyX)
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
+                // prevent copy, paste, cut
+                editor.onKeyDown((e) => {
+                  if (
+                    (e.ctrlKey || e.metaKey) &&
+                    (e.keyCode === monaco.KeyCode.KeyC ||
+                      e.keyCode === monaco.KeyCode.KeyV ||
+                      e.keyCode === monaco.KeyCode.KeyX)
+                  ) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                });
 
-    // prevent paste
-    editor.onDidPaste(() => {
-      editor.setValue(code);
-    });
-  }}
-/>
+                // prevent paste
+                editor.onDidPaste(() => {
+                  editor.setValue(code);
+                });
+              }}
+            />
           </div>
 
           {/* Output */}
@@ -539,12 +559,17 @@ const CodingCompiler = ({ user, contestData }) => {
       <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
         <button
           onClick={handleRun}
-          disabled={isRunning || submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)}
+          disabled={
+            isRunning ||
+            submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
+          }
           className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50"
         >
-          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title) 
-            ? "Already Submitted" 
-            : isRunning ? "Submitting..." : "Submit"}
+          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
+            ? "Already Submitted"
+            : isRunning
+            ? "Submitting..."
+            : "Submit"}
         </button>
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
@@ -574,4 +599,3 @@ const CodingCompiler = ({ user, contestData }) => {
 };
 
 export default CodingCompiler;
-
