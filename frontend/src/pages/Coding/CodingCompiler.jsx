@@ -48,7 +48,9 @@ const CodingCompiler = ({ user, contestData }) => {
   // Add state to track if problem has been submitted
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
-  
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [showWarning, setShowWarning] = useState(false);
+
   const BASE_URL = import.meta.env.VITE_API_URL;
 
   // problems state - now using passed data instead of fetching
@@ -83,10 +85,12 @@ const CodingCompiler = ({ user, contestData }) => {
       setProblems(contestData.problems);
     } else {
       console.log("No valid problems found in contestData");
-      console.log("Available keys in contestData:", contestData ? Object.keys(contestData) : "contestData is null/undefined");
+      console.log(
+        "Available keys in contestData:",
+        contestData ? Object.keys(contestData) : "contestData is null/undefined"
+      );
     }
   }, [contestData]);
-
 
   //Auto Fullscreen
   useEffect(() => {
@@ -98,17 +102,37 @@ const CodingCompiler = ({ user, contestData }) => {
   }, [contestData]);
 
   //Auto Submit
-   useEffect(() => {
+  useEffect(() => {
     if (timeLeft <= 0) {
       handleEndRound();
     }
   }, [timeLeft]);
 
   // Detect tab switch
-   useEffect(() => {
+  useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        alert("⚠️ Tab switching detected! Please return to the test window.");
+        setTabSwitchCount((prev) => {
+          const newCount = prev + 1;
+          setShowWarning(true);
+
+          if (newCount >= 3) {
+            setShowWarning(false);
+            setOutput((prev) => [
+              ...(prev || []),
+              <div
+                key="auto-submit"
+                className="flex items-center gap-2 text-red-600 font-semibold mt-3"
+              >
+                <PlayCircle className="w-5 h-5" /> Auto-submitting test due to
+                multiple tab switches...
+              </div>,
+            ]);
+            handleSubmit();
+          }
+
+          return newCount;
+        });
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -123,10 +147,9 @@ const CodingCompiler = ({ user, contestData }) => {
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleReset = () => {
-  setCode(LANGUAGES[selectedLang].defaultCode);
-  setOutput("");
-};
-
+    setCode(LANGUAGES[selectedLang].defaultCode);
+    setOutput("");
+  };
 
   const handleNextQuestion = () => {
     setCurrentProblemIndex((prev) => (prev + 1) % problems.length);
@@ -145,10 +168,16 @@ const CodingCompiler = ({ user, contestData }) => {
       let outputText = "📊 Test Results:\n\n";
 
       // Use visible test cases if available, otherwise fall back to example
-      const testCases = PROBLEM.visibleTestCases || (PROBLEM.example ? [{
-        input: PROBLEM.example.input,
-        expected: PROBLEM.example.output
-      }] : []);
+      const testCases =
+        PROBLEM.visibleTestCases ||
+        (PROBLEM.example
+          ? [
+              {
+                input: PROBLEM.example.input,
+                expected: PROBLEM.example.output,
+              },
+            ]
+          : []);
 
       for (let i = 0; i < testCases.length; i++) {
         const test = testCases[i];
@@ -170,9 +199,9 @@ const CodingCompiler = ({ user, contestData }) => {
 
         const actualOutput = (result.stdout || "").trim();
         const expectedOutput = (test.expected || test.output || "").trim();
-        
+
         outputText += `Actual: ${actualOutput}\n`;
-        
+
         if (actualOutput === expectedOutput) {
           outputText += `✅ Status: PASSED\n`;
           if (result.time) outputText += `⏱️ Execution Time: ${result.time}s\n`;
@@ -184,7 +213,7 @@ const CodingCompiler = ({ user, contestData }) => {
       }
 
       outputText += `📋 Summary: ${passedCount}/${testCases.length} test cases passed\n`;
-      
+
       if (passedCount === testCases.length) {
         outputText += "🎉 All visible test cases passed!";
       } else {
@@ -200,7 +229,6 @@ const CodingCompiler = ({ user, contestData }) => {
     }
   };
 
-
   const handleRun = async () => {
     setIsRunning(true);
     setOutput("");
@@ -212,17 +240,14 @@ const CodingCompiler = ({ user, contestData }) => {
           problemIndex: currentProblemIndex,
           language: selectedLang,
           submittedCode: code,
-        }
+        },
       ];
 
-      const res = await fetch(
-        `${BASE_URL}/college-coding/${linkId}/run`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentEmail, solutions }),
-        }
-      );
+      const res = await fetch(`${BASE_URL}/college-coding/${linkId}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentEmail, solutions }),
+      });
       const data = await res.json();
       console.log("Run response:", data);
 
@@ -256,10 +281,10 @@ const CodingCompiler = ({ user, contestData }) => {
       await fetch(`${BASE_URL}/college-coding/${contestData?._id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           contestId: contestData?._id,
           email: user.email,
-          results 
+          results,
         }),
       });
     } catch (err) {
@@ -267,6 +292,28 @@ const CodingCompiler = ({ user, contestData }) => {
     }
     setIsRoundComplete(true);
   };
+
+  const WarningModal = () =>
+    showWarning && (
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div className="bg-white p-6 rounded-2xl shadow-lg w-96 text-center">
+          <MonitorPause className="w-10 h-10 text-yellow-600 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-gray-800">
+            Tab Switch Detected ({tabSwitchCount}/3)
+          </h2>
+          <p className="text-sm text-gray-600 mt-2">
+            Please stay on this test window. After 3 tab switches, your test
+            will be submitted automatically.
+          </p>
+          <button
+            className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+            onClick={() => setShowWarning(false)}
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
 
   if (isRoundComplete) {
     return (
@@ -304,7 +351,6 @@ const CodingCompiler = ({ user, contestData }) => {
             ))}
           </div>
         </div>
-        
       </div>
     );
   }
@@ -314,7 +360,9 @@ const CodingCompiler = ({ user, contestData }) => {
       <div className="flex items-center justify-center h-screen bg-white/20 dark:bg-gray-900/40">
         <div className="text-center">
           <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
-            {problems.length === 0 ? "Loading problems..." : "No problems available"}
+            {problems.length === 0
+              ? "Loading problems..."
+              : "No problems available"}
           </p>
           {contestData && (
             <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -414,14 +462,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Input:</strong>
               <pre className="mt-1 text-xs">
-  {PROBLEM.example?.input?.replace(/\\n/g, "\n") || "No example input provided"}
-</pre>
+                {PROBLEM.example?.input?.replace(/\\n/g, "\n") ||
+                  "No example input provided"}
+              </pre>
             </p>
             <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
               <strong>Output:</strong>
               <pre className="mt-1 text-xs">
-  {PROBLEM.example?.output?.replace(/\\n/g, "\n") || "No example output provided"}
-</pre>
+                {PROBLEM.example?.output?.replace(/\\n/g, "\n") ||
+                  "No example output provided"}
+              </pre>
             </p>
           </div>
         </div>
@@ -434,16 +484,16 @@ const CodingCompiler = ({ user, contestData }) => {
             <div className="flex items-center gap-3 relative">
               <div className="relative">
                 <button
-  onClick={() => setShowDropdown(!showDropdown)}
-  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
->
-  <img
-    src={LANGUAGES[selectedLang].icon}
-    alt={LANGUAGES[selectedLang].name}
-    className="w-5 h-5"
-  />
-  <ChevronDown className="w-4 h-4 dark:text-white" />
-</button>
+                  onClick={() => setShowDropdown(!showDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500/20 h-10"
+                >
+                  <img
+                    src={LANGUAGES[selectedLang].icon}
+                    alt={LANGUAGES[selectedLang].name}
+                    className="w-5 h-5"
+                  />
+                  <ChevronDown className="w-4 h-4 dark:text-white" />
+                </button>
                 {showDropdown && (
                   <div className="absolute left-0 mt-2 bg-white dark:bg-gray-800 shadow rounded-lg p-2 flex flex-col gap-2 z-50">
                     {Object.values(LANGUAGES).map((lang) => (
@@ -488,40 +538,40 @@ const CodingCompiler = ({ user, contestData }) => {
           {/* Code Editor */}
           <div className="flex-1 bg-white/20 dark:bg-gray-900/40 rounded-lg m-3 overflow-hidden">
             <Editor
-  height="100%"
-  language={LANGUAGES[selectedLang].monacoLanguage}
-  value={code}
-  onChange={(v) => setCode(v || "")}
-  theme={editorTheme}
-  options={{
-    minimap: { enabled: false },
-    wordWrap: "on",
-    tabSize: 2,
-    insertSpaces: true,
-  }}
-  onMount={(editor, monaco) => {
-    // disable Tab
-    editor.addCommand(monaco.KeyCode.Tab, () => {});
+              height="100%"
+              language={LANGUAGES[selectedLang].monacoLanguage}
+              value={code}
+              onChange={(v) => setCode(v || "")}
+              theme={editorTheme}
+              options={{
+                minimap: { enabled: false },
+                wordWrap: "on",
+                tabSize: 2,
+                insertSpaces: true,
+              }}
+              onMount={(editor, monaco) => {
+                // disable Tab
+                editor.addCommand(monaco.KeyCode.Tab, () => {});
 
-    // prevent copy, paste, cut
-    editor.onKeyDown((e) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        (e.keyCode === monaco.KeyCode.KeyC ||
-          e.keyCode === monaco.KeyCode.KeyV ||
-          e.keyCode === monaco.KeyCode.KeyX)
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
+                // prevent copy, paste, cut
+                editor.onKeyDown((e) => {
+                  if (
+                    (e.ctrlKey || e.metaKey) &&
+                    (e.keyCode === monaco.KeyCode.KeyC ||
+                      e.keyCode === monaco.KeyCode.KeyV ||
+                      e.keyCode === monaco.KeyCode.KeyX)
+                  ) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                });
 
-    // prevent paste
-    editor.onDidPaste(() => {
-      editor.setValue(code);
-    });
-  }}
-/>
+                // prevent paste
+                editor.onDidPaste(() => {
+                  editor.setValue(code);
+                });
+              }}
+            />
           </div>
 
           {/* Output */}
@@ -539,12 +589,17 @@ const CodingCompiler = ({ user, contestData }) => {
       <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
         <button
           onClick={handleRun}
-          disabled={isRunning || submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)}
+          disabled={
+            isRunning ||
+            submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
+          }
           className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50"
         >
-          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title) 
-            ? "Already Submitted" 
-            : isRunning ? "Submitting..." : "Submit"}
+          {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
+            ? "Already Submitted"
+            : isRunning
+            ? "Submitting..."
+            : "Submit"}
         </button>
         <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
           Time Left:{" "}
@@ -569,6 +624,7 @@ const CodingCompiler = ({ user, contestData }) => {
           </button>
         )}
       </div>
+      <WarningModal />
     </div>
   );
 };
