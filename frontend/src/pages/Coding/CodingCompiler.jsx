@@ -160,6 +160,7 @@ const CodingCompiler = ({ user, contestData }) => {
 
     try {
       const payload = {
+        studentEmail: user.email,
         solutions: [
           {
             problemIndex: currentProblemIndex,
