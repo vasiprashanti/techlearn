@@ -11,15 +11,15 @@ const CollegeAssessment = () => {
 
   // College configuration
   const collegeConfig = {
-    vjit: {
-      name: "Vidya Jyothi Institute of Technology",
-      logo: "/vjit.png",
-      shortName: "VJIT",
-    },
     uoh: {
       name: "University of Hyderabad",
       logo: "/uh.png",
       shortName: "UoH",
+    },
+    vjit: {
+      name: "Vidya Jyothi Institute of Technology",
+      logo: "/vjit.png",
+      shortName: "VJIT",
     },
     vnr: {
       name: "VNR Vignana Jyothi Institute of Engineering and Technology",
@@ -135,15 +135,12 @@ const CollegeAssessment = () => {
                   {round.title}
                 </h4>
                 <button
-                  onClick={() => handleStartTest(round.linkId, round.type)}
-                  className={`w-full py-3 rounded-xl font-semibold text-white transition ${
-                    round.type === "MCQ"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : "bg-green-600 hover:bg-green-700"
-                  }`}
-                >
-                  Start {round.type} Round
-                </button>
+  onClick={() => handleStartTest(round.linkId, round.type)}
+  className="w-full py-3 rounded-xl font-semibold text-white transition bg-blue-600 hover:bg-blue-700"
+>
+  Start {round.type} Round
+</button>
+
               </div>
             ))
           ) : (
