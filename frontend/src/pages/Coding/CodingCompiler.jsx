@@ -51,7 +51,6 @@ const CodingCompiler = ({ user, contestData }) => {
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; // Fallback URL
-  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; // Fallback URL
 
   // problems state - now using passed data instead of fetching
   const [problems, setProblems] = useState([]);
@@ -144,27 +143,13 @@ const CodingCompiler = ({ user, contestData }) => {
       setOutput("⚠️ Please write some code before running.");
       return;
     }
-  const handleRun = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before running.");
-      return;
-    }
 
     // Validate required data
     if (!linkId) {
       setOutput("⚠️ Error: Missing contest link ID.");
       return;
     }
-    // Validate required data
-    if (!linkId) {
-      setOutput("⚠️ Error: Missing contest link ID.");
-      return;
-    }
 
-    if (!BASE_URL) {
-      setOutput("⚠️ Error: API URL not configured.");
-      return;
-    }
     if (!BASE_URL) {
       setOutput("⚠️ Error: API URL not configured.");
       return;
@@ -257,114 +242,109 @@ const CodingCompiler = ({ user, contestData }) => {
     setIsRunning(false);
   };
 
+  // --- Submit (Hidden Test Cases) ---
+  const handleSubmit = async () => {
+    if (!code.trim()) {
+      setOutput("⚠️ Please write some code before submitting.");
+      return;
+    }
+
+    if (!linkId) {
+      setOutput("⚠️ Error: Missing contest link ID.");
+      return;
+    }
+
+    if (!user?.email) {
+      setOutput("⚠️ Error: User email not available.");
+      return;
+    }
+
+    if (!BASE_URL) {
+      setOutput("⚠️ Error: API URL not configured.");
+      return;
+    }
+
+    setIsRunning(true);
+    setOutput("⏳ Submitting for hidden test validation...");
+
+    try {
+      const payload = {
+        studentEmail: user.email,
+        solutions: [
+          {
+            problemIndex: currentProblemIndex,
+            submittedCode: code,
+            language: selectedLang,
+          },
+        ],
+      };
+
+      const response = await axios.post(
+        `${BASE_URL}/college-coding/${linkId}/submit`,
+        payload,
+        {
+          timeout: 30000,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const { data } = response;
+      console.log("Raw submit response:", data);
+
+      // ✅ get hidden test cases from results[0]
+      const res = data?.data?.results?.[0] || {};
+      const hiddenTests = res.hiddenTestCases || [];
+
+      if (hiddenTests.length > 0) {
+        // Note: hidden test cases only have input + expectedOutput (no actualOutput/passed)
+        const totalCount = hiddenTests.length;
+
+        setResults(hiddenTests);
+
+        setOutput(
+          `✅ Submission successful!\nHidden Test Cases Provided: ${totalCount}\n` +
+            `⚠️ Actual outputs and pass/fail are not exposed for hidden cases.`
+        );
+
+        setSubmittedProblems((prev) =>
+          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+        );
+      } else if (data.message === "Submission successful" || data.success) {
+        setOutput("✅ Submission successful (no hidden test cases returned).");
+        setSubmittedProblems((prev) =>
+          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+        );
+      } else {
+        setOutput(
+          "⚠️ Submission failed: " + (data.message || JSON.stringify(data))
+        );
+      }
+    } catch (err) {
+      console.error("Submit error:", err);
+
+      if (err.response) {
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.statusText;
+
+        if (status === 404) {
+          setOutput(
+            `⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`
+          );
+        } else {
+          setOutput(`⚠️ Server error ${status}: ${message}`);
+        }
+      } else if (err.request) {
+        setOutput(
+          "⚠️ Network error: Unable to connect to server. Please check your connection."
+        );
+      } else {
+        setOutput("⚠️ Error submitting code: " + err.message);
+      }
+    }
+
     setIsRunning(false);
   };
 
-  // --- Submit (Hidden Test Cases) ---
-  const handleSubmit = async () => {
-  if (!code.trim()) {
-    setOutput("⚠️ Please write some code before submitting.");
-    return;
-  }
-
-  if (!linkId) {
-    setOutput("⚠️ Error: Missing contest link ID.");
-    return;
-  }
-
-  if (!user?.email) {
-    setOutput("⚠️ Error: User email not available.");
-    return;
-  }
-
-  if (!BASE_URL) {
-    setOutput("⚠️ Error: API URL not configured.");
-    return;
-  }
-
-  setIsRunning(true);
-  setOutput("⏳ Submitting for hidden test validation...");
-
-  try {
-    const payload = {
-      studentEmail: user.email,
-      solutions: [
-        {
-          problemIndex: currentProblemIndex,
-          submittedCode: code,
-          language: selectedLang,
-        },
-      ],
-    };
-
-    const response = await axios.post(
-      `${BASE_URL}/college-coding/${linkId}/submit`,
-      payload,
-      {
-        timeout: 30000,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-
-    const { data } = response;
-    console.log("Raw submit response:", data);
-
-    // ✅ get hidden test cases from results[0]
-    const res = data?.data?.results?.[0] || {};
-    const hiddenTests = res.hiddenTestCases || [];
-
-    if (hiddenTests.length > 0) {
-      // Note: hidden test cases only have input + expectedOutput (no actualOutput/passed)
-      const totalCount = hiddenTests.length;
-
-      setResults(hiddenTests);
-
-      setOutput(
-        `✅ Submission successful!\nHidden Test Cases Provided: ${totalCount}\n` +
-          `⚠️ Actual outputs and pass/fail are not exposed for hidden cases.`
-      );
-
-      setSubmittedProblems((prev) =>
-        new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-      );
-    } else if (data.message === "Submission successful" || data.success) {
-      setOutput("✅ Submission successful (no hidden test cases returned).");
-      setSubmittedProblems((prev) =>
-        new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-      );
-    } else {
-      setOutput(
-        "⚠️ Submission failed: " + (data.message || JSON.stringify(data))
-      );
-    }
-  } catch (err) {
-    console.error("Submit error:", err);
-
-    if (err.response) {
-      const status = err.response.status;
-      const message = err.response.data?.message || err.response.statusText;
-
-      if (status === 404) {
-        setOutput(
-          `⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`
-        );
-      } else {
-        setOutput(`⚠️ Server error ${status}: ${message}`);
-      }
-    } else if (err.request) {
-      setOutput(
-        "⚠️ Network error: Unable to connect to server. Please check your connection."
-      );
-    } else {
-      setOutput("⚠️ Error submitting code: " + err.message);
-    }
-  }
-
-  setIsRunning(false);
-};
-
-
-  
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
     setCode(LANGUAGES[lang].defaultCode);
@@ -414,7 +394,6 @@ const CodingCompiler = ({ user, contestData }) => {
       console.error("Error submitting contest results:", err);
     }
 
-
     setIsRoundComplete(true);
   };
 
@@ -422,15 +401,12 @@ const CodingCompiler = ({ user, contestData }) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDropdown && !event.target.closest(".relative")) {
-      if (showDropdown && !event.target.closest(".relative")) {
         setShowDropdown(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showDropdown]);
@@ -531,7 +507,6 @@ const CodingCompiler = ({ user, contestData }) => {
             className="h-8 w-auto object-contain"
             onError={(e) => {
               console.warn("Logo failed to load:", e.target.src);
-              e.target.style.display = "none";
               e.target.style.display = "none";
             }}
           />
@@ -646,11 +621,6 @@ const CodingCompiler = ({ user, contestData }) => {
                         e.target.src
                       );
                       e.target.style.display = "none";
-                      console.warn(
-                        "Language icon failed to load:",
-                        e.target.src
-                      );
-                      e.target.style.display = "none";
                     }}
                   />
                   <span className="text-sm dark:text-white">
@@ -668,9 +638,6 @@ const CodingCompiler = ({ user, contestData }) => {
                           selectedLang === lang.id
                             ? "bg-gray-200 dark:bg-gray-700"
                             : ""
-                          selectedLang === lang.id
-                            ? "bg-gray-200 dark:bg-gray-700"
-                            : ""
                         }`}
                       >
                         <img
@@ -678,11 +645,6 @@ const CodingCompiler = ({ user, contestData }) => {
                           alt={lang.name}
                           className="w-5 h-5"
                           onError={(e) => {
-                            console.warn(
-                              "Language icon failed to load:",
-                              e.target.src
-                            );
-                            e.target.style.display = "none";
                             console.warn(
                               "Language icon failed to load:",
                               e.target.src
