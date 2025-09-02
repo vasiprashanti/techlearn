@@ -41,21 +41,37 @@ export async function sendOTPEmail(email, otp, context = "MCQ/Coding Round") {
   await sendMail(email, subject, text);
 }
 
-// Validate round is active (duration, date)
+// Validate round is active (duration, date, endTime)
 export function isRoundActive(round) {
   if (!round.isActive) return false;
+
   const now = Date.now();
   const start = new Date(round.date).getTime();
-  const end = start + round.duration * 60 * 1000;
+
+  // Use endTime if available, otherwise calculate from duration
+  let end;
+  if (round.endTime) {
+    end = new Date(round.endTime).getTime();
+  } else {
+    end = start + round.duration * 60 * 1000;
+  }
+
   return now >= start && now <= end;
 }
-
 
 // Helper for time status
 export function getRoundTimeStatus(round) {
   const now = Date.now();
   const start = new Date(round.date).getTime();
-  const end = start + round.duration * 60 * 1000;
+
+  // Use endTime if available, otherwise calculate from duration
+  let end;
+  if (round.endTime) {
+    end = new Date(round.endTime).getTime();
+  } else {
+    end = start + round.duration * 60 * 1000;
+  }
+
   if (now < start) return "upcoming";
   if (now > end) return "ended";
   return "active";

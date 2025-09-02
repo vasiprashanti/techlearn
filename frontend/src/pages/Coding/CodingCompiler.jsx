@@ -51,6 +51,7 @@ const CodingCompiler = ({ user, contestData }) => {
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
   const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; // Fallback URL
+  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; // Fallback URL
 
   // problems state - now using passed data instead of fetching
   const [problems, setProblems] = useState([]);
@@ -143,13 +144,27 @@ const CodingCompiler = ({ user, contestData }) => {
       setOutput("⚠️ Please write some code before running.");
       return;
     }
+  const handleRun = async () => {
+    if (!code.trim()) {
+      setOutput("⚠️ Please write some code before running.");
+      return;
+    }
 
     // Validate required data
     if (!linkId) {
       setOutput("⚠️ Error: Missing contest link ID.");
       return;
     }
+    // Validate required data
+    if (!linkId) {
+      setOutput("⚠️ Error: Missing contest link ID.");
+      return;
+    }
 
+    if (!BASE_URL) {
+      setOutput("⚠️ Error: API URL not configured.");
+      return;
+    }
     if (!BASE_URL) {
       setOutput("⚠️ Error: API URL not configured.");
       return;
@@ -238,6 +253,9 @@ const CodingCompiler = ({ user, contestData }) => {
         setOutput("⚠️ Error running test cases: " + err.message);
       }
     }
+
+    setIsRunning(false);
+  };
 
     setIsRunning(false);
   };
@@ -396,6 +414,7 @@ const CodingCompiler = ({ user, contestData }) => {
       console.error("Error submitting contest results:", err);
     }
 
+
     setIsRoundComplete(true);
   };
 
@@ -403,12 +422,15 @@ const CodingCompiler = ({ user, contestData }) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDropdown && !event.target.closest(".relative")) {
+      if (showDropdown && !event.target.closest(".relative")) {
         setShowDropdown(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showDropdown]);
@@ -509,6 +531,7 @@ const CodingCompiler = ({ user, contestData }) => {
             className="h-8 w-auto object-contain"
             onError={(e) => {
               console.warn("Logo failed to load:", e.target.src);
+              e.target.style.display = "none";
               e.target.style.display = "none";
             }}
           />
@@ -623,6 +646,11 @@ const CodingCompiler = ({ user, contestData }) => {
                         e.target.src
                       );
                       e.target.style.display = "none";
+                      console.warn(
+                        "Language icon failed to load:",
+                        e.target.src
+                      );
+                      e.target.style.display = "none";
                     }}
                   />
                   <span className="text-sm dark:text-white">
@@ -640,6 +668,9 @@ const CodingCompiler = ({ user, contestData }) => {
                           selectedLang === lang.id
                             ? "bg-gray-200 dark:bg-gray-700"
                             : ""
+                          selectedLang === lang.id
+                            ? "bg-gray-200 dark:bg-gray-700"
+                            : ""
                         }`}
                       >
                         <img
@@ -647,6 +678,11 @@ const CodingCompiler = ({ user, contestData }) => {
                           alt={lang.name}
                           className="w-5 h-5"
                           onError={(e) => {
+                            console.warn(
+                              "Language icon failed to load:",
+                              e.target.src
+                            );
+                            e.target.style.display = "none";
                             console.warn(
                               "Language icon failed to load:",
                               e.target.src

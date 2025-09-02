@@ -1,6 +1,7 @@
 import CodingRound from "../models/CodingRound.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import {
   generateOTP,
   storeOTP,
@@ -11,6 +12,19 @@ import {
   validateSubmission,
 } from "../utils/mcqCodingUtils.js";
 import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
+
+// Simple rate limiter for coding operations (10 seconds)
+export const codingRateLimit = rateLimit({
+  windowMs: 10 * 1000, // 10 seconds
+  max: 1, // 1 request per window per IP
+  message: {
+    success: false,
+    message: "Please wait 10 seconds before trying again",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // No custom keyGenerator - uses default IP-based limiting
+});
 
 // Helper function to convert IST to UTC
 const convertISTToUTC = (istDateString) => {
@@ -116,6 +130,9 @@ export const createCodingRound = async (req, res) => {
         id: codingRound._id,
         title: codingRound.title,
         college: codingRound.college,
+        date: codingRound.date,
+        duration: codingRound.duration,
+        endTime: codingRound.endTime,
         linkId: codingRound.linkId,
         accessLink: `${process.env.FRONTEND_URL}/coding/${codingRound.linkId}`,
       },
@@ -135,7 +152,7 @@ export const getAllCodingRounds = async (req, res) => {
   try {
     const codingRounds = await CodingRound.find()
       .select(
-        "title college date duration totalAttempts isActive linkId createdAt"
+        "title college date duration endTime totalAttempts isActive linkId createdAt"
       )
       .sort({ createdAt: -1 });
 
@@ -263,13 +280,13 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
   }
 };
 
-// Submit coding round answers
+// Submit coding round answers (hidden test cases) - validates and updates score only
 export const submitCodingRoundAnswers = async (req, res) => {
   try {
     const { linkId } = req.params;
     const { studentEmail, solutions } = req.body;
 
-    // Basic validation
+    // Validate input
     if (!studentEmail || !solutions || !Array.isArray(solutions)) {
       return res.status(400).json({
         success: false,
@@ -277,10 +294,21 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    if (solutions.length === 0) {
+    if (solutions.length !== 1) {
       return res.status(400).json({
         success: false,
-        message: "At least one solution is required",
+        message: "Please submit one problem at a time",
+      });
+    }
+
+    const solution = solutions[0];
+    const { problemIndex, language, submittedCode } = solution;
+
+    // Validate solution structure
+    if (problemIndex === undefined || !language || !submittedCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Problem index, language, and submitted code are required",
       });
     }
 
@@ -301,174 +329,112 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Check for existing submission - only allow one submission
-    const existingSubmission = await StudentCodingSubmission.findOne({
+    // Find the problem
+    const problem = codingRound.problems[problemIndex];
+    if (!problem) {
+      return res.status(400).json({
+        success: false,
+        message: `Problem at index ${problemIndex} not found`,
+      });
+    }
+
+    // Get language ID for Judge0
+    const languageId = LANGUAGE_IDS[language?.toLowerCase()];
+    if (!languageId) {
+      return res.status(400).json({
+        success: false,
+        message: `Unsupported language: ${language}`,
+      });
+    }
+
+    // Find or create submission record
+    let submission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: studentEmail.toLowerCase(),
     });
 
-    if (existingSubmission) {
+    // Check if round has been ended by the student
+    if (submission?.isRoundEnded) {
       return res.status(400).json({
         success: false,
         message:
-          "You have already submitted for this coding round. Only one submission is allowed.",
+          "You have already ended this round. No more submissions allowed.",
       });
     }
 
-    // Process solutions - validate each solution against hidden test cases only
-    const processedSolutions = [];
-    let totalScore = 0;
+    // Test against hidden test cases
+    let hiddenTestsPassed = 0;
+    const totalHiddenTests = problem.hiddenTestCases.length;
 
-    for (const solution of solutions) {
-      const { problemIndex, language, submittedCode } = solution;
+    for (let i = 0; i < problem.hiddenTestCases.length; i++) {
+      const testCase = problem.hiddenTestCases[i];
 
-      // Validate solution structure
-      if (problemIndex === undefined || !language || !submittedCode) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Each solution must have problemIndex, language, and submittedCode",
-        });
+      try {
+        const testResult = await testCodeWithJudge0(
+          submittedCode,
+          languageId,
+          testCase.input,
+          testCase.expectedOutput
+        );
+
+        const passed = testResult.success && testResult.outputMatches;
+        if (passed) hiddenTestsPassed++;
+      } catch (error) {
+        // Test failed, don't increment passed count
       }
-
-      // Find the problem
-      const problem = codingRound.problems[problemIndex];
-      if (!problem) {
-        return res.status(400).json({
-          success: false,
-          message: `Problem at index ${problemIndex} not found`,
-        });
-      }
-
-      // Get language ID for Judge0
-      const languageId = LANGUAGE_IDS[language?.toLowerCase()];
-      if (!languageId) {
-        return res.status(400).json({
-          success: false,
-          message: `Unsupported language: ${language}`,
-        });
-      }
-
-      // Test against hidden test cases only
-      let hiddenTestsPassed = 0;
-      const totalHiddenTests = problem.hiddenTestCases.length;
-      const hiddenTestResults = [];
-
-      for (let i = 0; i < problem.hiddenTestCases.length; i++) {
-        const testCase = problem.hiddenTestCases[i];
-
-        try {
-          const testResult = await testCodeWithJudge0(
-            submittedCode,
-            languageId,
-            testCase.input,
-            testCase.output
-          );
-
-          const passed = testResult.success && testResult.outputMatches;
-          if (passed) hiddenTestsPassed++;
-
-          // Store results but don't expose actual test case details
-          hiddenTestResults.push({
-            testCaseIndex: i,
-            passed,
-            error: testResult.error || null,
-            // Don't expose input/output for hidden test cases
-          });
-        } catch (error) {
-          hiddenTestResults.push({
-            testCaseIndex: i,
-            passed: false,
-            error: `Test execution failed: ${error.message}`,
-          });
-        }
-      }
-
-      // Calculate score for this problem (based only on hidden test cases)
-      const problemScore =
-        totalHiddenTests > 0
-          ? Math.round((hiddenTestsPassed / totalHiddenTests) * 100)
-          : 0;
-      const isCorrect = hiddenTestsPassed === totalHiddenTests;
-
-      totalScore += problemScore;
-
-      // Store processed solution
-      processedSolutions.push({
-        problemIndex,
-        submittedCode,
-        language,
-        testCasesPassed: hiddenTestsPassed,
-        totalTestCases: totalHiddenTests,
-        hiddenTestsPassed,
-        totalHiddenTests,
-        isCorrect,
-        problemScore,
-        hiddenTestSummary: {
-          passed: hiddenTestsPassed,
-          total: totalHiddenTests,
-          failedTests: totalHiddenTests - hiddenTestsPassed,
-        },
-      });
     }
 
-    // Save submission
-    const submission = new StudentCodingSubmission({
-      codingRoundId: codingRound._id,
-      studentEmail: studentEmail.toLowerCase(),
-      solutions: processedSolutions.map((sol) => ({
-        problemIndex: sol.problemIndex,
-        submittedCode: sol.submittedCode,
-        language: sol.language,
-        testCasesPassed: sol.testCasesPassed,
-        totalTestCases: sol.totalTestCases,
-        isCorrect: sol.isCorrect,
-      })),
-      totalScore,
-    });
+    // Calculate score for this problem (0 if any test case fails, 100 if all pass)
+    const problemScore = hiddenTestsPassed === totalHiddenTests ? 100 : 0;
+    const isCorrect = hiddenTestsPassed === totalHiddenTests;
+
+    if (!submission) {
+      // Create new submission
+      const problemScores = new Map();
+      problemScores.set(problemIndex.toString(), problemScore);
+
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentEmail: studentEmail.toLowerCase(),
+        problemScores,
+        totalScore: problemScore,
+        lastSubmissionAt: new Date(),
+      });
+    } else {
+      // Update existing submission
+      submission.problemScores.set(problemIndex.toString(), problemScore);
+
+      // Recalculate total score
+      let totalScore = 0;
+      for (const score of submission.problemScores.values()) {
+        totalScore += score;
+      }
+      submission.totalScore = totalScore;
+      submission.lastSubmissionAt = new Date();
+    }
 
     await submission.save();
 
-    // Update attempts count
-    codingRound.totalAttempts = (codingRound.totalAttempts || 0) + 1;
-    await codingRound.save();
-
     res.status(200).json({
       success: true,
-      message: "Solutions submitted and evaluated successfully",
+      message: "Solution submitted and evaluated successfully",
       data: {
         submissionId: submission._id,
-        totalScore,
-        maxPossibleScore: codingRound.problems.length * 100,
-        solutions: processedSolutions.map((sol) => ({
-          problemIndex: sol.problemIndex,
-          language: sol.language,
-          testCasesPassed: sol.testCasesPassed,
-          totalTestCases: sol.totalTestCases,
-          hiddenTestsPassed: sol.hiddenTestsPassed,
-          totalHiddenTests: sol.totalHiddenTests,
-          isCorrect: sol.isCorrect,
-          problemScore: sol.problemScore,
-          hiddenTestSummary: sol.hiddenTestSummary,
-          feedback: sol.isCorrect
-            ? "Perfect! All test cases passed."
-            : `Passed ${sol.testCasesPassed}/${sol.totalTestCases} test cases.`,
-        })),
-        submittedAt: submission.submittedAt,
-        scoringSummary: {
-          totalProblems: codingRound.problems.length,
-          averageScore: Math.round(totalScore / codingRound.problems.length),
-          partialCreditAwarded: processedSolutions.some(
-            (sol) => sol.problemScore > 0 && sol.problemScore < 100
-          ),
-        },
+        problemIndex,
+        problemScore,
+        isCorrect,
+        currentTotalScore: submission.totalScore,
+        feedback: isCorrect
+          ? "Perfect! All test cases passed."
+          : "Some test cases failed. Try again!",
+        submittedAt: new Date(),
       },
     });
   } catch (error) {
     console.error("Error submitting coding round answers:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to submit solutions",
+      message: "Failed to submit solution",
     });
   }
 };
@@ -477,7 +443,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
 export const updateCodingRound = async (req, res) => {
   try {
     const { codingRoundId } = req.params;
-    const { title, college, date, duration, problems, isActive } = req.body;
+    const { title, college, date, duration, problems, isActive, endTime } =
+      req.body;
 
     // Validate coding round ID
     if (!codingRoundId || !codingRoundId.match(/^[0-9a-fA-F]{24}$/)) {
@@ -557,6 +524,8 @@ export const updateCodingRound = async (req, res) => {
     if (duration !== undefined) updateData.duration = duration;
     if (problems !== undefined) updateData.problems = problems;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (endTime !== undefined)
+      updateData.endTime = endTime ? new Date(endTime) : null;
 
     // Update the coding round
     const updatedCodingRound = await CodingRound.findByIdAndUpdate(
@@ -574,6 +543,7 @@ export const updateCodingRound = async (req, res) => {
         college: updatedCodingRound.college,
         date: updatedCodingRound.date,
         duration: updatedCodingRound.duration,
+        endTime: updatedCodingRound.endTime,
         problems: updatedCodingRound.problems,
         isActive: updatedCodingRound.isActive,
         linkId: updatedCodingRound.linkId,
@@ -787,6 +757,77 @@ export const runCodingRoundAnswers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+// End coding round - prevents further submissions and shows final score
+export const endCodingRound = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { studentEmail } = req.body;
+
+    // Validate input
+    if (!studentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Student email is required",
+      });
+    }
+
+    // Find coding round
+    const codingRound = await CodingRound.findOne({ linkId });
+    if (!codingRound) {
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
+    }
+
+    // Find submission record
+    let submission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: studentEmail.toLowerCase(),
+    });
+
+    if (!submission) {
+      // Create empty submission if student hasn't submitted anything
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentEmail: studentEmail.toLowerCase(),
+        problemScores: new Map(),
+        totalScore: 0,
+        isRoundEnded: true,
+        roundEndedAt: new Date(),
+        lastSubmissionAt: new Date(),
+      });
+    } else {
+      // Mark existing submission as ended
+      submission.isRoundEnded = true;
+      submission.roundEndedAt = new Date();
+    }
+
+    await submission.save();
+
+    // Calculate max possible score
+    const maxPossibleScore = codingRound.problems.length * 100;
+
+    res.status(200).json({
+      success: true,
+      message: "Coding round ended successfully",
+      data: {
+        finalScore: submission.totalScore,
+        maxPossibleScore: maxPossibleScore,
+        problemsAttempted: submission.problemScores.size,
+        totalProblems: codingRound.problems.length,
+        roundEndedAt: submission.roundEndedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error ending coding round:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to end coding round",
     });
   }
 };

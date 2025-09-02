@@ -13,38 +13,26 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    solutions: [
-      {
-        problemIndex: {
-          type: Number,
-          required: true,
-        },
-        submittedCode: {
-          type: String,
-          required: true,
-        },
-        language: {
-          type: String,
-          required: true,
-        },
-        testCasesPassed: {
-          type: Number,
-          default: 0,
-        },
-        totalTestCases: {
-          type: Number,
-          default: 0,
-        },
-        isCorrect: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
+    problemScores: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
     totalScore: {
       type: Number,
       required: true,
       default: 0,
+    },
+    isRoundEnded: {
+      type: Boolean,
+      default: false,
+    },
+    roundEndedAt: {
+      type: Date,
+    },
+    lastSubmissionAt: {
+      type: Date,
+      default: Date.now,
     },
     submittedAt: {
       type: Date,
