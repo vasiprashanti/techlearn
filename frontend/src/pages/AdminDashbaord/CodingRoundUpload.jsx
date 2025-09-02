@@ -3,18 +3,12 @@ import axios from "axios";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 
 const getTodayDate = () => {
-  // Get current date in IST (Indian Standard Time)
-  const today = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-  const istDate = new Date(today.getTime() + istOffset);
-
-  const year = istDate.getUTCFullYear();
-  const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(istDate.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  
+  // Always return date in yyyy-mm-dd for IST timezone
+  return new Date().toLocaleDateString("en-in", { timeZone: "Asia/Kolkata" });
 };
 
-export default function CodingRoundForm() {
+export default function CodingRoundUpload() {
   const [college, setCollege] = useState("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(getTodayDate());
@@ -154,80 +148,76 @@ export default function CodingRoundForm() {
 
   // Handle Delete
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this round?")) return;
-    try {
-      const token = getToken();
-      await axios.delete(`${BASE_URL}/college-coding/admin/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert("Coding round deleted successfully!");
-      fetchPreviousRounds();
-    } catch (err) {
-      console.error("Delete error:", err);
-      alert("Failed to delete coding round.");
-    }
-  };
+  if (!window.confirm("Are you sure you want to delete this round?")) return;
+  try {
+    const token = getToken();
+    await axios.delete(`${BASE_URL}/college-coding/admin/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    alert("Coding round deleted successfully!");
+    fetchPreviousRounds();
+  } catch (err) {
+    console.error("Delete error:", err);
+    alert("Failed to delete coding round.");
+  }
+};
 
   // Enhanced validation
-  const validate = () => {
-    let newErrors = {};
+const validate = () => {
+  let newErrors = {};
 
-    // Basic field validation
-    if (!college) newErrors.college = "College is required.";
-    if (!title) newErrors.title = "Test title is required.";
-    if (!date) newErrors.date = "Date is required.";
-    if (!startTime) newErrors.startTime = "Start time is required.";
-    if (!endTime) newErrors.endTime = "End time is required.";
-    if (!duration || duration <= 0)
-      newErrors.duration = "Duration must be a positive number.";
+  if (!college) newErrors.college = "College is required.";
+  if (!title) newErrors.title = "Test title is required.";
+  if (!date) newErrors.date = "Date is required.";
+  if (!startTime) newErrors.startTime = "Start time is required.";
+  if (!endTime) newErrors.endTime = "End time is required.";
+  if (!duration || duration <= 0)
+    newErrors.duration = "Duration must be a positive number.";
 
-    // Time validation
-    if (startTime && endTime && startTime >= endTime) {
+  // Time validation using Date objects
+  if (date && startTime && endTime) {
+    const start = new Date(`${date}T${startTime}:00`);
+    const end = new Date(`${date}T${endTime}:00`);
+    if (start >= end) {
       newErrors.endTime = "End time must be after start time.";
     }
 
-    // Date validation (ensure it's not in the past)
-    if (date && startTime) {
-      const testDateTime = new Date(`${date}T${startTime}:00`);
-
-      // Current time (no manual IST offset needed, browser already handles it)
-      const now = new Date();
-
-      // Add buffer (e.g., 1 minute)
-      const minimumTime = new Date(now.getTime() + 60 * 1000);
-
-      if (testDateTime < minimumTime) {
-        newErrors.date = "Test date and time must be in the future (IST).";
-      }
+    // Ensure start time is in future
+    const now = new Date();
+    const minimumTime = new Date(now.getTime() + 60 * 1000);
+    if (start < minimumTime) {
+      newErrors.date = "Test date and time must be in the future (IST).";
     }
+  }
 
-    // Problem validation
-    problems.forEach((p, i) => {
-      if (!p.problemTitle)
-        newErrors[`p-${i}-title`] = "Problem title is required.";
-      if (!p.difficulty)
-        newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
-      if (!p.description)
-        newErrors[`p-${i}-description`] = "Problem description is required.";
+  // Problem validation
+  problems.forEach((p, i) => {
+    if (!p.problemTitle)
+      newErrors[`p-${i}-title`] = "Problem title is required.";
+    if (!p.difficulty)
+      newErrors[`p-${i}-difficulty`] = "Difficulty is required.";
+    if (!p.description)
+      newErrors[`p-${i}-description`] = "Problem description is required.";
 
-      // Validate that at least one test case has both input and output
-      const hasValidHiddenTestCase = p.hiddenTestCases.some(
-        (tc) => tc.input.trim() && tc.expectedOutput.trim()
-      );
-      if (!hasValidHiddenTestCase) {
-        newErrors[`p-${i}-testcases`] =
-          "At least one complete hidden test case is required.";
-      }
-    });
+    // At least one hidden test case
+    const hasValidHiddenTestCase = p.hiddenTestCases.some(
+      (tc) => tc.input.trim() && tc.expectedOutput.trim()
+    );
+    if (!hasValidHiddenTestCase) {
+      newErrors[`p-${i}-testcases`] =
+        "At least one complete hidden test case is required.";
+    }
+  });
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
   // API call using axios
   // Handle Edit (prefill form)
   // Handle Update (prefill form for updating)
   const handleUpdate = (round) => {
-    setEditingId(round.linkId);
+    setEditingId(round._id);
     setCollege(round.college);
     setTitle(round.title);
 
@@ -268,89 +258,95 @@ export default function CodingRoundForm() {
 
   // Modified handleSubmit
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
+  e.preventDefault();
+  if (!validate()) return;
+  setSubmitting(true);
 
-    const payload = {
-      title,
-      college,
-      date: `${date}T${startTime}:00`,
-      endTime: `${date}T${endTime}:00`, 
-      duration: parseInt(duration),
-      problems: problems.map((problem) => ({
+  const payload = {
+    title,
+    college,
+    date: new Date(`${date}T${startTime}:00`).toISOString(),  // Fix timezone
+    endTime: new Date(`${date}T${endTime}:00`).toISOString(), // Fix timezone
+    duration: parseInt(duration, 10),
+    problems: problems.map((problem) => {
+      const visibleCases = problem.visibleTestCases.filter(
+        (tc) => tc.input.trim() && tc.expectedOutput.trim()
+      );
+      const hiddenCases = problem.hiddenTestCases.filter(
+        (tc) => tc.input.trim() && tc.expectedOutput.trim()
+      );
+
+      return {
         problemTitle: problem.problemTitle,
         description: problem.description,
         difficulty: problem.difficulty,
         inputDescription: problem.inputDescription || "",
         outputDescription: problem.outputDescription || "",
-        visibleTestCases: problem.visibleTestCases.filter(
-          (tc) => tc.input.trim() && tc.expectedOutput.trim()
-        ),
-        hiddenTestCases: problem.hiddenTestCases.filter(
-          (tc) => tc.input.trim() && tc.expectedOutput.trim()
-        ),
-      })),
-    };
-
-    try {
-      const token = getToken();
-      if (!token) {
-        alert("Authentication token not found. Please login again.");
-        return;
-      }
-
-      let res;
-      if (editingId) {
-        // Update existing
-        res = await axios.put(
-          `${BASE_URL}/college-coding/admin/${editingId}`,
-          payload,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        alert("Coding Test Updated Successfully!");
-      } else {
-        // Create new
-        res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("Coding Test Created Successfully!");
-      }
-
-      console.log("Response:", res.data);
-
-      // Reset form
-      setEditingId(null);
-      setCollege("");
-      setTitle("");
-      setDate(getTodayDate());
-      setStartTime("");
-      setEndTime("");
-      setDuration("");
-      setNumQuestions(1);
-      setProblems([
-        {
-          problemTitle: "",
-          difficulty: "",
-          description: "",
-          inputDescription: "",
-          outputDescription: "",
-          visibleTestCases: [{ input: "", expectedOutput: "" }],
-          hiddenTestCases: [{ input: "", expectedOutput: "" }],
-        },
-      ]);
-      setExpanded([]);
-      setErrors({});
-      fetchPreviousRounds();
-    } catch (error) {
-      console.error("Error saving coding round:", error);
-      alert("Something went wrong.");
-    } finally {
-      setSubmitting(false);
-    }
+        visibleTestCases: visibleCases.length
+          ? visibleCases
+          : [{ input: "1\n1", expectedOutput: "0" }], // fallback
+        ...(hiddenCases.length
+          ? { hiddenTestCases: hiddenCases } // Only include if backend supports
+          : {}),
+      };
+    }),
   };
+
+  try {
+    const token = getToken();
+    if (!token) {
+      alert("Authentication token not found. Please login again.");
+      return;
+    }
+
+    let res;
+    if (editingId) {
+      res = await axios.put(
+        `${BASE_URL}/college-coding/admin/${editingId}`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert("Coding Test Updated Successfully!");
+    } else {
+      res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Coding Test Created Successfully!");
+    }
+
+    console.log("Response:", res.data);
+
+    // Reset form after success
+    setEditingId(null);
+    setCollege("");
+    setTitle("");
+    setDate(getTodayDate());
+    setStartTime("");
+    setEndTime("");
+    setDuration("");
+    setNumQuestions(1);
+    setProblems([
+      {
+        problemTitle: "",
+        difficulty: "",
+        description: "",
+        inputDescription: "",
+        outputDescription: "",
+        visibleTestCases: [{ input: "", expectedOutput: "" }],
+        hiddenTestCases: [{ input: "", expectedOutput: "" }],
+      },
+    ]);
+    setExpanded([]);
+    setErrors({});
+    fetchPreviousRounds();
+  } catch (error) {
+    console.error("Error saving coding round:", error.response?.data || error);
+    alert(error.response?.data?.message || "Something went wrong.");
+  } finally {
+    setSubmitting(false);
+  }
+};
+
 
   // Fetch previous rounds
   const fetchPreviousRounds = async () => {
@@ -893,7 +889,7 @@ export default function CodingRoundForm() {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(round.linkId)}
+                          onClick={() => handleDelete(round._id)}
                           className="px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700 text-sm"
                         >
                           Delete
