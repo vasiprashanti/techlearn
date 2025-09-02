@@ -5,7 +5,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 const getTodayDate = () => {
   
   // Always return date in yyyy-mm-dd for IST timezone
-  return new Date().toLocaleDateString("en-in", { timeZone: "Asia/Kolkata" });
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 };
 
 export default function CodingRoundUpload() {
