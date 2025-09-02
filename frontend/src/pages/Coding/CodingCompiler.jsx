@@ -291,21 +291,26 @@ const CodingCompiler = ({ user, contestData }) => {
     const { data } = response;
     console.log("Raw submit response:", data);
 
-    const res = data?.data?.results?.[0] || data?.results?.[0] || {};
-    const hiddenTests =
-      res.hiddenTestResults || res.hiddenTestCases || data?.hiddenTestCases || [];
+    // ✅ get hidden test cases from results[0]
+    const res = data?.data?.results?.[0] || {};
+    const hiddenTests = res.hiddenTestCases || [];
 
     if (hiddenTests.length > 0) {
-      // 🔹 Only show how many hidden test cases exist
+      // Note: hidden test cases only have input + expectedOutput (no actualOutput/passed)
+      const totalCount = hiddenTests.length;
+
+      setResults(hiddenTests);
+
       setOutput(
-        `✅ Submission successful!\nHidden Test Cases: ${hiddenTests.length} provided.\n⚠️ (Backend did not validate pass/fail.)`
+        `✅ Submission successful!\nHidden Test Cases Provided: ${totalCount}\n` +
+          `⚠️ Actual outputs and pass/fail are not exposed for hidden cases.`
       );
 
       setSubmittedProblems((prev) =>
         new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
       );
     } else if (data.message === "Submission successful" || data.success) {
-      setOutput("✅ Submission successful (no hidden test cases provided).");
+      setOutput("✅ Submission successful (no hidden test cases returned).");
       setSubmittedProblems((prev) =>
         new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
       );
