@@ -396,7 +396,7 @@ export default function CodingRoundForm() {
       setLoadingReports((prev) => ({ ...prev, [roundId]: true }));
       const token = getToken();
       const res = await axios.get(
-        `${BASE_URL}/coding-rounds/admin/${roundId}/scores`,
+        `${BASE_URL}/college-coding/admin/${roundId}/scores`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
