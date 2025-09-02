@@ -364,6 +364,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
     // Test against hidden test cases
     let hiddenTestsPassed = 0;
+    let hiddenTestsFailed = 0;
     const totalHiddenTests = problem.hiddenTestCases.length;
 
     for (let i = 0; i < problem.hiddenTestCases.length; i++) {
@@ -378,9 +379,13 @@ export const submitCodingRoundAnswers = async (req, res) => {
         );
 
         const passed = testResult.success && testResult.outputMatches;
-        if (passed) hiddenTestsPassed++;
+        if (passed) {
+          hiddenTestsPassed++;
+        } else {
+          hiddenTestsFailed++;
+        }
       } catch (error) {
-        // Test failed, don't increment passed count
+        hiddenTestsFailed++;
       }
     }
 
@@ -424,9 +429,11 @@ export const submitCodingRoundAnswers = async (req, res) => {
         problemScore,
         isCorrect,
         currentTotalScore: submission.totalScore,
+        failedTestCases: hiddenTestsFailed, // <-- Add this line
+        totalTestCases: totalHiddenTests, // <-- Optional: total count
         feedback: isCorrect
           ? "Perfect! All test cases passed."
-          : "Some test cases failed. Try again!",
+          : `Some test cases failed. Failed: ${hiddenTestsFailed}/${totalHiddenTests}`,
         submittedAt: new Date(),
       },
     });
@@ -809,18 +816,37 @@ export const endCodingRound = async (req, res) => {
 
     await submission.save();
 
-    // Calculate max possible score
-    const maxPossibleScore = codingRound.problems.length * 100;
+    // Prepare problem results
+    const problemResults = codingRound.problems.map((problem, index) => {
+      const score = submission.problemScores.get(index.toString()) || 0;
+      return {
+        problemIndex: index,
+        problemTitle: problem.problemTitle,
+        difficulty: problem.difficulty,
+        attempted: score > 0,
+        score: score,
+        maxScore: 100,
+        isCorrect: score === 100,
+      };
+    });
+
+    const totalProblemsAttempted = problemResults.filter(
+      (p) => p.attempted
+    ).length;
+    const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
 
     res.status(200).json({
       success: true,
       message: "Coding round ended successfully",
       data: {
-        finalScore: submission.totalScore,
-        maxPossibleScore: maxPossibleScore,
-        problemsAttempted: submission.problemScores.size,
-        totalProblems: codingRound.problems.length,
+        submissionId: submission._id,
         roundEndedAt: submission.roundEndedAt,
+        problemResults,
+        totalScore: submission.totalScore,
+        maxPossibleScore: codingRound.problems.length * 100,
+        totalProblems: codingRound.problems.length,
+        attempted: totalProblemsAttempted,
+        correctSolutions: correctSolutions,
       },
     });
   } catch (error) {

@@ -244,28 +244,8 @@ const CodingCompiler = ({ user, contestData }) => {
 
   // --- Submit (Hidden Test Cases) ---
   const handleSubmit = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before submitting.");
-      return;
-    }
-
-    if (!linkId) {
-      setOutput("⚠️ Error: Missing contest link ID.");
-      return;
-    }
-
-    if (!user?.email) {
-      setOutput("⚠️ Error: User email not available.");
-      return;
-    }
-
-    if (!BASE_URL) {
-      setOutput("⚠️ Error: API URL not configured.");
-      return;
-    }
-
     setIsRunning(true);
-    setOutput("⏳ Submitting for hidden test validation...");
+    setOutput("");
 
     try {
       const payload = {
@@ -273,44 +253,36 @@ const CodingCompiler = ({ user, contestData }) => {
         solutions: [
           {
             problemIndex: currentProblemIndex,
-            submittedCode: code,
             language: selectedLang,
+            submittedCode: code,
           },
         ],
       };
 
-      const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/submit`,
-        payload,
+      const response = await fetch(
+        `${BASE_URL}/api/college-coding/${linkId}/submit`,
         {
-          timeout: 30000,
+          method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         }
       );
 
-      const { data } = response;
-      console.log("Raw submit response:", data);
+      const data = await response.json();
 
-      // ✅ get hidden test cases from results[0]
-      const res = data?.data?.results?.[0] || {};
-      const hiddenTests = res.hiddenTestCases || [];
+      if (data.success) {
+        // Show feedback and failed test case count if available
+        let feedback = data.data?.feedback || "Submission successful.";
 
-      if (hiddenTests.length > 0) {
-        // Note: hidden test cases only have input + expectedOutput (no actualOutput/passed)
-        const totalCount = hiddenTests.length;
+        if (
+          typeof data.data?.failedTestCases === "number" &&
+          typeof data.data?.totalTestCases === "number"
+        ) {
+          feedback += ` (${data.data.failedTestCases} out of ${data.data.totalTestCases} hidden test cases failed)`;
+        }
 
-        setResults(hiddenTests);
+        setOutput(feedback);
 
-        setOutput(
-          `✅ Submission successful!\nHidden Test Cases Provided: ${totalCount}\n` +
-            `⚠️ Actual outputs and pass/fail are not exposed for hidden cases.`
-        );
-
-        setSubmittedProblems((prev) =>
-          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-        );
-      } else if (data.message === "Submission successful" || data.success) {
-        setOutput("✅ Submission successful (no hidden test cases returned).");
         setSubmittedProblems((prev) =>
           new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
         );
@@ -321,28 +293,10 @@ const CodingCompiler = ({ user, contestData }) => {
       }
     } catch (err) {
       console.error("Submit error:", err);
-
-      if (err.response) {
-        const status = err.response.status;
-        const message = err.response.data?.message || err.response.statusText;
-
-        if (status === 404) {
-          setOutput(
-            `⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`
-          );
-        } else {
-          setOutput(`⚠️ Server error ${status}: ${message}`);
-        }
-      } else if (err.request) {
-        setOutput(
-          "⚠️ Network error: Unable to connect to server. Please check your connection."
-        );
-      } else {
-        setOutput("⚠️ Error submitting code: " + err.message);
-      }
+      setOutput("⚠️ Error submitting code: " + err.message);
+    } finally {
+      setIsRunning(false);
     }
-
-    setIsRunning(false);
   };
 
   const handleLanguageChange = (lang) => {
@@ -415,7 +369,7 @@ const CodingCompiler = ({ user, contestData }) => {
     return (
       <div className="flex flex-col h-screen items-center justify-center bg-white/20 dark:bg-gray-900/40 p-6 border-t border-gray-300 dark:border-gray-700">
         <h1 className="text-3xl font-bold text-center mb-8 dark:text-white">
-           Round Complete!
+          Round Complete!
         </h1>
         <div className="w-full max-w-3xl bg-white/30 dark:bg-gray-900/50 p-6 rounded-2xl shadow-lg border border-gray-300 dark:border-gray-700 backdrop-blur-md">
           <h2 className="text-xl font-semibold mb-6 dark:text-white text-gray-800">
