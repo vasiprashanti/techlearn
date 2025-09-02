@@ -157,7 +157,7 @@ export default function CodingRoundForm() {
     if (!window.confirm("Are you sure you want to delete this round?")) return;
     try {
       const token = getToken();
-      await axios.delete(`${BASE_URL}/college-coding/${id}`, {
+      await axios.delete(`${BASE_URL}/college-coding/admin/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Coding round deleted successfully!");
@@ -227,7 +227,7 @@ export default function CodingRoundForm() {
   // Handle Edit (prefill form)
   // Handle Update (prefill form for updating)
   const handleUpdate = (round) => {
-    setEditingId(round._id);
+    setEditingId(round.linkId);
     setCollege(round.college);
     setTitle(round.title);
 
@@ -304,7 +304,7 @@ export default function CodingRoundForm() {
       if (editingId) {
         // Update existing
         res = await axios.put(
-          `${BASE_URL}/college-coding/${editingId}`,
+          `${BASE_URL}/college-coding/admin/${editingId}`,
           payload,
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -893,7 +893,7 @@ export default function CodingRoundForm() {
                         </button>
 
                         <button
-                          onClick={() => handleDelete(round._id)}
+                          onClick={() => handleDelete(round.linkId)}
                           className="px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700 text-sm"
                         >
                           Delete
