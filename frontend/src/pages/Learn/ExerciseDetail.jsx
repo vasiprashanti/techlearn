@@ -385,32 +385,27 @@ const ExerciseDetail = () => {
 
       <div className="w-full px-4">
         {/* Breadcrumbs */}
-                <motion.nav
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="flex items-center gap-2 mb-6 ml-4 text-sm text-gray-600 dark:text-gray-400"
-                >
-                  <button
-                    onClick={() => navigate('/learn')}
-                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
-                  >
-                    Learn
-                  </button>
-                  <span>/</span>
-                  <button
-                    onClick={() => navigate('/learn/exercises')}
-                    className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
-                  >
-                    Exercises
-                  </button>
-                  <span>/</span>
-                  <span className="text-gray-900 dark:text-white font-medium">
-                    {exercise.title || 'Course'}
-                  </span>
-                </motion.nav>
+        <nav className="flex items-center gap-2 mb-6 ml-4 text-sm text-gray-600 dark:text-gray-400">
+          <button
+          onClick={() => navigate('/learn')}
+          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+          >
+          Learn
+          </button>
+          <span>/</span>
+          <button
+          onClick={() => navigate('/learn/exercises')}
+          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+          >
+            Exercises
+            </button>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-white font-medium">
+              {exercise.title || 'Course'}
+              </span>
+          </nav>
 
-        {/* Tab Navigation - for Mobile */}
+        {/* Tab Navigation - Only for Mobile */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -494,11 +489,12 @@ const ExerciseDetail = () => {
           onTouchEnd={onTouchEnd}
         >
 
-          {/* Desktop Layout */}
+          {/* Desktop Layout - Always show combined view */}
           <div className="hidden md:block">
             <div className="max-h-[1500px] flex gap-2 p-2">
               
-              {/* Left Side - Theory area */}
+              {/* Left Side - Theory area (50%) */}
+              
               <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <h1 className="font-poppins text-2xl md:text-2xl font-medium brand-heading-primary p-4 mb-2 tracking-wider">
                 {exercise?.title}
@@ -564,9 +560,9 @@ const ExerciseDetail = () => {
                 </div>
               </div>
               
-              {/* Right Side - Compiler and Preview */}
+              {/* Right Side - Code and Preview containers (50%) */}
               <div className="flex-1 flex flex-col gap-2">
-                {/* Top Right - Code Editor */}
+                {/* Top Right - Code Editor (70% height) */}
                 <div className="flex-none h-[50%] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {/* Code Editor Header */}
                   <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
