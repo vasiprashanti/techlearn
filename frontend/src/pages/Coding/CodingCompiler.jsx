@@ -260,7 +260,7 @@ const CodingCompiler = ({ user, contestData }) => {
       };
 
       const response = await axios.post(
-        `${BASE_URL}/api/college-coding/${linkId}/submit`,
+        `${BASE_URL}/college-coding/${linkId}/submit`,
         payload,
         {
           timeout: 30000, // Same as handleRun
