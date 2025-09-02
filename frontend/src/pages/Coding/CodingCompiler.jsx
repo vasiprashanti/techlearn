@@ -244,116 +244,112 @@ const CodingCompiler = ({ user, contestData }) => {
 
   // --- Submit (Hidden Test Cases) ---
   const handleSubmit = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before submitting.");
-      return;
-    }
+  if (!code.trim()) {
+    setOutput("⚠️ Please write some code before submitting.");
+    return;
+  }
 
-    // Validate required data
-    if (!linkId) {
-      setOutput("⚠️ Error: Missing contest link ID.");
-      return;
-    }
+  if (!linkId) {
+    setOutput("⚠️ Error: Missing contest link ID.");
+    return;
+  }
 
-    if (!user?.email) {
-      setOutput("⚠️ Error: User email not available.");
-      return;
-    }
+  if (!user?.email) {
+    setOutput("⚠️ Error: User email not available.");
+    return;
+  }
 
-    if (!BASE_URL) {
-      setOutput("⚠️ Error: API URL not configured.");
-      return;
-    }
+  if (!BASE_URL) {
+    setOutput("⚠️ Error: API URL not configured.");
+    return;
+  }
 
-    setIsRunning(true);
-    setOutput("⏳ Submitting for hidden test validation...");
+  setIsRunning(true);
+  setOutput("⏳ Submitting for hidden test validation...");
 
-    try {
-      const payload = {
-        studentEmail: user.email,
-        solutions: [
-          {
-            problemIndex: currentProblemIndex,
-            submittedCode: code,
-            language: selectedLang,
-          },
-        ],
-      };
-
-      console.log("Submit payload:", payload);
-      console.log(
-        "Submit API URL:",
-        `${BASE_URL}/college-coding/${linkId}/submit`
-      );
-
-      const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/submit`,
-        payload,
+  try {
+    const payload = {
+      studentEmail: user.email,
+      solutions: [
         {
-          timeout: 30000, // 30 second timeout
-          headers: { "Content-Type": "application/json" },
-        }
+          problemIndex: currentProblemIndex,
+          submittedCode: code,
+          language: selectedLang,
+        },
+      ],
+    };
+
+    console.log("Submit payload:", payload);
+    console.log("Submit API URL:", `${BASE_URL}/college-coding/${linkId}/submit`);
+
+    const response = await axios.post(
+      `${BASE_URL}/college-coding/${linkId}/submit`,
+      payload,
+      {
+        timeout: 30000,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    const { data } = response;
+    console.log("Raw submit response:", data); // 👈 Add this to inspect shape
+
+    // Try to extract hidden test results safely
+    const res = data?.data?.results?.[0] || data?.results?.[0] || {};
+    const hiddenTests =
+      res.hiddenTestResults || data?.hiddenTestResults || [];
+
+    if (hiddenTests.length > 0) {
+      const passedCount = hiddenTests.filter((t) => t.passed).length;
+      const totalCount = hiddenTests.length;
+
+      setResults(hiddenTests);
+
+      setOutput(
+        `✅ Submission successful!\nHidden Test Cases Passed: ${passedCount} / ${totalCount}`
       );
 
-      const { data } = response;
-
-      // ✅ If hidden test results are available
-      if (data?.data?.results?.[0]?.hiddenTestResults) {
-        const res = data.data.results[0];
-        const hiddenTests = res.hiddenTestResults;
-
-        const passedCount = hiddenTests.filter((t) => t.passed).length;
-        const totalCount = hiddenTests.length;
-
-        setResults(hiddenTests);
-
-        setOutput(
-          `✅ Submission successful!\nHidden Test Cases Passed: ${passedCount} / ${totalCount}`
-        );
-
-        setSubmittedProblems((prev) =>
-          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-        );
-      }
-      // ✅ Fallback: backend didn’t send details
-      else if (data.message === "Submission successful" || data.success) {
-        setOutput(
-          "✅ Submission successful (no hidden test summary provided)."
-        );
-        setSubmittedProblems((prev) =>
-          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
-        );
-      } else {
-        setOutput(
-          "⚠️ Submission failed: " + (data.message || JSON.stringify(data))
-        );
-      }
-    } catch (err) {
-      console.error("Submit error:", err);
-
-      if (err.response) {
-        const status = err.response.status;
-        const message = err.response.data?.message || err.response.statusText;
-
-        if (status === 404) {
-          setOutput(
-            `⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`
-          );
-        } else {
-          setOutput(`⚠️ Server error ${status}: ${message}`);
-        }
-      } else if (err.request) {
-        setOutput(
-          "⚠️ Network error: Unable to connect to server. Please check your connection."
-        );
-      } else {
-        setOutput("⚠️ Error submitting code: " + err.message);
-      }
+      setSubmittedProblems((prev) =>
+        new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+      );
+    } else if (data.message === "Submission successful" || data.success) {
+      setOutput("✅ Submission successful (no hidden test summary provided).");
+      setSubmittedProblems((prev) =>
+        new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+      );
+    } else {
+      setOutput(
+        "⚠️ Submission failed: " + (data.message || JSON.stringify(data))
+      );
     }
+  } catch (err) {
+    console.error("Submit error:", err);
 
-    setIsRunning(false);
-  };
+    if (err.response) {
+      const status = err.response.status;
+      const message = err.response.data?.message || err.response.statusText;
 
+      if (status === 404) {
+        setOutput(
+          `⚠️ Error 404: Contest submission endpoint not found. Please check if the contest '${linkId}' is valid.`
+        );
+      } else {
+        setOutput(`⚠️ Server error ${status}: ${message}`);
+      }
+    } else if (err.request) {
+      setOutput(
+        "⚠️ Network error: Unable to connect to server. Please check your connection."
+      );
+    } else {
+      setOutput("⚠️ Error submitting code: " + err.message);
+    }
+  }
+
+  setIsRunning(false);
+};
+
+
+  
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
     setCode(LANGUAGES[lang].defaultCode);
