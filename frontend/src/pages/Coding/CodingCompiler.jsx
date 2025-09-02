@@ -279,7 +279,7 @@ const CodingCompiler = ({ user, contestData }) => {
           typeof data.data?.failedTestCases === "number" &&
           typeof data.data?.totalTestCases === "number"
         ) {
-          feedback += ` (${data.data.failedTestCases} out of ${data.data.totalTestCases} hidden test cases failed)`;
+          feedback += ` Number of hidden test cases failed is (${data.data.failedTestCases} out of ${data.data.totalTestCases}) `;
         }
 
         setOutput(feedback);
