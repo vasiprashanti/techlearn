@@ -259,19 +259,20 @@ const CodingCompiler = ({ user, contestData }) => {
         ],
       };
 
-      const response = await fetch(
+      const response = await axios.post(
         `${BASE_URL}/api/college-coding/${linkId}/submit`,
+        payload,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          timeout: 30000, // Same as handleRun
+          headers: {
+            "Content-Type": "application/json",
+          },
         }
       );
 
-      const data = await response.json();
+      const data = response.data; // No need for .json()
 
       if (data.success) {
-        // Show feedback and failed test case count if available
         let feedback = data.data?.feedback || "Submission successful.";
 
         if (
@@ -293,7 +294,16 @@ const CodingCompiler = ({ user, contestData }) => {
       }
     } catch (err) {
       console.error("Submit error:", err);
-      setOutput("⚠️ Error submitting code: " + err.message);
+
+      if (err.response) {
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.statusText;
+        setOutput(`⚠️ Server error ${status}: ${message}`);
+      } else if (err.request) {
+        setOutput("⚠️ Network error: Unable to connect to server.");
+      } else {
+        setOutput("⚠️ Error submitting code: " + err.message);
+      }
     } finally {
       setIsRunning(false);
     }
