@@ -16,7 +16,6 @@ const ProjectPayment = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
 
-
   // Always use project from navigation state if present
   const [project, setProject] = useState(() => {
     if (location.state?.project) {
@@ -70,6 +69,21 @@ const ProjectPayment = () => {
     return (
       <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#beaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
         <div className="max-w-7xl mx-auto px-6">
+
+          {/* Breadcrumbs */}
+          <nav className="flex items-center gap-2 mb-4 text-sm text-gray-600 dark:text-gray-400 font-sans">
+            <button
+              onClick={() => navigate('/build')}
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
+            >
+              Build
+            </button>
+            <span>/</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {project?.title || 'Project Payment'}
+            </span>
+          </nav>
+          
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -101,18 +115,20 @@ const ProjectPayment = () => {
   return (
     <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <div className="max-w-7xl mx-auto px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="flex items-center gap-4 mb-8">
+
+        {/* Breadcrumbs only, no back button */}
+        <nav className="flex items-center gap-2 mb-8 text-sm text-gray-600 dark:text-gray-400 font-sans">
           <button
             onClick={() => navigate('/build')}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Projects</span>
+            className="hover:text-blue-600 dark:hover:text-blue-400 transition"
+          >
+            Build
           </button>
-        </motion.div>
+          <span>/</span>
+          <span className="font-medium text-gray-900 dark:text-white">
+            {project?.title || 'Project Payment'}
+          </span>
+        </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <motion.div
