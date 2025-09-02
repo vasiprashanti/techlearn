@@ -156,7 +156,7 @@ const CodingCompiler = ({ user, contestData }) => {
     }
 
     setIsRunning(true);
-    setOutput("⏳ Running visible test cases...");
+    setOutput("⏳ Running  test cases...");
 
     try {
       const payload = {
@@ -171,7 +171,7 @@ const CodingCompiler = ({ user, contestData }) => {
       };
 
       console.log("Run payload:", payload);
-      console.log("API URL:", `${BASE_URL}/coding-round/${linkId}/run`);
+      console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
 
       const response = await axios.post(
         `${BASE_URL}/college-coding/${linkId}/run`,
@@ -188,20 +188,27 @@ const CodingCompiler = ({ user, contestData }) => {
 
       if (data?.data?.results?.[0]?.visibleTestResults) {
         const res = data.data.results[0];
+        const visibleTests = res.visibleTestResults;
 
-        setResults(res.visibleTestResults);
+        setResults(visibleTests);
 
-        setOutput(
-          res.visibleTestResults
+        const passedCount = visibleTests.filter((t) => t.passed).length;
+        const totalCount = visibleTests.length;
+
+        const formatted =
+          visibleTests
             .map(
               (t, idx) =>
                 `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
-                `Input: ${t.input}\nExpected: ${
-                  t.expectedOutput
-                }\nActual: ${t.actualOutput.trim()}\n`
+                `Input: ${t.input}\n` +
+                `Expected: ${t.expectedOutput}\n` +
+                `Actual: ${t.actualOutput?.trim()}\n`
             )
-            .join("\n") + `\n\n${res.feedback || ""}`
-        );
+            .join("\n\n") +
+          `\n\nSummary: ${passedCount} / ${totalCount}  test cases passed.\n` +
+          (res.feedback || "");
+
+        setOutput(formatted);
       } else {
         console.log("Unexpected shape:", data);
         setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
@@ -276,7 +283,7 @@ const CodingCompiler = ({ user, contestData }) => {
       console.log("Submit payload:", payload);
       console.log(
         "Submit API URL:",
-        `${BASE_URL}/coding-round/${linkId}/submit`
+        `${BASE_URL}/college-coding/${linkId}/submit`
       );
 
       const response = await axios.post(
@@ -284,16 +291,35 @@ const CodingCompiler = ({ user, contestData }) => {
         payload,
         {
           timeout: 30000, // 30 second timeout
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
       const { data } = response;
 
-      if (data.message === "Submission successful" || data.success) {
-        setOutput("✅ Submission successful!");
+      // ✅ If hidden test results are available
+      if (data?.data?.results?.[0]?.hiddenTestResults) {
+        const res = data.data.results[0];
+        const hiddenTests = res.hiddenTestResults;
+
+        const passedCount = hiddenTests.filter((t) => t.passed).length;
+        const totalCount = hiddenTests.length;
+
+        setResults(hiddenTests);
+
+        setOutput(
+          `✅ Submission successful!\nHidden Test Cases Passed: ${passedCount} / ${totalCount}`
+        );
+
+        setSubmittedProblems((prev) =>
+          new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
+        );
+      }
+      // ✅ Fallback: backend didn’t send details
+      else if (data.message === "Submission successful" || data.success) {
+        setOutput(
+          "✅ Submission successful (no hidden test summary provided)."
+        );
         setSubmittedProblems((prev) =>
           new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
         );
