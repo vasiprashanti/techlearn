@@ -226,33 +226,46 @@ export default function CodingRoundForm() {
   // API call using axios
   // Handle Edit (prefill form)
   // Handle Update (prefill form for updating)
-  const handleUpdate = (round) => {
-    setEditingId(round._id);
-    setCollege(round.college);
-    setTitle(round.title);
-    setDate(round.date.split("T")[0]);
-    setStartTime(new Date(round.date).toISOString().slice(11, 16)); // HH:MM'
-    setEndTime(new Date(round.endTime).toISOString().slice(11, 16));
+   const handleUpdate = (round) => {
+  setEditingId(round?._id ?? "");
+  setCollege(round?.college ?? "");
+  setTitle(round?.title ?? "");
+  setDate(round?.date ? round.date.split("T")[0] : "");
 
-    setDuration(round.duration);
-    setProblems(
-      round.problems.map((p) => ({
-        problemTitle: p.problemTitle,
-        difficulty: p.difficulty,
-        description: p.description,
-        inputDescription: p.inputDescription || "",
-        outputDescription: p.outputDescription || "",
-        visibleTestCases: p.visibleTestCases.length
-          ? p.visibleTestCases
-          : [{ input: "", expectedOutput: "" }],
-        hiddenTestCases: p.hiddenTestCases.length
-          ? p.hiddenTestCases
-          : [{ input: "", expectedOutput: "" }],
-      }))
-    );
-    setNumQuestions(round.problems.length);
-    setExpanded(new Array(round.problems.length).fill(true));
-  };
+  // Parse start time in local (IST handled automatically by browser)
+  let start = round?.date ? new Date(round.date) : null;
+  let startHours = start && !isNaN(start) ? String(start.getHours()).padStart(2, "0") : "";
+  let startMinutes = start && !isNaN(start) ? String(start.getMinutes()).padStart(2, "0") : "";
+  setStartTime(startHours && startMinutes ? `${startHours}:${startMinutes}` : "");
+
+  // Parse end time
+  let end = round?.endTime ? new Date(round.endTime) : null;
+  let endHours = end && !isNaN(end) ? String(end.getHours()).padStart(2, "0") : "";
+  let endMinutes = end && !isNaN(end) ? String(end.getMinutes()).padStart(2, "0") : "";
+  setEndTime(endHours && endMinutes ? `${endHours}:${endMinutes}` : "");
+
+  setDuration(round?.duration ?? "");
+
+  const safeProblems = Array.isArray(round?.problems) ? round.problems : [];
+  setProblems(
+    safeProblems.map((p) => ({
+      problemTitle: p?.problemTitle ?? "",
+      difficulty: p?.difficulty ?? "",
+      description: p?.description ?? "",
+      inputDescription: p?.inputDescription ?? "",
+      outputDescription: p?.outputDescription ?? "",
+      visibleTestCases: Array.isArray(p?.visibleTestCases) && p.visibleTestCases.length
+        ? p.visibleTestCases
+        : [{ input: "", expectedOutput: "" }],
+      hiddenTestCases: Array.isArray(p?.hiddenTestCases) && p.hiddenTestCases.length
+        ? p.hiddenTestCases
+        : [{ input: "", expectedOutput: "" }],
+    }))
+  );
+
+  setNumQuestions(safeProblems.length);
+  setExpanded(new Array(safeProblems.length).fill(true));
+};
 
   // Modified handleSubmit
   const handleSubmit = async (e) => {
