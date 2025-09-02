@@ -279,9 +279,6 @@ const CodingCompiler = ({ user, contestData }) => {
       ],
     };
 
-    console.log("Submit payload:", payload);
-    console.log("Submit API URL:", `${BASE_URL}/college-coding/${linkId}/submit`);
-
     const response = await axios.post(
       `${BASE_URL}/college-coding/${linkId}/submit`,
       payload,
@@ -292,28 +289,23 @@ const CodingCompiler = ({ user, contestData }) => {
     );
 
     const { data } = response;
-    console.log("Raw submit response:", data); // 👈 Add this to inspect shape
+    console.log("Raw submit response:", data);
 
-    // Try to extract hidden test results safely
     const res = data?.data?.results?.[0] || data?.results?.[0] || {};
     const hiddenTests =
-      res.hiddenTestResults || data?.hiddenTestResults || [];
+      res.hiddenTestResults || res.hiddenTestCases || data?.hiddenTestCases || [];
 
     if (hiddenTests.length > 0) {
-      const passedCount = hiddenTests.filter((t) => t.passed).length;
-      const totalCount = hiddenTests.length;
-
-      setResults(hiddenTests);
-
+      // 🔹 Only show how many hidden test cases exist
       setOutput(
-        `✅ Submission successful!\nHidden Test Cases Passed: ${passedCount} / ${totalCount}`
+        `✅ Submission successful!\nHidden Test Cases: ${hiddenTests.length} provided.\n⚠️ (Backend did not validate pass/fail.)`
       );
 
       setSubmittedProblems((prev) =>
         new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
       );
     } else if (data.message === "Submission successful" || data.success) {
-      setOutput("✅ Submission successful (no hidden test summary provided).");
+      setOutput("✅ Submission successful (no hidden test cases provided).");
       setSubmittedProblems((prev) =>
         new Set(prev).add(PROBLEM.problemTitle || PROBLEM.title)
       );
