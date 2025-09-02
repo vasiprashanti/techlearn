@@ -489,36 +489,20 @@ const ExerciseDetail = () => {
           onTouchEnd={onTouchEnd}
         >
 
-          {/* Desktop Layout - Always show combined view */}
+          {/* Desktop Layout */}
           <div className="hidden md:block">
             <div className="max-h-[1500px] flex gap-2 p-2">
               
-              {/* Left Side - Theory area (50%) */}
-              
-              <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <h1 className="font-poppins text-2xl md:text-2xl font-medium brand-heading-primary p-4 mb-2 tracking-wider">
-                {exercise?.title}
-              </h1>
+              {/* Left Side - Theory area */}
+              <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               {/* <p className="text-gray-600 dark:text-gray-400 mb-4">
                 {exercise?.description}
               </p> */}
-              <div className="flex items-center gap-4 mt-2 mb-6 px-4">
-                <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">
-                  {exercise?.difficulty}
-                </span>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <Clock className="w-4 h-4" />
-                  <span>{exercise?.estimatedTime}</span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                  <Trophy className="w-4 h-4" />
-                  <span>{exercise?.xp} XP</span>
-                </div>
-              </div>
-                
+              
                 {/* Theory Content */}
                 <div className="h-[calc(100%-3.5rem)] overflow-auto p-4">
-                  <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
+                  
+                  <div className="prose prose-gray dark:prose-invert max-w-none text-black/80 dark:text-white/80 text-xl prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       rehypePlugins={[rehypeHighlight]}
@@ -536,7 +520,7 @@ const ExerciseDetail = () => {
                             </code>
                           );
                         },
-                        p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
+                        p: ({children}) => <p className="text-blue-900 dark:text-blue-400 leading-relaxed mb-4">{children}</p>,
                         ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
                         ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
                         li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
@@ -545,11 +529,25 @@ const ExerciseDetail = () => {
                     >
                       {exercise?.theory}
                     </ReactMarkdown>
+
+                    <div className="flex items-center gap-4 mt-2 mb-6 px-1">
+                <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-sm">
+                  {exercise?.difficulty}
+                </span>
+                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-sm">
+                  <Clock className="w-4 h-4" />
+                  <span>{exercise?.estimatedTime}</span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-sm">
+                  <Trophy className="w-4 h-4" />
+                  <span>{exercise?.xp} XP</span>
+                </div>
+              </div>
                     {/* Show expected solution if present */}
                     {exercise?.expectedOutput && (
                       <div className="mt-6">
-                        <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
-                        <div className="bg-white/50 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                        <h2 className="text-black/60 dark:text-white/60 text-lg font-bold ml-1 mb-2">Expected Solution</h2>
+                        <div className="bg-blue-100 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-100 dark:border-black/40">
                           <pre className="p-5 text-sm font-mono text-black/50 dark:text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
                             {exercise.expectedOutput}
                           </pre>
@@ -563,9 +561,9 @@ const ExerciseDetail = () => {
               {/* Right Side - Code and Preview containers (50%) */}
               <div className="flex-1 flex flex-col gap-2">
                 {/* Top Right - Code Editor (70% height) */}
-                <div className="flex-none h-[50%] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="flex-none h-[50%] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {/* Code Editor Header */}
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                  <div className="bg-gradient-to-r [#daf0fa] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-blue-900 dark:text-white/80 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2">
                       <Code className="w-4 h-4" />
                       <span className="font-small">Code Editor</span>
@@ -574,7 +572,7 @@ const ExerciseDetail = () => {
                       <button
                         onClick={runCode}
                         disabled={isRunning}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-900 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
                       >
                         {isRunning ? 'Running...' : 'Run Code'}
                         <Play className="w-4 h-4" />
@@ -690,9 +688,9 @@ const ExerciseDetail = () => {
                 </div>
 
                 {/* Bottom Right - Live Preview (30% height) */}
-                <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="flex-1 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {/* Output Header */}
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                  <div className="bg-gradient-to-r [#daf0fa] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-blue-900 dark:text-white/80 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2">
                       <Terminal className="w-4 h-4" />
                       <span className="font-medium">Output</span>
@@ -700,7 +698,7 @@ const ExerciseDetail = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={resetCode}
-                        className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 text-indigo-900 dark:text-white/80 hover:text-gray-200 transition-colors"
                       >
                         <RotateCcw className="w-4 h-4" />
                       </button>
@@ -809,7 +807,7 @@ const ExerciseDetail = () => {
             {activeTab === 'compiler' && (
               <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 {/* Code Editor Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
+                <div className="bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#beaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
                     <Code className="w-4 h-4" />
                     <span className="font-medium">Code Editor</span>
