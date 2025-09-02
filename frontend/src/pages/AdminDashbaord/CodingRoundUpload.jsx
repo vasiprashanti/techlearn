@@ -157,7 +157,7 @@ export default function CodingRoundForm() {
     if (!window.confirm("Are you sure you want to delete this round?")) return;
     try {
       const token = getToken();
-      await axios.delete(`${BASE_URL}/api/coding-rounds/admin/${id}`, {
+      await axios.delete(`${BASE_URL}/coding-rounds/admin/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Coding round deleted successfully!");
