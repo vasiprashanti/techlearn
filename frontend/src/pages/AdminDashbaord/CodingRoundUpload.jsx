@@ -230,9 +230,22 @@ export default function CodingRoundForm() {
     setEditingId(round._id);
     setCollege(round.college);
     setTitle(round.title);
-    setDate(round.date.split("T")[0]);
-    setStartTime(new Date(round.date).toISOString().slice(11, 16)); // HH:MM
+
+    // Ensure date is only yyyy-mm-dd
+    setDate(new Date(round.date).toISOString().slice(0, 10));
+
+    // Start time
+    setStartTime(new Date(round.date).toISOString().slice(11, 16));
+
+    // End time (fix: read from round.endTime if API gives it)
+    if (round.endTime) {
+      setEndTime(new Date(round.endTime).toISOString().slice(11, 16));
+    } else {
+      setEndTime("");
+    }
+
     setDuration(round.duration);
+
     setProblems(
       round.problems.map((p) => ({
         problemTitle: p.problemTitle,
@@ -248,6 +261,7 @@ export default function CodingRoundForm() {
           : [{ input: "", expectedOutput: "" }],
       }))
     );
+
     setNumQuestions(round.problems.length);
     setExpanded(new Array(round.problems.length).fill(true));
   };
@@ -262,6 +276,7 @@ export default function CodingRoundForm() {
       title,
       college,
       date: `${date}T${startTime}:00`,
+      endTime: `${date}T${endTime}:00`, 
       duration: parseInt(duration),
       problems: problems.map((problem) => ({
         problemTitle: problem.problemTitle,
