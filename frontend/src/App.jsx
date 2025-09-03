@@ -118,34 +118,38 @@ const HomePage = () => {
 
   // Marquee sections data
   const marqueeData = [
-   {
-      title: "techPREP",
-      subtitle: "Already learned with us? Time to prove it.",
-      description:
-        "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
-      logos: [
-        {
-          name: "University of Hyderabad",
-          src: "uh.png",
-          link: "/colleges/uoh",
-        },
-        {
-          name: "Vidya Jyothi Institute of Technology",
-          src: "/vjit.png",
-          link: "/colleges/vjit",
-        },
-        {
-          name: "VNR Vignana Jyothi Institute of Engineering and Technology",
-          src: "/vnrvjiet.png",
-          link: "/colleges/vnr",
-        },
-        {
-          name: "Mahindra University",
-          src: "/mu.png",
-          link: "/colleges/mahindra",
-        },
-      ],
-    },
+  {
+    title: "techPREP",
+    subtitle: "Already learned with us? Time to prove it.",
+    description:
+      "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
+    logos: [
+      {
+        name: "University of Hyderabad",
+        src: "uh.png",
+        srcDark: "uh_dark.png",
+        link: "/colleges/uoh",
+      },
+      {
+        name: "Vidya Jyothi Institute of Technology",
+        src: "/vjit.png",
+        srcDark: "vjit_dark.png",
+        link: "/colleges/vjit",
+      },
+      {
+        name: "VNR Vignana Jyothi Institute of Engineering and Technology",
+        src: "/vnrvjiet.png",
+        srcDark: "/vnrvjiet_dark.png",
+        link: "/colleges/vnr",
+      },
+      {
+        name: "Mahindra University",
+        src: "/mu.png",
+        srcDark: "/mu_dark.png",
+        link: "/colleges/mahindra",
+      },
+    ],
+  },
     {
       id: "exercises",
       title: "code WORKOUT",
@@ -416,14 +420,14 @@ const HomePage = () => {
       {marqueeData.map((item, index) => (
         <div
           key={index}
-          className={item.reverse ? "marquee-header-2" : "marquee-header"}
+          className={item.reverse ? "marquee-header-2" : "marquee-header "}
           ref={(el) => (marqueeRefs.current[index] = el)}
         >
           {/* Special layout for techPREP section with logos */}
           {item.logos ? (
             <div className="w-full">
               {/* Text content */}
-              <div className="mb-12 max-w-4xl mx-auto px-8">
+              <div className="mb-12 max-w-4xl mx-auto px-8 ">
                 {/* TechPREP title first - left aligned */}
                 <a
                   href={item.link}
@@ -435,8 +439,8 @@ const HomePage = () => {
                 >
                   <h2
                     className={`${
-                      item.reverse ? "marquee-title-2" : "marquee-title"
-                    } !text-left`}
+                      item.reverse ? "marquee-title-2 " : "marquee-title "
+                    } !text-left`} style={{ marginLeft: -30 }}
                   >
                     <span>
                       <i>{item.title.split(" ")[0]}</i>{" "}
@@ -474,15 +478,15 @@ const HomePage = () => {
                   >
                     <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
                       <img
-                        src={logo.src}
-                        alt={logo.name}
-                        className="max-w-full max-h-full object-contain filter drop-shadow-md"
-                        style={{ mixBlendMode: "multiply" }}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.nextSibling.style.display = "flex";
-                        }}
-                      />
+  src={
+    logo.srcDark && theme === "dark"
+      ? logo.srcDark
+      : logo.src
+  }
+  alt={logo.name}
+  className="max-w-full max-h-full object-contain filter drop-shadow-md"
+/>
+
                       <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
                         {logo.name
                           .split(" ")
@@ -509,7 +513,8 @@ const HomePage = () => {
                       navigate(item.link);
                     }}
                   >
-                    <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
+                    <h2 className={`${item.reverse ? "marquee-title-2" : "marquee-title"} !text-left ml-0`}
+    style={{ marginLeft: -30 }}>
                       <span>
                         <i>{item.title.split(" ")[0]}</i>{" "}
                         {item.title.split(" ").slice(1).join(" ")}
