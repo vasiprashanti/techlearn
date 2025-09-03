@@ -144,7 +144,6 @@ const CodingCompiler = ({ user, contestData }) => {
     return;
   }
 
-  // Validate required data
   if (!linkId) {
     setOutput("⚠️ Error: Missing contest link ID.");
     return;
@@ -177,125 +176,91 @@ const CodingCompiler = ({ user, contestData }) => {
       `${BASE_URL}/college-coding/${linkId}/run`,
       payload,
       {
-        timeout: 30000, // 30 second timeout
-        headers: {
-          "Content-Type": "application/json",
-        },
+        timeout: 30000,
+        headers: { "Content-Type": "application/json" },
       }
     );
 
     const data = response.data;
     console.log("Full API response:", data);
 
-    // Handle different possible response structures
-    let testResults = null;
-    
-    if (data?.data?.results?.[0]?.visibleTestResults) {
-      // Structure 1: data.data.results[0].visibleTestResults
-      testResults = data.data.results[0].visibleTestResults;
-    } else if (data?.results?.[0]?.visibleTestResults) {
-      // Structure 2: data.results[0].visibleTestResults
-      testResults = data.results[0].visibleTestResults;
-    } else if (data?.visibleTestResults) {
-      // Structure 3: data.visibleTestResults
-      testResults = data.visibleTestResults;
-    } else if (data?.testResults) {
-      // Structure 4: data.testResults
-      testResults = data.testResults;
-    }
+    const resultsArray = data?.data?.results || [];
 
-    if (testResults && Array.isArray(testResults)) {
-      setResults(testResults);
-      
-      // Temporary debugging - remove after fixing
-      console.log("Test Results:", testResults);
+    if (Array.isArray(resultsArray) && resultsArray.length > 0) {
+      let allFormatted = "";
 
-      const passedCount = testResults.filter((t) => t.passed === true).length;
-      const totalCount = testResults.length;
+      resultsArray.forEach((result, problemIdx) => {
+        const testResults = result?.visibleTestResults || [];
+        const feedback = result?.feedback || "";
 
-      const formatted = testResults
-        .map((t, idx) => {
-          const passed = t.passed === true;
-          const input = t.input || 'N/A';
-          const expected = t.expectedOutput || 'N/A';
-          
-          // Temporary debugging - remove after fixing
-          console.log(`Test ${idx + 1}:`, {
-            passed,
-            actualOutput: t.actualOutput,
-            error: t.error,
-            rawTest: t
-          });
-          
-          // Handle actual output more carefully
-          let actual = '';
-          if (t.actualOutput !== undefined && t.actualOutput !== null) {
-            actual = typeof t.actualOutput === 'string' ? t.actualOutput.trim() : String(t.actualOutput);
-          } else if (t.error) {
-            actual = `Error: ${t.error}`;
-          } else if (!passed) {
-            actual = 'No output generated';
-          } else {
-            actual = 'N/A';
-          }
-          
-          return `Test ${idx + 1}: ${passed ? "✅ Passed" : "❌ Failed"}\n` +
-                 `Input: ${input}\n` +
-                 `Expected: ${expected}\n` +
-                 `Actual: ${actual}\n` +
-                 (t.executionTime ? `Execution Time: ${t.executionTime}\n` : '') +
-                 (t.error && !passed ? `Error Details: ${t.error}\n` : '');
-        })
-        .join("\n") +
-        `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n`;
+        if (testResults.length > 0) {
+          const passedCount = testResults.filter((t) => t.passed).length;
+          const totalCount = testResults.length;
 
-      // Add feedback from the API response
-      const feedback = data?.data?.feedback || "";
-      
-      setOutput(formatted + (feedback ? `\n${feedback}` : ''));
+          const formatted = testResults
+            .map((t, idx) => {
+              const passed = t.passed === true;
+              const input = t.input || "N/A";
+              const expected = t.expectedOutput || "N/A";
+
+              let actual;
+              if (t.actualOutput === null) actual = "null";
+              else if (t.actualOutput === undefined) actual = "undefined";
+              else if (t.actualOutput === "") actual = "(empty output)";
+              else actual = String(t.actualOutput);
+
+              return `   Test ${idx + 1}: ${passed ? "✅ Passed" : "❌ Failed"}\n` +
+                     `   Input: ${input}\n` +
+                     `   Expected: ${expected}\n` +
+                     `   Actual: ${actual}\n` +
+                     (t.executionTime ? `   Execution Time: ${t.executionTime}\n` : "") +
+                     (t.error ? `   Error: ${t.error}\n` : "");
+            })
+            .join("\n");
+
+          allFormatted += `\n=== Problem ${problemIdx} (Language: ${result.language}) ===\n` +
+                          formatted +
+                          `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n` +
+                          (feedback ? `${feedback}\n` : "");
+        } else {
+          allFormatted += `\n=== Problem ${problemIdx} ===\n⚠️ No test results available\n`;
+        }
+      });
+
+      setOutput(allFormatted.trim());
     } else if (data?.success === false) {
-      // Handle API error response
       setOutput("⚠️ " + (data.message || "Test execution failed"));
     } else {
-      // Fallback for unexpected response structure
-      setOutput("⚠️ Unexpected response format. Please try running again.\n\n" + 
-               "Response: " + JSON.stringify(data, null, 2));
+      setOutput("⚠️ Unexpected response format.\n\n" + JSON.stringify(data, null, 2));
     }
   } catch (err) {
     console.error("Run error:", err);
 
     if (err.response) {
-      // Server responded with error status
       const status = err.response.status;
       const message = err.response.data?.message || err.response.statusText;
 
       if (status === 404) {
-        setOutput(
-          `⚠️ Error 404: Contest not found. Please check if the contest link '${linkId}' is valid.`
-        );
+        setOutput(`⚠️ Error 404: Contest not found. Invalid contest link '${linkId}'.`);
       } else if (status === 400) {
         setOutput(`⚠️ Error 400: Bad request. ${message}`);
       } else if (status === 500) {
-        setOutput(`⚠️ Error 500: Server error. Please try again later.`);
+        setOutput("⚠️ Error 500: Server error. Please try again later.");
       } else {
         setOutput(`⚠️ Server error ${status}: ${message}`);
       }
-    } else if (err.code === 'ECONNABORTED') {
-      // Timeout error
-      setOutput("⚠️ Request timeout: The server is taking too long to respond. Please try again.");
+    } else if (err.code === "ECONNABORTED") {
+      setOutput("⚠️ Request timeout. The server is taking too long to respond.");
     } else if (err.request) {
-      // Request was made but no response received
-      setOutput(
-        "⚠️ Network error: Unable to connect to server. Please check your connection."
-      );
+      setOutput("⚠️ Network error: Unable to connect to server.");
     } else {
-      // Something else happened
       setOutput("⚠️ Error running test cases: " + err.message);
     }
   } finally {
     setIsRunning(false);
   }
 };
+
 
 
   // --- Submit (Hidden Test Cases) ---
