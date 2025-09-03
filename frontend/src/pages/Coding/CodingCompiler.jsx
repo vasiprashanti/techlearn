@@ -414,6 +414,52 @@ const CodingCompiler = ({ user, contestData }) => {
     };
   }, [showDropdown]);
 
+
+  // ✅ If round is complete → show results page
+if (isRoundComplete) {
+  return (
+    <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="max-w-lg w-full bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+        <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">
+          🎉 Round Completed!
+        </h2>
+
+        {results.length === 0 ? (
+          <p className="text-center text-gray-600 dark:text-gray-300">
+            No results available.
+          </p>
+        ) : (
+          <ul className="space-y-4">
+            {results.map((item, idx) => (
+              <li
+                key={idx}
+                className="flex justify-between items-center border-b pb-2 last:border-b-0"
+              >
+                <span className="font-medium text-gray-800 dark:text-gray-200">
+                  {item.label}
+                </span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {item.value}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={() => window.location.href = "/"} // redirect home or dashboard
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   
   if (!PROBLEM) {
     return (
@@ -722,24 +768,9 @@ const CodingCompiler = ({ user, contestData }) => {
             End Round
           </button>
         )}
-      </div> 
-        {isRoundComplete && (
-    <div className="mt-6 p-4 border rounded bg-gray-100">
-      <h2 className="text-lg font-semibold mb-2">Results Summary</h2>
-  
-      {results.length === 0 ? (
-        <p>No results available.</p>
-      ) : (
-        <ul className="list-disc pl-5 space-y-1">
-          {results.map((item, idx) => (
-            <li key={idx}>
-              <strong>{item.label}:</strong> {item.value}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )}
+      </div>
+        
+        
     </div>
   );
 };
