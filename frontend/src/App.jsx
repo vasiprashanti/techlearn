@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom'
 import FloatingCodeWords from './components/FloatingCodeWords'
 import FloatingCourseLogos from './components/FloatingCourseLogos'
 import LoadingScreen from './components/LoadingScreen'
+import { useTheme } from './context/ThemeContext'
 
 //Admin Dashboard
 import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
@@ -81,10 +82,10 @@ import UserMcq from './pages/Mcq/UserMcq'
 //College list
 import CollegeAssessment from "./pages/Colleges/CollegeAssesment";
 
-
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
+  const { theme } = useTheme()
   const bottomTextRef = useRef(null)
   const [isBottomTextInViewport, setIsBottomTextInViewport] = useState(false)
 
@@ -146,28 +147,33 @@ const HomePage = () => {
       ],
     },
     {
-      title: "mini PROJECTS",
-      subtitle: "Mini Projects — because upskilling is what we do.",
-      description: "Transform your learning with hands-on mini projects that bridge theory and practice. Build real-world applications, from simple tools to advanced web apps, and create a portfolio that highlights your skills. Our project-based approach ensures you understand concepts and apply them effectively in professional settings.",
-      features: ["10+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
-      link: "/build",
-      reverse: true
+      id: "exercises",
+      title: "code WORKOUT",
+      subtitle: "Turn syntax into muscle memory — minus the sweat.",
+      description: "Challenge yourself with our comprehensive coding exercises designed to strengthen your programming fundamentals. Practice makes perfect, and our structured workout sessions will help you build the coding stamina needed for real-world development challenges.",
+      features: ["Progressive difficulty levels from beginner to advanced", "Interactive coding challenges with instant feedback", "Track your progress and identify improvement areas", "Real-world problem scenarios and algorithmic thinking"],
+      link: "/learn/exercises",
+      reverse: true,
+      visual: "workout"
     },
     {
-      title: "summer INTERN",
-      subtitle: "Join live internships in Web Dev, UI/UX Design, or Content Creation.",
-      description: "Gain invaluable real-world experience through our comprehensive internship program designed to bridge the gap between academic learning and professional development. Work on live projects with established companies, receive personalized mentorship from industry veterans, and build a professional network that will accelerate your career. Our internships offer hands-on experience in cutting-edge technologies, collaborative team environments, and the opportunity to contribute to meaningful projects that impact real users and businesses.",
-      features: ["3-6 month structured internship programs", "Direct mentorship from senior developers and designers", "Real client projects with measurable impact", "Certificate of completion and LinkedIn recommendations"],
-      note: "Summer positions filled — Winter applications open in November.",
-      link: "/careers"
+      id: "compiler",
+      title: "code LAB",
+      subtitle: "Your browser is your IDE now.",
+      description: "Experience seamless coding with our powerful online compiler that supports multiple programming languages. No installations, no setup hassles – just pure coding experience in your browser with all the features of a professional development environment.",
+      features: ["Multi-language support including C, C++, Java, Python, JavaScript", "Real-time code compilation and execution", "Syntax highlighting and error detection", "Share and collaborate on code with others"],
+      link: "/learn/compiler",
+      visual: "compiler"
     },
     {
-      title: "design LAB",
-      subtitle: "DesignLab is our open-source UI library with ready-to-use buttons, loaders, forms, toggles, radios, and more.",
-      description: "Revolutionize your development workflow with our comprehensive open-source UI component library, meticulously crafted to accelerate your design and development process. DesignLab provides production-ready, accessible, and customizable components that follow modern design principles and best practices. From elegant buttons and smooth animations to complex form elements and interactive toggles, every component is built with performance, accessibility, and developer experience in mind. Save countless hours of development time while maintaining consistent, professional design standards across all your projects.",
-      features: ["50+ production-ready UI components", "Full accessibility compliance (WCAG 2.1)", "Dark mode support and theme customization", "React, Vue, and vanilla JavaScript versions"],
-      link: "/build",
-      reverse: true
+      id: "certification",
+      title: "code MASTER",
+      subtitle: "Prove Your Expertise",
+      description: "Validate your programming skills with industry-recognized certifications that demonstrate your technical proficiency. Our comprehensive certification program evaluates both theoretical knowledge and practical coding abilities to give you credentials that employers trust.",
+      features: ["Industry-recognized certification programs", "Comprehensive skill assessments covering theory and practice", "Digital certificates with verification codes", "Professional portfolio enhancement and career advancement"],
+      link: "/learn/certification",
+      reverse: true,
+      visual: "certification"
     }
   ]
 
@@ -455,44 +461,198 @@ const HomePage = () => {
                 </p>
               </div>
               {/* College Logos Row */}
-{/* College Logos Row */}
-<div className="flex justify-start items-center mt-12 px-8 flex-wrap gap-8">
-  {item.logos.map((logo, logoIndex) => (
-    <button
-      key={logoIndex}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate(logo.link);
-      }}
-      className="flex items-center justify-center bg-transparent transition-transform duration-300 hover:scale-105 hover:opacity-90"
-    >
-      <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
-        <img
-          src={logo.src}
-          alt={logo.name}
-          className="max-w-full max-h-full object-contain filter drop-shadow-md"
-          style={{ mixBlendMode: "multiply" }}
-          onError={(e) => {
-            e.target.style.display = "none";
-            e.target.nextSibling.style.display = "flex";
-          }}
-        />
-        <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
-          {logo.name
-            .split(" ")
-            .map((word) => word[0])
-            .join("")
-            .slice(0, 4)}
-        </div>
-      </div>
-    </button>
-  ))}
-</div>
+              <div className="flex justify-start items-center mt-12 px-8 flex-wrap gap-8">
+                {item.logos.map((logo, logoIndex) => (
+                  <button
+                    key={logoIndex}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(logo.link);
+                    }}
+                    className="flex items-center justify-center bg-transparent transition-transform duration-300 hover:scale-105 hover:opacity-90"
+                  >
+                    <div className="w-40 h-24 md:w-56 md:h-32 lg:w-64 lg:h-36 flex items-center justify-center">
+                      <img
+                        src={logo.src}
+                        alt={logo.name}
+                        className="max-w-full max-h-full object-contain filter drop-shadow-md"
+                        style={{ mixBlendMode: "multiply" }}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div className="hidden w-full h-full bg-blue-500 text-white items-center justify-center text-lg font-bold text-center rounded-lg">
+                        {logo.name
+                          .split(" ")
+                          .map((word) => word[0])
+                          .join("")
+                          .slice(0, 4)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : item.visual ? (
+            /* Learn sections */
+            <div className="container mx-auto max-w-7xl px-6 py-20">
+              <div className="grid lg:grid-cols-2 gap-16 items-center">
+                {/* Content Side */}
+                <div className="relative z-10 space-y-8">
+                  <a
+                    href={item.link}
+                    className="marquee-link"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(item.link);
+                    }}
+                  >
+                    <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
+                      <span>
+                        <i>{item.title.split(" ")[0]}</i>{" "}
+                        {item.title.split(" ").slice(1).join(" ")}
+                      </span>
+                    </h2>
+                  </a>
+                  
+                  <motion.p
+                    className="font-poppins text-lg md:text-xl text-gray-700 dark:text-gray-300"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    viewport={{ once: true }}
+                  >
+                    {item.subtitle}
+                  </motion.p>
 
+                  <motion.p
+                    className="text-base md:text-lg text-gray-600 dark:text-gray-400 leading-relaxed max-w-xl"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
+                    viewport={{ once: true }}
+                  >
+                    {item.description}
+                  </motion.p>
+
+                  {item.features && (
+                    <motion.ul
+                      className="space-y-3"
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.8 }}
+                      viewport={{ once: true }}
+                    >
+                      {item.features.map((feature, idx) => (
+                        <li
+                          key={idx}
+                          className="flex items-center gap-3 text-base text-gray-600 dark:text-gray-400"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </motion.ul>
+                  )}
+
+                  {/* CTA Button */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 1.0 }}
+                    viewport={{ once: true }}
+                  >
+                    <motion.div
+                      whileHover={{
+                        x: 2,
+                        transition: { duration: 0.2, ease: "easeOut" }
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <button
+                        onClick={() => navigate(item.link)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white border-none px-4 py-2 text-base rounded-lg cursor-pointer inline-flex items-center gap-2 transition-all duration-300 font-sans"
+                      >
+                        <span>Start {item.title.split(" ")[1]}</span>
+                        <motion.div
+                          whileHover={{ x: 4 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </motion.div>
+                      </button>
+                    </motion.div>
+                  </motion.div>
+                </div>
+
+                {/* Visual Side */}
+                <motion.div
+                  className="relative h-64 sm:h-80 md:h-96 lg:h-[500px] transform-gpu perspective-1000"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, delay: 0.6 }}
+                  viewport={{ once: true }}
+                >
+                  <div className="w-full h-full flex items-center justify-center relative">
+                    {item.visual === 'workout' && (
+                      <motion.img
+                        src={theme === 'dark' ? '/workout-dark.png' : '/workout-light.png'}
+                        alt="Coding Challenges"
+                        className="w-full h-auto object-contain"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                        viewport={{ once: true }}
+                      />
+                    )}
+                    
+                    {item.visual === 'compiler' && (
+                      <motion.img
+                        src={theme === 'dark' ? '/compiler-dark.png' : '/compiler-light.png'}
+                        alt="Code Compiler"
+                        className="w-full h-auto object-contain"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                        viewport={{ once: true }}
+                      />
+                    )}
+                    
+                    {item.visual === 'certification' && (
+                      <motion.div
+                        className="w-full h-full flex items-center justify-center"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.8, delay: 0.6 }}
+                        viewport={{ once: true }}
+                      >
+                        <motion.img
+                          src="/certificate.png"
+                          alt="Professional Certificate"
+                          className="w-full h-auto max-w-md object-contain drop-shadow-2xl"
+                          animate={{
+                            y: [0, -12, 0],
+                            rotate: [-1, 1, -1]
+                          }}
+                          transition={{
+                            duration: 6,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
             </div>
           ) : (
-            /* Regular sections without logos */
+            /* Regular sections without logos or visuals */
             <>
               <a
                 href={item.link}
@@ -709,7 +869,6 @@ function LayoutWrapper() {
   const showNavbar = !(codingRegex.test(location.pathname) || mcqRegex.test(location.pathname) || location.pathname === '/dashboard' || location.pathname === '/admin' || location.pathname === '/admin/codingroundupload');
   const showFooter = !(codingRegex.test(location.pathname) || mcqRegex.test(location.pathname));
 
-
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
       {showNavbar && <Navbar />}
@@ -764,7 +923,7 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
-            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
+            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
             <Route path="/admin/mcqupload" element={<McqUpload/>} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
           </Route>
@@ -773,7 +932,7 @@ function LayoutWrapper() {
         </Routes>
       </main>
       
-      {showFooter && <Footer />}
+      {showFooter && <Footer />}
     </div>
   );
 }
