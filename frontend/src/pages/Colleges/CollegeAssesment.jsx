@@ -1,62 +1,43 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
+import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
+import useInViewport from "../../hooks/useInViewport";
+import CourseCard from "../../components/CourseCard";
 
 const CollegeAssessment = () => {
   const { collegeId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeRounds, setActiveRounds] = useState([]);
+  const [headingRef, isHeadingInViewport] = useInViewport();
 
-  // College configuration
   const collegeConfig = {
-    uoh: {
-      name: "University of Hyderabad",
-      logo: "/uh.png",
-      shortName: "UoH",
-    },
-    vjit: {
-      name: "Vidya Jyothi Institute of Technology",
-      logo: "/vjit.png",
-      shortName: "VJIT",
-    },
-    vnr: {
-      name: "VNR Vignana Jyothi Institute of Engineering and Technology",
-      logo: "/vnrvjiet.png",
-      shortName: "VNRVJIET",
-    },
-    mahindra: {
-      name: "Mahindra University",
-      logo: "/mu.png",
-      shortName: "MU",
-    },
+    uoh: { logo: "/uh.png", shortName: "UoH" },
+    vjit: { logo: "/vjit.png", shortName: "VJIT" },
+    vnr: { logo: "/vnrvjiet.png", shortName: "VNRVJIET" },
+    mahindra: { logo: "/mu.png", shortName: "MU" },
   };
 
   const currentCollege = collegeConfig[collegeId];
-  
   const BASE_URL = import.meta.env.VITE_API_URL;
+
   useEffect(() => {
     const fetchCollegeData = async () => {
       try {
         const res = await axios.get(`${BASE_URL}/college/${collegeId}`);
-        console.log("ipd kavalsindi",res);
         const result = res.data;
 
         if (result.success) {
-          // Merge mcqs and coding rounds (access directly from result)
           const mergedRounds = [
-            ...(result.mcqs || []).map((mcq) => ({
-              ...mcq,
-              type: "MCQ",
-            })),
+            ...(result.mcqs || []).map((mcq) => ({ ...mcq, type: "MCQ" })),
             ...(result.codingRounds || []).map((coding) => ({
               ...coding,
               type: "Coding",
             })),
           ];
-
-          // filter only active ones
           setActiveRounds(mergedRounds.filter((r) => r.isActive));
         } else {
           setActiveRounds([]);
@@ -78,14 +59,19 @@ const CollegeAssessment = () => {
   };
 
   if (loading) {
-    return <LoadingScreen showMessage={false} size={48} duration={800} />;
+    return (
+      <>
+        <ScrollProgress />
+        <LoadingScreen showMessage={false} size={48} duration={800} />
+      </>
+    );
   }
 
   if (!currentCollege) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
             College Not Found
           </h1>
           <button
@@ -100,55 +86,82 @@ const CollegeAssessment = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-      <div className="max-w-7xl w-full mx-auto px-6 pt-20 pb-16">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-3 mb-4">
-            <h1 className="text-3xl md:text-4xl font-bold text-blue-900 dark:text-white">
-              tech<span className="text-blue-600">PREP</span>
-            </h1>
-            <span className="text-xl font-semibold text-blue-900 dark:text-gray-200">
-              X
-            </span>
-            <img
-              src={currentCollege.logo}
-              alt={currentCollege.shortName}
-              className="h-36 md:h-38 object-contain"
-            />
-          </div>
-          <p className="text-lg text-blue-900 dark:text-gray-200">
-            Practice MCQs and coding rounds to boost your placement prep and ace
-            technical interviews.
-          </p>
-        </div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+      <ScrollProgress />
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          {activeRounds.length > 0 ? (
-            activeRounds.map((round) => (
-              <div
-                key={round._id}
-                className="bg-white/70 dark:bg-white/10 backdrop-blur-md rounded-2xl shadow-md hover:shadow-lg transition-all p-6 flex flex-col justify-between"
-              >
-                <h4 className="text-lg font-semibold text-blue-900 dark:text-white text-center mb-4">
-                  {round.title}
-                </h4>
-                <button
-  onClick={() => handleStartTest(round.linkId, round.type)}
-  className="w-full py-3 rounded-xl font-semibold text-white transition bg-blue-600 hover:bg-blue-700"
->
-  Start {round.type} Round
-</button>
-
+      {/* Header Section */}
+      <div className="relative z-10 pt-24 pb-12">
+        <div className="container px-6 mx-auto max-w-7xl">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="mb-12"
+          >
+            {/* Left-aligned Logo Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent whitespace-nowrap">
+                  techPREP
+                </h1>
+                <span className="text-xl font-semibold text-blue-900 dark:text-white">
+                  X
+                </span>
+                <img
+                  src={currentCollege.logo}
+                  alt={currentCollege.shortName}
+                  className="h-16 md:h-20 object-contain flex-shrink-0"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
               </div>
-            ))
-          ) : (
-            <p className="col-span-full text-blue-900 dark:text-gray-200 text-center">
+            </div>
+
+            {/* Tagline under logo, also left aligned */}
+            <div className="w-full">
+              <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 max-w-4xl leading-relaxed">
+                Practice MCQs and coding rounds to boost your placement prep and ace technical interviews.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Rounds Grid */}
+      <div className="container px-6 pb-16 mx-auto max-w-7xl">
+        {activeRounds.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
+            {activeRounds.map((round, index) => (
+              <CourseCard
+                key={round._id}
+                course={{
+                  id: round._id,
+                  title: round.title,
+                  description: `${round.type} Assessment`,
+                  status: "available",
+                }}
+                index={index}
+                onClick={() => handleStartTest(round.linkId, round.type)}
+              />
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <p className="text-xl text-gray-500 dark:text-gray-400">
               No active tests available right now.
             </p>
-          )}
-        </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
