@@ -943,48 +943,40 @@ const handleSubmit = async (e) => {
 
                       {/* Report Section */}
                       {loadingReports[round._id] ? (
-                        <p className="text-gray-500 mt-2">Fetching report...</p>
-                      ) : reports[round._id] &&
-                        reports[round._id].length > 0 ? (
-                        <div className="overflow-x-auto mt-4">
-                          <table className="min-w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg">
-                            <thead>
-                              <tr className="bg-gray-200 dark:bg-gray-600">
-                                <th className="p-2 border">Rank</th>
-                                <th className="p-2 border">Name</th>
-                                <th className="p-2 border">Email</th>
-                                <th className="p-2 border">Score</th>
-                                <th className="p-2 border">Submitted At</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {reports[round._id].map((user, idx) => (
-                                <tr
-                                  key={user._id || idx}
-                                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                  <td className="p-2 border">{idx + 1}</td>
-                                  <td className="p-2 border">{user.name}</td>
-                                  <td className="p-2 border">{user.email}</td>
-                                  <td className="p-2 border">{user.score}</td>
-                                  <td className="p-2 border">
-                                    {new Date(user.submittedAt).toLocaleString(
-                                      "en-IN",
-                                      {
-                                        timeZone: "Asia/Kolkata",
-                                      }
-                                    )}
-                                  </td>
+                            <p className="text-gray-500">Loading scores...</p>
+                          ) : reports[round._id] && reports[round._id].length > 0 ? (
+                            <table className="w-full border mt-2 text-sm text-left">
+                              <thead>
+                                <tr className="bg-gray-200 dark:bg-gray-600">
+                                  <th className="p-2 border">Rank</th>
+                                  <th className="p-2 border">Email</th>
+                                  <th className="p-2 border">Score</th>
+                                  <th className="p-2 border">Submitted At</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : reports[round._id] ? (
-                        <p className="text-gray-500 mt-2">
-                          No report data found.
-                        </p>
-                      ) : null}
+                              </thead>
+                              <tbody>
+                                {reports[round._id]
+                                  .sort((a, b) => b.studentScore - a.studentScore) // highest first
+                                  .map((user, idx) => (
+                                    <tr
+                                      key={idx}
+                                      className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                      <td className="p-2 border">{idx + 1}</td>
+                                      <td className="p-2 border">{user.studentEmail}</td>
+                                      <td className="p-2 border">{user.studentScore}</td>
+                                      <td className="p-2 border">
+                                        {new Date(user.submittedAt).toLocaleString("en-IN", {
+                                          timeZone: "Asia/Kolkata",
+                                        })}
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p className="text-gray-500">No scores available</p>
+                          )}
                     </div>
                   )}
                 </div>
