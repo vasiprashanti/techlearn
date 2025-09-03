@@ -206,6 +206,9 @@ const CodingCompiler = ({ user, contestData }) => {
 
     if (testResults && Array.isArray(testResults)) {
       setResults(testResults);
+      
+      // Temporary debugging - remove after fixing
+      console.log("Test Results:", testResults);
 
       const passedCount = testResults.filter((t) => t.passed === true).length;
       const totalCount = testResults.length;
@@ -215,13 +218,33 @@ const CodingCompiler = ({ user, contestData }) => {
           const passed = t.passed === true;
           const input = t.input || 'N/A';
           const expected = t.expectedOutput || 'N/A';
-          const actual = t.actualOutput || 'N/A';
+          
+          // Temporary debugging - remove after fixing
+          console.log(`Test ${idx + 1}:`, {
+            passed,
+            actualOutput: t.actualOutput,
+            error: t.error,
+            rawTest: t
+          });
+          
+          // Handle actual output more carefully
+          let actual = '';
+          if (t.actualOutput !== undefined && t.actualOutput !== null) {
+            actual = typeof t.actualOutput === 'string' ? t.actualOutput.trim() : String(t.actualOutput);
+          } else if (t.error) {
+            actual = `Error: ${t.error}`;
+          } else if (!passed) {
+            actual = 'No output generated';
+          } else {
+            actual = 'N/A';
+          }
           
           return `Test ${idx + 1}: ${passed ? "✅ Passed" : "❌ Failed"}\n` +
                  `Input: ${input}\n` +
                  `Expected: ${expected}\n` +
-                 `Actual: ${typeof actual === 'string' ? actual.trim() : actual}\n` +
-                 (t.executionTime ? `Execution Time: ${t.executionTime}\n` : '');
+                 `Actual: ${actual}\n` +
+                 (t.executionTime ? `Execution Time: ${t.executionTime}\n` : '') +
+                 (t.error && !passed ? `Error Details: ${t.error}\n` : '');
         })
         .join("\n") +
         `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n`;
