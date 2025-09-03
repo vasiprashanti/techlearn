@@ -230,22 +230,46 @@ export default function CodingRoundForm() {
   setEditingId(round?._id ?? "");
   setCollege(round?.college ?? "");
   setTitle(round?.title ?? "");
-  setDate(round?.date ? round.date.split("T")[0] : "");
 
-  // Parse start time in local (IST handled automatically by browser)
-  let start = round?.date ? new Date(round.date) : null;
-  let startHours = start && !isNaN(start) ? String(start.getHours()).padStart(2, "0") : "";
-  let startMinutes = start && !isNaN(start) ? String(start.getMinutes()).padStart(2, "0") : "";
-  setStartTime(startHours && startMinutes ? `${startHours}:${startMinutes}` : "");
+  // ✅ Parse and set date (YYYY-MM-DD)
+  setDate(round?.date ? new Date(round.date).toISOString().split("T")[0] : "");
 
-  // Parse end time
-  let end = round?.endTime ? new Date(round.endTime) : null;
-  let endHours = end && !isNaN(end) ? String(end.getHours()).padStart(2, "0") : "";
-  let endMinutes = end && !isNaN(end) ? String(end.getMinutes()).padStart(2, "0") : "";
-  setEndTime(endHours && endMinutes ? `${endHours}:${endMinutes}` : "");
+  // ✅ Parse and set start time (HH:mm)
+  if (round?.date) {
+    const start = new Date(round.date);
+    if (!isNaN(start)) {
+      setStartTime(
+        `${String(start.getHours()).padStart(2, "0")}:${String(
+          start.getMinutes()
+        ).padStart(2, "0")}`
+      );
+    } else {
+      setStartTime("");
+    }
+  } else {
+    setStartTime("");
+  }
 
+  // ✅ Parse and set end time (HH:mm)
+  if (round?.endTime) {
+    const end = new Date(round.endTime);
+    if (!isNaN(end)) {
+      setEndTime(
+        `${String(end.getHours()).padStart(2, "0")}:${String(
+          end.getMinutes()
+        ).padStart(2, "0")}`
+      );
+    } else {
+      setEndTime("");
+    }
+  } else {
+    setEndTime("");
+  }
+
+  // ✅ Duration
   setDuration(round?.duration ?? "");
 
+  // ✅ Problems
   const safeProblems = Array.isArray(round?.problems) ? round.problems : [];
   setProblems(
     safeProblems.map((p) => ({
@@ -254,105 +278,113 @@ export default function CodingRoundForm() {
       description: p?.description ?? "",
       inputDescription: p?.inputDescription ?? "",
       outputDescription: p?.outputDescription ?? "",
-      visibleTestCases: Array.isArray(p?.visibleTestCases) && p.visibleTestCases.length
-        ? p.visibleTestCases
-        : [{ input: "", expectedOutput: "" }],
-      hiddenTestCases: Array.isArray(p?.hiddenTestCases) && p.hiddenTestCases.length
-        ? p.hiddenTestCases
-        : [{ input: "", expectedOutput: "" }],
+      visibleTestCases:
+        Array.isArray(p?.visibleTestCases) && p.visibleTestCases.length
+          ? p.visibleTestCases
+          : [{ input: "", expectedOutput: "" }],
+      hiddenTestCases:
+        Array.isArray(p?.hiddenTestCases) && p.hiddenTestCases.length
+          ? p.hiddenTestCases
+          : [{ input: "", expectedOutput: "" }],
     }))
   );
 
+  // ✅ Keep problems expanded by default
   setNumQuestions(safeProblems.length);
   setExpanded(new Array(safeProblems.length).fill(true));
 };
 
+
   // Modified handleSubmit
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!validate()) return;
+  setSubmitting(true);
+
+  try {
+    const token = getToken();
+    if (!token) {
+      alert("Authentication token not found. Please login again.");
+      return;
+    }
+
+    // 🔹 Build ISO date/time values
+    const startDateTime = new Date(`${date}T${startTime}:00`);
+    const endDateTime = new Date(`${date}T${endTime}:00`);
 
     const payload = {
-  title,
-  college,
-  date: `${date}T${startTime}:00`,
-  duration: parseInt(duration),
-  endTime: `${date}T${endTime}:00`,   // ✅ include endTime
-  problems: problems.map((problem) => ({
-    problemTitle: problem.problemTitle,
-    description: problem.description,
-    difficulty: problem.difficulty,
-    inputDescription: problem.inputDescription || "",
-    outputDescription: problem.outputDescription || "",
-    visibleTestCases: problem.visibleTestCases.filter(
-      (tc) => tc.input.trim() && tc.expectedOutput.trim()
-    ),
-    hiddenTestCases: problem.hiddenTestCases.filter(
-      (tc) => tc.input.trim() && tc.expectedOutput.trim()
-    ),
-  })),
-};
+      title,
+      college,
+      date: startDateTime.toISOString(),   // ✅ start datetime
+      endTime: endDateTime.toISOString(),  // ✅ end datetime
+      duration: parseInt(duration, 10),
+      isActive: true,                      // ✅ include isActive
+      problems: problems.map((problem) => ({
+        problemTitle: problem.problemTitle,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        inputDescription: problem.inputDescription || "",
+        outputDescription: problem.outputDescription || "",
+        visibleTestCases: problem.visibleTestCases.filter(
+          (tc) => tc.input.trim() && tc.expectedOutput.trim()
+        ),
+        hiddenTestCases: problem.hiddenTestCases.filter(
+          (tc) => tc.input.trim() && tc.expectedOutput.trim()
+        ),
+      })),
+    };
 
-
-    try {
-      const token = getToken();
-      if (!token) {
-        alert("Authentication token not found. Please login again.");
-        return;
-      }
-
-      let res;
-      if (editingId) {
-        // Update existing
-        res = await axios.put(
-          `${BASE_URL}/college-coding/${editingId}`,
-          payload,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        alert("Coding Test Updated Successfully!");
-      } else {
-        // Create new
-        res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        alert("Coding Test Created Successfully!");
-      }
-
-      console.log("Response:", res.data);
-
-      // Reset form
-      setEditingId(null);
-      setCollege("");
-      setTitle("");
-      setDate(getTodayDate());
-      setStartTime("");
-      setEndTime("");
-      setDuration("");
-      setNumQuestions(1);
-      setProblems([
+    let res;
+    if (editingId) {
+      // Update existing
+      res = await axios.put(
+        `${BASE_URL}/college-coding/${editingId}`,
+        payload,
         {
-          problemTitle: "",
-          difficulty: "",
-          description: "",
-          inputDescription: "",
-          outputDescription: "",
-          visibleTestCases: [{ input: "", expectedOutput: "" }],
-          hiddenTestCases: [{ input: "", expectedOutput: "" }],
-        },
-      ]);
-      setExpanded([]);
-      setErrors({});
-      fetchPreviousRounds();
-    } catch (error) {
-      console.error("Error saving coding round:", error);
-      alert("Something went wrong.");
-    } finally {
-      setSubmitting(false);
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      alert("Coding Test Updated Successfully!");
+    } else {
+      // Create new
+      res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert("Coding Test Created Successfully!");
     }
-  };
+
+    console.log("Response:", res.data);
+
+    // Reset form
+    setEditingId(null);
+    setCollege("");
+    setTitle("");
+    setDate(getTodayDate());
+    setStartTime("");
+    setEndTime("");
+    setDuration("");
+    setNumQuestions(1);
+    setProblems([
+      {
+        problemTitle: "",
+        difficulty: "",
+        description: "",
+        inputDescription: "",
+        outputDescription: "",
+        visibleTestCases: [{ input: "", expectedOutput: "" }],
+        hiddenTestCases: [{ input: "", expectedOutput: "" }],
+      },
+    ]);
+    setExpanded([]);
+    setErrors({});
+    fetchPreviousRounds();
+  } catch (error) {
+    console.error("Error saving coding round:", error);
+    alert("Something went wrong.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   // Fetch previous rounds
   const fetchPreviousRounds = async () => {
