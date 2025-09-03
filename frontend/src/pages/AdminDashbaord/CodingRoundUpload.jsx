@@ -342,7 +342,7 @@ const handleSubmit = async (e) => {
     } else {
       // ✅ Create new round
       res = await axios.post(
-        `${BASE_URL}/college-coding/admin/`,
+        `${BASE_URL}/college-coding/`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
