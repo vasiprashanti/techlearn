@@ -138,109 +138,142 @@ const CodingCompiler = ({ user, contestData }) => {
     setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
-  const handleRun = async () => {
-    if (!code.trim()) {
-      setOutput("⚠️ Please write some code before running.");
-      return;
-    }
+ const handleRun = async () => {
+  if (!code.trim()) {
+    setOutput("⚠️ Please write some code before running.");
+    return;
+  }
 
-    // Validate required data
-    if (!linkId) {
-      setOutput("⚠️ Error: Missing contest link ID.");
-      return;
-    }
+  // Validate required data
+  if (!linkId) {
+    setOutput("⚠️ Error: Missing contest link ID.");
+    return;
+  }
 
-    if (!BASE_URL) {
-      setOutput("⚠️ Error: API URL not configured.");
-      return;
-    }
+  if (!BASE_URL) {
+    setOutput("⚠️ Error: API URL not configured.");
+    return;
+  }
 
-    setIsRunning(true);
-    setOutput("⏳ Running  test cases...");
+  setIsRunning(true);
+  setOutput("⏳ Running test cases...");
 
-    try {
-      const payload = {
-        studentEmail: user.email,
-        solutions: [
-          {
-            problemIndex: currentProblemIndex,
-            submittedCode: code,
-            language: selectedLang,
-          },
-        ],
-      };
-
-      console.log("Run payload:", payload);
-      console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
-
-      const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/run`,
-        payload,
+  try {
+    const payload = {
+      studentEmail: user.email,
+      solutions: [
         {
-          timeout: 30000, // 30 second timeout
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+          problemIndex: currentProblemIndex,
+          submittedCode: code,
+          language: selectedLang,
+        },
+      ],
+    };
 
-      const { data } = response;
+    console.log("Run payload:", payload);
+    console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
 
-      if (data?.data?.results?.[0]?.visibleTestResults) {
-        const res = data.data.results[0];
-        const visibleTests = res.visibleTestResults;
-
-        setResults(visibleTests);
-
-        const passedCount = visibleTests.filter((t) => t.passed).length;
-        const totalCount = visibleTests.length;
-
-        const formatted =
-          visibleTests
-            .map(
-              (t, idx) =>
-                `Test ${idx + 1}: ${t.passed ? "✅ Passed" : "❌ Failed"}\n` +
-                `Input: ${t.input}\n` +
-                `Expected: ${t.expectedOutput}\n` +
-                `Actual: ${t.actualOutput?.trim()}\n`
-            )
-            .join("\n\n") +
-          `\n\nSummary: ${passedCount} / ${totalCount}  test cases passed.\n` +
-          (res.feedback || "");
-
-        setOutput(formatted);
-      } else {
-        console.log("Unexpected shape:", data);
-        setOutput("⚠️ Unexpected response format: " + JSON.stringify(data));
+    const response = await axios.post(
+      `${BASE_URL}/college-coding/${linkId}/run`,
+      payload,
+      {
+        timeout: 30000, // 30 second timeout
+        headers: {
+          "Content-Type": "application/json",
+        },
       }
-    } catch (err) {
-      console.error("Run error:", err);
+    );
 
-      if (err.response) {
-        // Server responded with error status
-        const status = err.response.status;
-        const message = err.response.data?.message || err.response.statusText;
+    const data = response.data;
+    console.log("Full API response:", data);
 
-        if (status === 404) {
-          setOutput(
-            `⚠️ Error 404: Contest not found. Please check if the contest link '${linkId}' is valid.`
-          );
-        } else {
-          setOutput(`⚠️ Server error ${status}: ${message}`);
-        }
-      } else if (err.request) {
-        // Request was made but no response received
-        setOutput(
-          "⚠️ Network error: Unable to connect to server. Please check your connection."
-        );
-      } else {
-        // Something else happened
-        setOutput("⚠️ Error running test cases: " + err.message);
-      }
+    // Handle different possible response structures
+    let testResults = null;
+    
+    if (data?.data?.results?.[0]?.visibleTestResults) {
+      // Structure 1: data.data.results[0].visibleTestResults
+      testResults = data.data.results[0].visibleTestResults;
+    } else if (data?.results?.[0]?.visibleTestResults) {
+      // Structure 2: data.results[0].visibleTestResults
+      testResults = data.results[0].visibleTestResults;
+    } else if (data?.visibleTestResults) {
+      // Structure 3: data.visibleTestResults
+      testResults = data.visibleTestResults;
+    } else if (data?.testResults) {
+      // Structure 4: data.testResults
+      testResults = data.testResults;
     }
 
+    if (testResults && Array.isArray(testResults)) {
+      setResults(testResults);
+
+      const passedCount = testResults.filter((t) => t.passed === true).length;
+      const totalCount = testResults.length;
+
+      const formatted = testResults
+        .map((t, idx) => {
+          const passed = t.passed === true;
+          const input = t.input || 'N/A';
+          const expected = t.expectedOutput || 'N/A';
+          const actual = t.actualOutput || 'N/A';
+          
+          return `Test ${idx + 1}: ${passed ? "✅ Passed" : "❌ Failed"}\n` +
+                 `Input: ${input}\n` +
+                 `Expected: ${expected}\n` +
+                 `Actual: ${typeof actual === 'string' ? actual.trim() : actual}\n` +
+                 (t.executionTime ? `Execution Time: ${t.executionTime}\n` : '');
+        })
+        .join("\n") +
+        `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n`;
+
+      // Add feedback from the API response
+      const feedback = data?.data?.feedback || "";
+      
+      setOutput(formatted + (feedback ? `\n${feedback}` : ''));
+    } else if (data?.success === false) {
+      // Handle API error response
+      setOutput("⚠️ " + (data.message || "Test execution failed"));
+    } else {
+      // Fallback for unexpected response structure
+      setOutput("⚠️ Unexpected response format. Please try running again.\n\n" + 
+               "Response: " + JSON.stringify(data, null, 2));
+    }
+  } catch (err) {
+    console.error("Run error:", err);
+
+    if (err.response) {
+      // Server responded with error status
+      const status = err.response.status;
+      const message = err.response.data?.message || err.response.statusText;
+
+      if (status === 404) {
+        setOutput(
+          `⚠️ Error 404: Contest not found. Please check if the contest link '${linkId}' is valid.`
+        );
+      } else if (status === 400) {
+        setOutput(`⚠️ Error 400: Bad request. ${message}`);
+      } else if (status === 500) {
+        setOutput(`⚠️ Error 500: Server error. Please try again later.`);
+      } else {
+        setOutput(`⚠️ Server error ${status}: ${message}`);
+      }
+    } else if (err.code === 'ECONNABORTED') {
+      // Timeout error
+      setOutput("⚠️ Request timeout: The server is taking too long to respond. Please try again.");
+    } else if (err.request) {
+      // Request was made but no response received
+      setOutput(
+        "⚠️ Network error: Unable to connect to server. Please check your connection."
+      );
+    } else {
+      // Something else happened
+      setOutput("⚠️ Error running test cases: " + err.message);
+    }
+  } finally {
     setIsRunning(false);
-  };
+  }
+};
+
 
   // --- Submit (Hidden Test Cases) ---
   const handleSubmit = async () => {
