@@ -334,7 +334,7 @@ const handleSubmit = async (e) => {
     if (editingId) {
       // ✅ Update existing round
       res = await axios.put(
-        `${BASE_URL}/coding-rounds/admin/${editingId}`,
+        `${BASE_URL}/college-coding/admin/${editingId}`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -342,7 +342,7 @@ const handleSubmit = async (e) => {
     } else {
       // ✅ Create new round
       res = await axios.post(
-        `${BASE_URL}/coding-rounds/admin/`,
+        `${BASE_URL}/college-coding/admin/`,
         payload,
         { headers: { Authorization: `Bearer ${token}` } }
       );
