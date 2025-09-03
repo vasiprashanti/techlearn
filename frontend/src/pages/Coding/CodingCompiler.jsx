@@ -722,7 +722,7 @@ const CodingCompiler = ({ user, contestData }) => {
             End Round
           </button>
         )}
-      </div
+      </div> 
         {isRoundComplete && (
     <div className="mt-6 p-4 border rounded bg-gray-100">
       <h2 className="text-lg font-semibold mb-2">Results Summary</h2>
