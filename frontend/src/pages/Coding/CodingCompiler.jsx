@@ -414,25 +414,7 @@ const CodingCompiler = ({ user, contestData }) => {
     };
   }, [showDropdown]);
 
-  {isRoundComplete && (
-  <div className="mt-6 p-4 border rounded bg-gray-100">
-    <h2 className="text-lg font-semibold mb-2">Results Summary</h2>
-
-    {results.length === 0 ? (
-      <p>No results available.</p>
-    ) : (
-      <ul className="list-disc pl-5 space-y-1">
-        {results.map((item, idx) => (
-          <li key={idx}>
-            <strong>{item.label}:</strong> {item.value}
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
-)}
-
-
+  
   if (!PROBLEM) {
     return (
       <div className="flex items-center justify-center h-screen bg-white/20 dark:bg-gray-900/40">
@@ -740,7 +722,24 @@ const CodingCompiler = ({ user, contestData }) => {
             End Round
           </button>
         )}
-      </div>
+      </div
+        {isRoundComplete && (
+    <div className="mt-6 p-4 border rounded bg-gray-100">
+      <h2 className="text-lg font-semibold mb-2">Results Summary</h2>
+  
+      {results.length === 0 ? (
+        <p>No results available.</p>
+      ) : (
+        <ul className="list-disc pl-5 space-y-1">
+          {results.map((item, idx) => (
+            <li key={idx}>
+              <strong>{item.label}:</strong> {item.value}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )}
     </div>
   );
 };
