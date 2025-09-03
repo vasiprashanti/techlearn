@@ -418,8 +418,14 @@ const CodingCompiler = ({ user, contestData }) => {
   // ✅ If round is complete → show results page
 if (isRoundComplete) {
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="max-w-lg w-full bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg">
+    <div className="flex items-center justify-center h-screen 
+      bg-gradient-to-br from-blue-50 via-white to-blue-100 
+      dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      
+      <div className="max-w-lg w-full bg-white/20 dark:bg-gray-900/40 
+        backdrop-blur-md p-8 rounded-2xl shadow-2xl border 
+        border-gray-200 dark:border-gray-700">
+        
         <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">
           🎉 Round Completed!
         </h2>
@@ -433,7 +439,8 @@ if (isRoundComplete) {
             {results.map((item, idx) => (
               <li
                 key={idx}
-                className="flex justify-between items-center border-b pb-2 last:border-b-0"
+                className="flex justify-between items-center border-b 
+                  border-gray-300 dark:border-gray-700 pb-2 last:border-b-0"
               >
                 <span className="font-medium text-gray-800 dark:text-gray-200">
                   {item.label}
@@ -448,8 +455,9 @@ if (isRoundComplete) {
 
         <div className="mt-6 flex justify-center">
           <button
-            onClick={() => window.location.href = "/"} // redirect home or dashboard
-            className="px-5 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition"
+            onClick={() => (window.location.href = "/")}
+            className="px-5 py-2 bg-blue-600 text-white rounded-xl 
+              shadow hover:bg-blue-700 transition"
           >
             Go to Dashboard
           </button>
@@ -458,6 +466,7 @@ if (isRoundComplete) {
     </div>
   );
 }
+
 
 
   
