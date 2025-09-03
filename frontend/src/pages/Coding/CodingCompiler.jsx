@@ -337,50 +337,48 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleEndRound = async () => {
-    // Validate required data
-    if (!contestData?._id) {
-      console.error("Contest ID not available");
-      setIsRoundComplete(true);
-      return;
-    }
-
-    if (!user?.email) {
-      console.error("User email not available");
-      setIsRoundComplete(true);
-      return;
-    }
-
-    try {
-      console.log("Ending round with contest ID:", contestData._id);
-
-      const response = await fetch(
-        `${BASE_URL}/college-coding/${linkId}/submit`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contestId: contestData._id,
-            email: user.email,
-            results,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        console.error("End round failed with status:", response.status);
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-      } else {
-        console.log("Round ended successfully");
-      }
-    } catch (err) {
-      console.error("Error submitting contest results:", err);
-    }
-
+  if (!linkId) {
+    console.error("Link ID not available");
     setIsRoundComplete(true);
-  };
+    return;
+  }
+
+  if (!user?.email) {
+    console.error("User email not available");
+    setIsRoundComplete(true);
+    return;
+  }
+
+  try {
+    console.log("Ending round with link ID:", linkId);
+
+    const response = await fetch(
+      `${BASE_URL}/college-coding/${linkId}/end`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          studentEmail: user.email,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("End round failed:", data);
+    } else {
+      console.log("Round ended successfully:", data);
+    }
+  } catch (err) {
+    console.error("Error ending contest round:", err);
+  }
+
+  setIsRoundComplete(true);
+};
+
 
   // Add click outside handler for dropdown
   useEffect(() => {
