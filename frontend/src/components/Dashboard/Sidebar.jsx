@@ -143,8 +143,9 @@ const Sidebar = ({ onToggle }) => {
                     {item.completed ? (
                       <FiCheckCircle className="w-4 h-4 text-white" />
                     ) : (
-                      //Removed the image tag for icons
-                      <div className="w-2 h-2 bg-white/50 rounded-full"></div>
+                      <span className="text-white font-semibold text-sm">
+                        {item.title.charAt(0)}
+                      </span>
                     )}
                   </div>
 
@@ -254,8 +255,9 @@ const Sidebar = ({ onToggle }) => {
                           {item.completed ? (
                             <FiCheckCircle className="w-4 h-4 text-white" />
                           ) : (
-                            // Remove the span with letter - leave empty or add different icon
-                            <div className="w-2 h-2 bg-white/50 rounded-full"></div>
+                            <span className="text-white font-semibold text-xs">
+                              {item.title.charAt(0)}
+                            </span>
                           )}
                         </div>
                         <div>
