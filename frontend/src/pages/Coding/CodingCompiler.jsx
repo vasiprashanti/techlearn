@@ -497,7 +497,7 @@ if (isRoundComplete) {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+  <div className="flex flex-col min-h-screen max-h-screen overflow-hidden">
       <ScrollProgress />
       {/* Navbar */}
       <nav
@@ -549,8 +549,8 @@ if (isRoundComplete) {
         </div>
       </nav>
 
-      {/* MAIN CONTENT */}
-      <div className="flex flex-1 pt-5">
+  {/* MAIN CONTENT */}
+  <div className="flex flex-1 pt-5 overflow-auto">
         {/* LEFT PANEL */}
         <div className="w-1/2 bg-white/20 dark:bg-gray-900/40 p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700">
           <h1 className="text-2xl font-bold mb-4 dark:text-white">
@@ -741,8 +741,8 @@ if (isRoundComplete) {
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700">
+  {/* Bottom Controls */}
+  <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700 sticky bottom-0 bg-white/80 dark:bg-gray-900/80 z-10 backdrop-blur-md">
         <button
           onClick={handleSubmit}
           disabled={
