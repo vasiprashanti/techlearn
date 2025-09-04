@@ -1,7 +1,13 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { FiChevronLeft, FiChevronRight, FiCheckCircle, FiX, FiMenu } from 'react-icons/fi';
+import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { NavLink, Link } from "react-router-dom";
+import {
+  FiChevronLeft,
+  FiChevronRight,
+  FiCheckCircle,
+  FiX,
+  FiMenu,
+} from "react-icons/fi";
 
 const Sidebar = ({ onToggle }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -15,41 +21,41 @@ const Sidebar = ({ onToggle }) => {
 
   const menuItems = [
     {
-      id: 'profile',
-      title: 'Profile',
-      icon: '/sidebar/profile.png',
+      id: "profile",
+      title: "Profile",
+      // icon: '/sidebar/profile.png',
       completed: false,
     },
     {
-      id: 'learn/courses',
-      title: 'Enrolled Courses',
-      icon: '/sidebar/courses.png',
+      id: "learn/courses",
+      title: "Enrolled Courses",
+      // icon: '/sidebar/courses.png',
       completed: false,
     },
     {
-      id: 'learn/exercises',
-      title: 'My Exercises',
-      icon: '/sidebar/exercises.png',
+      id: "learn/exercises",
+      title: "My Exercises",
+      // icon: '/sidebar/exercises.png',
       completed: false,
     },
     {
-      id: 'projects',
-      title: 'Current Projects',
-      icon: '/sidebar/projects.png',
+      id: "projects",
+      title: "Current Projects",
+      // icon: '/sidebar/projects.png',
       completed: false,
     },
     {
-      id:'mcq',
-      title:'MCQ',
-      icon:'/sidebar/quizzes.png',
-      completed: false,
-    },
- {
-      id:'coding',
-      title:'Coding Round',
-      icon:'/sidebar/coding.png',
-      completed: false,
-    }
+      id: "mcq",
+      title: "MCQ",
+      // icon:'/sidebar/quizzes.png',
+      completed: false,
+    },
+    {
+      id: "coding",
+      title: "Coding Round",
+      // icon:'/sidebar/coding.png',
+      completed: false,
+    },
   ];
 
   return (
@@ -59,9 +65,9 @@ const Sidebar = ({ onToggle }) => {
         initial={false}
         animate={{
           width: sidebarCollapsed ? "82px" : "280px",
-          transition: { duration: 0.3, ease: "easeInOut" }
+          transition: { duration: 0.3, ease: "easeInOut" },
         }}
-        style={{ willChange: 'width' }}
+        style={{ willChange: "width" }}
         className="hidden lg:flex flex-col bg-transparent dark:bg-transparent relative z-40 h-screen overflow-hidden"
       >
         {/* Clickable Logo */}
@@ -80,11 +86,13 @@ const Sidebar = ({ onToggle }) => {
               type="button"
               onClick={handleToggleSidebar}
               onMouseDown={(e) => {
-                console.log('Mouse down on toggle button');
+                console.log("Mouse down on toggle button");
                 e.preventDefault();
               }}
               className="p-3 rounded-lg bg-blue-500/20 dark:bg-blue-600/20 hover:bg-blue-500/30 dark:hover:bg-blue-600/30 transition-all duration-200 border-2 border-blue-500/50 dark:border-blue-400/50 flex-shrink-0 cursor-pointer z-[60] relative shadow-lg active:scale-95"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={
+                sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+              }
             >
               {sidebarCollapsed ? (
                 <FiChevronRight className="w-3 h-3 text-blue-700 dark:text-blue-300" />
@@ -101,27 +109,35 @@ const Sidebar = ({ onToggle }) => {
             {menuItems.map((item, index) => (
               <motion.button
                 key={item.id}
-                onClick={() => { }}
+                onClick={() => {}}
                 whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`group relative w-full text-left rounded-xl transition-all duration-300 ${
                   item.completed
-                    ? 'bg-green-500/20 border-2 border-green-500/50 text-green-700 dark:text-green-300 shadow-lg'
-                    : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
-                } ${sidebarCollapsed ? 'p-3 mx-1' : 'p-4'}`}
+                    ? "bg-green-500/20 border-2 border-green-500/50 text-green-700 dark:text-green-300 shadow-lg"
+                    : "bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md"
+                } ${sidebarCollapsed ? "p-3 mx-1" : "p-4"}`}
               >
                 <NavLink
                   to={`/${item.id}`}
-                  className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}
+                  className={`flex items-center ${
+                    sidebarCollapsed ? "justify-center" : "gap-3"
+                  }`}
                 >
                   <div
                     className={`
                       w-10 h-10 flex-none
                       rounded-lg flex items-center justify-center overflow-hidden relative
-                      ${item.completed
-                        ? 'bg-green-500 shadow-sm'
-                        : 'bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm'}
-                      ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}
+                      ${
+                        item.completed
+                          ? "bg-green-500 shadow-sm"
+                          : "bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-600 dark:to-gray-700 shadow-sm"
+                      }
+                      ${
+                        sidebarCollapsed
+                          ? "border border-white/10 dark:border-gray-500/20"
+                          : ""
+                      }
                     `}
                   >
                     {item.completed ? (
@@ -198,7 +214,11 @@ const Sidebar = ({ onToggle }) => {
               {/* Mobile Header */}
               <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-6">
                 <div className="flex items-center justify-between">
-                  <Link to="/" className="flex items-center" onClick={() => setMobileMenuOpen(false)}>
+                  <Link
+                    to="/"
+                    className="flex items-center"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     <img
                       src="/logoo.png"
                       alt="Logo"
@@ -229,8 +249,8 @@ const Sidebar = ({ onToggle }) => {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`block w-full text-left p-4 rounded-xl transition-all duration-300 ${
                         item.completed
-                          ? 'bg-green-500/20 border-2 border-green-500/50 text-green-700 dark:text-green-300 shadow-lg'
-                          : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
+                          ? "bg-green-500/20 border-2 border-green-500/50 text-green-700 dark:text-green-300 shadow-lg"
+                          : "bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md"
                       }`}
                     >
                       <div className="flex items-center gap-3">
