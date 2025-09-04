@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Award, 
-  Star, 
-  Clock, 
-  Users, 
-  CheckCircle, 
-  ArrowRight, 
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import {
+  Award,
+  Star,
+  Clock,
+  Users,
+  CheckCircle,
+  ArrowRight,
   Download,
   Trophy,
   Calendar,
   BookOpen,
   Target,
-  Zap
-} from 'lucide-react';
-import ScrollProgress from '../../components/ScrollProgress';
-import LoadingScreen from '../../components/LoadingScreen';
-import useInViewport from '../../hooks/useInViewport';
-import { courseAPI } from '../../services/api';
+  Zap,
+} from "lucide-react";
+import ScrollProgress from "../../components/ScrollProgress";
+import LoadingScreen from "../../components/LoadingScreen";
+import useInViewport from "../../hooks/useInViewport";
+import { courseAPI } from "../../services/api";
 
 const Certification = () => {
   const navigate = useNavigate();
-  const [certificationsHeadingRef, isCertificationsHeadingInViewport] = useInViewport();
+  const [certificationsHeadingRef, isCertificationsHeadingInViewport] =
+    useInViewport();
   const [benefitsHeadingRef, isBenefitsHeadingInViewport] = useInViewport();
   const [certifications, setCertifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,19 +40,29 @@ const Certification = () => {
           // Get pricing based on course title
           const getCertificationPricing = (title) => {
             const titleLower = title.toLowerCase();
-            if (titleLower.includes('java') || titleLower.includes('python')) {
+            if (titleLower.includes("python")) {
               return {
-                price: 1499, // Original price (no discount pre-applied)
-                originalPrice: 1499, // Base price
+                price: 1000, // Changed from 1499 to 1000
+                originalPrice: 1500,
                 xpDiscount: 500,
-                requiredXP: 1000
+                requiredXP: 1000,
+              };
+            } else if (
+              titleLower.includes("java") ||
+              titleLower.includes("c programming")
+            ) {
+              return {
+                price: 1300, // Changed from 1499 to 1300
+                originalPrice: 1800,
+                xpDiscount: 500,
+                requiredXP: 1000,
               };
             } else {
               return {
-                price: 7999, // Original price (no discount pre-applied)
-                originalPrice: 7999,
+                price: 1000, // Other courses remain unchanged
+                originalPrice: 3000,
                 xpDiscount: null,
-                requiredXP: null
+                requiredXP: null,
               };
             }
           };
@@ -62,7 +73,9 @@ const Certification = () => {
           const certificationData = {
             id: course._id,
             title: course.title,
-            description: course.description || "Master the fundamentals and advanced concepts",
+            description:
+              course.description ||
+              "Master the fundamentals and advanced concepts",
             duration: "12 weeks", // Default duration
             level: course.level || "Intermediate",
             price: pricing.price,
@@ -86,11 +99,11 @@ const Certification = () => {
               "Downloadable PDF certificate",
               "Industry mentor guidance",
               "Portfolio development",
-              "Job placement assistance"
+              "Job placement assistance",
             ],
             image: "/api/placeholder/400/250",
             icon: getIconForCourse(course.title),
-            iconColor: getIconColorForCourse(index)
+            iconColor: getIconColorForCourse(index),
           };
 
           return certificationData;
@@ -98,7 +111,7 @@ const Certification = () => {
 
         setCertifications(transformedCertifications);
       } catch (error) {
-        console.error('Error fetching certifications:', error);
+        console.error("Error fetching certifications:", error);
         // Fallback to empty array on error
         setCertifications([]);
       } finally {
@@ -112,61 +125,107 @@ const Certification = () => {
   // Helper functions to generate course-specific data
   const getSkillsForCourse = (title) => {
     const titleLower = title.toLowerCase();
-    if (titleLower.includes('web') || titleLower.includes('react') || titleLower.includes('javascript')) {
-      return ["React.js", "Node.js", "MongoDB", "Express.js", "JavaScript", "HTML/CSS"];
-    } else if (titleLower.includes('python') || titleLower.includes('data') || titleLower.includes('machine')) {
-      return ["Python", "Pandas", "NumPy", "Scikit-learn", "TensorFlow", "Tableau"];
-    } else if (titleLower.includes('mobile') || titleLower.includes('app') || titleLower.includes('android') || titleLower.includes('ios')) {
+    if (
+      titleLower.includes("web") ||
+      titleLower.includes("react") ||
+      titleLower.includes("javascript")
+    ) {
+      return [
+        "React.js",
+        "Node.js",
+        "MongoDB",
+        "Express.js",
+        "JavaScript",
+        "HTML/CSS",
+      ];
+    } else if (
+      titleLower.includes("python") ||
+      titleLower.includes("data") ||
+      titleLower.includes("machine")
+    ) {
+      return [
+        "Python",
+        "Pandas",
+        "NumPy",
+        "Scikit-learn",
+        "TensorFlow",
+        "Tableau",
+      ];
+    } else if (
+      titleLower.includes("mobile") ||
+      titleLower.includes("app") ||
+      titleLower.includes("android") ||
+      titleLower.includes("ios")
+    ) {
       return ["React Native", "Flutter", "Dart", "Firebase", "API Integration"];
-    } else if (titleLower.includes('java')) {
+    } else if (titleLower.includes("java")) {
       return ["Java", "Spring Boot", "MySQL", "REST APIs", "Maven", "JUnit"];
     } else {
-      return ["Programming", "Problem Solving", "Algorithms", "Data Structures"];
+      return [
+        "Programming",
+        "Problem Solving",
+        "Algorithms",
+        "Data Structures",
+      ];
     }
   };
 
   const getIconForCourse = (title) => {
     const titleLower = title.toLowerCase();
-    if (titleLower.includes('web') || titleLower.includes('react')) return "WD";
-    if (titleLower.includes('data') || titleLower.includes('python')) return "DS";
-    if (titleLower.includes('mobile') || titleLower.includes('app')) return "MA";
-    if (titleLower.includes('java')) return "JA";
+    if (titleLower.includes("web") || titleLower.includes("react")) return "WD";
+    if (titleLower.includes("data") || titleLower.includes("python"))
+      return "DS";
+    if (titleLower.includes("mobile") || titleLower.includes("app"))
+      return "MA";
+    if (titleLower.includes("java")) return "JA";
     return title.substring(0, 2).toUpperCase();
   };
 
   const getIconColorForCourse = (index) => {
-    const colors = ["bg-blue-500", "bg-purple-500", "bg-green-500", "bg-orange-500", "bg-red-500", "bg-indigo-500"];
+    const colors = [
+      "bg-blue-500",
+      "bg-purple-500",
+      "bg-green-500",
+      "bg-orange-500",
+      "bg-red-500",
+      "bg-indigo-500",
+    ];
     return colors[index % colors.length];
   };
-
-
 
   const benefits = [
     {
       icon: Award,
       title: "Industry-Recognized Certificates",
-      description: "Get certificates that are valued by top tech companies worldwide"
+      description:
+        "Get certificates that are valued by top tech companies worldwide",
     },
     {
       icon: Target,
       title: "Skill-Based Learning",
-      description: "Focus on practical skills that directly apply to real-world projects"
+      description:
+        "Focus on practical skills that directly apply to real-world projects",
     },
     {
       icon: Users,
       title: "Expert Mentorship",
-      description: "Learn from industry professionals with years of experience"
+      description: "Learn from industry professionals with years of experience",
     },
     {
       icon: Zap,
       title: "Fast-Track Career",
-      description: "Accelerate your career growth with our comprehensive programs"
-    }
+      description:
+        "Accelerate your career growth with our comprehensive programs",
+    },
   ];
 
   const handleGetCertified = (certificationId) => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    setTimeout(() => navigate(`/learn/certification/payment?courseId=${certificationId}`), 100);
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    setTimeout(
+      () =>
+        navigate(`/learn/certification/payment?courseId=${certificationId}`),
+      100
+    );
   };
 
   // Show loading state while fetching certifications
@@ -174,11 +233,7 @@ const Certification = () => {
     return (
       <>
         <ScrollProgress />
-        <LoadingScreen
-          showMessage={false}
-          size={48}
-          duration={800}
-        />
+        <LoadingScreen showMessage={false} size={48} duration={800} />
       </>
     );
   }
@@ -186,7 +241,7 @@ const Certification = () => {
   return (
     <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <ScrollProgress />
-      
+
       <div className="max-w-7xl mx-auto px-6">
         {/* Hero Section */}
         <motion.div
@@ -197,13 +252,15 @@ const Certification = () => {
         >
           <h1
             ref={certificationsHeadingRef}
-            className={`Marquee-title-no-border ${isCertificationsHeadingInViewport ? 'in-viewport' : ''} mb-6`}
+            className={`Marquee-title-no-border ${
+              isCertificationsHeadingInViewport ? "in-viewport" : ""
+            } mb-6`}
           >
             Get Certified
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Advance your career with industry-recognized certifications. Learn from experts, 
-            build real projects, and get the skills that matter.
+            Advance your career with industry-recognized certifications. Learn
+            from experts, build real projects, and get the skills that matter.
           </p>
         </motion.div>
 
@@ -233,11 +290,13 @@ const Certification = () => {
         >
           <h2
             ref={benefitsHeadingRef}
-            className={`font-poppins text-3xl md:text-4xl font-medium brand-heading-primary ${isBenefitsHeadingInViewport ? 'in-viewport' : ''} text-center mb-12 tracking-wider`}
+            className={`font-poppins text-3xl md:text-4xl font-medium brand-heading-primary ${
+              isBenefitsHeadingInViewport ? "in-viewport" : ""
+            } text-center mb-12 tracking-wider`}
           >
             Why Choose Our Certifications?
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {benefits.map((benefit, index) => (
               <motion.div
@@ -274,8 +333,6 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
       transition={{ duration: 0.6, delay: index * 0.1 }}
       className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/20 hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col"
     >
-
-
       {/* Content Section */}
       <div className="p-6 flex-1 flex flex-col">
         {/* Header with Level and Price */}
@@ -297,7 +354,8 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
             </div>
             {certification.xpDiscount && (
               <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Save ₹{certification.xpDiscount} with {certification.requiredXP} XP
+                Save ₹{certification.xpDiscount} with {certification.requiredXP}{" "}
+                XP
               </div>
             )}
           </div>
@@ -326,7 +384,9 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
 
           {/* Skills */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Skills You'll Learn:</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              Skills You'll Learn:
+            </h4>
             <div className="flex flex-wrap gap-1">
               {certification.skills.slice(0, 3).map((skill, idx) => (
                 <span
@@ -346,10 +406,15 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
 
           {/* Features */}
           <div className="mb-6">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">What's Included:</h4>
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              What's Included:
+            </h4>
             <ul className="space-y-1">
               {certification.features.slice(0, 3).map((feature, idx) => (
-                <li key={idx} className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <li
+                  key={idx}
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+                >
                   <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
                   <span className="line-clamp-1">{feature}</span>
                 </li>

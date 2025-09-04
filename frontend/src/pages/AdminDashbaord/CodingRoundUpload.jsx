@@ -259,22 +259,29 @@ export default function CodingRoundForm() {
 
     setDuration(round.duration);
     setProblems(
-      round.problems.map((p) => ({
-        problemTitle: p.problemTitle,
-        difficulty: p.difficulty,
-        description: p.description,
-        inputDescription: p.inputDescription || "",
-        outputDescription: p.outputDescription || "",
-        visibleTestCases: p.visibleTestCases.length
-          ? p.visibleTestCases
-          : [{ input: "", expectedOutput: "" }],
-        hiddenTestCases: p.hiddenTestCases.length
-          ? p.hiddenTestCases
-          : [{ input: "", expectedOutput: "" }],
-      }))
-    );
+  round.problems.map((p) => ({
+    problemTitle: p.problemTitle || "",
+    difficulty: p.difficulty || "",
+    description: p.description || "",
+    inputDescription: p.inputDescription || "",
+    outputDescription: p.outputDescription || "",
+    visibleTestCases: p.visibleTestCases?.length
+      ? p.visibleTestCases.map((tc) => ({
+          input: tc.input || "",
+          expectedOutput: tc.expectedOutput || "",
+        }))
+      : [{ input: "", expectedOutput: "" }],
+    hiddenTestCases: p.hiddenTestCases?.length
+      ? p.hiddenTestCases.map((tc) => ({
+          input: tc.input || "",
+          expectedOutput: tc.expectedOutput || "",
+        }))
+      : [{ input: "", expectedOutput: "" }],
+  }))
+);
+    
     setNumQuestions(round.problems.length);
-    setExpanded(new Array(round.problems.length).fill(true));
+setExpanded(new Array(round.problems.length).fill(true));
   };
 
   // Modified handleSubmit
