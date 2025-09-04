@@ -36,15 +36,12 @@ const XPBadge = () => {
 
   const fetchXP = async () => {
     if (!isAuthenticated) {
-      console.log('XPBadge: User not authenticated, skipping XP fetch');
       setLoading(false);
       return;
     }
 
-    console.log('XPBadge: Fetching XP data using progressAPI...');
     try {
       const data = await progressAPI.getUserProgress();
-      console.log('XPBadge: Received data:', data);
       const courseXPValues = Object.values(data.courseXP || {});
       const exerciseXPValues = Object.values(data.exerciseXP || {});
 
@@ -81,7 +78,6 @@ const XPBadge = () => {
   // Listen for XP updates from quiz completions
   useEffect(() => {
     const handleXPUpdate = () => {
-      console.log('XP updated, refreshing badge...');
       fetchXP();
     };
 
