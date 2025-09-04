@@ -337,24 +337,22 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleEndRound = async () => {
-  if (!linkId) {
-    console.error("Link ID not available");
-    setIsRoundComplete(true);
-    return;
-  }
+    if (!linkId) {
+      console.error("Link ID not available");
+      setIsRoundComplete(true);
+      return;
+    }
 
-  if (!user?.email) {
-    console.error("User email not available");
-    setIsRoundComplete(true);
-    return;
-  }
+    if (!user?.email) {
+      console.error("User email not available");
+      setIsRoundComplete(true);
+      return;
+    }
 
-  try {
-    console.log("Ending round with link ID:", linkId);
+    try {
+      console.log("Ending round with link ID:", linkId);
 
-    const response = await fetch(
-      `${BASE_URL}/college-coding/${linkId}/end`,
-      {
+      const response = await fetch(`${BASE_URL}/college-coding/${linkId}/end`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -362,42 +360,50 @@ const CodingCompiler = ({ user, contestData }) => {
         body: JSON.stringify({
           studentEmail: user.email,
         }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("End round failed:", data);
+      } else {
+        console.log("Round ended successfully:", data);
+
+        if (data?.data) {
+          // ✅ Updated to match the actual API response structure
+          const summaryResults = [
+            {
+              label: "Final Score",
+              value: `${data.data.totalScore || 0} / ${
+                data.data.maxPossibleScore || 0
+              }`,
+            },
+            {
+              label: "Problems Attempted",
+              value: `${data.data.attempted || 0} / ${
+                data.data.totalProblems || 0
+              }`,
+            },
+            {
+              label: "Correct Solutions",
+              value: `${data.data.correctSolutions || 0}`,
+            },
+            {
+              label: "Round Ended At",
+              value: new Date(data.data.roundEndedAt).toLocaleString(),
+            },
+          ];
+
+          setResults(summaryResults);
+        }
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("End round failed:", data);
-    } else {
-      console.log("Round ended successfully:", data);
-
-      if (data?.data) {
-        // ✅ Convert backend summary into results array for your UI
-        const summaryResults = [
-          {
-            label: "Final Score",
-            value: `${data.data.finalScore} / ${data.data.maxPossibleScore}`,
-          },
-          {
-            label: "Problems Attempted",
-            value: `${data.data.problemsAttempted} / ${data.data.totalProblems}`,
-          },
-          {
-            label: "Round Ended At",
-            value: new Date(data.data.roundEndedAt).toLocaleString(),
-          },
-        ];
-
-        setResults(summaryResults);
-      }
+    } catch (err) {
+      console.error("Error ending contest round:", err);
     }
-  } catch (err) {
-    console.error("Error ending contest round:", err);
-  }
 
-  setIsRoundComplete(true);
-};
+    setIsRoundComplete(true);
+  };
+
 
 
   // Add click outside handler for dropdown
@@ -417,55 +423,52 @@ const CodingCompiler = ({ user, contestData }) => {
 
   // ✅ If round is complete → show results page
 if (isRoundComplete) {
-  return (
-    <div className="flex items-center justify-center h-screen 
-      bg-gradient-to-br from-blue-50 via-white to-blue-100 
-      dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      
-      <div className="max-w-lg w-full bg-white/20 dark:bg-gray-900/40 
-        backdrop-blur-md p-8 rounded-2xl shadow-2xl border 
-        border-gray-200 dark:border-gray-700">
-        
-        <h2 className="text-2xl font-bold mb-6 text-center dark:text-white">
-          🎉 Round Completed!
-        </h2>
+    return (
+      <div
+        className="flex items-center justify-center h-screen 
+      bg-gradient-to-br from-sky-200 via-sky-100 to-blue-200"
+      >
+        <div
+          className="max-w-lg w-full bg-white/30 backdrop-blur-md 
+        p-8 rounded-2xl shadow-2xl border border-white/40"
+        >
+          <h2 className="text-2xl font-bold mb-6 text-center text-slate-800">
+            🎉 Round Completed!
+          </h2>
 
-        {results.length === 0 ? (
-          <p className="text-center text-gray-600 dark:text-gray-300">
-            No results available.
-          </p>
-        ) : (
-          <ul className="space-y-4">
-            {results.map((item, idx) => (
-              <li
-                key={idx}
-                className="flex justify-between items-center border-b 
-                  border-gray-300 dark:border-gray-700 pb-2 last:border-b-0"
-              >
-                <span className="font-medium text-gray-800 dark:text-gray-200">
-                  {item.label}
-                </span>
-                <span className="text-gray-700 dark:text-gray-300">
-                  {item.value}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+          {results.length === 0 ? (
+            <p className="text-center text-slate-600">No results available.</p>
+          ) : (
+            <ul className="space-y-4">
+              {results.map((item, idx) => (
+                <li
+                  key={idx}
+                  className="flex justify-between items-center border-b 
+                  border-slate-300/50 pb-2 last:border-b-0"
+                >
+                  <span className="font-medium text-slate-700">
+                    {item.label}
+                  </span>
+                  <span className="text-slate-600">{item.value}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
-        <div className="mt-6 flex justify-center">
-          <button
-            onClick={() => (window.location.href = "/")}
-            className="px-5 py-2 bg-blue-600 text-white rounded-xl 
-              shadow hover:bg-blue-700 transition"
-          >
-            Go to Dashboard
-          </button>
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="px-6 py-3 bg-blue-500 text-white rounded-xl 
+              shadow-lg hover:bg-blue-600 transition-all duration-200 
+              hover:shadow-xl font-medium"
+            >
+              Go to Dashboard
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 
 
