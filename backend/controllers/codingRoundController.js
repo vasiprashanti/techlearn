@@ -196,40 +196,67 @@ export const sendCodingRoundOTP = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
     }
 
     const codingRound = await CodingRound.findOne({ linkId });
     if (!codingRound) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Coding round not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
     }
 
     if (!isRoundActive(codingRound)) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Coding round not active" });
-    }
-
-    // Check if student has already submitted actual code (one submission per coding round per student)
-    const existingSubmission = await StudentCodingSubmission.findOne({
-      codingRoundId: codingRound._id,
-      studentEmail: email,
-    });
-    if (
-      existingSubmission &&
-      existingSubmission.solutions &&
-      existingSubmission.solutions.length > 0
-    ) {
-      return res.status(409).json({
+      return res.status(400).json({
         success: false,
-        message: "You have already submitted this coding round",
+        message: "Coding round is not active or has expired",
       });
     }
-    // Generate OTP
+
+    // Check if student has ANY existing submission record (even without actual submission)
+    const existingSubmission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: email.toLowerCase(),
+    });
+
+    // If student has ended the round, prevent further OTP access
+    if (existingSubmission?.isRoundEnded) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You have already ended this coding round and cannot access it again",
+        alreadyEnded: true,
+        finalScore: existingSubmission.totalScore,
+        endedAt: existingSubmission.roundEndedAt,
+      });
+    }
+
+    // If any submission record exists, prevent further OTP access
+    if (existingSubmission) {
+      let message = "You have already attempted this coding round";
+
+      if (existingSubmission.totalScore > 0) {
+        message =
+          "You have already submitted your solution for this coding round";
+      } else {
+        message =
+          "You have already accessed this coding round and cannot restart";
+      }
+
+      return res.status(400).json({
+        success: false,
+        message,
+        alreadyAttempted: true,
+        finalScore: existingSubmission.totalScore || 0,
+        roundEnded: existingSubmission.isRoundEnded || false,
+      });
+    }
+
+    // Generate OTP only if no submission record exists
     const otp = generateOTP();
     storeOTP(`${linkId}:${email}`, otp);
     await sendOTPEmail(email, otp, "Coding Round");
@@ -248,32 +275,79 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and OTP required" });
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required",
+      });
     }
 
     const codingRound = await CodingRound.findOne({ linkId });
     if (!codingRound) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Coding round not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
     }
 
     if (!isRoundActive(codingRound)) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Coding round not active" });
+      return res.status(400).json({
+        success: false,
+        message: "Coding round is not active or has expired",
+      });
     }
 
+    // Double-check for existing submission record
+    const existingSubmission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: email.toLowerCase(),
+    });
+
+    if (existingSubmission?.isRoundEnded) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "You have already ended this coding round and cannot access it again",
+        alreadyEnded: true,
+        finalScore: existingSubmission.totalScore,
+        endedAt: existingSubmission.roundEndedAt,
+      });
+    }
+
+    if (existingSubmission) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already accessed this coding round",
+        alreadyAttempted: true,
+      });
+    }
     const valid = verifyOTP(`${linkId}:${email}`, otp);
     if (!valid) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid or expired OTP" });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
     }
 
-    res.json({ success: true, codingRound });
+    // Create a submission record immediately upon successful OTP verification
+    // This prevents the student from getting OTP again
+    const newSubmission = new StudentCodingSubmission({
+      codingRoundId: codingRound._id,
+      studentEmail: email.toLowerCase(),
+      problemScores: new Map(),
+      totalScore: 0,
+      isRoundEnded: false,
+      submittedAt: new Date(),
+      lastSubmissionAt: new Date(),
+    });
+
+    await newSubmission.save();
+
+    res.json({
+      success: true,
+      codingRound,
+      message: "Access granted. You can now attempt the coding round.",
+      note: "This is your only attempt. Make sure to complete it before the time limit.",
+    });
   } catch (error) {
     console.error("Error verifying OTP for Coding Round:", error);
     res.status(500).json({ success: false, message: "Failed to verify OTP" });
@@ -355,10 +429,13 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
     // Check if round has been ended by the student
     if (submission?.isRoundEnded) {
-      return res.status(400).json({
+      return res.status(403).json({
         success: false,
         message:
-          "You have already ended this round. No more submissions allowed.",
+          "You have already ended this coding round and cannot submit solutions",
+        alreadyEnded: true,
+        finalScore: submission.totalScore,
+        endedAt: submission.roundEndedAt,
       });
     }
 
@@ -662,6 +739,22 @@ export const runCodingRoundAnswers = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Coding round is not active",
+      });
+    }
+
+    // Check if student has ended the round
+    const existingSubmission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: studentEmail.toLowerCase(),
+    });
+
+    if (existingSubmission?.isRoundEnded) {
+      return res.status(403).json({
+        success: false,
+        message: "You have already ended this coding round and cannot run code",
+        alreadyEnded: true,
+        finalScore: existingSubmission.totalScore,
+        endedAt: existingSubmission.roundEndedAt,
       });
     }
 
