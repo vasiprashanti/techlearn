@@ -143,12 +143,9 @@ const Sidebar = ({ onToggle }) => {
                     {item.completed ? (
                       <FiCheckCircle className="w-4 h-4 text-white" />
                     ) : (
-                      <img
-                        src={item.icon}
-                        alt={item.title}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                      />
+                      <span className="text-white font-semibold text-sm">
+                        {item.title.charAt(0)}
+                      </span>
                     )}
                   </div>
 
@@ -258,12 +255,10 @@ const Sidebar = ({ onToggle }) => {
                           {item.completed ? (
                             <FiCheckCircle className="w-4 h-4 text-white" />
                           ) : (
-                            <img
-                              src={item.icon}
-                              alt={item.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
+                            //removed the image tags for sidebar icons
+                            <span className="text-white font-semibold text-xs">
+                              {item.title.charAt(0)}
+                            </span>
                           )}
                         </div>
                         <div>
