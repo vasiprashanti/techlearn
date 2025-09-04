@@ -465,7 +465,7 @@ const HomePage = () => {
                 </p>
               </div>
               {/* College Logos Row */}
-              <div className="flex justify-start items-center mt-12 px-8 flex-wrap gap-8">
+              <div className="flex flex-row flex-nowrap overflow-x-auto gap-6 mt-8 px-2">
                 {item.logos.map((logo, logoIndex) => (
                   <button
                     key={logoIndex}
@@ -504,7 +504,7 @@ const HomePage = () => {
             <div className="container mx-auto max-w-7xl px-6 py-20">
               <div className="grid lg:grid-cols-2 gap-16 items-center">
                 {/* Content Side */}
-                <div className="relative z-10 space-y-8">
+                <div className="relative z-10 space-y-8 text-left">
                   <a
                     href={item.link}
                     className="marquee-link"
