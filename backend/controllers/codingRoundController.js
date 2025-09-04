@@ -210,14 +210,7 @@ export const sendCodingRoundOTP = async (req, res) => {
       });
     }
 
-    if (!isRoundActive(codingRound)) {
-      return res.status(400).json({
-        success: false,
-        message: "Coding round is not active or has expired",
-      });
-    }
-
-    // Check if student has ANY existing submission record (even without actual submission)
+    // Simple check - if round was created but student already ended, prevent OTP
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: email.toLowerCase(),
@@ -286,13 +279,6 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Coding round not found",
-      });
-    }
-
-    if (!isRoundActive(codingRound)) {
-      return res.status(400).json({
-        success: false,
-        message: "Coding round is not active or has expired",
       });
     }
 
@@ -392,14 +378,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Coding round not found",
-      });
-    }
-
-    // Check if round is active
-    if (!isRoundActive(codingRound)) {
-      return res.status(400).json({
-        success: false,
-        message: "Coding round is not active",
       });
     }
 
@@ -734,14 +712,6 @@ export const runCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Check if round is active
-    if (!isRoundActive(codingRound)) {
-      return res.status(400).json({
-        success: false,
-        message: "Coding round is not active",
-      });
-    }
-
     // Check if student has ended the round
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
@@ -947,6 +917,102 @@ export const endCodingRound = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to end coding round",
+    });
+  }
+};
+
+// Auto-submit coding round when frontend timer expires
+export const autoSubmitRound = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const { studentEmail } = req.body;
+
+    if (!studentEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Student email is required",
+      });
+    }
+
+    const codingRound = await CodingRound.findOne({ linkId });
+    if (!codingRound) {
+      return res.status(404).json({
+        success: false,
+        message: "Coding round not found",
+      });
+    }
+
+    // Find submission record
+    let submission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: studentEmail.toLowerCase(),
+    });
+
+    if (!submission) {
+      // Create empty submission if student hasn't submitted anything
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentEmail: studentEmail.toLowerCase(),
+        problemScores: new Map(),
+        totalScore: 0,
+        isRoundEnded: true,
+        autoEnded: true,
+        roundEndedAt: new Date(),
+        lastSubmissionAt: new Date(),
+      });
+    } else if (!submission.isRoundEnded) {
+      // Auto-end existing submission
+      submission.isRoundEnded = true;
+      submission.autoEnded = true;
+      submission.roundEndedAt = new Date();
+    } else {
+      // Already ended, return current status
+      return res.status(200).json({
+        success: true,
+        message: "Coding round was already ended",
+        data: {
+          submissionId: submission._id,
+          totalScore: submission.totalScore,
+          endedAt: submission.roundEndedAt,
+          autoEnded: submission.autoEnded,
+        },
+      });
+    }
+
+    await submission.save();
+
+    // Prepare problem results
+    const problemResults = codingRound.problems.map((problem, index) => {
+      const score = submission.problemScores.get(index.toString()) || 0;
+      return {
+        problemIndex: index,
+        problemTitle: problem.problemTitle,
+        attempted: score > 0,
+        score: score,
+        isCorrect: score === 100,
+      };
+    });
+
+    const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
+
+    res.status(200).json({
+      success: true,
+      message: "Coding round auto-submitted and ended due to time expiry",
+      data: {
+        submissionId: submission._id,
+        totalScore: submission.totalScore,
+        endedAt: submission.roundEndedAt,
+        autoEnded: true,
+        problemResults,
+        correctSolutions,
+        totalProblems: codingRound.problems.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error auto-submitting coding round:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to auto-submit coding round",
     });
   }
 };

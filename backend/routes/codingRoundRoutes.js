@@ -11,6 +11,7 @@ import {
   runCodingRoundAnswers,
   getCodingRoundScores,
   endCodingRound,
+  autoSubmitRound,
   codingRateLimit,
 } from "../controllers/codingRoundController.js";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
@@ -48,6 +49,7 @@ codingRoundRoutes.get(
 codingRoundRoutes.get("/:linkId", getOneCodingRound);
 codingRoundRoutes.post("/:linkId/send-otp", sendCodingRoundOTP);
 codingRoundRoutes.post("/:linkId/verify-otp", verifyOTPAndGetCodingRound);
+codingRoundRoutes.post("/:linkId/auto-submit", autoSubmitRound); // Frontend timer triggers this
 codingRoundRoutes.post("/:linkId/run", codingRateLimit, runCodingRoundAnswers);
 codingRoundRoutes.post(
   "/:linkId/submit",
