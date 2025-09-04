@@ -14,6 +14,23 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+const parseISTDateTime = (utcDateString) => {
+  const utcDate = new Date(utcDateString);
+  const istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+  const istDate = new Date(utcDate.getTime() + istOffset);
+
+  const year = istDate.getUTCFullYear();
+  const month = String(istDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(istDate.getUTCDate()).padStart(2, "0");
+  const hours = String(istDate.getUTCHours()).padStart(2, "0");
+  const minutes = String(istDate.getUTCMinutes()).padStart(2, "0");
+
+  return {
+    date: `${year}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  };
+};
+
 export default function CodingRoundForm() {
   const [college, setCollege] = useState("");
   const [title, setTitle] = useState("");
@@ -157,7 +174,7 @@ export default function CodingRoundForm() {
     if (!window.confirm("Are you sure you want to delete this round?")) return;
     try {
       const token = getToken();
-  await axios.delete(`${BASE_URL}/college-coding/admin/${id}`, {
+      await axios.delete(`${BASE_URL}/college-coding/admin/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       alert("Coding round deleted successfully!");
@@ -226,165 +243,127 @@ export default function CodingRoundForm() {
   // API call using axios
   // Handle Edit (prefill form)
   // Handle Update (prefill form for updating)
-   const handleUpdate = (round) => {
-  setEditingId(round?._id ?? "");
-  setCollege(round?.college ?? "");
-  setTitle(round?.title ?? "");
+  const handleUpdate = (round) => {
+    setEditingId(round._id);
+    setCollege(round.college);
+    setTitle(round.title);
 
-  // ✅ Parse and set date (YYYY-MM-DD)
-  if (round?.date) {
-    const start = new Date(round.date);
-    if (!isNaN(start)) {
-      setDate(start.toISOString().split("T")[0]); // always YYYY-MM-DD
-      setStartTime(
-        `${String(start.getHours()).padStart(2, "0")}:${String(
-          start.getMinutes()
-        ).padStart(2, "0")}`
-      );
-    } else {
-      setDate("");
-      setStartTime("");
-    }
-  } else {
-    setDate("");
-    setStartTime("");
-  }
+    // Parse start date and time using the helper function
+    const startDateTime = parseISTDateTime(round.date);
+    setDate(startDateTime.date);
+    setStartTime(startDateTime.time);
 
-  // ✅ Parse and set end time (HH:mm)
-  if (round?.endTime) {
-    const end = new Date(round.endTime);
-    if (!isNaN(end)) {
-      setEndTime(
-        `${String(end.getHours()).padStart(2, "0")}:${String(
-          end.getMinutes()
-        ).padStart(2, "0")}`
-      );
-    } else {
-      setEndTime("");
-    }
-  } else {
-    setEndTime("");
-  }
+    // Parse end date and time using the helper function
+    const endDateTime = parseISTDateTime(round.endTime);
+    setEndTime(endDateTime.time);
 
-  // ✅ Duration
-  setDuration(round?.duration ?? "");
-
-  // ✅ Problems
-  const safeProblems = Array.isArray(round?.problems) ? round.problems : [];
-  setProblems(
-    safeProblems.map((p) => ({
-      problemTitle: p?.problemTitle ?? "",
-      difficulty: p?.difficulty ?? "",
-      description: p?.description ?? "",
-      inputDescription: p?.inputDescription ?? "",
-      outputDescription: p?.outputDescription ?? "",
-      visibleTestCases:
-        Array.isArray(p?.visibleTestCases) && p.visibleTestCases.length
+    setDuration(round.duration);
+    setProblems(
+      round.problems.map((p) => ({
+        problemTitle: p.problemTitle,
+        difficulty: p.difficulty,
+        description: p.description,
+        inputDescription: p.inputDescription || "",
+        outputDescription: p.outputDescription || "",
+        visibleTestCases: p.visibleTestCases.length
           ? p.visibleTestCases
           : [{ input: "", expectedOutput: "" }],
-      hiddenTestCases:
-        Array.isArray(p?.hiddenTestCases) && p.hiddenTestCases.length
+        hiddenTestCases: p.hiddenTestCases.length
           ? p.hiddenTestCases
           : [{ input: "", expectedOutput: "" }],
-    }))
-  );
-
-  setNumQuestions(safeProblems.length);
-  setExpanded(new Array(safeProblems.length).fill(true));
-};
-
-
-
-  // Modified handleSubmit
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!validate()) return;
-  setSubmitting(true);
-
-  const payload = {
-    title,
-    college,
-    date: `${date}T${startTime}:00`,   // start datetime
-    endTime: `${date}T${endTime}:00`, // end datetime
-    duration: parseInt(duration, 10),
-    isActive: true, // backend expects this
-    problems: problems.map((problem) => ({
-      problemTitle: problem.problemTitle,
-      description: problem.description,
-      difficulty: problem.difficulty,
-      inputDescription: problem.inputDescription || "",
-      outputDescription: problem.outputDescription || "",
-      visibleTestCases: problem.visibleTestCases.filter(
-        (tc) => tc.input.trim() && tc.expectedOutput.trim()
-      ),
-      hiddenTestCases: problem.hiddenTestCases.filter(
-        (tc) => tc.input.trim() && tc.expectedOutput.trim()
-      ),
-    })),
+      }))
+    );
+    setNumQuestions(round.problems.length);
+    setExpanded(new Array(round.problems.length).fill(true));
   };
 
-  try {
-    const token = getToken();
-    if (!token) {
-      alert("Authentication token not found. Please login again.");
-      return;
-    }
+  // Modified handleSubmit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setSubmitting(true);
 
-    let res;
-    if (editingId) {
-      // ✅ Update existing round
-      res = await axios.put(
-        `${BASE_URL}/college-coding/admin/${editingId}`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
+    const payload = {
+      title,
+      college,
+      date: `${date}T${startTime}:00`, // start datetime
+      endTime: `${date}T${endTime}:00`, // end datetime
+      duration: parseInt(duration, 10),
+      isActive: true, // backend expects this
+      problems: problems.map((problem) => ({
+        problemTitle: problem.problemTitle,
+        description: problem.description,
+        difficulty: problem.difficulty,
+        inputDescription: problem.inputDescription || "",
+        outputDescription: problem.outputDescription || "",
+        visibleTestCases: problem.visibleTestCases.filter(
+          (tc) => tc.input.trim() && tc.expectedOutput.trim()
+        ),
+        hiddenTestCases: problem.hiddenTestCases.filter(
+          (tc) => tc.input.trim() && tc.expectedOutput.trim()
+        ),
+      })),
+    };
+
+    try {
+      const token = getToken();
+      if (!token) {
+        alert("Authentication token not found. Please login again.");
+        return;
+      }
+
+      let res;
+      if (editingId) {
+        // ✅ Update existing round
+        res = await axios.put(
+          `${BASE_URL}/college-coding/admin/${editingId}`,
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert("Coding Test Updated Successfully!");
+      } else {
+        // ✅ Create new round
+        res = await axios.post(`${BASE_URL}/college-coding/`, payload, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert("Coding Test Created Successfully!");
+      }
+
+      console.log("Response:", res.data);
+
+      // Reset form
+      setEditingId(null);
+      setCollege("");
+      setTitle("");
+      setDate(getTodayDate());
+      setStartTime("");
+      setEndTime("");
+      setDuration("");
+      setNumQuestions(1);
+      setProblems([
+        {
+          problemTitle: "",
+          difficulty: "",
+          description: "",
+          inputDescription: "",
+          outputDescription: "",
+          visibleTestCases: [{ input: "", expectedOutput: "" }],
+          hiddenTestCases: [{ input: "", expectedOutput: "" }],
+        },
+      ]);
+      setExpanded([]);
+      setErrors({});
+      fetchPreviousRounds();
+    } catch (error) {
+      console.error(
+        "Error saving coding round:",
+        error.response?.data || error.message
       );
-      alert("Coding Test Updated Successfully!");
-    } else {
-      // ✅ Create new round
-      res = await axios.post(
-        `${BASE_URL}/college-coding/`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert("Coding Test Created Successfully!");
+      alert("Something went wrong.");
+    } finally {
+      setSubmitting(false);
     }
-
-    console.log("Response:", res.data);
-
-    // Reset form
-    setEditingId(null);
-    setCollege("");
-    setTitle("");
-    setDate(getTodayDate());
-    setStartTime("");
-    setEndTime("");
-    setDuration("");
-    setNumQuestions(1);
-    setProblems([
-      {
-        problemTitle: "",
-        difficulty: "",
-        description: "",
-        inputDescription: "",
-        outputDescription: "",
-        visibleTestCases: [{ input: "", expectedOutput: "" }],
-        hiddenTestCases: [{ input: "", expectedOutput: "" }],
-      },
-    ]);
-    setExpanded([]);
-    setErrors({});
-    fetchPreviousRounds();
-  } catch (error) {
-    console.error(
-      "Error saving coding round:",
-      error.response?.data || error.message
-    );
-    alert("Something went wrong.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+  };
 
   // Fetch previous rounds
   const fetchPreviousRounds = async () => {
@@ -943,40 +922,48 @@ const handleSubmit = async (e) => {
 
                       {/* Report Section */}
                       {loadingReports[round._id] ? (
-                            <p className="text-gray-500">Loading scores...</p>
-                          ) : reports[round._id] && reports[round._id].length > 0 ? (
-                            <table className="w-full border mt-2 text-sm text-left">
-                              <thead>
-                                <tr className="bg-gray-200 dark:bg-gray-600">
-                                  <th className="p-2 border">Rank</th>
-                                  <th className="p-2 border">Email</th>
-                                  <th className="p-2 border">Score</th>
-                                  <th className="p-2 border">Submitted At</th>
+                        <p className="text-gray-500">Loading scores...</p>
+                      ) : reports[round._id] &&
+                        reports[round._id].length > 0 ? (
+                        <table className="w-full border mt-2 text-sm text-left">
+                          <thead>
+                            <tr className="bg-gray-200 dark:bg-gray-600">
+                              <th className="p-2 border">Rank</th>
+                              <th className="p-2 border">Email</th>
+                              <th className="p-2 border">Score</th>
+                              <th className="p-2 border">Submitted At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {reports[round._id]
+                              .sort((a, b) => b.studentScore - a.studentScore) // highest first
+                              .map((user, idx) => (
+                                <tr
+                                  key={idx}
+                                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <td className="p-2 border">{idx + 1}</td>
+                                  <td className="p-2 border">
+                                    {user.studentEmail}
+                                  </td>
+                                  <td className="p-2 border">
+                                    {user.studentScore}
+                                  </td>
+                                  <td className="p-2 border">
+                                    {new Date(user.submittedAt).toLocaleString(
+                                      "en-IN",
+                                      {
+                                        timeZone: "Asia/Kolkata",
+                                      }
+                                    )}
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {reports[round._id]
-                                  .sort((a, b) => b.studentScore - a.studentScore) // highest first
-                                  .map((user, idx) => (
-                                    <tr
-                                      key={idx}
-                                      className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                                    >
-                                      <td className="p-2 border">{idx + 1}</td>
-                                      <td className="p-2 border">{user.studentEmail}</td>
-                                      <td className="p-2 border">{user.studentScore}</td>
-                                      <td className="p-2 border">
-                                        {new Date(user.submittedAt).toLocaleString("en-IN", {
-                                          timeZone: "Asia/Kolkata",
-                                        })}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p className="text-gray-500">No scores available</p>
-                          )}
+                              ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="text-gray-500">No scores available</p>
+                      )}
                     </div>
                   )}
                 </div>
