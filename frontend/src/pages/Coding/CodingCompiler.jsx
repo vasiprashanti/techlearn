@@ -57,11 +57,7 @@ const CodingCompiler = ({ user, contestData }) => {
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   const PROBLEM = problems[currentProblemIndex];
 
-  // Debug logging
-  console.log("Contest Data:", contestData);
-  console.log("Problems:", problems);
-  console.log("Link ID:", linkId);
-  console.log("Base URL:", BASE_URL);
+  
 
   // Timer - using duration from contestData
   const [timeLeft, setTimeLeft] = useState((contestData?.duration || 120) * 60);
@@ -80,12 +76,11 @@ const CodingCompiler = ({ user, contestData }) => {
 
   // Set problems from contestData on component mount
   useEffect(() => {
-    console.log("useEffect triggered with contestData:", contestData);
     if (contestData?.problems && Array.isArray(contestData.problems)) {
-      console.log("Setting problems from contestData.problems");
+
       setProblems(contestData.problems);
     } else {
-      console.log("No valid problems found in contestData");
+   
       console.log(
         "Available keys in contestData:",
         contestData ? Object.keys(contestData) : "contestData is null/undefined"
@@ -367,7 +362,6 @@ const CodingCompiler = ({ user, contestData }) => {
       if (!response.ok) {
         console.error("End round failed:", data);
       } else {
-        console.log("Round ended successfully:", data);
 
         if (data?.data) {
           // ✅ Updated to match the actual API response structure
