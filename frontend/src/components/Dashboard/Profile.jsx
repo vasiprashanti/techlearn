@@ -1,31 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import {
-  FiUser,
-  FiMail,
-  FiCalendar,
-  FiLock,
-  FiCamera,
-} from 'react-icons/fi';
-import { useUser } from '../../context/UserContext';
-import Sidebar from './Sidebar';
+import React, { useState, useEffect } from "react";
+import { FiUser, FiMail, FiCalendar, FiLock, FiCamera } from "react-icons/fi";
+import { useUser } from "../../context/UserContext";
+import Sidebar from "./Sidebar";
 
 const AVATAR_COUNT = 8;
-const AVATAR_PATH = '/profile_avatars';
+const AVATAR_PATH = "/profile_avatars";
+
+// Helper function to get initial avatar
+const getInitialAvatar = () => {
+  const storedUser = JSON.parse(localStorage.getItem("userData"));
+  if (storedUser?.photoUrl) {
+    return storedUser.photoUrl;
+  }
+  return `${AVATAR_PATH}/avatar1.png`;
+};
 
 const Profile = () => {
   const { user, isLoading, updateUser } = useUser();
-  const [selectedAvatar, setSelectedAvatar] = useState(`${AVATAR_PATH}/avatar1.png`);
+  const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState(null);
 
   useEffect(() => {
-    // Get userData from localStorage
+    // Only update if there's no avatar already selected and user data is available
     const storedUser = JSON.parse(localStorage.getItem("userData"));
-    if (storedUser?.photoUrl) {
+    if (storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
       setSelectedAvatar(storedUser.photoUrl);
-    } else if (user?.photoUrl) {
+    } else if (user?.photoUrl && !storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
       setSelectedAvatar(user.photoUrl);
     }
-  }, [user?.photoUrl]);
+  }, [user?.photoUrl, selectedAvatar]);
 
   const handleAvatarSelect = async (avatarUrl) => {
     setSelectedAvatar(avatarUrl);
@@ -34,31 +38,33 @@ const Profile = () => {
     try {
       // Get the user from localStorage
       const storedUser = JSON.parse(localStorage.getItem("userData"));
-      
+
       if (!storedUser || !storedUser.id) {
         throw new Error("User ID not found in localStorage");
       }
 
       const userId = storedUser.id;
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/users/user/${userId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ photoUrl: avatarUrl }),
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/user/${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ photoUrl: avatarUrl }),
+        }
+      );
 
       if (!res.ok) {
         throw new Error("Failed to update avatar");
       }
 
       const data = await res.json();
-      
+
       // Update localStorage with new photoUrl
       const updatedUser = { ...storedUser, photoUrl: avatarUrl };
       localStorage.setItem("userData", JSON.stringify(updatedUser));
-      
     } catch (error) {
       console.error("Error updating avatar:", error);
     }
@@ -68,15 +74,17 @@ const Profile = () => {
     <div className="flex flex-wrap justify-center gap-6 mt-4">
       {Array.from({ length: AVATAR_COUNT }, (_, i) => {
         const avatarUrl = `${AVATAR_PATH}/avatar${i + 1}.png`;
-        const isSelected = avatarUrl === selectedAvatar;
+        const isSelected = avatarUrl === (pendingAvatar || selectedAvatar);
 
         return (
           <button
             type="button"
             key={i}
-            onClick={() => handleAvatarSelect(avatarUrl)}
+            onClick={() => setPendingAvatar(avatarUrl)}
             className={`rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-150 ${
-              isSelected ? "ring-4 ring-blue-500 shadow-lg scale-110" : "hover:ring-2 hover:ring-blue-300 hover:scale-105"
+              isSelected
+                ? "ring-4 ring-blue-500 shadow-lg scale-110"
+                : "hover:ring-2 hover:ring-blue-300 hover:scale-105"
             }`}
             style={{ padding: 0, background: "none" }}
             aria-label={`Select avatar ${i + 1}`}
@@ -106,147 +114,168 @@ const Profile = () => {
   const displayUser = user || userData;
 
   return (
-    <div className='flex'>
-      <Sidebar/>
-    <div className="flex-1 max-w-6xl mx-auto px-4 pt-32 pb-12">
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Left Column - Profile Info */}
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">
-            Profile Information
-          </h1>
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 max-w-6xl mx-auto px-4 pt-32 pb-12">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Left Column - Profile Info */}
+          <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">
+              Profile Information
+            </h1>
 
-          {/* Basic Info */}
-          <div className="mb-10">
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Basic Info
+            {/* Basic Info */}
+            <div className="mb-10">
+              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
+                Basic Info
+              </h2>
+
+              <div className="space-y-6">
+                <div className="flex items-center">
+                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Name
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      {displayUser?.firstName || "First"}{" "}
+                      {displayUser?.lastName || "Last"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <FiCalendar className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Date of Birth
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      {displayUser?.dateOfBirth || "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Gender
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      {displayUser?.gender || "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <FiMail className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Email
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      {displayUser?.email || "No email provided"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Account Info */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
+                Account Info
+              </h2>
+
+              <div className="space-y-6">
+                <div className="flex items-center">
+                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Username
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      {displayUser?.username || "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <FiLock className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Password
+                    </p>
+                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                      ••••••••
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Profile Picture and Avatar Picker */}
+          <div className="w-full lg:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 flex flex-col items-center">
+            <div className="relative mb-6 flex flex-col items-center">
+              <img
+                src={selectedAvatar}
+                alt="Avatar"
+                className="w-48 h-48 rounded-full object-cover ring-4 ring-blue-500 shadow-xl mb-2"
+              />
+              <button
+                onClick={() => setIsSelectingAvatar(!isSelectingAvatar)}
+                className="absolute bottom-6 right-6 md:right-3 bg-blue-600 dark:bg-blue-700 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all"
+                title="Change Avatar"
+              >
+                <FiCamera className="text-2xl" />
+              </button>
+            </div>
+
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-1">
+              {displayUser?.firstName || "User"} {displayUser?.lastName}
             </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {displayUser?.email || "No email provided"}
+            </p>
 
-            <div className="space-y-6">
-              <div className="flex items-center">
-                <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Name</p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {displayUser?.firstName || 'First'} {displayUser?.lastName || 'Last'}
+            {/* Avatar Selection Overlay */}
+            {isSelectingAvatar && (
+              <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-30">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl w-full max-w-xl flex flex-col items-center relative">
+                  <button
+                    onClick={() => setIsSelectingAvatar(false)}
+                    className="absolute top-3 right-4 text-gray-400 hover:text-red-500 text-2xl"
+                    aria-label="Close"
+                  >
+                    &times;
+                  </button>
+                  <h3 className="text-lg font-bold mb-1 text-gray-800 dark:text-white">
+                    Select an Avatar
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
+                    Choose the image that best represents you:
                   </p>
+                  {renderAvatarChoices()}
+
+                  {/* Save Button */}
+                  {pendingAvatar && pendingAvatar !== selectedAvatar && (
+                    <button
+                      onClick={() => handleAvatarSelect(pendingAvatar)}
+                      className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition-all"
+                    >
+                      Save Avatar
+                    </button>
+                  )}
                 </div>
               </div>
-
-              <div className="flex items-center">
-                <FiCalendar className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Date of Birth
-                  </p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {displayUser?.dateOfBirth || 'Not specified'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Gender</p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {displayUser?.gender || 'Not specified'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <FiMail className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {displayUser?.email || 'No email provided'}
-                  </p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
-
-          {/* Account Info */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
-              Account Info
-            </h2>
-
-            <div className="space-y-6">
-              <div className="flex items-center">
-                <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Username
-                  </p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    {displayUser?.username || 'Not specified'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <FiLock className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Password
-                  </p>
-                  <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                    ••••••••
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column - Profile Picture and Avatar Picker */}
-        <div className="w-full lg:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 flex flex-col items-center">
-          <div className="relative mb-6 flex flex-col items-center">
-            <img
-              src={selectedAvatar}
-              alt="Avatar"
-              className="w-48 h-48 rounded-full object-cover ring-4 ring-blue-500 shadow-xl mb-2"
-            />
-            <button
-              onClick={() => setIsSelectingAvatar(!isSelectingAvatar)}
-              className="absolute bottom-6 right-6 md:right-3 bg-blue-600 dark:bg-blue-700 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all"
-              title="Change Avatar"
-            >
-              <FiCamera className="text-2xl" />
-            </button>
-          </div>
-
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-1">
-            {displayUser?.firstName || "User"} {displayUser?.lastName}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            {displayUser?.email || "No email provided"}
-          </p>
-
-          {/* Avatar Selection Overlay */}
-          {isSelectingAvatar && (
-            <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-30">
-              <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl w-full max-w-xl flex flex-col items-center relative">
-                <button
-                  onClick={() => setIsSelectingAvatar(false)}
-                  className="absolute top-3 right-4 text-gray-400 hover:text-red-500 text-2xl"
-                  aria-label="Close"
-                >
-                  &times;
-                </button>
-                <h3 className="text-lg font-bold mb-1 text-gray-800 dark:text-white">Select an Avatar</h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">Choose the image that best represents you:</p>
-                {renderAvatarChoices()}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default Profile;
