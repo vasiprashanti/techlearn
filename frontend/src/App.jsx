@@ -498,6 +498,9 @@ const HomePage = () => {
                   </button>
                 ))}
               </div>
+              <div className="block md:hidden text-right pr-4 mt-1">
+  <span className="italic text-xs text-gray-400">swipe for more...</span>
+</div>
             </div>
           ) : item.visual ? (
             /* Learn sections */
