@@ -140,7 +140,7 @@ const Dashboard = () => {
           }`}
         />
 
-        <Sidebar onToggle={handleSidebarToggle} />
+        <Sidebar />
 
         <main
           className={`flex-1 transition-all duration-300 ${
