@@ -27,6 +27,10 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    autoEnded: {
+      type: Boolean,
+      default: false, // Flag to indicate if round was auto-ended due to time expiry
+    },
     roundEndedAt: {
       type: Date,
     },

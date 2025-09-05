@@ -97,12 +97,74 @@ const CodingCompiler = ({ user, contestData }) => {
     }
   }, [contestData]);
 
+
+  const handleAutoSubmit = async () => {
+  if (!linkId) {
+    console.error("Link ID not available");
+    setIsRoundComplete(true);
+    return;
+  }
+
+  if (!user?.email) {
+    console.error("User email not available");
+    setIsRoundComplete(true);
+    return;
+  }
+
+  try {
+    console.log("Auto-submitting round with link ID:", linkId);
+
+    const response = await fetch(`${BASE_URL}/college-coding/${linkId}/auto-submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        studentEmail: user.email,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Auto-submit failed:", data);
+    } else {
+      console.log("Auto-submitted successfully:", data);
+
+      if (data?.data) {
+        const summaryResults = [
+          {
+            label: "Final Score",
+            value: `${data.data.totalScore || 0}`,
+          },
+          {
+            label: "Correct Solutions",
+            value: `${data.data.correctSolutions || 0} / ${data.data.totalProblems || 0}`,
+          },
+          {
+            label: "Round Ended At",
+            value: new Date(data.data.endedAt).toLocaleString(),
+          },
+        ];
+
+        setResults(summaryResults);
+      }
+    }
+  } catch (err) {
+    console.error("Error auto-submitting contest round:", err);
+  }
+
+  setIsRoundComplete(true);
+};
+
+
   //Auto Submit
   useEffect(() => {
-    if (timeLeft <= 0) {
-      handleEndRound();
-    }
-  }, [timeLeft]);
+  if (timeLeft <= 0) {
+    handleAutoSubmit();
+  }
+}, [timeLeft]);
+
 
   // Detect tab switch
   useEffect(() => {
@@ -133,130 +195,141 @@ const CodingCompiler = ({ user, contestData }) => {
     setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
- const handleRun = async () => {
-  if (!code.trim()) {
-    setOutput("⚠️ Please write some code before running.");
-    return;
-  }
+  const handleRun = async () => {
+    if (!code.trim()) {
+      setOutput("⚠️ Please write some code before running.");
+      return;
+    }
 
-  if (!linkId) {
-    setOutput("⚠️ Error: Missing contest link ID.");
-    return;
-  }
+    if (!linkId) {
+      setOutput("⚠️ Error: Missing contest link ID.");
+      return;
+    }
 
-  if (!BASE_URL) {
-    setOutput("⚠️ Error: API URL not configured.");
-    return;
-  }
+    if (!BASE_URL) {
+      setOutput("⚠️ Error: API URL not configured.");
+      return;
+    }
 
-  setIsRunning(true);
-  setOutput("⏳ Running test cases...");
+    setIsRunning(true);
+    setOutput("⏳ Running test cases...");
 
-  try {
-    const payload = {
-      studentEmail: user.email,
-      solutions: [
+    try {
+      const payload = {
+        studentEmail: user.email,
+        solutions: [
+          {
+            problemIndex: currentProblemIndex,
+            submittedCode: code,
+            language: selectedLang,
+          },
+        ],
+      };
+
+      console.log("Run payload:", payload);
+      console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
+
+      const response = await axios.post(
+        `${BASE_URL}/college-coding/${linkId}/run`,
+        payload,
         {
-          problemIndex: currentProblemIndex,
-          submittedCode: code,
-          language: selectedLang,
-        },
-      ],
-    };
-
-    console.log("Run payload:", payload);
-    console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
-
-    const response = await axios.post(
-      `${BASE_URL}/college-coding/${linkId}/run`,
-      payload,
-      {
-        timeout: 30000,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-
-    const data = response.data;
-    console.log("Full API response:", data);
-
-    const resultsArray = data?.data?.results || [];
-
-    if (Array.isArray(resultsArray) && resultsArray.length > 0) {
-      let allFormatted = "";
-
-      resultsArray.forEach((result, problemIdx) => {
-        const testResults = result?.visibleTestResults || [];
-        const feedback = result?.feedback || "";
-
-        if (testResults.length > 0) {
-          const passedCount = testResults.filter((t) => t.passed).length;
-          const totalCount = testResults.length;
-
-          const formatted = testResults
-            .map((t, idx) => {
-              const passed = t.passed === true;
-              const input = t.input || "N/A";
-              const expected = t.expectedOutput || "N/A";
-
-              let actual;
-              if (t.actualOutput === null) actual = "null";
-              else if (t.actualOutput === undefined) actual = "undefined";
-              else if (t.actualOutput === "") actual = "(empty output)";
-              else actual = String(t.actualOutput);
-
-              return `   Test ${idx + 1}: ${passed ? "✅ Passed" : "❌ Failed"}\n` +
-                     `   Input: ${input}\n` +
-                     `   Expected: ${expected}\n` +
-                     `   Actual: ${actual}\n` +
-                     (t.executionTime ? `   Execution Time: ${t.executionTime}\n` : "") +
-                     (t.error ? `   Error: ${t.error}\n` : "");
-            })
-            .join("\n");
-
-          allFormatted += `\n=== Problem ${problemIdx} (Language: ${result.language}) ===\n` +
-                          formatted +
-                          `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n` +
-                          (feedback ? `${feedback}\n` : "");
-        } else {
-          allFormatted += `\n=== Problem ${problemIdx} ===\n⚠️ No test results available\n`;
+          timeout: 30000,
+          headers: { "Content-Type": "application/json" },
         }
-      });
+      );
 
-      setOutput(allFormatted.trim());
-    } else if (data?.success === false) {
-      setOutput("⚠️ " + (data.message || "Test execution failed"));
-    } else {
-      setOutput("⚠️ Unexpected response format.\n\n" + JSON.stringify(data, null, 2));
-    }
-  } catch (err) {
-    console.error("Run error:", err);
+      const data = response.data;
+      console.log("Full API response:", data);
 
-    if (err.response) {
-      const status = err.response.status;
-      const message = err.response.data?.message || err.response.statusText;
+      const resultsArray = data?.data?.results || [];
 
-      if (status === 404) {
-        setOutput(`⚠️ Error 404: Contest not found. Invalid contest link '${linkId}'.`);
-      } else if (status === 400) {
-        setOutput(`⚠️ Error 400: Bad request. ${message}`);
-      } else if (status === 500) {
-        setOutput("⚠️ Error 500: Server error. Please try again later.");
+      if (Array.isArray(resultsArray) && resultsArray.length > 0) {
+        let allFormatted = "";
+
+        resultsArray.forEach((result, problemIdx) => {
+          const testResults = result?.visibleTestResults || [];
+          const feedback = result?.feedback || "";
+
+          if (testResults.length > 0) {
+            const passedCount = testResults.filter((t) => t.passed).length;
+            const totalCount = testResults.length;
+
+            const formatted = testResults
+              .map((t, idx) => {
+                const passed = t.passed === true;
+                const input = t.input || "N/A";
+                const expected = t.expectedOutput || "N/A";
+
+                let actual;
+                if (t.actualOutput === null) actual = "null";
+                else if (t.actualOutput === undefined) actual = "undefined";
+                else if (t.actualOutput === "") actual = "(empty output)";
+                else actual = String(t.actualOutput);
+
+                return (
+                  `   Test ${idx + 1}: ${
+                    passed ? "✅ Passed" : "❌ Failed"
+                  }\n` +
+                  `   Input: ${input}\n` +
+                  `   Expected: ${expected}\n` +
+                  `   Actual: ${actual}\n` +
+                  (t.executionTime
+                    ? `   Execution Time: ${t.executionTime}\n`
+                    : "") +
+                  (t.error ? `   Error: ${t.error}\n` : "")
+                );
+              })
+              .join("\n");
+
+            allFormatted +=
+              `\n=== Problem ${problemIdx} (Language: ${result.language}) ===\n` +
+              formatted +
+              `\nSummary: ${passedCount} / ${totalCount} test cases passed.\n` +
+              (feedback ? `${feedback}\n` : "");
+          } else {
+            allFormatted += `\n=== Problem ${problemIdx} ===\n⚠️ No test results available\n`;
+          }
+        });
+
+        setOutput(allFormatted.trim());
+      } else if (data?.success === false) {
+        setOutput("⚠️ " + (data.message || "Test execution failed"));
       } else {
-        setOutput(`⚠️ Server error ${status}: ${message}`);
+        setOutput(
+          "⚠️ Unexpected response format.\n\n" + JSON.stringify(data, null, 2)
+        );
       }
-    } else if (err.code === "ECONNABORTED") {
-      setOutput("⚠️ Request timeout. The server is taking too long to respond.");
-    } else if (err.request) {
-      setOutput("⚠️ Network error: Unable to connect to server.");
-    } else {
-      setOutput("⚠️ Error running test cases: " + err.message);
+    } catch (err) {
+      console.error("Run error:", err);
+
+      if (err.response) {
+        const status = err.response.status;
+        const message = err.response.data?.message || err.response.statusText;
+
+        if (status === 404) {
+          setOutput(
+            `⚠️ Error 404: Contest not found. Invalid contest link '${linkId}'.`
+          );
+        } else if (status === 400) {
+          setOutput(`⚠️ Error 400: Bad request. ${message}`);
+        } else if (status === 500) {
+          setOutput("⚠️ Error 500: Server error. Please try again later.");
+        } else {
+          setOutput(`⚠️ Server error ${status}: ${message}`);
+        }
+      } else if (err.code === "ECONNABORTED") {
+        setOutput(
+          "⚠️ Request timeout. The server is taking too long to respond."
+        );
+      } else if (err.request) {
+        setOutput("⚠️ Network error: Unable to connect to server.");
+      } else {
+        setOutput("⚠️ Error running test cases: " + err.message);
+      }
+    } finally {
+      setIsRunning(false);
     }
-  } finally {
-    setIsRunning(false);
-  }
-};
-
-
+  };
 
   // --- Submit (Hidden Test Cases) ---
   const handleSubmit = async () => {
@@ -332,74 +405,67 @@ const CodingCompiler = ({ user, contestData }) => {
   };
 
   const handleEndRound = async () => {
-    if (!linkId) {
-      console.error("Link ID not available");
-      setIsRoundComplete(true);
-      return;
-    }
-
-    if (!user?.email) {
-      console.error("User email not available");
-      setIsRoundComplete(true);
-      return;
-    }
-
-    try {
-      console.log("Ending round with link ID:", linkId);
-
-      const response = await fetch(`${BASE_URL}/college-coding/${linkId}/end`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          studentEmail: user.email,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("End round failed:", data);
-      } else {
-
-        if (data?.data) {
-          // ✅ Updated to match the actual API response structure
-          const summaryResults = [
-            {
-              label: "Final Score",
-              value: `${data.data.totalScore || 0} / ${
-                data.data.maxPossibleScore || 0
-              }`,
-            },
-            {
-              label: "Problems Attempted",
-              value: `${data.data.attempted || 0} / ${
-                data.data.totalProblems || 0
-              }`,
-            },
-            {
-              label: "Correct Solutions",
-              value: `${data.data.correctSolutions || 0}`,
-            },
-            {
-              label: "Round Ended At",
-              value: new Date(data.data.roundEndedAt).toLocaleString(),
-            },
-          ];
-
-          setResults(summaryResults);
-        }
-      }
-    } catch (err) {
-      console.error("Error ending contest round:", err);
-    }
-
+  if (!linkId) {
+    console.error("Link ID not available");
     setIsRoundComplete(true);
-  };
+    return;
+  }
 
+  if (!user?.email) {
+    console.error("User email not available");
+    setIsRoundComplete(true);
+    return;
+  }
 
+  try {
+    console.log("Ending round manually with link ID:", linkId);
 
+    const response = await fetch(`${BASE_URL}/college-coding/${linkId}/end`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        studentEmail: user.email,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("End round failed:", data);
+    } else {
+      console.log("Round ended successfully:", data);
+
+      if (data?.data) {
+        const summaryResults = [
+          {
+            label: "Final Score",
+            value: `${data.data.totalScore || 0} / ${data.data.maxPossibleScore || 0}`,
+          },
+          {
+            label: "Problems Attempted",
+            value: `${data.data.attempted || 0} / ${data.data.totalProblems || 0}`,
+          },
+          {
+            label: "Correct Solutions",
+            value: `${data.data.correctSolutions || 0}`,
+          },
+          {
+            label: "Round Ended At",
+            value: new Date(data.data.roundEndedAt).toLocaleString(),
+          },
+        ];
+
+        setResults(summaryResults);
+      }
+    }
+  } catch (err) {
+    console.error("Error ending contest round:", err);
+  }
+
+  setIsRoundComplete(true);
+};
   // Add click outside handler for dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -414,9 +480,8 @@ const CodingCompiler = ({ user, contestData }) => {
     };
   }, [showDropdown]);
 
-
   // ✅ If round is complete → show results page
-if (isRoundComplete) {
+  if (isRoundComplete) {
     return (
       <div
         className="flex items-center justify-center h-screen 
@@ -464,9 +529,6 @@ if (isRoundComplete) {
     );
   }
 
-
-
-  
   if (!PROBLEM) {
     return (
       <div className="flex items-center justify-center h-screen bg-white/20 dark:bg-gray-900/40">
@@ -491,7 +553,7 @@ if (isRoundComplete) {
   }
 
   return (
-  <div className="flex flex-col min-h-screen max-h-screen overflow-hidden">
+    <div className="flex flex-col min-h-screen max-h-screen overflow-hidden">
       <ScrollProgress />
       {/* Navbar */}
       <nav
@@ -543,8 +605,8 @@ if (isRoundComplete) {
         </div>
       </nav>
 
-  {/* MAIN CONTENT */}
-  <div className="flex flex-1 pt-5 overflow-auto">
+      {/* MAIN CONTENT */}
+      <div className="flex flex-1 pt-5 overflow-auto">
         {/* LEFT PANEL */}
         <div className="w-1/2 bg-white/20 dark:bg-gray-900/40 p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700">
           <h1 className="text-2xl font-bold mb-4 dark:text-white">
@@ -735,8 +797,8 @@ if (isRoundComplete) {
         </div>
       </div>
 
-  {/* Bottom Controls */}
-  <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700 sticky bottom-0 bg-white/80 dark:bg-gray-900/80 z-10 backdrop-blur-md">
+      {/* Bottom Controls */}
+      <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700 sticky bottom-0 bg-white/80 dark:bg-gray-900/80 z-10 backdrop-blur-md">
         <button
           onClick={handleSubmit}
           disabled={
@@ -775,8 +837,6 @@ if (isRoundComplete) {
           </button>
         )}
       </div>
-        
-        
     </div>
   );
 };

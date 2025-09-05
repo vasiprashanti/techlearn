@@ -122,7 +122,7 @@ const HomePage = () => {
     title: "techPREP",
     subtitle: "Already learned with us? Time to prove it.",
     description:
-      "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
+      "Click your college logo below and start your assessment now. Because practice turns preparation into success.",
     logos: [
       {
         name: "University of Hyderabad",
@@ -465,7 +465,7 @@ const HomePage = () => {
                 </p>
               </div>
               {/* College Logos Row */}
-              <div className="flex justify-start items-center mt-12 px-8 flex-wrap gap-8">
+              <div className="flex flex-row flex-nowrap overflow-x-auto gap-6 mt-8 px-2">
                 {item.logos.map((logo, logoIndex) => (
                   <button
                     key={logoIndex}
@@ -498,13 +498,16 @@ const HomePage = () => {
                   </button>
                 ))}
               </div>
+              <div className="block md:hidden text-right pr-4 mt-1">
+  <span className="italic text-xs text-gray-400">swipe for more...</span>
+</div>
             </div>
           ) : item.visual ? (
             /* Learn sections */
             <div className="container mx-auto max-w-7xl px-6 py-20">
               <div className="grid lg:grid-cols-2 gap-16 items-center">
                 {/* Content Side */}
-                <div className="relative z-10 space-y-8">
+                <div className="relative z-10 space-y-8 text-left">
                   <a
                     href={item.link}
                     className="marquee-link"
@@ -542,25 +545,29 @@ const HomePage = () => {
                     {item.description}
                   </motion.p>
 
+                  {item.visual === 'compiler' && <div className="h-10 md:h-0"></div>}
+
                   {item.features && (
-                    <motion.ul
-                      className="space-y-3"
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8, delay: 0.8 }}
-                      viewport={{ once: true }}
-                    >
-                      {item.features.map((feature, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-center gap-3 text-base text-gray-600 dark:text-gray-400"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          {feature}
-                        </li>
-                      ))}
-                    </motion.ul>
-                  )}
+  <ul className="space-y-3 list-none" style={{ listStyle: 'none' }}>
+    {item.features.map((feature, idx) => (
+      <motion.li
+        key={idx}
+        className="flex items-start gap-3 text-base text-gray-600 dark:text-gray-400"
+        style={{ listStyle: 'none' }}
+        initial={{ opacity: 0, x: -20 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        transition={{ 
+          duration: 0.6, 
+          delay: 0.8 + (idx * 0.15)
+        }}
+        viewport={{ once: true }}
+      >
+        <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+        <span>{feature}</span>
+      </motion.li>
+    ))}
+  </ul>
+)}
 
                   {/* CTA Button */}
                   <motion.div
@@ -569,6 +576,7 @@ const HomePage = () => {
                     transition={{ duration: 0.8, delay: 1.0 }}
                     viewport={{ once: true }}
                   >
+                    <div className="pt-6 md:pt-8">
                     <motion.div
                       whileHover={{
                         x: 2,
@@ -592,6 +600,7 @@ const HomePage = () => {
                         </motion.div>
                       </button>
                     </motion.div>
+                    </div>
                   </motion.div>
                 </div>
 
@@ -795,7 +804,7 @@ const HomePage = () => {
 
           {/* Horizontal scrolling reviews */}
           <div className="overflow-hidden pb-4 w-full">
-            <div className="flex gap-4 animate-scroll-horizontal" style={{width: 'max-content'}}>
+            <div className="flex gap-4 animate-scroll-horizontal" style={{width: 'max-content', animationDuration: '50s'}}>
               {[
                 { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
                 { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
