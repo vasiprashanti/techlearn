@@ -122,7 +122,7 @@ const HomePage = () => {
     title: "techPREP",
     subtitle: "Already learned with us? Time to prove it.",
     description:
-      "Click your college logo below and start your assessment now with TechPrep at Techlearn Solutions. Because practice turns preparation into success.",
+      "Click your college logo below and start your assessment now. Because practice turns preparation into success.",
     logos: [
       {
         name: "University of Hyderabad",
