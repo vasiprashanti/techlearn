@@ -1062,19 +1062,22 @@ print(df.describe())    # Statistical summary`,
                 </motion.div>
 
                 {/* Inline Question Display */}
-                <AnimatePresence>
-                  {showQuestionAt && currentQuestion && (
-                    <div className="inline-question mt-6">
-                      <InlineQuestionComponent
-                        question={currentQuestion}
-                        questionId={currentQuestion.id || currentQuestion._id}
-                        checkpointId={showQuestionAt}
-                        onAnswer={handleAnswerSubmission}
-                        isAnswering={isAnswering}
-                      />
-                    </div>
-                  )}
-                </AnimatePresence>
+               {/*
+<AnimatePresence>
+  {showQuestionAt && currentQuestion && (
+    <div className="inline-question mt-6">
+      <InlineQuestionComponent
+        question={currentQuestion}
+        questionId={currentQuestion.id || currentQuestion._id}
+        checkpointId={showQuestionAt}
+        onAnswer={handleAnswerSubmission}
+        isAnswering={isAnswering}
+      />
+    </div>
+  )}
+</AnimatePresence>
+*/}
+
               </div>
             </div>
           </div>
