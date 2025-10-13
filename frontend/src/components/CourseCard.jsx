@@ -25,7 +25,7 @@ const CourseCard = ({ course, index, onClick }) => {
       <Card className="h-full bg-white/80 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-600/50 hover:shadow-xl hover:border-purple-300/50 dark:hover:border-purple-500/50 transition-all duration-300 overflow-hidden">
         <CardContent className="p-0">
           {/* Course Icon/Header - Simplified with plain background */}
-          <div className="h-48 bg-purple-200 dark:bg-purple-800 flex items-center justify-center relative">
+          <div className="h-48 bg-blue-200 dark:bg-purple-800 flex items-center justify-center relative">
             {/* Optimized animated logo */}
             <AnimatedLogo
               src={course.image}
