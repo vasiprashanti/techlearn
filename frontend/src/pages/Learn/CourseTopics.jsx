@@ -18,163 +18,7 @@ import { courseAPI, progressAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
 import { useAuthModalContext } from "../../context/AuthModalContext";
 
-// MOCK MCQ DATA FOR TESTING
-const mockPythonQuestions = [
-  {
-    id: "q1_python_variables",
-    text: "What will be the output of the following Python code?\n\nx = 5\ny = '5'\nprint(x == y)",
-    options: [
-      "True",
-      "False", 
-      "Error",
-      "5"
-    ],
-    correctAnswer: 1,
-    explanation: "x is an integer (5) and y is a string ('5'). When comparing with ==, Python checks both value and type, so 5 == '5' returns False."
-  },
-  {
-    id: "q2_python_functions", 
-    text: "Which of the following is the correct way to define a function in Python that returns the square of a number?",
-    options: [
-      "function square(x): return x * x",
-      "def square(x): return x * x",
-      "def square(x) -> return x * x", 
-      "square(x) = x * x"
-    ],
-    correctAnswer: 1,
-    explanation: "In Python, functions are defined using the 'def' keyword followed by the function name and parameters."
-  },
-  {
-    id: "q3_python_loops",
-    text: "What will be printed by this code?\n\nfor i in range(3):\n    if i == 1:\n        continue\n    print(i)",
-    options: [
-      "0 1 2",
-      "0 2",
-      "1 2", 
-      "0 1"
-    ],
-    correctAnswer: 1,
-    explanation: "The continue statement skips the rest of the loop iteration when i equals 1, so only 0 and 2 are printed."
-  },
-  {
-    id: "q4_python_classes",
-    text: "In Python classes, what does the 'self' parameter represent?",
-    options: [
-      "The class itself",
-      "The current instance of the class",
-      "The parent class",
-      "A static method"
-    ],
-    correctAnswer: 1,
-    explanation: "'self' refers to the current instance of the class and is used to access instance variables and methods."
-  }
-];
 
-// Inline Question Component
-const InlineQuestionComponent = ({ question, onAnswer, isAnswering, questionId, checkpointId }) => {
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [showAnswer, setShowAnswer] = useState(false);
-
-  const handleSubmit = () => {
-    if (selectedOption !== null) {
-      setShowAnswer(true);
-      onAnswer(questionId, selectedOption, checkpointId);
-    }
-  };
-
-  if (!question) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="my-8 p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl shadow-lg"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-          <Lightbulb className="w-4 h-4 text-white" />
-        </div>
-        <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-          Quick Check
-        </h4>
-      </div>
-      
-      <div className="text-gray-700 dark:text-gray-300 mb-4 font-medium whitespace-pre-line">
-        {question.text || question.question}
-      </div>
-      
-      <div className="space-y-3 mb-4">
-        {(question.options || question.choices || []).map((option, index) => {
-          let optionClass = `w-full text-left p-3 rounded-lg border transition-all duration-200 `;
-          
-          if (showAnswer) {
-            if (index === question.correctAnswer) {
-              optionClass += 'bg-green-100 dark:bg-green-800/30 border-green-300 dark:border-green-600 text-green-800 dark:text-green-200';
-            } else if (selectedOption === index && index !== question.correctAnswer) {
-              optionClass += 'bg-red-100 dark:bg-red-800/30 border-red-300 dark:border-red-600 text-red-800 dark:text-red-200';
-            } else {
-              optionClass += 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400';
-            }
-          } else {
-            if (selectedOption === index) {
-              optionClass += 'bg-blue-100 dark:bg-blue-800/50 border-blue-300 dark:border-blue-600';
-            } else {
-              optionClass += 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700';
-            }
-          }
-
-          return (
-            <button
-              key={index}
-              onClick={() => !showAnswer && setSelectedOption(index)}
-              disabled={showAnswer}
-              className={optionClass}
-            >
-              <span className="flex items-center gap-2">
-                <span className="font-semibold">
-                  {String.fromCharCode(65 + index)}.
-                </span>
-                <span>{option}</span>
-                {showAnswer && index === question.correctAnswer && (
-                  <CheckCircle className="w-4 h-4 text-green-600 ml-auto" />
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      
-      {!showAnswer ? (
-        <button
-          onClick={handleSubmit}
-          disabled={selectedOption === null || isAnswering}
-          className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-            selectedOption !== null && !isAnswering
-              ? 'bg-blue-500 hover:bg-blue-600 text-white'
-              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {isAnswering ? 'Submitting...' : 'Submit Answer'}
-        </button>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="font-semibold text-blue-700 dark:text-blue-300">Explanation:</span>
-          </div>
-          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-            {question.explanation}
-          </p>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
 
 const CourseTopics = () => {
   const { courseId } = useParams();
@@ -204,15 +48,7 @@ const CourseTopics = () => {
     isCompleted: false
   });
 
-  // Inline Questions State
-  const [inlineQuestions, setInlineQuestions] = useState({});
-  const [currentQuestion, setCurrentQuestion] = useState(null);
-  const [questionCheckpoints, setQuestionCheckpoints] = useState([]);
-  const [answeredQuestions, setAnsweredQuestions] = useState(new Set());
-  const [showQuestionAt, setShowQuestionAt] = useState(null);
-  const [isAnswering, setIsAnswering] = useState(false);
-  const [scrollCheckpoints] = useState([15, 35, 55, 75]);
-  const [triggeredCheckpoints, setTriggeredCheckpoints] = useState(new Set());
+ 
 
   // Fetch course data from backend
   useEffect(() => {
@@ -1060,23 +896,6 @@ print(df.describe())    # Statistical summary`,
                     )}
                   </div>
                 </motion.div>
-
-                {/* Inline Question Display */}
-               {/*
-<AnimatePresence>
-  {showQuestionAt && currentQuestion && (
-    <div className="inline-question mt-6">
-      <InlineQuestionComponent
-        question={currentQuestion}
-        questionId={currentQuestion.id || currentQuestion._id}
-        checkpointId={showQuestionAt}
-        onAnswer={handleAnswerSubmission}
-        isAnswering={isAnswering}
-      />
-    </div>
-  )}
-</AnimatePresence>
-*/}
 
               </div>
             </div>
