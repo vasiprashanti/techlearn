@@ -1,939 +1,672 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github-dark.css';
-import '../../styles/markdown.css';
-import {
-  BookOpen, Code2, Trophy, PanelLeft, Play, CheckCircle,
-  Clock, ArrowRight, FileText, Lightbulb, ChevronLeft, ChevronRight,
-  Menu, X, AlertCircle
-} from "lucide-react";
-import ScrollProgress from "../../components/ScrollProgress";
-import LoadingScreen from "../../components/LoadingScreen";
-import useInViewport from "../../hooks/useInViewport";
-import { courseAPI, progressAPI } from "../../services/api";
-import { useAuth } from "../../context/AuthContext";
-import { useAuthModalContext } from "../../context/AuthModalContext";
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import ScrollToTop from './components/ScrollToTop'
+import { ThemeProvider } from './context/ThemeContext'
+import { AuthProvider } from './context/AuthContext'
+import { AuthModalProvider } from './context/AuthModalContext'
+import { UserProvider } from './context/UserContext'
+import PrivateRoute from './Routes/PrivateRoute'
+import AdminPrivateRoute from './Routes/AdminPrivateRoute'
 
-// mock mcqs
-const mockQuestions = [
-  {
-    id: "q1_variables",
-    text: "What will be the output of the following Python code?\n\nx = 5\ny = '5'\nprint(x == y)",
-    options: ["True", "False", "Error", "5"],
-    correctAnswer: 1,
-    explanation: "x is an integer (5) and y is a string ('5'). When comparing with ==, Python checks both value and type, so 5 == '5' returns False."
-  },
-  {
-    id: "q2_functions",
-    text: "Which of the following is the correct way to define a function in Python?",
-    options: [
-      "function square(x): return x * x",
-      "def square(x): return x * x",
-      "def square(x) -> return x * x", 
-      "square(x) = x * x"
-    ],
-    correctAnswer: 1,
-    explanation: "In Python, functions are defined using the 'def' keyword followed by the function name and parameters."
-  },
-  {
-    id: "q3_loops",
-    text: "What will be printed by this code?\n\nfor i in range(3):\n    if i == 1:\n        continue\n    print(i)",
-    options: ["0 1 2", "0 2", "1 2", "0 1"],
-    correctAnswer: 1,
-    explanation: "The continue statement skips the rest of the loop iteration when i equals 1, so only 0 and 2 are printed."
-  },
-  {
-    id: "q4_classes",
-    text: "In Python classes, what does the 'self' parameter represent?",
-    options: [
-      "The class itself",
-      "The current instance of the class",
-      "The parent class",
-      "A static method"
-    ],
-    correctAnswer: 1,
-    explanation: "'self' refers to the current instance of the class and is used to access instance variables and methods."
-  },
-  {
-    id: "q5_general",
-    text: "What is the correct way to create a comment in Python?",
-    options: [
-      "// This is a comment",
-      "/* This is a comment */",
-      "# This is a comment",
-      "-- This is a comment"
-    ],
-    correctAnswer: 2,
-    explanation: "In Python, comments are created using the # symbol. Everything after # on that line is ignored by the Python interpreter."
-  }
-];
+// Motion for animations
+import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+import FloatingCodeWords from './components/FloatingCodeWords'
+import FloatingCourseLogos from './components/FloatingCourseLogos'
+import LoadingScreen from './components/LoadingScreen'
 
-// Simple Question Component
-const QuestionComponent = ({ question, onAnswer, isAnswering }) => {
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [showAnswer, setShowAnswer] = useState(false);
+//Admin Dashboard
+import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
+import Sidebar from '../src/components/AdminDashbaord/Admin_Sidebar'
+import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
+import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
+import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
+import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
+import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
+import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
+import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
-  const handleSubmit = () => {
-    if (selectedOption !== null) {
-      setShowAnswer(true);
-      onAnswer && onAnswer(question.id, selectedOption);
+// Auth pages
+import Login from './pages/Auth/Login'
+import Signup from './pages/Auth/Signup'
+import Dashboard from './pages/Dashboard/Dashboard'
+import ResetPassword from './components/auth/ResetPassword';
+import Projects from '../src/components/Dashboard/Projects'
+import UserCoding from './pages/Coding/UserCoding';
+
+
+// Learn components
+import LearnMain from './pages/Learn/LearnMain'
+import Courses from './pages/Learn/Courses'
+import AllCourses from './pages/Learn/AllCourses'
+import CourseDetails from './pages/Learn/CourseDetails'
+import CourseQuiz from './pages/Learn/CourseQuiz'
+import CourseTopics from './pages/Learn/CourseTopics'
+import LiveBatchDetails from './pages/Learn/LiveBatchDetails'
+
+// Exercise components
+import Exercises from './pages/Learn/Exercises'
+import ExercisesList from './pages/Learn/ExercisesList'
+import ExerciseDetail from './pages/Learn/ExerciseDetail'
+
+// Certification components
+import Certification from './pages/Learn/Certification'
+import CertificationPayment from './pages/Learn/CertificationPayment'
+
+// Compiler component
+import OnlineCompiler from './pages/Learn/OnlineCompiler'
+
+// Build components
+import BuildPageMain from './pages/Build/BuildPage'
+import ProjectDetail from './pages/Build/ProjectDetail'
+import MidProjectDetail from './pages/Build/MidProjectDetail'
+import ProjectPayment from './pages/Build/ProjectPayment'
+import PaymentGateway from './pages/Build/PaymentGateway'
+import UILibrary from './pages/Build/UILibrary'
+import Profile from './components/Dashboard/Profile'
+
+// Contact component
+import Contact from './pages/Contact/Contact'
+
+// About component
+import About from './pages/About/About'
+// Terms and Conditions componenet
+import TermsAndConditions from './pages/About/TermsAndConditons';
+
+import PrivacyPolicy from './pages/About/PrivacyPolicy';
+import UserMcq from './pages/Mcq/UserMcq'
+
+// Homepage component
+const HomePage = () => {
+  const navigate = useNavigate()
+  const bottomTextRef = useRef(null)
+  const [isBottomTextInViewport, setIsBottomTextInViewport] = useState(false)
+
+  // Typewriter effect state
+  const [displayedText, setDisplayedText] = useState("")
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isTyping, setIsTyping] = useState(false)
+  const fullText = "Techlearn;"
+  const headingRef = useRef(null)
+
+  // Stats animation state
+  const statsRef = useRef(null)
+  const [animatedStats, setAnimatedStats] = useState({
+    courses: 0,
+    batches: 0,
+    students: 0,
+    rating: 0
+  })
+
+  // Marquee refs for intersection observer
+  const marqueeRefs = useRef([])
+
+  // Stats data
+  const statsData = [
+    { target: 10, label: "Courses Offered", suffix: "+" },
+    { target: 400, label: "Batches Completed", suffix: "+" },
+    { target: 5101, label: "Students Trained", suffix: "+" },
+    { target: 4.6, label: "Google Rating", isDecimal: true }
+  ]
+
+  // Marquee sections data
+  const marqueeData = [
+    {
+      title: "tech PREP",
+      subtitle: "Struggling with technical rounds or job interviews?",
+      description: "Tech Prep is your comprehensive solution for mastering technical interviews and landing your dream job. Our carefully curated curriculum covers data structures, algorithms, system design, and behavioral interview techniques. With real-world coding challenges, mock interviews, and personalized feedback from industry experts, you'll build the confidence and skills needed to excel in any technical interview. From FAANG companies to startups, our proven methodology has helped thousands of students secure positions at top tech companies.",
+      features: ["Placement-focused courses with 90% success rate", "Live classes with real hiring patterns from top companies", "1-on-1 mock interviews with industry professionals", "Comprehensive system design workshops"],
+      link: "/learn"
+    },
+    {
+      title: "mini PROJECTS",
+      subtitle: "Mini Projects — because upskilling is what we do.",
+      description: "Transform your learning journey with hands-on mini projects that bridge the gap between theory and practice. Each project is carefully designed to reinforce fundamental concepts while building real-world applications that showcase your skills to potential employers. From simple calculators to complex web applications, you'll progressively build a diverse portfolio that demonstrates your growth as a developer. Our project-based learning approach ensures you not only understand the concepts but can apply them effectively in professional environments.",
+      features: ["20+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
+      link: "/build",
+      reverse: true
+    },
+    {
+      title: "summer INTERN",
+      subtitle: "Join live internships in Web Dev, UI/UX Design, or Content Creation.",
+      description: "Gain invaluable real-world experience through our comprehensive internship program designed to bridge the gap between academic learning and professional development. Work on live projects with established companies, receive personalized mentorship from industry veterans, and build a professional network that will accelerate your career. Our internships offer hands-on experience in cutting-edge technologies, collaborative team environments, and the opportunity to contribute to meaningful projects that impact real users and businesses.",
+      features: ["3-6 month structured internship programs", "Direct mentorship from senior developers and designers", "Real client projects with measurable impact", "Certificate of completion and LinkedIn recommendations"],
+      note: "Summer positions filled — Winter applications open in November.",
+      link: "/careers"
+    },
+    {
+      title: "design LAB",
+      subtitle: "DesignLab is our open-source UI library with ready-to-use buttons, loaders, forms, toggles, radios, and more.",
+      description: "Revolutionize your development workflow with our comprehensive open-source UI component library, meticulously crafted to accelerate your design and development process. DesignLab provides production-ready, accessible, and customizable components that follow modern design principles and best practices. From elegant buttons and smooth animations to complex form elements and interactive toggles, every component is built with performance, accessibility, and developer experience in mind. Save countless hours of development time while maintaining consistent, professional design standards across all your projects.",
+      features: ["50+ production-ready UI components", "Full accessibility compliance (WCAG 2.1)", "Dark mode support and theme customization", "React, Vue, and vanilla JavaScript versions"],
+      link: "/build",
+      reverse: true
     }
-  };
+  ]
 
-  if (!question) return null;
+  // Custom viewport detection for typewriter - triggers every time
+  useEffect(() => {
+    const element = headingRef.current
+    if (!element) return
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="my-6 p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-700 rounded-xl shadow-lg"
-    >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-          <Lightbulb className="w-4 h-4 text-white" />
-        </div>
-        <h4 className="text-lg font-semibold text-blue-700 dark:text-blue-300">
-          Quick Check
-        </h4>
-      </div>
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isTyping) {
+          setIsTyping(true)
+          setDisplayedText("")
+          setCurrentIndex(0)
+        } else if (!entry.isIntersecting && isTyping) {
+          setIsTyping(false)
+          setDisplayedText("")
+          setCurrentIndex(0)
+        }
+      },
+      {
+        threshold: 0.3,
+        rootMargin: '0px'
+      }
+    )
 
-      <div className="text-gray-700 dark:text-gray-300 mb-4 font-medium whitespace-pre-line">
-        {question.text}
-      </div>
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [isTyping])
 
-      <div className="space-y-3 mb-4">
-        {question.options.map((option, index) => {
-          let optionClass = "w-full text-left p-3 rounded-lg border transition-all duration-200 ";
+  // Typewriter animation
+  useEffect(() => {
+    if (isTyping && currentIndex < fullText.length) {
+      const isMobile = window.innerWidth <= 480
+      const charDelay = isMobile ? 120 : 75
 
-          if (showAnswer) {
-            if (index === question.correctAnswer) {
-              optionClass += 'bg-green-100 dark:bg-green-800/30 border-green-300 dark:border-green-600 text-green-800 dark:text-green-200';
-            } else if (selectedOption === index) {
-              optionClass += 'bg-red-100 dark:bg-red-800/30 border-red-300 dark:border-red-600 text-red-800 dark:text-red-200';
-            } else {
-              optionClass += 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400';
-            }
+      const timeout = setTimeout(() => {
+        setDisplayedText(prev => prev + fullText[currentIndex])
+        setCurrentIndex(prev => prev + 1)
+      }, charDelay)
+
+      return () => clearTimeout(timeout)
+    }
+  }, [currentIndex, fullText, isTyping])
+
+  // Custom viewport detection for stats
+  useEffect(() => {
+    const element = statsRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
+
+          statsData.forEach((stat, index) => {
+            const increment = stat.isDecimal ? 0.1 : Math.ceil(stat.target / 50)
+            let count = 0
+
+            const timer = setInterval(() => {
+              count += increment
+              if (count >= stat.target) {
+                count = stat.target
+                clearInterval(timer)
+              }
+
+              setAnimatedStats(prev => ({
+                ...prev,
+                [index === 0 ? 'courses' : index === 1 ? 'batches' : index === 2 ? 'students' : 'rating']: count
+              }))
+            }, 30)
+          })
+        } else {
+          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
+        }
+      },
+      {
+        threshold: 0.3,
+        rootMargin: '0px'
+      }
+    )
+
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [])
+
+  // Bottom text viewport detection
+  useEffect(() => {
+    const element = bottomTextRef.current
+    if (!element) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsBottomTextInViewport(entry.isIntersecting)
+      },
+      {
+        threshold: 0.3,
+        rootMargin: '0px'
+      }
+    )
+
+    observer.observe(element)
+    return () => observer.unobserve(element)
+  }, [])
+
+  // Marquee animation intersection observer
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const title = entry.target.querySelector('.marquee-title, .marquee-title-2')
+        if (title) {
+          if (entry.isIntersecting) {
+            title.classList.add('animate')
           } else {
-            if (selectedOption === index) {
-              optionClass += 'bg-blue-100 dark:bg-blue-800/50 border-blue-300 dark:border-blue-600';
-            } else {
-              optionClass += 'bg-white dark:bg-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700';
-            }
-          }
-
-          return (
-            <button
-              key={index}
-              onClick={() => !showAnswer && setSelectedOption(index)}
-              disabled={showAnswer}
-              className={optionClass}
-            >
-              <span className="flex items-center gap-2">
-                <span className="font-semibold">
-                  {String.fromCharCode(65 + index)}.
-                </span>
-                <span>{option}</span>
-                {showAnswer && index === question.correctAnswer && (
-                  <CheckCircle className="w-4 h-4 text-green-600 ml-auto" />
-                )}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {!showAnswer ? (
-        <button
-          onClick={handleSubmit}
-          disabled={selectedOption === null || isAnswering}
-          className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-            selectedOption !== null && !isAnswering
-              ? 'bg-blue-500 hover:bg-blue-600 text-white'
-              : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {isAnswering ? 'Submitting...' : 'Submit Answer'}
-        </button>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Lightbulb className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="font-semibold text-blue-700 dark:text-blue-300">Explanation:</span>
-          </div>
-          <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-            {question.explanation}
-          </p>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
-const CourseTopics = () => {
-  const { courseId } = useParams();
-  const navigate = useNavigate();
-  const [selectedTopic, setSelectedTopic] = useState(0);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [titleRef, isTitleInViewport] = useInViewport();
-
-  // Ref for the notes content container
-  const notesContentRef = useRef(null);
-
-  // Authentication hooks
-  const { isAuthenticated } = useAuth();
-  const { openLogin } = useAuthModalContext();
-
-  // Backend data state
-  const [backendCourse, setBackendCourse] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [userProgress, setUserProgress] = useState(null);
-
-  // Modal state for quiz already attempted
-  const [quizAlreadyAttempted, setQuizAlreadyAttempted] = useState({
-    show: false,
-    title: '',
-    isCompleted: false
-  });
-
-  // SIMPLE question state
-  const [questionCounter, setQuestionCounter] = useState(0);
-  const [answeredQuestions, setAnsweredQuestions] = useState(new Set());
-  const [isAnswering, setIsAnswering] = useState(false);
-  
-  // Use ref instead of state to avoid re-render loops
-  const paragraphCounterRef = useRef(0);
-
-  // Get next question
-  const getNextQuestion = () => {
-    const availableQuestions = mockQuestions.filter((_, index) => !answeredQuestions.has(index));
-    if (availableQuestions.length === 0) return null;
-    return availableQuestions[0];
-  };
-
-  // Handle answer submission
-  const handleAnswerSubmission = async (questionId, selectedAnswer) => {
-    if (isAnswering) return;
-
-    setIsAnswering(true);
-    console.log('📝 Answer submitted:', { questionId, selectedAnswer });
-
-    try {
-      // Find question index and mark as answered
-      const questionIndex = mockQuestions.findIndex(q => q.id === questionId);
-      if (questionIndex !== -1) {
-        setAnsweredQuestions(prev => new Set([...prev, questionIndex]));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-    } catch (error) {
-      console.error('Error submitting answer:', error);
-    } finally {
-      setIsAnswering(false);
-    }
-  };
-
-  // Reset when topic changes
-  useEffect(() => {
-    console.log('🔄 Resetting questions for new topic');
-    setQuestionCounter(0);
-    setAnsweredQuestions(new Set());
-    paragraphCounterRef.current = 0; // Reset ref counter
-  }, [selectedTopic]);
-
-  // Fetch course data from backend
-  useEffect(() => {
-    const fetchCourse = async () => {
-      try {
-        setLoading(true);
-        const response = await courseAPI.getCourse(courseId);
-        console.log('Course response in CourseTopics:', response);
-
-        const courseData = response.course || response;
-        console.log('Extracted course data:', courseData);
-
-        setBackendCourse(courseData);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching course for topics:', error);
-        setError(error.message);
-        setBackendCourse(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (courseId) {
-      fetchCourse();
-    }
-  }, [courseId]);
-
-  // Fetch user progress
-  useEffect(() => {
-    const fetchUserProgress = async () => {
-      if (!isAuthenticated) return;
-
-      try {
-        console.log('Fetching user progress for quiz completion check...');
-        const progress = await progressAPI.getUserProgress();
-        console.log('User progress received in CourseTopics:', progress);
-        setUserProgress(progress);
-      } catch (error) {
-        console.error('Error fetching user progress in CourseTopics:', error);
-        setUserProgress(null);
-      }
-    };
-
-    fetchUserProgress();
-  }, [isAuthenticated]);
-
-  // Course topics data
-  const courseTopicsData = {
-    "python": {
-      title: "Python Programming",
-      description: "Master Python fundamentals with hands-on coding exercises",
-      topics: [
-        {
-          id: "variables",
-          title: "Variables & Data Types",
-          description: "Learn about Python variables, data types, and basic operations",
-          exercises: 5,
-          maxXP: 50,
-          completed: false,
-          content: {
-            theory: "Variables are containers for storing data values. In Python, you don't need to declare variables explicitly - they are created automatically when you assign a value to them.\n\nPython has several built-in data types:\n• Integers (int): Whole numbers like 42, -17, 0\n• Floats (float): Decimal numbers like 3.14, -2.5\n• Strings (str): Text like \"Hello\", 'Python'\n• Booleans (bool): True or False values\n\nVariable Assignment Examples:\nYou can assign values to variables using the equals sign (=). Python automatically determines the data type based on the value you assign.\n\nNaming Rules:\n• Variable names must start with a letter or underscore\n• Can contain letters, numbers, and underscores\n• Case-sensitive (age and Age are different)\n• Cannot use Python keywords like 'if', 'for', 'while'\n\nType Checking:\nYou can check the type of any variable using the type() function. This is useful for debugging and understanding your data.\n\nDynamic Typing:\nPython is dynamically typed, meaning you can change the type of a variable by assigning it a new value of a different type.\n\nCommon Operations:\nYou can perform various operations on variables depending on their type. For example, you can add numbers, concatenate strings, and perform logical operations on booleans.\n\nBest Practices:\n• Use descriptive variable names\n• Follow naming conventions (snake_case)\n• Initialize variables before using them\n• Be mindful of variable scope\n• Use meaningful names that describe the data\n\nString Operations:\nStrings in Python are immutable, meaning they cannot be changed after creation. However, you can create new strings based on existing ones using various string methods.\n\nNumeric Operations:\nPython supports various numeric operations including addition, subtraction, multiplication, division, and more. You can also use mathematical functions from the math module.\n\nBoolean Logic:\nBoolean values are essential for control flow in programming. They represent True or False states and are used in conditional statements and loops.",
-            codeExample: `# Creating variables
-name = "Alice"        # String
-age = 25             # Integer  
-height = 5.6         # Float
-is_student = True    # Boolean
-
-# You can check the type of a variable
-print(type(name))        # <class 'str'>
-print(type(age))         # <class 'int'>
-print(type(height))      # <class 'float'>
-print(type(is_student))  # <class 'bool'>`,
-            keyPoints: [
-              "Variables are created when you assign a value",
-              "Python is dynamically typed - no need to declare types",
-              "Use descriptive variable names for better code readability",
-              "Variable names are case-sensitive",
-              "Cannot start with numbers or contain spaces"
-            ]
-          }
-        },
-        {
-          id: "functions",
-          title: "Functions",
-          description: "Create reusable code blocks with functions",
-          exercises: 4,
-          maxXP: 40,
-          completed: false,
-          content: {
-            theory: "Functions are reusable blocks of code that perform specific tasks. They help organize code, avoid repetition, and make programs more modular and easier to maintain.\n\nFunction Definition:\nFunctions are defined using the 'def' keyword followed by the function name and parameters in parentheses. The code block within every function starts with a colon (:) and is indented.\n\nParameters and Arguments:\nParameters are variables listed inside the parentheses in the function definition. Arguments are the values passed to the function when it is called.\n\nReturn Statement:\nFunctions can return values using the 'return' statement. If no return statement is used, the function returns None by default.\n\nFunction Benefits:\n• Code reusability\n• Better organization\n• Easier testing and debugging\n• Modular programming approach\n\nFunction Scope:\nVariables defined inside a function have local scope, meaning they are only accessible within that function. Variables defined outside functions have global scope.\n\nDefault Parameters:\nYou can provide default values for function parameters. If no argument is provided for a parameter with a default value, the default is used.\n\nKeyword Arguments:\nYou can call functions using keyword arguments, which allows you to specify arguments by parameter name rather than position.\n\nVariable-Length Arguments:\nPython allows functions to accept a variable number of arguments using *args for positional arguments and **kwargs for keyword arguments.\n\nDocstrings:\nIt's good practice to include docstrings in your functions to document what they do, their parameters, and return values.",
-            codeExample: `# Defining a function
-def greet(name):
-    return f"Hello, {name}!"
-
-# Calling the function
-message = greet("Alice")
-print(message)  # Output: Hello, Alice!
-
-# Function with multiple parameters
-def calculate_area(length, width):
-    area = length * width
-    return area
-
-result = calculate_area(5, 3)
-print(f"Area: {result}")  # Output: Area: 15`,
-            keyPoints: [
-              "Use 'def' keyword to define functions",
-              "Functions can accept parameters and return values",
-              "Good function names describe what they do",
-              "Functions promote code reusability",
-              "Use docstrings to document your functions"
-            ]
+            title.classList.remove('animate')
           }
         }
-      ]
+      })
+    }, {
+      threshold: 0.3
+    })
+
+    marqueeRefs.current.forEach(header => {
+      if (header) {
+        observer.observe(header)
+      }
+    })
+
+    return () => {
+      marqueeRefs.current.forEach(header => {
+        if (header) {
+          observer.unobserve(header)
+        }
+      })
     }
-  };
-
-  // Create hybrid course object
-  const currentCourse = (() => {
-    if (backendCourse && backendCourse.topics) {
-      return {
-        title: backendCourse.title,
-        description: `Master ${backendCourse.title} fundamentals with hands-on coding exercises`,
-        topics: backendCourse.topics.map((topic, index) => {
-          const topicId = topic._id || topic.topicId || topic.id || `topic_${index}`;
-
-          const cleanTitle = (() => {
-            let title = topic.title || '';
-            title = title.replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1');
-            title = title.replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
-            return title;
-          })();
-
-          return {
-            id: topicId,
-            title: cleanTitle,
-            description: `Learn about ${cleanTitle} concepts and applications`,
-            exercises: 5,
-            maxXP: 50,
-            completed: false,
-            hasNotes: !!topic.notesId,
-            notesContent: topic.notes,
-            content: {
-              theory: topic.notes || `Learn the fundamentals of ${cleanTitle}. This topic covers essential concepts and practical applications.`,
-              codeExample: `// Example code for ${cleanTitle}\nconsole.log("Learning ${cleanTitle}");`,
-              keyPoints: [
-                `Understand ${cleanTitle} basics`,
-                "Apply concepts in practical scenarios",
-                "Master key techniques",
-                "Build real-world applications"
-              ]
-            }
-          };
-        })
-      };
-    }
-
-    return courseTopicsData[courseId];
-  })();
-
-  const currentTopic = currentCourse?.topics[selectedTopic];
-
-  // Scroll to top when component mounts
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-  }, []);
-
-  // Loading state
-  if (loading) {
-    return (
-      <LoadingScreen
-        showMessage={false}
-        size={48}
-        duration={800}
-      />
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Error Loading Course</h1>
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-              setTimeout(() => navigate('/learn/courses'), 100);
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-          >
-            Back to Courses
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Course not found state
-  if (!currentCourse) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Course Not Found</h1>
-          <button
-            onClick={() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-              setTimeout(() => navigate('/learn/courses'), 100);
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-          >
-            Back to Courses
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const handleStartPractice = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      navigate(`/learn/exercises/${courseId}`);
-    }, 100);
-  };
-
-  const handleToggleSidebar = () => {
-    console.log('Toggling sidebar from:', sidebarCollapsed, 'to:', !sidebarCollapsed);
-    setSidebarCollapsed(prev => !prev);
-  };
+  }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      <ScrollProgress />
-
-      <div className="flex min-h-screen">
-        {/* Desktop Sidebar */}
-        <motion.div
-          initial={false}
-          animate={{
-            width: sidebarCollapsed ? "80px" : "320px",
-            transition: { duration: 0.3, ease: "easeInOut" }
-          }}
-          className="hidden lg:flex flex-col bg-transparent backdrop-blur-xl sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
-        >
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
-            <div className="flex items-center justify-between relative z-50">
-              <AnimatePresence mode="wait">
-                {!sidebarCollapsed && (
-                  <motion.h3
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold text-2xl motion-div text-blue-900 dark:text-white/80"
-                  >
-                    Course Topics
-                  </motion.h3>
-                )}
-              </AnimatePresence>
-
-              <button
-                type="button"
-                onClick={handleToggleSidebar}
-                onMouseDown={(e) => {
-                  console.log('Mouse down on toggle button');
-                  e.preventDefault();
+    <div className="bg-transparent dark:bg-transparent relative">
+      {/* Hero Section */}
+      <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
+        {/* Floating Course Logos - Hero Section Only */}
+        <FloatingCourseLogos />
+        <div className="relative z-10 flex flex-col items-center justify-center text-center">
+          {/* TECHLEARN Heading with Typewriter Effect */}
+          <div className="mb-4">
+            <div
+              ref={headingRef}
+              className="font-bold text-[#001862] dark:text-[#ffffffde] font-poppins relative"
+              style={{
+                fontWeight: 700,
+                lineHeight: 1.2,
+                marginBottom: '10px',
+                marginTop: '10%',
+                fontSize: 'clamp(42px, 8vw, 110px)',
+                textAlign: 'center'
+              }}
+            >
+              <span
+                style={{
+                  visibility: 'hidden',
+                  whiteSpace: 'nowrap'
                 }}
-                className="p-2 rounded-xl bg-transparent hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative active:scale-95"
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-hidden="true"
               >
-                {sidebarCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-blue-900" />
-                ) : (
-                  <ChevronLeft className="w-5 h-5 text-blue-900" />
-                )}
-              </button>
+                {fullText}
+              </span>
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.1em'
+                }}
+              >
+                {displayedText}
+              </span>
             </div>
+            <h2
+              className="font-medium text-[#002d88] dark:text-[#ffffffde] font-poppins"
+              style={{
+                fontWeight: 500,
+                marginTop: '10px',
+                fontSize: 'clamp(15px, 3vw, 25px)'
+              }}
+            >
+              Don't Just Use Technology, Build It.
+            </h2>
           </div>
 
-          {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide">
-            <div className="space-y-3">
-              {currentCourse.topics.map((topic, index) => (
-                <motion.button
-                  key={topic.id}
-                  onClick={() => {
-                    setSelectedTopic(index);
-                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                  }}
-                  whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`group relative w-full text-left rounded-xl transition-all duration-300 overflow-hidden ${
-                    selectedTopic === index
-                      ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
-                      : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
-                  } ${sidebarCollapsed ? 'p-3 mx-1' : 'p-4'}`}
-                >
-                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    {topic.completed ? (
-                      <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center bg-green-500 shadow-sm ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
-                        <CheckCircle className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-4 h-4'} text-white`} />
-                      </div>
-                    ) : (
-                      <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold text-gray-700 dark:text-gray-300`}>
-                        {index + 1}
-                      </span>
-                    )}
+          {/* Start for Free Button */}
+          <button
+            onClick={() => navigate('/learn/courses')}
+            className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
+            style={{
+              backgroundColor: '#ffffffac',
+              color: '#001242',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#001242'
+              e.target.style.color = '#ffffff'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#ffffffac'
+              e.target.style.color = '#001242'
+            }}
+          >
+            Start for Free
+          </button>
+        </div>
+      </div>
 
-                    <AnimatePresence mode="wait">
-                      {!sidebarCollapsed && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="flex-1 min-w-0 motion-div"
-                        >
-                          <h4 className="font-medium brand-heading-primary truncate">
-                            {topic.title}
-                          </h4>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+      {/* Stats Section */}
+      <div className="flex items-start justify-center px-6 pt-16 pb-8">
+        <div
+          ref={statsRef}
+          className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 w-full max-w-4xl"
+        >
+          {statsData.map((stat, index) => (
+            <div key={index} className="text-center">
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-light text-[#000c3e] dark:text-[#ffffffde]">
+                {stat.isDecimal
+                  ? animatedStats.rating.toFixed(1)
+                  : Math.floor(index === 0 ? animatedStats.courses : index === 1 ? animatedStats.batches : animatedStats.students)
+                }{stat.suffix || ''}
+              </h2>
+              <p className="text-sm md:text-base text-[#000234] dark:text-[#ffffff] mt-2 font-inter">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-                  {sidebarCollapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs truncate">
-                      {topic.title}
-                    </div>
-                  )}
-                </motion.button>
+      {/* Marquee Sections */}
+      {marqueeData.map((item, index) => (
+        <div
+          key={index}
+          className={item.reverse ? "marquee-header-2" : "marquee-header"}
+          ref={el => marqueeRefs.current[index] = el}
+        >
+          <a
+            href={item.link}
+            className="marquee-link"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate(item.link);
+            }}
+          >
+            <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
+              <span>
+                <i>{item.title.split(' ')[0]}</i> {item.title.split(' ').slice(1).join(' ')}
+              </span>
+            </h2>
+          </a>
+          <p className={item.reverse ? "marquee-subtext-2" : "marquee-subtext"}>
+            {item.subtitle}<br/><br/>
+            <strong>{item.description}</strong>
+            {item.features && (
+              <>
+                <br/>
+                {item.features.map((feature, idx) => (
+                  <span key={idx}>• {feature}<br/></span>
+                ))}
+              </>
+            )}
+            {item.note && (
+              <>
+                <br/>
+                <em>{item.note}</em>
+              </>
+            )}
+          </p>
+        </div>
+      ))}
+
+      {/* Reviews Section */}
+      <div className="py-2 md:py-16">
+        {/* Desktop: Two column layout with vertical scrolling */}
+        <div className="hidden md:flex h-screen overflow-hidden">
+          {/* Left column scrolling up */}
+          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
+            <div className="flex flex-col gap-4 animate-scroll-up">
+              {/* First set of reviews */}
+              {[
+                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
+                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
+                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
+                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
+                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
+              ].map((review, index) => (
+                <div key={`left-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
+                </div>
+              ))}
+              {/* Duplicate set for seamless loop */}
+              {[
+                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
+                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
+                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
+                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
+                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
+              ].map((review, index) => (
+                <div key={`left-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
+                </div>
               ))}
             </div>
           </div>
-        </motion.div>
 
-        {/* Mobile Sidebar Overlay */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-              />
-              <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 flex flex-col"
-              >
-                <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-poppins text-lg font-semibold text-blue-900 dark:text-white/80">
-                      Course Topics
-                    </h3>
-                    <button
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-2 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 transition-all duration-200"
-                    >
-                      <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  </div>
+          {/* Center heading */}
+          <div className="flex-none flex items-center justify-center px-5">
+            <h2 className="text-3xl lg:text-4xl font-bold text-center brand-heading-primary">
+              <span className="italic">learn</span> REVIEWS
+            </h2>
+          </div>
+
+          {/* Right column scrolling down */}
+          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
+            <div className="flex flex-col gap-4 animate-scroll-down">
+              {/* First set of reviews */}
+              {[
+                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
+                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
+                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
+                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
+                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
+              ].map((review, index) => (
+                <div key={`right-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
                 </div>
-
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="space-y-3">
-                    {currentCourse.topics.map((topic, index) => (
-                      <button
-                        key={topic.id}
-                        onClick={() => {
-                          setSelectedTopic(index);
-                          setMobileMenuOpen(false);
-                          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                        }}
-                        className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
-                          selectedTopic === index
-                            ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300'
-                            : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            topic.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}>
-                            {topic.completed ? (
-                              <CheckCircle className="w-4 h-4 text-white" />
-                            ) : (
-                              <span className="text-xs font-bold text-blue-950 dark:text-gray-300">
-                                {index + 1}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-medium text-blue-800 dark:text-white/60">{topic.title}</h4>
-                        </div>
-                        <p className="text-sm text-blue-500 dark:text-white/60 ml-11">
-                          {topic.description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
+              ))}
+              {/* Duplicate set for seamless loop */}
+              {[
+                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
+                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
+                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
+                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
+                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
+              ].map((review, index) => (
+                <div key={`right-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+              ))}
+            </div>
+          </div>
+        </div>
 
-        {/* Main Content */}
-        <div className="flex-1 relative min-w-0">
-          <div className="relative z-10 pt-24 pb-12">
-            <div className={`container mx-auto max-w-6xl transition-all duration-300 ${
-              sidebarCollapsed ? 'px-6' : 'px-6 lg:px-8'
-            }`}>
+        {/* Mobile: Horizontal scrolling layout */}
+        <div className="md:hidden">
+          {/* Mobile heading */}
+          <div className="text-center mb-2">
+            <h2 className="text-2xl font-bold brand-heading-primary">
+              <span className="italic">learn</span> REVIEWS
+            </h2>
+          </div>
 
-              {/* Header */}
-              <div className="border-b border-gray-200/20 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-2 mt-2">
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  <div className="flex flex-col gap-0">
-                    <div className="flex-1">
-                      <div className="lg:hidden flex items-center gap-3 mb-4">
-                        <button
-                          onClick={() => setMobileMenuOpen(true)}
-                          className="p-2 bg-blue-500/20 hover:bg-blue-500/30 backdrop-blur-sm rounded-lg border border-blue-400/30 shadow-sm transition-all duration-200 hover:scale-105"
-                        >
-                          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        </button>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Course Topics</span>
-                      </div>
-
-                      <h1
-                        ref={titleRef}
-                        className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-4 text-center lg:text-left`}
-                      >
-                        {currentTopic?.title}
-                      </h1>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Content Sections */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="lg:bg-transparent lg:h-[90vh] lg:flex lg:flex-col"
-                >
-                  <div className="max-w-none px-[5px] lg:px-8 lg:py-1 lg:flex-1 lg:overflow-hidden">
-                    {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div 
-                        ref={notesContentRef}
-                        className="h-full lg:overflow-y-auto scrollbar-hide"
-                      >
-                        <div className="markdown-content lg:bg-transparent">
-                          <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight]}
-                              components={{
-                                h1: ({children}) => null,
-                                h2: ({children}) => null,
-                                h3: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-
-                                  return (
-                                    <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">
-                                      {cleanText}
-                                    </h3>
-                                  );
-                                },
-                                h4: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-
-                                  return (
-                                    <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">
-                                      {cleanText}
-                                    </h4>
-                                  );
-                                },
-                                h5: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h5>;
-                                },
-                                h6: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h6>;
-                                },
-                                code: ({inline, className, children, ...props}) => {
-                                  if (inline) {
-                                    return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>
-                                  }
-                                  return <code className={className} {...props}>{children}</code>
-                                },
-                                pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                                p: ({children}) => {
-                                  // Increment ref counter (no re-render)
-                                  paragraphCounterRef.current++;
-                                  
-                                  // Show question after every 3rd paragraph
-                                  const currentQuestion = getNextQuestion();
-                                  const shouldShowQuestion = currentQuestion && 
-                                    paragraphCounterRef.current > 0 && 
-                                    paragraphCounterRef.current % 3 === 0 && 
-                                    questionCounter < 3;
-
-                                  return (
-                                    <div>
-                                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>
-                                      {shouldShowQuestion && (
-                                        <div className="my-6">
-                                          <QuestionComponent
-                                            question={currentQuestion}
-                                            onAnswer={(questionId, answer) => {
-                                              handleAnswerSubmission(questionId, answer);
-                                              setQuestionCounter(prev => prev + 1);
-                                            }}
-                                            isAnswering={isAnswering}
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                },
-                                ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                                ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                                li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                                blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                                strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
-                                table: ({children}) => (
-                                  <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
-                                    <table className="min-w-full">{children}</table>
-                                  </div>
-                                )
-                              }}
-                            >
-                              {currentTopic.notesContent}
-                            </ReactMarkdown>
-                          </div>
-                        </div>
-                      </div>
-                    ) : currentTopic?.hasNotes ? (
-                      <div className="h-full lg:overflow-y-auto scrollbar-hide">
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center">
-                            <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div 
-                        ref={notesContentRef}
-                        className="h-full lg:overflow-y-auto lg:custom-scrollbar"
-                      >
-                        <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
-                          {currentTopic?.content.theory}
-
-                          {/* Show question after the theory content for fallback topics */}
-                          {(() => {
-                            const currentQuestion = getNextQuestion();
-                            const shouldShowQuestion = currentQuestion && questionCounter < 1;
-
-                            return shouldShowQuestion ? (
-                              <div className="mt-8">
-                                <QuestionComponent
-                                  question={currentQuestion}
-                                  onAnswer={(questionId, answer) => {
-                                    handleAnswerSubmission(questionId, answer);
-                                    setQuestionCounter(prev => prev + 1);
-                                  }}
-                                  isAnswering={isAnswering}
-                                />
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              </div>
+          {/* Horizontal scrolling reviews */}
+          <div className="overflow-hidden pb-4 w-full">
+            <div className="flex gap-4 animate-scroll-horizontal" style={{width: 'max-content'}}>
+              {[
+                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
+                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
+                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
+                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
+                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
+                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
+                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
+                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
+                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
+                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
+              ].map((review, index) => (
+                <div key={`first-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
+                </div>
+              ))}
+              {[
+                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
+                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
+                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
+                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
+                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
+                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
+                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
+                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
+                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
+                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
+              ].map((review, index) => (
+                <div key={`second-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
+                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
+                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Quiz Already Attempted Modal */}
-      <AnimatePresence>
-        {quizAlreadyAttempted.show && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20 max-w-md w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              </button>
+const CareersPage = () => {
+  const [loading, setLoading] = useState(true);
 
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-                </div>
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  Quiz Already {quizAlreadyAttempted.isCompleted ? 'Completed' : 'Started'}
-                </h3>
+  if (loading) {
+    return <LoadingScreen showMessage={false} size={48} duration={800} />;
+  }
 
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  You have already {quizAlreadyAttempted.isCompleted ? 'completed' : 'started'} the quiz for{' '}
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    "{quizAlreadyAttempted.title}"
-                  </span>
-                  . Each quiz can only be attempted once to maintain the integrity of your progress.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+  return (
+    <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-transparent dark:bg-transparent">
+      <div className="max-w-md mx-auto text-center">
+        <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Careers Page</h1>
+        <p className="text-gray-600 dark:text-gray-300">Coming soon...</p>
+      </div>
     </div>
   );
 };
 
-export default CourseTopics;
+function FloatingCodeBackground() {
+  const location = useLocation();
+  const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+  return isAuthPage ? <FloatingCodeWords /> : null;
+}
+
+function LayoutWrapper() {
+  const location = useLocation();
+  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
+  const showFooter = !['/coding','/mcq'].includes(location.pathname);
+
+
+  return (
+    <div className="relative z-10 flex flex-col min-h-screen">
+      {showNavbar && <Navbar />}
+
+      <main className="flex-grow">
+        <Routes>
+          
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route element={<PrivateRoute />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
+          
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/learn" element={<LearnMain />} />
+          <Route path="/learn/courses" element={<Courses />} />
+          <Route path="/learn/courses/all" element={<AllCourses />} />
+          <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
+          <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
+          <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />
+          <Route path="/learn/batches/:batchId" element={<LiveBatchDetails />} />
+          <Route path="/learn/exercises" element={<Exercises />} />
+          <Route path="/learn/exercises/:courseId" element={<ExercisesList />} />
+          <Route path="/learn/exercises/:courseId/:exerciseId" element={<ExerciseDetail />} />
+          <Route path="/learn/certification" element={<Certification />} />
+          <Route path="/learn/certification/payment" element={<CertificationPayment />} />
+          <Route path="/learn/compiler" element={<OnlineCompiler />} />
+          <Route path="/build" element={<BuildPageMain />} />
+          <Route path="/build/mini/:id" element={<ProjectDetail />} />
+          <Route path="/build/midproject/:id" element={<ProjectDetail />} />
+          <Route path="/build/major/:id" element={<ProjectDetail />} />
+          <Route path="/payment" element={<ProjectPayment />} />
+           <Route path="/payment-gateway" element={<PaymentGateway />} />
+          <Route path="/build/ui-library" element={<UILibrary />} />
+          <Route path="/careers" element={<CareersPage />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+          <Route path="/mcq/:linkId" element={<UserMcq />} />
+          <Route path="/coding/:linkId" element={ <UserCoding />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          {/* All admin routes protected by AdminPrivateRoute */}
+          <Route element={<AdminPrivateRoute />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
+            <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
+            <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
+            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
+            <Route path="/admin/mcqupload" element={<McqUpload/>} />
+            <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
+          </Route>
+          <Route path="/about" element={<About />} />
+          
+        </Routes>
+      </main>
+      
+      {showFooter && <Footer />}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <UserProvider>
+          <AuthModalProvider>
+            
+              <ScrollToTop />
+              <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
+                <FloatingCodeBackground />
+                <LayoutWrapper />
+              </div>
+        
+          </AuthModalProvider>
+        </UserProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}

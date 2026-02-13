@@ -1,5 +1,6 @@
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -7,18 +8,13 @@ import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
 import {
-  BookOpen, Code2, Trophy, PanelLeft, Play, CheckCircle,
-  Clock, ArrowRight, FileText, Lightbulb, ChevronLeft, ChevronRight,
-  Menu, X, AlertCircle
+  BookOpen, CheckCircle, ChevronLeft, ChevronRight,
+  X, AlertCircle
 } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import useInViewport from "../../hooks/useInViewport";
-import { courseAPI, progressAPI } from "../../services/api";
-import { useAuth } from "../../context/AuthContext";
-import { useAuthModalContext } from "../../context/AuthModalContext";
-
-
+import { courseAPI } from "../../services/api";
 
 const CourseTopics = () => {
   const { courseId } = useParams();
@@ -28,44 +24,21 @@ const CourseTopics = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [titleRef, isTitleInViewport] = useInViewport();
 
-  // Ref for the notes content container
-  const notesContentRef = useRef(null);
-
-  // Authentication hooks
-  const { isAuthenticated } = useAuth();
-  const { openLogin } = useAuthModalContext();
-
-  // Backend data state
   const [backendCourse, setBackendCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [userProgress, setUserProgress] = useState(null);
 
-  // Modal state for quiz already attempted
-  const [quizAlreadyAttempted, setQuizAlreadyAttempted] = useState({
-    show: false,
-    title: '',
-    isCompleted: false
-  });
-
- 
-
-  // Fetch course data from backend
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         setLoading(true);
         const response = await courseAPI.getCourse(courseId);
-        console.log('Course response in CourseTopics:', response);
-
         const courseData = response.course || response;
-        console.log('Extracted course data:', courseData);
-
         setBackendCourse(courseData);
         setError(null);
-      } catch (error) {
-        console.error('Error fetching course for topics:', error);
-        setError(error.message);
+      } catch (err) {
+        console.error('Error fetching course for topics:', err);
+        setError(err.message);
         setBackendCourse(null);
       } finally {
         setLoading(false);
@@ -77,190 +50,6 @@ const CourseTopics = () => {
     }
   }, [courseId]);
 
-  // Fetch user progress
-  useEffect(() => {
-    const fetchUserProgress = async () => {
-      if (!isAuthenticated) return;
-
-      try {
-        console.log('Fetching user progress for quiz completion check...');
-        const progress = await progressAPI.getUserProgress();
-        console.log('User progress received in CourseTopics:', progress);
-        setUserProgress(progress);
-      } catch (error) {
-        console.error('Error fetching user progress in CourseTopics:', error);
-        setUserProgress(null);
-      }
-    };
-
-    fetchUserProgress();
-  }, [isAuthenticated]);
-
-  // Scroll Detection for Notes Content Container
-  useEffect(() => {
-    console.log('Setting up scroll detection for notes content...');
-    
-    const handleContentScroll = () => {
-      const contentElement = notesContentRef.current;
-      if (!contentElement) {
-        console.log('No content element found');
-        return;
-      }
-
-      const scrollPosition = contentElement.scrollTop;
-      const scrollHeight = contentElement.scrollHeight - contentElement.clientHeight;
-      const scrollPercentage = scrollHeight > 0 ? (scrollPosition / scrollHeight) * 100 : 0;
-      
-      console.log(`📊 Content Scroll: ${scrollPercentage.toFixed(1)}% (${scrollPosition}px of ${scrollHeight}px)`);
-      
-      scrollCheckpoints.forEach((checkpoint, index) => {
-        const checkpointId = `checkpoint_${index}_topic_${selectedTopic}`;
-        
-        if (scrollPercentage >= checkpoint && 
-            !answeredQuestions.has(checkpointId) && 
-            !triggeredCheckpoints.has(checkpointId) &&
-            showQuestionAt !== checkpointId) {
-          
-          console.log(`🎯 TRIGGERING QUESTION at content checkpoint ${checkpoint}%!`);
-          setTriggeredCheckpoints(prev => new Set([...prev, checkpointId]));
-          fetchQuestionForCheckpoint(checkpointId, checkpoint);
-        }
-      });
-    };
-
-    const throttle = (func, limit) => {
-      let inThrottle;
-      return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-          func.apply(context, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      }
-    };
-
-    const throttledContentScroll = throttle(handleContentScroll, 300);
-
-    const setupScrollListener = () => {
-      const contentElement = notesContentRef.current;
-      if (contentElement) {
-        console.log('✅ Found content element, attaching scroll listener');
-        contentElement.addEventListener('scroll', throttledContentScroll);
-        
-        setTimeout(handleContentScroll, 500);
-        
-        return () => {
-          console.log('🧹 Cleaning up content scroll listener');
-          contentElement.removeEventListener('scroll', throttledContentScroll);
-        };
-      } else {
-        console.log('❌ Content element not found yet, retrying...');
-        setTimeout(setupScrollListener, 1000);
-      }
-    };
-
-    const cleanup = setupScrollListener();
-    
-    return () => {
-      if (typeof cleanup === 'function') {
-        cleanup();
-      }
-    };
-  }, [answeredQuestions, showQuestionAt, selectedTopic, scrollCheckpoints, triggeredCheckpoints]);
-
-  // Reset checkpoints when topic changes
-  useEffect(() => {
-    console.log('🔄 Resetting checkpoints for new topic');
-    setTriggeredCheckpoints(new Set());
-    setAnsweredQuestions(new Set());
-    setShowQuestionAt(null);
-    setCurrentQuestion(null);
-  }, [selectedTopic]);
-
-  // Fetch question for checkpoint
-  const fetchQuestionForCheckpoint = async (checkpointId, scrollPercentage) => {
-    try {
-      console.log(`Fetching question for checkpoint ${checkpointId} at ${scrollPercentage}%`);
-
-      const topicId = backendCourse?.topics[selectedTopic]?._id || 
-                     backendCourse?.topics[selectedTopic]?.topicId || 
-                     currentCourse?.topics[selectedTopic]?.id ||
-                     'fallback_topic';
-      
-      console.log(`📚 Topic ID: ${topicId}`);
-
-      // Using mock data for testing
-      const questionIndex = Math.floor(Math.random() * mockPythonQuestions.length);
-      const questionData = mockPythonQuestions[questionIndex];
-      
-      console.log(' Using mock question data:', questionData);
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      if (questionData) {
-        setInlineQuestions(prev => ({
-          ...prev,
-          [checkpointId]: questionData
-        }));
-        setShowQuestionAt(checkpointId);
-        setCurrentQuestion(questionData);
-        
-        console.log('Question set! Should appear now.');
-        
-        setTimeout(() => {
-          const questionElement = document.querySelector('.inline-question');
-          if (questionElement && notesContentRef.current) {
-            questionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            console.log('Scrolled to question element within content');
-          } else {
-            console.log('Could not find question element or content ref');
-          }
-        }, 100);
-      }
-      
-    } catch (error) {
-      console.error('Error fetching inline question:', error);
-      setAnsweredQuestions(prev => new Set([...prev, checkpointId]));
-    }
-  };
-
-  // Answer submission handler
-  const handleAnswerSubmission = async (questionId, selectedAnswer, checkpointId) => {
-    if (isAnswering) return;
-    
-    setIsAnswering(true);
-    console.log('📝 Submitting answer:', { questionId, selectedAnswer, checkpointId });
-    
-    try {
-      const topicId = backendCourse?.topics[selectedTopic]?._id || 
-                     backendCourse?.topics[selectedTopic]?.topicId || 
-                     currentCourse?.topics[selectedTopic]?.id;
-
-      const isCorrect = selectedAnswer === currentQuestion?.correctAnswer;
-      const result = { isCorrect, explanation: currentQuestion?.explanation };
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      console.log('✅ Mock answer result:', result);
-      
-      setAnsweredQuestions(prev => new Set([...prev, checkpointId]));
-      
-      setTimeout(() => {
-        console.log('⏰ Hiding question after showing result');
-        setShowQuestionAt(null);
-        setCurrentQuestion(null);
-      }, 8000);
-      
-    } catch (error) {
-      console.error('❌ Error submitting answer:', error);
-    } finally {
-      setIsAnswering(false);
-    }
-  };
-
-  // Course topics data
   const courseTopicsData = {
     "python": {
       title: "Python Programming",
@@ -439,7 +228,6 @@ print(df.describe())    # Statistical summary`,
     }
   };
 
-  // Create hybrid course object
   const currentCourse = (() => {
     if (backendCourse && backendCourse.topics) {
       return {
@@ -483,13 +271,18 @@ print(df.describe())    # Statistical summary`,
   })();
 
   const currentTopic = currentCourse?.topics[selectedTopic];
+  const totalTopics = currentCourse?.topics?.length || 0;
+  const isFirstTopic = selectedTopic === 0;
+  const isLastTopic = selectedTopic === totalTopics - 1;
 
-  // Scroll to top when component mounts
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, []);
 
-  // Loading state
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [selectedTopic]);
+
   if (loading) {
     return (
       <LoadingScreen
@@ -500,7 +293,6 @@ print(df.describe())    # Statistical summary`,
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
@@ -521,7 +313,6 @@ print(df.describe())    # Statistical summary`,
     );
   }
 
-  // Course not found state
   if (!currentCourse) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
@@ -541,22 +332,86 @@ print(df.describe())    # Statistical summary`,
     );
   }
 
-  const handleStartPractice = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    setTimeout(() => {
-      navigate(`/learn/exercises/${courseId}`);
-    }, 100);
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed(prev => !prev);
   };
 
-  const handleToggleSidebar = () => {
-    console.log('Toggling sidebar from:', sidebarCollapsed, 'to:', !sidebarCollapsed);
-    setSidebarCollapsed(prev => !prev);
+  const goToPreviousTopic = () => {
+    if (!isFirstTopic) {
+      setSelectedTopic(prev => prev - 1);
+    }
+  };
+
+  const goToNextTopic = () => {
+    if (!isLastTopic) {
+      setSelectedTopic(prev => prev + 1);
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      setTimeout(() => navigate(`/learn/exercises/${courseId}`), 100);
+    }
+  };
+
+  const cleanHeadingText = (children) => {
+    if (typeof children === 'string') {
+      return children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '');
+    }
+    if (Array.isArray(children)) {
+      return children.map(child =>
+        typeof child === 'string'
+          ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
+          : child
+      );
+    }
+    return children;
+  };
+
+  const markdownComponents = {
+    h1: () => null,
+    h2: () => null,
+    h3: ({children}) => (
+      <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">
+        {cleanHeadingText(children)}
+      </h3>
+    ),
+    h4: ({children}) => (
+      <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">
+        {cleanHeadingText(children)}
+      </h4>
+    ),
+    h5: ({children}) => (
+      <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">
+        {cleanHeadingText(children)}
+      </h5>
+    ),
+    h6: ({children}) => (
+      <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">
+        {cleanHeadingText(children)}
+      </h6>
+    ),
+    code: ({inline, className, children, ...props}) => {
+      if (inline) {
+        return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>;
+      }
+      return <code className={className} {...props}>{children}</code>;
+    },
+    pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
+    p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
+    ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
+    ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
+    li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
+    blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
+    strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
+    table: ({children}) => (
+      <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
+        <table className="min-w-full">{children}</table>
+      </div>
+    )
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <ScrollProgress />
-      
+
       <div className="flex min-h-screen">
         {/* Desktop Sidebar */}
         <motion.div
@@ -567,7 +422,6 @@ print(df.describe())    # Statistical summary`,
           }}
           className="hidden lg:flex flex-col bg-transparent backdrop-blur-xl sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
         >
-          {/* Sidebar Header */}
           <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
             <div className="flex items-center justify-between relative z-50">
               <AnimatePresence mode="wait">
@@ -587,10 +441,7 @@ print(df.describe())    # Statistical summary`,
               <button
                 type="button"
                 onClick={handleToggleSidebar}
-                onMouseDown={(e) => {
-                  console.log('Mouse down on toggle button');
-                  e.preventDefault();
-                }}
+                onMouseDown={(e) => e.preventDefault()}
                 className="p-2 rounded-xl bg-transparent hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative active:scale-95"
                 aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               >
@@ -603,16 +454,12 @@ print(df.describe())    # Statistical summary`,
             </div>
           </div>
 
-          {/* Sidebar Content */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide">
             <div className="space-y-3">
               {currentCourse.topics.map((topic, index) => (
                 <motion.button
                   key={topic.id}
-                  onClick={() => {
-                    setSelectedTopic(index);
-                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-                  }}
+                  onClick={() => setSelectedTopic(index)}
                   whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className={`group relative w-full text-left rounded-xl transition-all duration-300 overflow-hidden ${
@@ -678,7 +525,6 @@ print(df.describe())    # Statistical summary`,
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
                 className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 flex flex-col"
               >
-                {/* Mobile Header */}
                 <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24">
                   <div className="flex items-center justify-between">
                     <h3 className="font-poppins text-lg font-semibold text-blue-900 dark:text-white/80">
@@ -693,7 +539,6 @@ print(df.describe())    # Statistical summary`,
                   </div>
                 </div>
 
-                {/* Mobile Content */}
                 <div className="flex-1 overflow-y-auto p-4">
                   <div className="space-y-3">
                     {currentCourse.topics.map((topic, index) => (
@@ -702,7 +547,6 @@ print(df.describe())    # Statistical summary`,
                         onClick={() => {
                           setSelectedTopic(index);
                           setMobileMenuOpen(false);
-                          window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
                         }}
                         className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
                           selectedTopic === index
@@ -743,17 +587,14 @@ print(df.describe())    # Statistical summary`,
               sidebarCollapsed ? 'px-6' : 'px-6 lg:px-8'
             }`}>
 
-              {/* Header */}
-              <div className="border-b border-gray-200/20 dark:border-gray-700/30 bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-2 mt-2">
+              <div className="bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-2 mt-2">
                 <motion.div
                   initial={{ opacity: 0, y: -20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
                 >
                   <div className="flex flex-col gap-0">
-                    {/* Header Section */}
                     <div className="flex-1">
-                      {/* Mobile Book Icon Button */}
                       <div className="lg:hidden flex items-center gap-3 mb-4">
                         <button
                           onClick={() => setMobileMenuOpen(true)}
@@ -774,188 +615,75 @@ print(df.describe())    # Statistical summary`,
                   </div>
                 </motion.div>
 
-                {/* Content Sections */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.2 }}
-                  className="lg:bg-transparent lg:h-[90vh] lg:flex lg:flex-col"
                 >
-                  <div className="max-w-none px-[5px] lg:px-8 lg:py-1 lg:flex-1 lg:overflow-hidden">
+                  <div className="max-w-none px-[5px] lg:px-8 lg:py-1">
                     {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div 
-                        ref={notesContentRef}
-                        className="h-full lg:overflow-y-auto scrollbar-hide"
-                      >
-                        <div className="markdown-content lg:bg-transparent">
-                          <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              rehypePlugins={[rehypeHighlight]}
-                              components={{
-                                h1: ({children}) => null,
-                                h2: ({children}) => null,
-                                h3: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">{cleanText}</h3>;
-                                },
-                                h4: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">{cleanText}</h4>;
-                                },
-                                h5: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h5>;
-                                },
-                                h6: ({children}) => {
-                                  const cleanText = typeof children === 'string'
-                                    ? children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                    : Array.isArray(children)
-                                      ? children.map(child =>
-                                          typeof child === 'string'
-                                            ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-                                            : child
-                                        )
-                                      : children;
-                                  return <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">{cleanText}</h6>;
-                                },
-                                code: ({inline, className, children, ...props}) => {
-                                  if (inline) {
-                                    return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>
-                                  }
-                                  return <code className={className} {...props}>{children}</code>
-                                },
-                                pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                                p: ({children}) => {
-                                  return (
-                                    <>
-                                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>
-                                    </>
-                                  );
-                                },
-                                ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                                ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                                li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                                blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                                strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
-                                table: ({children}) => (
-                                  <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
-                                    <table className="min-w-full">{children}</table>
-                                  </div>
-                                )
-                              }}
-                            >
-                              {currentTopic.notesContent}
-                            </ReactMarkdown>
-                          </div>
+                      <div className="markdown-content">
+                        <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                            components={markdownComponents}
+                          >
+                            {currentTopic.notesContent}
+                          </ReactMarkdown>
                         </div>
                       </div>
                     ) : currentTopic?.hasNotes ? (
-                      <div className="h-full lg:overflow-y-auto scrollbar-hide">
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center">
-                            <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
-                          </div>
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
+                          <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
                         </div>
                       </div>
                     ) : (
-                      <div 
-                        ref={notesContentRef}
-                        className="h-full lg:overflow-y-auto lg:custom-scrollbar"
-                      >
-                        <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
-                          {currentTopic?.content.theory}
-                        </div>
+                      <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
+                        {currentTopic?.content.theory}
                       </div>
                     )}
                   </div>
-                </motion.div>
 
+                  {/* Topic Navigation */}
+                  <div className="flex items-center justify-between gap-4 mt-10 mx-[5px] lg:mx-8 pt-6 border-t border-gray-200/30 dark:border-gray-700/30">
+                    {!isFirstTopic ? (
+                      <button
+                        onClick={goToPreviousTopic}
+                        className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-200 bg-white/60 dark:bg-gray-800/60 border border-gray-200/50 dark:border-gray-600/50 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 dark:hover:bg-blue-500/10 hover:border-blue-400/50 hover:shadow-md active:scale-[0.98]"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                        <span className="hidden sm:inline">Previous</span>
+                      </button>
+                    ) : (
+                      <div></div>
+                    )}
+
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 select-none">
+                      {selectedTopic + 1} / {totalTopics}
+                    </span>
+
+                    {!isLastTopic ? (
+                      <button
+                        onClick={goToNextTopic}
+                        className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium bg-[#00113b] hover:bg-[#001a52] dark:bg-blue-600 dark:hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    ) : (
+                      <div></div>
+                    )}
+                  </div>
+                </motion.div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Quiz Already Attempted Modal */}
-      <AnimatePresence>
-        {quizAlreadyAttempted.show && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-2xl border border-white/20 dark:border-gray-700/20 max-w-md w-full mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              </button>
-
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-                </div>
-
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                  Quiz Already {quizAlreadyAttempted.isCompleted ? 'Completed' : 'Started'}
-                </h3>
-
-                <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                  You have already {quizAlreadyAttempted.isCompleted ? 'completed' : 'started'} the quiz for{' '}
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    "{quizAlreadyAttempted.title}"
-                  </span>
-                  . Each quiz can only be attempted once to maintain the integrity of your progress.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setQuizAlreadyAttempted({ show: false, title: '', isCompleted: false })}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200"
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

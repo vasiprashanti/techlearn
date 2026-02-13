@@ -10,5 +10,22 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+// Only initialize Firebase if credentials are provided
+let app = null;
+let auth = null;
+
+try {
+  // Check if at least API key and project ID are present
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    console.log('✅ Firebase initialized successfully');
+  } else {
+    console.warn('⚠️ Firebase credentials not found - Google OAuth will not work. Email/password auth is still available.');
+  }
+} catch (error) {
+  console.warn('⚠️ Firebase initialization failed:', error.message);
+  console.log('💡 Google OAuth disabled. Use email/password authentication instead.');
+}
+
+export { auth };

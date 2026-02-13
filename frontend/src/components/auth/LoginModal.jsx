@@ -38,6 +38,12 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
   // Firebase Google Sign-in
   const handleGoogleSignIn = async () => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      setError("Google Sign-in is not available. Please use email/password login.");
+      return;
+    }
+    
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
