@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
-import { X, Eye, EyeOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '../../config/firebase'; // Your Firebase config file
-import { FcGoogle } from 'react-icons/fc';
+import { useEffect, useState } from "react";
+import { X, Eye, EyeOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate, useLocation } from "react-router-dom";
+import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { auth } from "../../config/firebase"; // Your Firebase config file
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -20,8 +20,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
   // Helper function to handle navigation based on user role
   const navigateBasedOnRole = (userData) => {
-   
-    if (userData.role==="admin") {
+    if (userData.role === "admin") {
       navigate("/admin");
     } else {
       navigate("/dashboard");
@@ -30,8 +29,11 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
   // Handle modal close - navigate to home if user was trying to access protected route
   const handleClose = () => {
-    if (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard')) {
-      navigate('/');
+    if (
+      location.pathname === "/dashboard" ||
+      location.pathname.startsWith("/dashboard")
+    ) {
+      navigate("/");
     }
     onClose();
   };
@@ -40,29 +42,34 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const handleGoogleSignIn = async () => {
     // Check if Firebase is initialized
     if (!auth) {
-      setError("Google Sign-in is not available. Please use email/password login.");
+      setError(
+        "Google Sign-in is not available. Please use email/password login.",
+      );
       return;
     }
-    
+
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const idToken = await result.user.getIdToken();
 
       // Send idToken to your backend Firebase endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/firebase`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/firebase`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        },
+      );
 
       const data = await response.json();
 
       if (response.ok && data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userData', JSON.stringify(data.user));
-        localStorage.setItem('isAdmin', data.user?.isAdmin ? 'true' : 'false');
-        
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userData", JSON.stringify(data.user));
+        localStorage.setItem("isAdmin", data.user?.isAdmin ? "true" : "false");
+
         // Navigate based on user role
         navigateBasedOnRole(data.user);
         onClose();
@@ -70,7 +77,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
         setError(data.message || "Google sign-in failed");
       }
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      console.error("Google sign-in error:", error);
       setError("Google sign-in failed");
     }
   };
@@ -80,10 +87,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     setError("");
 
     // Hardcoded admin credentials check
-    if (formData.email === 'admintls@123' && formData.password === 'admintls123') {
-      localStorage.setItem('token', 'mock-admin-token');
-      localStorage.setItem('isAdmin', 'true');
-      navigate('/admin');
+    if (
+      formData.email === "admintls@123" &&
+      formData.password === "admintls123"
+    ) {
+      localStorage.setItem("token", "mock-admin-token");
+      localStorage.setItem("isAdmin", "true");
+      navigate("/admin");
       onClose();
       return;
     }
@@ -93,16 +103,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       if (result.success) {
         // Set admin status based on user data
         const isAdmin = result.data?.user?.isAdmin || false;
-        localStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-        
+        localStorage.setItem("isAdmin", isAdmin ? "true" : "false");
+
         // Navigate based on user role
         navigateBasedOnRole(result.data?.user);
         onClose();
       } else {
         setError(result.error || "Login failed");
-        if (location.pathname === '/dashboard') {
+        if (location.pathname === "/dashboard") {
           setTimeout(() => {
-            navigate('/');
+            navigate("/");
             onClose();
           }, 2000);
         }
@@ -110,9 +120,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     } catch (err) {
       console.error(err);
       setError("Something went wrong");
-      if (location.pathname === '/dashboard') {
+      if (location.pathname === "/dashboard") {
         setTimeout(() => {
-          navigate('/');
+          navigate("/");
           onClose();
         }, 2000);
       }
@@ -123,20 +133,23 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     e.preventDefault();
     setForgotPasswordMessage("");
     setError("");
-    
+
     if (!forgotPasswordEmail) {
       setError("Please enter your email");
       return;
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/forgot-password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: forgotPasswordEmail }),
         },
-        body: JSON.stringify({ email: forgotPasswordEmail }),
-      });
+      );
 
       const data = await response.json();
 
@@ -153,7 +166,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
   useEffect(() => {
     if (!isOpen) {
-      setFormData({ email: '', password: '' });
+      setFormData({ email: "", password: "" });
       setError("");
       setShowPassword(false);
       setForgotPasswordMode(false);
@@ -191,16 +204,24 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
           {forgotPasswordMode ? (
             <>
-              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">Forgot Password</h2>
-              
+              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">
+                Forgot Password
+              </h2>
+
               {forgotPasswordMessage && (
-                <p className="text-green-600 text-sm text-center mb-4">{forgotPasswordMessage}</p>
+                <p className="text-green-600 text-sm text-center mb-4">
+                  {forgotPasswordMessage}
+                </p>
               )}
-              {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
+              {error && (
+                <p className="text-red-600 text-sm text-center mb-4">{error}</p>
+              )}
 
               <form onSubmit={handleForgotPassword} className="space-y-6">
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -232,36 +253,52 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">Login</h2>
+              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">
+                Login
+              </h2>
 
-              {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
+              {error && (
+                <p className="text-red-600 text-sm text-center mb-4">{error}</p>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="username@gmail.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                    Password
+                  </label>
                   <input
                     type={showPassword ? "text" : "password"}
                     className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
                     placeholder="Password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-[calc(50%+10px)] transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
                 <button
@@ -281,7 +318,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                 {/* Google Sign-in Section */}
                 <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
                   <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
-                  <span className="px-3 text-sm whitespace-nowrap">or continue with</span>
+                  <span className="px-3 text-sm whitespace-nowrap">
+                    or continue with
+                  </span>
                   <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
                 </div>
 
@@ -295,7 +334,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                 </button>
 
                 <p className="text-gray-700 dark:text-gray-300 text-center mt-6 text-sm">
-                  Don't have an account?
+                  Don't have an Account?
                   <button
                     type="button"
                     onClick={onSwitchToSignup}
@@ -309,7 +348,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
           )}
         </motion.div>
       </div>
-    </AnimatePresence>  
+    </AnimatePresence>
   );
 }
 // Deployment trigger
