@@ -163,10 +163,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 🚀 Start Server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-  console.log(`🔒 CORS: Dynamic origin matching enabled`);
-});
+// Export for Vercel Serverless
+export default app;
+
+// Local Development Server (only runs when not in Vercel)
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+    console.log(`🔒 CORS: Dynamic origin matching enabled`);
+  });
+}
