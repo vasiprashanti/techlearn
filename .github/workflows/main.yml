@@ -1,0 +1,13 @@
+name: Remote Vercel Deploy
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Vercel
+        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
