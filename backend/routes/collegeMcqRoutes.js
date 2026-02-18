@@ -19,7 +19,7 @@ collegeMcqRouter.get(
   "/admin/allCollegeMcqs",
   protect,
   isAdmin,
-  getAllCollegeMcqs
+  getAllCollegeMcqs,
 );
 
 collegeMcqRouter.put("/admin/:mcqId", protect, isAdmin, updateCollegeMcq);
@@ -28,7 +28,7 @@ collegeMcqRouter.get(
   "/admin/:mcqId/scores",
   protect,
   isAdmin,
-  getCollegeMcqScores
+  getCollegeMcqScores,
 );
 collegeMcqRouter.delete("/admin/:mcqId", protect, isAdmin, deleteCollegeMcq);
 

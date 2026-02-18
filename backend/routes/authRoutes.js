@@ -66,6 +66,7 @@ router.post("/register", async function register(req, res) {
     return res.status(500).json({ message: "Server error" });
   }
 });
+//Tested and working fine
 
 /* ========== LOGIN ========== */
 router.post("/login", async function login(req, res) {
@@ -116,6 +117,7 @@ router.post("/login", async function login(req, res) {
     return res.status(500).json({ message: "Server error" });
   }
 });
+//Tested and working fine
 
 /* ========== GOOGLE OAUTH ========== */
 router.post("/google", async function googleLogin(req, res) {
@@ -216,6 +218,7 @@ router.get("/me", protect, async function getMe(req, res) {
     return res.status(500).json({ message: "Server error" });
   }
 });
+//Tested and working fine
 
 /* ========== FORGOT PASSWORD ========== */
 router.post("/forgot-password", async (req, res) => {
@@ -266,6 +269,7 @@ router.post("/forgot-password", async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
+//Tested and working fine
 
 /* ========== RESET PASSWORD ========== */
 router.post("/reset-password/:resetToken", async (req, res) => {
@@ -308,6 +312,7 @@ router.post("/reset-password/:resetToken", async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
+//Tested and working fine
 
 /* ========== UPDATE AVATAR ========== */
 router.put("/avatar", protect, async (req, res) => {
@@ -322,7 +327,7 @@ router.put("/avatar", protect, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       userId,
       { avatar },
-      { new: true }
+      { new: true },
     );
 
     return res.status(200).json({

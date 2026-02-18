@@ -9,7 +9,7 @@ userProgressRouter.get("/", protect, getUserProgress);
 userProgressRouter.post(
   "/record-exercise-attempt",
   protect,
-  recordExerciseAttempt
+  recordExerciseAttempt,
 );
 
 export default userProgressRouter;

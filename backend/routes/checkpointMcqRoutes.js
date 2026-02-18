@@ -11,14 +11,14 @@ const mcqRouter = express.Router();
 mcqRouter.get(
   "/:courseId/topics/:topicId/mcqs",
   optionalProtect,
-  getMcqByCourseId
+  getMcqByCourseId,
 );
 
 //submit and check the mcq answer
 mcqRouter.post(
   "/notes/:notesId/checkpoint-mcq/:checkpointMcqId/submit",
   optionalProtect,
-  submitCheckpointMcq
+  submitCheckpointMcq,
 );
 
 export default mcqRouter;

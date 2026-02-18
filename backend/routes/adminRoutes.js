@@ -44,7 +44,7 @@ adminRouter.put(
   protect,
   isAdmin,
   upload.single("exerciseFile"),
-  editCourseExercises
+  editCourseExercises,
 );
 
 //Admin route to upload Exercise file for a course for the first time
@@ -53,7 +53,7 @@ adminRouter.post(
   protect,
   isAdmin,
   upload.single("exerciseFile"),
-  uploadExerciseFile
+  uploadExerciseFile,
 );
 
 //Admin route to delete all the files after upload
@@ -61,7 +61,7 @@ adminRouter.delete(
   "/notes/exercises/cleanup",
   protect,
   isAdmin,
-  cleanupTempFiles
+  cleanupTempFiles,
 );
 
 export default adminRouter;

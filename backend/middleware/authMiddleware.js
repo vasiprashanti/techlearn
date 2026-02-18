@@ -4,14 +4,34 @@ import User from "../models/User.js";
 export const protect = async (req, res, next) => {
   let token;
 
+  // // Debug: log incoming authorization header for troubleshooting
+  // console.log(
+  //   "authMiddleware - authorization header:",
+  //   req.headers.authorization,
+  // );
+
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
     try {
       token = req.headers.authorization.split(" ")[1];
+
+      // // Debug: log token presence (do NOT log full token in production)
+      // console.log("authMiddleware - token present:", !!token);
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // // Debug: log decoded token id
+      // console.log("authMiddleware - decoded token id:", decoded && decoded.id);
+
       req.user = await User.findById(decoded.id).select("-password");
+
+      // // Debug: log found user id and role
+      // console.log(
+      //   "authMiddleware - req.user:",
+      //   req.user ? { id: req.user._id.toString(), role: req.user.role } : null,
+      // );
 
       if (!req.user) {
         return res
@@ -21,11 +41,14 @@ export const protect = async (req, res, next) => {
 
       return next();
     } catch (error) {
+      console.error("authMiddleware - token error:", error.message);
       return res.status(401).json({ error: "Not authorized, invalid token" });
     }
   }
 
-  return res.status(401).json({ error: "Not authorized, no token" });
+  return res.status(401).json({
+    error: "Not authorized - Only valid Admins can access this endpoint",
+  });
 };
 
 export const isAdmin = (req, res, next) => {

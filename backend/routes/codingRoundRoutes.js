@@ -24,25 +24,25 @@ codingRoundRoutes.get(
   "/admin/getAllCodingRounds",
   protect,
   isAdmin,
-  getAllCodingRounds
+  getAllCodingRounds,
 );
 codingRoundRoutes.put(
   "/admin/:codingRoundId",
   protect,
   isAdmin,
-  updateCodingRound
+  updateCodingRound,
 );
 codingRoundRoutes.delete(
   "/admin/:codingRoundId",
   protect,
   isAdmin,
-  deleteCodingRound
+  deleteCodingRound,
 );
 codingRoundRoutes.get(
   "/admin/:codingRoundId/scores",
   protect,
   isAdmin,
-  getCodingRoundScores
+  getCodingRoundScores,
 );
 
 // Public routes for students
@@ -54,7 +54,7 @@ codingRoundRoutes.post("/:linkId/run", codingRateLimit, runCodingRoundAnswers);
 codingRoundRoutes.post(
   "/:linkId/submit",
   codingRateLimit,
-  submitCodingRoundAnswers
+  submitCodingRoundAnswers,
 );
 codingRoundRoutes.post("/:linkId/end", endCodingRound);
 

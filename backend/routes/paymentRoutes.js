@@ -21,7 +21,7 @@ paymentRouter.patch(
   "/payments/:paymentId",
   protect,
   isAdmin,
-  paymentConfirmation
+  paymentConfirmation,
 );
 
 export default paymentRouter;

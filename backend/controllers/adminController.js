@@ -10,6 +10,7 @@ import {
   parseExerciseMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 import fs from "fs";
+import User from "../models/User.js";
 
 export const getCourseTopicsForDashboard = async (req, res) => {
   try {
@@ -74,7 +75,7 @@ export const editTopicDetails = async (req, res) => {
 
     // Find the correct files in req.files array (only if files exist)
     const notesFile = files.find(
-      (f) => f.fieldname === "file" || f.fieldname === "notesFile"
+      (f) => f.fieldname === "file" || f.fieldname === "notesFile",
     );
     const mcqFile = files.find((f) => f.fieldname === "mcqFile");
 
@@ -192,7 +193,7 @@ export const editCourseExercises = async (req, res) => {
     // Parse the uploaded file
     const parseResult = await parseExerciseMarkdownFile(
       exerciseFile.path,
-      courseId
+      courseId,
     );
 
     if (!parseResult.success) {
@@ -221,7 +222,7 @@ export const editCourseExercises = async (req, res) => {
         // Update existing exercise while preserving its ID
         await Exercise.findByIdAndUpdate(
           existingExercises[i]._id,
-          newExercises[i]
+          newExercises[i],
         );
         exerciseIds.push(existingExercises[i]._id);
       } else {
@@ -269,18 +270,18 @@ export const getAdminMetrics = async (req, res) => {
     const totalCourses = await Course.countDocuments();
 
     // project count
-    const majorProjects = await MajorProject.countDocuments();
-    const midProjects = await MidProject.countDocuments();
-    const miniProjects = await MiniProject.countDocuments();
+    // const majorProjects = await MajorProject.countDocuments();
+    // const midProjects = await MidProject.countDocuments();
+    // const miniProjects = await MiniProject.countDocuments();
 
-    const totalProjects = majorProjects + midProjects + miniProjects;
+    // const totalProjects = majorProjects + midProjects + miniProjects;
 
     res.status(200).json({
       totalUsers,
       clubMembers,
       activeUsers,
       totalCourses,
-      totalProjects,
+      // totalProjects,
     });
   } catch (err) {
     console.error("Admin Metrics Error:", err);
