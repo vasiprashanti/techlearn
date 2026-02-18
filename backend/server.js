@@ -172,6 +172,6 @@ if (process.env.NODE_ENV !== "production") {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`🔒 CORS: Dynamic origin matching enabled`);
+    console.log(`🔒 cors: Dynamic origin matching enabled`);
   });
 }
