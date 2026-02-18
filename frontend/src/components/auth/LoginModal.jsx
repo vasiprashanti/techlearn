@@ -351,4 +351,4 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     </AnimatePresence>
   );
 }
-// Deployment trigger]
+// Deployment trigger
