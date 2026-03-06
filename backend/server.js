@@ -109,7 +109,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
-app.use("/api/admin/batches", batchRoutes);
+app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin", adminRouter);
 
 // 🧪 Health Check
