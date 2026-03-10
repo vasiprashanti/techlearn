@@ -41,6 +41,11 @@ const studentMcqSubmissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+studentMcqSubmissionSchema.index(
+  { collegeMcqId: 1, studentEmail: 1 },
+  { unique: true }
+);
+
 const StudentMcqSubmission = mongoose.model(
   "StudentMcqSubmission",
   studentMcqSubmissionSchema
