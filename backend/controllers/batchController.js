@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Batch from "../models/Batch.js";
+import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import Track from "../models/Track.js";
 import College from "../models/College.js";
 
@@ -89,3 +89,66 @@ export const createBatch = async (req, res) => {
         });
     }
 };
+
+// @desc    Activate a Batch and lock its Tracks
+// @route   PUT /api/admin/batch/:batchId/activate
+// @access  Private/Admin
+export const activateBatch = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { batchId } = req.params;
+
+        // Validate ObjectId format
+        if (!mongoose.Types.ObjectId.isValid(batchId)) {
+            return res.status(400).json({ success: false, message: "Invalid batch ID format." });
+        }
+
+        // Find the Batch
+        const batch = await Batch.findById(batchId).session(session);
+        if (!batch) {
+            return res.status(404).json({ success: false, message: "Batch not found." });
+        }
+
+        // Check if the status allows activation (must be Draft)
+        if (batch.status !== BATCH_STATUS.DRAFT) {
+            return res.status(400).json({
+                success: false,
+                message: `Batch cannot be activated. Current status is ${batch.status}.`
+            });
+        }
+
+        // Update Batch Status to ACTIVE
+        batch.status = BATCH_STATUS.ACTIVE;
+        await batch.save({ session });
+
+        // Find all tracks belonging to this batch and lock them
+        await Track.updateMany(
+            { batchId: batch._id },
+            { $set: { isLockedAfterActivation: true } },
+            { session }
+        );
+
+        // Commit transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        res.status(200).json({
+            success: true,
+            message: "Batch activated and tracks locked successfully.",
+            data: batch
+        });
+
+    } catch (error) {
+        // Abort transaction on any failure
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error in activateBatch:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to activate Batch. Server error.",
+        });
+    }
+};
+
