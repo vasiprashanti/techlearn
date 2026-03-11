@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2547f4",
+                        "accent-purple": "#a855f7",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#0a0c16",
+                        "glass-bg": "rgba(255, 255, 255, 0.03)",
+                        "glass-border": "rgba(255, 255, 255, 0.1)",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-focus:focus {
+            outline: none;
+            border-color: #2547f4;
+            box-shadow: 0 0 15px rgba(37, 71, 244, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Navigation -->
+<header class="sticky top-0 z-40 glass-panel border-b border-glass-border">
+<div class="flex items-center p-4 justify-between h-16">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">Create New Batch</h1>
+</div>
+<button class="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<!-- Tab Navigation -->
+<div class="px-4">
+<div class="flex gap-6 overflow-x-auto custom-scrollbar">
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 py-3 whitespace-nowrap text-sm font-semibold hover:text-slate-200" href="#">
+                    Active Batches
+                </a>
+<a class="flex flex-col items-center justify-center border-b-2 border-primary text-primary py-3 whitespace-nowrap text-sm font-semibold" href="#">
+                    Create Batch
+                </a>
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 py-3 whitespace-nowrap text-sm font-semibold hover:text-slate-200" href="#">
+                    Archived
+                </a>
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 py-3 whitespace-nowrap text-sm font-semibold hover:text-slate-200" href="#">
+                    Templates
+                </a>
+</div>
+</div>
+</header>
+<main class="flex-1 p-4 pb-24 max-w-md mx-auto w-full space-y-6">
+<!-- Form Section -->
+<section class="space-y-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(37,71,244,0.8)]"></span>
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Batch Information</h3>
+</div>
+<!-- Batch Name -->
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-300 ml-1">Batch Name</label>
+<input class="w-full bg-white/5 border border-glass-border rounded-xl px-4 py-3.5 text-slate-100 placeholder:text-slate-500 glow-focus transition-all" placeholder="e.g. Advanced UI/UX Winter 2024" type="text"/>
+</div>
+<!-- Date Row -->
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-300 ml-1">Start Date</label>
+<div class="relative">
+<input class="w-full bg-white/5 border border-glass-border rounded-xl px-4 py-3.5 text-slate-100 glow-focus transition-all [color-scheme:dark]" type="date"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-300 ml-1">End Date</label>
+<div class="relative">
+<input class="w-full bg-white/5 border border-glass-border rounded-xl px-4 py-3.5 text-slate-100 glow-focus transition-all [color-scheme:dark]" type="date"/>
+</div>
+</div>
+</div>
+<!-- Course Selection -->
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-300 ml-1">Select Course</label>
+<div class="relative group">
+<select class="w-full appearance-none bg-white/5 border border-glass-border rounded-xl px-4 py-3.5 text-slate-100 glow-focus transition-all cursor-pointer">
+<option disabled="" selected="" value="">Choose a curriculum...</option>
+<option value="uiux">Full-Stack Design Masters</option>
+<option value="react">Modern Web Development</option>
+<option value="data">Data Science &amp; AI</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Instructor Assignment -->
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-300 ml-1">Assign Instructor</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">search</span>
+<input class="w-full bg-white/5 border border-glass-border rounded-xl pl-12 pr-4 py-3.5 text-slate-100 placeholder:text-slate-500 glow-focus transition-all" placeholder="Search by name or specialty..." type="text"/>
+</div>
+<!-- Suggested Instructors -->
+<div class="flex flex-wrap gap-2 pt-2">
+<div class="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full pl-1 pr-3 py-1">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Profile of a male instructor with glasses" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATbwj_YRRXFV9ulLeqOMNVzLhCetLN9Q9Ym-8wQbgH0fxEOw1chhSO7YfE0K23aF4c1sNfpA0LAZ7WrlRGz5wFbhsljuPtziT0kxzFTHEXwJ72vKY7J_JFfagsWfHiShDqA-ljWDgfEGZRYE9f0PwTEz2i90EUK-jC-kAG21cOLBvpEKJQfHjGhZDJ2_cQXvvmluTky3f-EPTDAPGWH1pNQjw67NJjgaURjDuDsQmGb0OVk7FYgBIE_UG_4Ke04ZlbhhoqkNfIw9cD"/>
+<span class="text-xs font-semibold text-primary">Alex Chen</span>
+<span class="material-symbols-outlined text-xs cursor-pointer">close</span>
+</div>
+<div class="flex items-center gap-2 bg-white/5 border border-glass-border rounded-full pl-1 pr-3 py-1 opacity-60 hover:opacity-100 cursor-pointer">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Profile of a female instructor smiling" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbCl21NQrEfF7mJAGmf4dh2px4KfyKbSyQANQe6zOya5PVsbCqgqTwkyF56Z3RpCYrw7gxFIqR76Ct-E40tfifmqcOQpqxK962kj662T1rsgPZV-mlh4YfawyvDHXDYj4sqwTmqjzzi5hXLBtk9vPtzURkmSduwTc1bUwk9sHuDpt997gdD3hzR1YmOLDvLHmQtcGXWNrVaP-DW7H3iGsmldFJHcv5ByjVJpGf3cuu1CahetjJyh20rCxqRcqfopvus0rliCmchROQ"/>
+<span class="text-xs font-semibold text-slate-300">Sarah Miller</span>
+<span class="material-symbols-outlined text-xs">add</span>
+</div>
+</div>
+</div>
+<!-- Batch Capacity -->
+<div class="pt-4">
+<div class="glass-panel rounded-2xl p-4 flex items-center justify-between border border-glass-border">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-100">Maximum Capacity</span>
+<span class="text-xs text-slate-400">Total number of students</span>
+</div>
+<div class="flex items-center gap-4 bg-white/5 rounded-lg p-1">
+<button class="h-8 w-8 flex items-center justify-center rounded-md hover:bg-white/10 text-slate-300">
+<span class="material-symbols-outlined text-lg">remove</span>
+</button>
+<span class="text-lg font-bold w-8 text-center">45</span>
+<button class="h-8 w-8 flex items-center justify-center rounded-md bg-primary text-white shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Action Button -->
+<div class="pt-6">
+<button class="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center gap-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined">rocket_launch</span>
+                Initialize Batch
+            </button>
+<p class="text-center text-xs text-slate-500 mt-4 leading-relaxed">
+                By creating this batch, all selected instructors will receive a notification and a shared workspace will be provisioned.
+            </p>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 glass-panel border-t border-glass-border px-4 pb-6 pt-2 z-50">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">group_work</span>
+<span class="text-[10px] font-medium">Batches</span>
+</a>
+<div class="relative -top-8">
+<button class="h-14 w-14 bg-primary text-white rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center border-4 border-background-dark">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person_search</span>
+<span class="text-[10px] font-medium">Instructors</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Sidebar Overlay (Hidden by default, used for structural design) -->
+<div class="fixed inset-0 bg-background-dark/80 backdrop-blur-sm z-[60] opacity-0 pointer-events-none transition-opacity">
+<div class="absolute left-0 top-0 h-full w-4/5 glass-panel p-6 translate-x-[-100%] transition-transform">
+<div class="flex items-center gap-3 mb-10">
+<div class="h-12 w-12 rounded-2xl bg-gradient-to-tr from-primary to-accent-purple p-[2px]">
+<div class="h-full w-full bg-background-dark rounded-[14px] flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Administrator portrait avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBONYeOG-36XF6V42whDW4JdC2l9UmZduZB74GNledZbBwGXpFWcuffX9xs7LSbNpi3cur8HFBWTiVhizIlFmeaNrBs9wImijK6TWJQv3MCFubP2ulfB5Yv6KQnUPrz8hCLBDFRQYCZX-IzeOz9CCp72uIseREsWz03BW6KWaAGzmKhKYBonv17AIVdhN_5LdJwSwt5IVROYz3t5GWXRRoJJ_2FzuKZ4gRTIdPkGI_qzIX0KMjcF-cQwZRrc8LqCgNFgvm--hNoB7ws"/>
+</div>
+</div>
+<div>
+<h4 class="font-bold text-slate-100">Marcus Wright</h4>
+<p class="text-xs text-primary font-medium">System Administrator</p>
+</div>
+</div>
+<ul class="space-y-2">
+<li class="p-3 rounded-xl hover:bg-white/5 flex items-center gap-3 text-slate-300">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-semibold">Dashboard</span>
+</li>
+<li class="p-3 rounded-xl bg-primary/20 flex items-center gap-3 text-primary">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-semibold">Batches</span>
+</li>
+<li class="p-3 rounded-xl hover:bg-white/5 flex items-center gap-3 text-slate-300">
+<span class="material-symbols-outlined">school</span>
+<span class="font-semibold">Courses</span>
+</li>
+<li class="p-3 rounded-xl hover:bg-white/5 flex items-center gap-3 text-slate-300">
+<span class="material-symbols-outlined">supervised_user_circle</span>
+<span class="font-semibold">Instructors</span>
+</li>
+<li class="p-3 rounded-xl hover:bg-white/5 flex items-center gap-3 text-slate-300">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="font-semibold">Reports</span>
+</li>
+</ul>
+</div>
+</div>
+</body></html>

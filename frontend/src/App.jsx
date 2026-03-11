@@ -27,6 +27,13 @@ import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
 import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
 import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
+import BatchList from '../src/pages/admin/BatchList';
+import BatchCreate from '../src/pages/admin/BatchCreate';
+import BatchDetail from '../src/pages/admin/BatchDetail';
+import BatchEdit from '../src/pages/admin/BatchEdit';
+import AdminReports from '../src/pages/admin/AdminReports';
+import AdminProfile from '../src/pages/admin/AdminProfile';
+import AdminSettings from '../src/pages/admin/AdminSettings';
 
 // Auth pages
 import Login from './pages/Auth/Login'
@@ -583,7 +590,8 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
+  const adminRoutes = ['/dashboard', '/admin', '/admin/codingroundupload', '/admin/batches', '/admin/batches/create', '/admin/reports', '/admin/profile', '/admin/settings'];
+  const showNavbar = !adminRoutes.some(r => location.pathname === r || location.pathname.startsWith('/admin/batches/'));
   const showFooter = !['/coding','/mcq'].includes(location.pathname);
 
 
@@ -639,8 +647,13 @@ function LayoutWrapper() {
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
             <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
             <Route path="/admin/mcqupload" element={<McqUpload/>} />
-            <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
-          </Route>
+            <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />            <Route path="/admin/batches" element={<BatchList />} />
+            <Route path="/admin/batches/create" element={<BatchCreate />} />
+            <Route path="/admin/batches/:id" element={<BatchDetail />} />
+            <Route path="/admin/batches/:id/edit" element={<BatchEdit />} />
+            <Route path="/admin/reports" element={<AdminReports />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />          </Route>
           <Route path="/about" element={<About />} />
           
         </Routes>

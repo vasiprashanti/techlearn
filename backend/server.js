@@ -27,6 +27,7 @@ import midProjectRoutes from "./routes/midProjectRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import uiLibraryRoutes from "./routes/uiLibraryRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
+import batchRoutes from "./routes/batchRoutes.js";
 import mcqRouter from "./routes/checkpointMcqRoutes.js";
 import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 import collegeRouter from "./routes/collegeRoutes.js";
@@ -43,7 +44,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
+    const devOrigins = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
     if (devOrigins.includes(origin)) return callback(null, true);
 
     if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
@@ -109,6 +110,7 @@ app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
 app.use("/api/admin", adminRouter);
+app.use("/api/batches", batchRoutes);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {

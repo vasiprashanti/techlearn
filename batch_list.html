@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Batch Management List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2547f4",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#0a0c16",
+                        "glass": "rgba(255, 255, 255, 0.03)",
+                        "glass-border": "rgba(255, 255, 255, 0.08)"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .sidebar-blur {
+            background: rgba(10, 12, 22, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Navigation -->
+<header class="sticky top-0 z-40 bg-background-dark/80 backdrop-blur-md border-b border-white/5 px-4 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-2xl">grid_view</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">Batch Management</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-glass border border-glass-border">
+<span class="material-symbols-outlined text-slate-300">search</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Status Tabs -->
+<div class="px-4 pt-4">
+<div class="flex bg-glass border border-glass-border rounded-xl p-1 gap-1">
+<button class="flex-1 py-2 text-sm font-semibold rounded-lg bg-primary text-white shadow-lg shadow-primary/20">Active</button>
+<button class="flex-1 py-2 text-sm font-medium text-slate-400 hover:text-slate-200">Upcoming</button>
+<button class="flex-1 py-2 text-sm font-medium text-slate-400 hover:text-slate-200">Archived</button>
+</div>
+</div>
+<!-- Quick Stats Section -->
+<div class="px-4 py-6 grid grid-cols-2 gap-4">
+<div class="glass-card p-4 rounded-xl">
+<p class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Total Batches</p>
+<p class="text-2xl font-bold">24</p>
+</div>
+<div class="glass-card p-4 rounded-xl">
+<p class="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Active Students</p>
+<p class="text-2xl font-bold text-primary">842</p>
+</div>
+</div>
+<!-- Batch List Header -->
+<div class="px-4 flex items-center justify-between mb-4">
+<h2 class="text-lg font-bold text-slate-100">Batch List</h2>
+<button class="text-primary text-sm font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                Filter
+            </button>
+</div>
+<!-- Scrollable Data List (Mobile Tablet View) -->
+<div class="flex-1 px-4 pb-24 overflow-y-auto space-y-4">
+<!-- Batch Row 1 -->
+<div class="glass-card p-4 rounded-xl relative group overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-bold text-slate-100 text-base">Fullstack Dev - B24</h3>
+<p class="text-xs text-slate-400">Course: React &amp; Node.js Masterclass</p>
+</div>
+<span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase tracking-tighter border border-emerald-500/20">Active</span>
+</div>
+<div class="flex items-center gap-4 mb-4">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">calendar_today</span>
+<p class="text-xs text-slate-300">Oct 12 - Jan 20</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">person</span>
+<p class="text-xs text-slate-300">Dr. Sarah Jenkins</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-white/5">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 1" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKJF7UpwwX5ZcNRLka96pKJ4lO4t8sq502-qhhELV4NtzINagTvYU0rA4WLbcz7G9FE79Hg3Sd13Pb0nd7zNy7M-NSKUbdUNpMo9gATbpisgT9gqBgYw36EXaRuBx7zsbmuzVUiIw5QkEJeP4b4UBBWnEXNbmTMQptwW1T3-IxrhXmi3MQ1aiJ01oqJJLhrRmB9PzsxTSbR01nzwKemwocF-XsBG_R8jIVrDunDCLlL9sys4DTc-21AQc3UkEGWwPCMB3BW4XgJAH_"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyMLskXQbXUeBsrGjjT1SiWOJcKJ2sKQvWwpf_Yw_il7fGJDDOIGwBm0OUODIxSUsRn0jM2_lQb8t6BD6Vh6fGZeoRW_lJ2TkLGZgKd1aTzTG9N_2XeANK15XcS7fpyGy34vcAMcJY6XTuGP8Na7x-SQp5eFqjrGDP9JA5cQICF_X2bEPDgSAxRLW9QF22L_gRz9tdHE7BTkBIiHqTfTtnxyCmZ5jCWMBn3cJsJZTT5PC3EXvYI2g99tO1Qfrtc85JrM5MbJ9bZDca"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 3" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCED0wCGUjchzBESBmWjO6EI83M4KLtDB-IrlNOClCmsh6J__f9zWg-4h-t7RpclxSKoasTrFBulkTPfbfi50ZdBIRYWRiAq0HuqYnLhcmEjUews_8B0Bw2qSV7vVJ25H0VHeFedglYYIXHK0_RXEC7vRjEMHg0ALpBmbbBuUloBPl4SSIIzjzf6eK5rDC_wgYXXL4NdUC6bkfm1YZjREVPrE30j2akKKXO0v9UAj1VFaB_xwRo8uu6J9dtuuqsjBI6nHrIG0XJ5fRg"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark bg-slate-800 flex items-center justify-center text-[10px] text-slate-400 font-bold">+18</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-primary/20 hover:border-primary/40 transition-all text-slate-300 hover:text-primary">
+<span class="material-symbols-outlined text-xl">edit_note</span>
+</button>
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-rose-500/20 hover:border-rose-500/40 transition-all text-slate-300 hover:text-rose-400">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Batch Row 2 -->
+<div class="glass-card p-4 rounded-xl relative group overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary/40"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-bold text-slate-100 text-base">UI/UX Design - S2</h3>
+<p class="text-xs text-slate-400">Course: Advanced Product Design</p>
+</div>
+<span class="px-2 py-1 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-tighter border border-primary/20">Morning</span>
+</div>
+<div class="flex items-center gap-4 mb-4">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">calendar_today</span>
+<p class="text-xs text-slate-300">Nov 05 - Feb 15</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">person</span>
+<p class="text-xs text-slate-300">Marcus Thorne</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-white/5">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 4" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8VmQu3KA9xoj2NNbFgDNloCtDr_a83yI6v6IDHqZasGmmYUbL7F3UULJDnNLJwQiFLXOmuq1PJDJh6VjzCCfPeS5DYTBAOa2PoP9WGd4pri-aJtc-QBGnquNOwIL-6NMFO-HrJHk5ZLZ3XULZlpAZWlkyxTIt4jUrvt4s2320xYsAPqY36gY_16jN9TrmWOqYYs-_sJMn9hmCZ1WuHkxtw5zMgKRopMgnf5O5ZGRQZYUnlp8Wwut5WAmk1DtMsxzjQg3JuOxlch_9"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 5" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATtDmFlvjzp-gkURJlmwevKNpuMsAtq5AywVj0SfiGrBSKrQoWme4AT4bDV8Tpcj_ATjPrVk4eNLYJ2L1S8vn6Mi1p7SYDN9TCRNcXJ0_KDKOjHgDr1Az2rt1oAINt3-HoJ_18-LsA1728z5A_ReIuJUgIZl4NlKFDoU2R1pqWnd60xR0CVhd5z2ukUcnIOn51ku79O55byWJH27YXysQAZjoA_sT0WH17os4CNZIOmVVRNdaESpYtpx0e8C2kVYPbJaKvAS-ZLbn3"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark bg-slate-800 flex items-center justify-center text-[10px] text-slate-400 font-bold">+12</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-primary/20 hover:border-primary/40 transition-all text-slate-300 hover:text-primary">
+<span class="material-symbols-outlined text-xl">edit_note</span>
+</button>
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-rose-500/20 hover:border-rose-500/40 transition-all text-slate-300 hover:text-rose-400">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Batch Row 3 -->
+<div class="glass-card p-4 rounded-xl relative group overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-amber-500/60"></div>
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-bold text-slate-100 text-base">Data Science - D42</h3>
+<p class="text-xs text-slate-400">Course: Python &amp; ML Fundamentals</p>
+</div>
+<span class="px-2 py-1 rounded bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-tighter border border-amber-500/20">Pending</span>
+</div>
+<div class="flex items-center gap-4 mb-4">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">calendar_today</span>
+<p class="text-xs text-slate-300">Dec 01 - Mar 10</p>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-slate-500 text-sm">person</span>
+<p class="text-xs text-slate-300">Elena Rostova</p>
+</div>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-white/5">
+<div class="flex -space-x-2">
+<div class="w-7 h-7 rounded-full border-2 border-background-dark overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Student avatar 6" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGRn6yqMmgRbTwRKJ09Nz_Z0qQ16NKmmKsQoGyQjNtE6Kx62dvsuH2phm0T3nXpGK0VCvyWoTCENp0WVs5Exb2Ljp30GmQI8WT0m67hpRsKm4Hsg87Er8US4liznKx1XB1YOW1TdjjfTHJNcyFv8JprYn-VnaUwjJKi26XCJxW1yy0EUSOmASZPuaeQnxBliOHltKxwcngaoRIkcVFbLVjXzi1Z0iwnRp8spsgKAxSvib04fpJPWjm6PPkhzJXqqq1YlWqFUphEgCt"/>
+</div>
+<div class="w-7 h-7 rounded-full border-2 border-background-dark bg-slate-800 flex items-center justify-center text-[10px] text-slate-400 font-bold">+5</div>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-primary/20 hover:border-primary/40 transition-all text-slate-300 hover:text-primary">
+<span class="material-symbols-outlined text-xl">edit_note</span>
+</button>
+<button class="p-2 rounded-lg bg-glass border border-glass-border hover:bg-rose-500/20 hover:border-rose-500/40 transition-all text-slate-300 hover:text-rose-400">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed right-6 bottom-24 size-14 bg-primary text-white rounded-full shadow-2xl shadow-primary/50 flex items-center justify-center z-50">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-dark/90 sidebar-blur border-t border-white/5 flex items-center justify-around px-2 pb-6 pt-2 z-50">
+<a class="flex flex-col items-center gap-1 text-slate-400 p-2" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary p-2" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span class="text-[10px] font-medium">Batches</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 p-2" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-medium">Reports</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 p-2" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-medium">Profile</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 p-2" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+<!-- Optional: Persistent Left Sidebar (Hidden on mobile, showing as an overlay mechanism for design context) -->
+<div class="hidden lg:flex fixed left-0 top-0 h-full w-64 flex-col bg-background-dark border-r border-white/5 p-6 sidebar-blur z-[60]">
+<div class="flex items-center gap-3 mb-12">
+<div class="p-2.5 rounded-xl bg-primary shadow-lg shadow-primary/30">
+<span class="material-symbols-outlined text-white">school</span>
+</div>
+<span class="text-xl font-bold">EduAdmin</span>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-glass hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary border border-primary/20" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span class="font-medium">Batches</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-glass hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-medium">Courses</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-glass hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-medium">Instructors</span>
+</a>
+</li>
+<li class="mt-8 border-t border-white/5 pt-8">
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-glass hover:text-white transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">System Settings</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto p-4 glass-card rounded-2xl flex items-center gap-3">
+<img class="w-10 h-10 rounded-full border border-white/20" data-alt="Admin profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL2ZSvvXEjGi7_grPmWFx2tCnnD5h9vk0-iFTeAeqS0ziUNqfsxgyzOM5MDb63YbzJ_XR0mGkGDyU8XI5C6VVxN7_6uwEXt85bQH63ay34rR_F8i-xdrhM5mXynu3WuVqiJVb8x8iwqRBZeWgBOvLGV9EIsXp5i-l5r0kc6I2EegYvHXmzGwPZyBP-RihNpjQhcR5UzUTsD_OEykON1-fKQ5_-yjcdhi5mPfeIWxkpou_S0uxDEAhfVUe4E9q0QEUv-ghwjMD5MJB8"/>
+<div class="overflow-hidden">
+<p class="text-sm font-bold truncate">Alex Morgan</p>
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Administrator</p>
+</div>
+</div>
+</div>
+</body></html>

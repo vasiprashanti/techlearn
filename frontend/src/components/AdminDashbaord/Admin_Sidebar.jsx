@@ -7,26 +7,35 @@ import {
 } from "react-icons/hi2";
 import { FiMenu, FiX,FiCode } from "react-icons/fi";
 import { MdQuiz } from "react-icons/md";
+import { MdGroup } from "react-icons/md";
 import { useTheme } from "../../context/ThemeContext";
 
 const menu = [
   { name: "Dashboard", icon: HiOutlineHome, path: "/admin" },
   { name: "Courses", icon: HiOutlineBookOpen, path: "/admin/courses" },
   { name: "Exercises", icon: HiOutlineChartBar, path: "/admin/upload-exercises" },
-  {name : "MCQs", icon: MdQuiz, path: "/admin/mcqupload" },
-  {name:"Coding",icon: FiCode, path: "/admin/codingroundupload" }
+  {name : "MCQs", icon: MdQuiz, path: "/admin/mcqupload" },
+  {name:"Coding",icon: FiCode, path: "/admin/codingroundupload" },
+  {name:"Batches",icon: MdGroup, path: "/admin/batches" }
 ];
 
-export default function Admin_Sidebar() {
+export default function Admin_Sidebar({ headerMode = false, isOpen, onOpenChange }) {
   const location = useLocation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const isControlled = isOpen !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     return saved === "true";
   });
+
+  const mobileOpen = isControlled ? isOpen : internalOpen;
+  const setMobileOpen = (val) => {
+    if (isControlled) onOpenChange?.(val);
+    else setInternalOpen(val);
+  };
 
   useEffect(() => {
     setMobileOpen(false);
@@ -47,6 +56,7 @@ export default function Admin_Sidebar() {
   return (
     <>
       {/* Hamburger menu for mobile/tablet */}
+      {!headerMode && (
       <button
         onClick={() => setMobileOpen(true)}
         style={{ top: "64px" }}
@@ -55,6 +65,7 @@ export default function Admin_Sidebar() {
       >
         <FiMenu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
       </button>
+      )}
 
       {/* MOBILE/TABLET SIDEBAR */}
       {mobileOpen && (
@@ -62,15 +73,15 @@ export default function Admin_Sidebar() {
           {/* Overlay */}
           <div
             onClick={() => setMobileOpen(false)}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden"
+            className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 ${headerMode ? '' : 'lg:hidden'}`}
             aria-hidden="true"
           ></div>
 
           {/* Sidebar drawer */}
           <aside
-            className="fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
+            className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
               w-72 h-full px-4 py-6 transition-transform duration-300 ease-in-out
-              shadow-lg flex lg:hidden"
+              shadow-lg ${headerMode ? '' : 'lg:hidden'}`}
             style={{ userSelect: "none" }}
             aria-label="Sidebar navigation"
           >
@@ -148,6 +159,7 @@ export default function Admin_Sidebar() {
       )}
 
       {/* DESKTOP SIDEBAR */}
+      {!headerMode && (
       <aside
         className={`
           hidden lg:flex flex-col
@@ -240,6 +252,7 @@ export default function Admin_Sidebar() {
           })}
         </nav>
       </aside>
+      )}
     </>
   );
 }

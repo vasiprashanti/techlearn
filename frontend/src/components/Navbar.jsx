@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
 import XPBadge from './XPBadge';
+import { FiSun, FiMoon } from 'react-icons/fi';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -186,7 +187,7 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <FiSun size={16} /> : <FiMoon size={16} />}
           </button>
         </nav>
 
@@ -318,7 +319,7 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <FiSun size={16} /> : <FiMoon size={16} />}
           </button>
         </div>
       </nav>

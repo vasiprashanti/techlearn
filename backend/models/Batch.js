@@ -1,42 +1,48 @@
 import mongoose from "mongoose";
 
-export const BATCH_STATUS = {
-  DRAFT: "Draft",
-  ACTIVE: "Active",
-  EXPIRED: "Expired",
-  ARCHIVED: "Archived",
-};
-
 const batchSchema = new mongoose.Schema(
   {
-    collegeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "College",
-      required: true,
-      index: true, // All foreign keys must be indexed
-    },
     name: {
       type: String,
       required: true,
       trim: true,
     },
+    college: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    track: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     startDate: {
       type: Date,
       required: true,
     },
-    expiryDate: {
+    endDate: {
       type: Date,
-      required: true,
-    },
-    releaseTime: {
-      type: String, // e.g., "00:00", stored typically as string for daily time
-      required: true,
     },
     status: {
       type: String,
-      enum: Object.values(BATCH_STATUS),
-      default: BATCH_STATUS.DRAFT,
-      required: true,
+      enum: ['Active', 'Upcoming', 'Archived'],
+      default: 'Active',
+    },
+    students: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
   { timestamps: true }

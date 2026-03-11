@@ -166,6 +166,10 @@ router.post("/firebase", async (req, res) => {
     const [firstName, ...rest] = name?.split(" ") || ["", ""];
     const lastName = rest.join(" ");
 
+    const ADMIN_UIDS = ["AQX8cieAI6NNMtVvNRlT47WxdLu1"];
+    const isAdmin = ADMIN_UIDS.includes(decodedToken.uid);
+    const assignedRole = isAdmin ? "admin" : "user";
+
     if (!email) {
       return res
         .status(400)
@@ -180,7 +184,12 @@ router.post("/firebase", async (req, res) => {
         lastName,
         email,
         password: "",
+        role: assignedRole,
       });
+    } else if (isAdmin && user.role !== "admin") {
+      // Upgrade existing user to admin if they are now in the whitelist
+      user.role = "admin";
+      await user.save();
     }
 
     const token = generateToken(user._id);
