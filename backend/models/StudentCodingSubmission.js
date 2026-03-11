@@ -46,6 +46,11 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+studentCodingSubmissionSchema.index(
+  { codingRoundId: 1, studentEmail: 1 },
+  { unique: true }
+);
+
 const StudentCodingSubmission = mongoose.model(
   "StudentCodingSubmission",
   studentCodingSubmissionSchema

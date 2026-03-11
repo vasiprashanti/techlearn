@@ -7,5 +7,7 @@ const bookingSchema = new mongoose.Schema({
   status: { type: String, default: "pending" },
 });
 
+bookingSchema.index({ user: 1 });
+
 const Booking = mongoose.model("Booking", bookingSchema);
 export default Booking;
