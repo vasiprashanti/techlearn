@@ -27,7 +27,7 @@ import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
 import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
 import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
-import BatchList from '../src/pages/admin/BatchList';
+import BatchList from './pages/Admin/BatchList';
 import BatchCreate from '../src/pages/admin/BatchCreate';
 import BatchDetail from '../src/pages/admin/BatchDetail';
 import BatchEdit from '../src/pages/admin/BatchEdit';
