@@ -11,6 +11,13 @@ import {
 } from "../config/unifiedMarkdownParser.js";
 import fs from "fs";
 import User from "../models/User.js";
+import College from "../models/College.js";
+import Student from "../models/Student.js";
+import Submission from "../models/Submission.js";
+import Batch from "../models/Batch.js";
+import MajorProject from "../models/majorProject.js";
+import MiniProject from "../models/miniProject.js";
+import MidProject from "../models/MidProject.js";
 
 export const getCourseTopicsForDashboard = async (req, res) => {
   try {
@@ -258,33 +265,251 @@ export const editCourseExercises = async (req, res) => {
 
 export const getAdminMetrics = async (req, res) => {
   try {
-    // stats for the users
-    const totalUsers = await User.countDocuments();
-    const clubMembers = await User.countDocuments({ isClub: true });
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const activeUsers = await User.countDocuments({
-      updatedAt: { $gte: sevenDaysAgo },
-    });
 
-    // course count
-    const totalCourses = await Course.countDocuments();
-
-    // project count
-    // const majorProjects = await MajorProject.countDocuments();
-    // const midProjects = await MidProject.countDocuments();
-    // const miniProjects = await MiniProject.countDocuments();
-
-    // const totalProjects = majorProjects + midProjects + miniProjects;
-
-    res.status(200).json({
+    // -------------------------------------------------------------------------
+    // BATCH 1: All independent counts + aggregations — single round-trip
+    // -------------------------------------------------------------------------
+    const [
       totalUsers,
       clubMembers,
       activeUsers,
       totalCourses,
-      // totalProjects,
+      totalColleges,
+      totalBatches,
+      activeBatches,
+      totalStudents,
+      activeStudents,
+      inactiveStudents,
+      totalSubmissions,
+      todaySubmissions,
+      avgScoreResult,
+      avgStreakResult,
+      majorProjects,
+      miniProjects,
+      midProjects,
+      trackBreakdown,
+      topBatchResult,
+      studentsPerBatch,
+      submissionsPerBatch,
+      todayUniqueParticipantIds,
+      recentSubmitterIds,
+    ] = await Promise.all([
+      // Platform users
+      User.countDocuments(),
+      User.countDocuments({ isClub: true }),
+      User.countDocuments({ updatedAt: { $gte: sevenDaysAgo } }),
+      Course.countDocuments(),
+
+      // College & Batch
+      College.countDocuments(),
+      Batch.countDocuments(),
+      Batch.countDocuments({ status: "Active" }),
+
+      // Students
+      Student.countDocuments(),
+      Student.countDocuments({ status: "Active" }),
+      Student.countDocuments({ status: "Inactive" }),
+
+      // Submissions
+      Submission.countDocuments(),
+      Submission.countDocuments({ submittedAt: { $gte: todayStart } }),
+
+      // Projects
+      MajorProject.countDocuments(),
+      MiniProject.countDocuments(),
+      MidProject.countDocuments(),
+
+      // Average score across all submissions
+      Submission.aggregate([
+        { $match: { totalScore: { $exists: true, $ne: null } } },
+        { $group: { _id: null, avg: { $avg: "$totalScore" } } },
+      ]),
+
+      // Average streak across all students
+      Student.aggregate([
+        { $group: { _id: null, avg: { $avg: "$streak" } } },
+      ]),
+
+      // Track-wise submission breakdown (Core / DSA / SQL)
+      Submission.aggregate([
+        { $group: { _id: "$trackId", count: { $sum: 1 } } },
+        {
+          $lookup: {
+            from: "tracks",
+            localField: "_id",
+            foreignField: "_id",
+            as: "track",
+          },
+        },
+        { $unwind: { path: "$track", preserveNullAndEmptyArrays: true } },
+        {
+          $group: {
+            _id: { $ifNull: ["$track.trackType", "Unknown"] },
+            count: { $sum: "$count" },
+          },
+        },
+        { $project: { _id: 0, trackType: "$_id", count: 1 } },
+        { $sort: { count: -1 } },
+      ]),
+
+      // Top performing batch by avg submission score
+      Submission.aggregate([
+        { $match: { totalScore: { $exists: true, $ne: null } } },
+        { $group: { _id: "$batchId", avgScore: { $avg: "$totalScore" } } },
+        { $sort: { avgScore: -1 } },
+        { $limit: 1 },
+        {
+          $lookup: {
+            from: "batches",
+            localField: "_id",
+            foreignField: "_id",
+            as: "batch",
+          },
+        },
+        { $unwind: { path: "$batch", preserveNullAndEmptyArrays: true } },
+        {
+          $project: {
+            _id: 0,
+            batchId: "$_id",
+            batchName: { $ifNull: ["$batch.name", "Unknown"] },
+            avgScore: { $round: ["$avgScore", 1] },
+          },
+        },
+      ]),
+
+      // Batch completion rate — students enrolled per batch
+      Student.aggregate([
+        { $group: { _id: "$batchId", total: { $sum: 1 } } },
+      ]),
+
+      // Batch completion rate — distinct submitting students per batch
+      Submission.aggregate([
+        { $group: { _id: { batchId: "$batchId", studentId: "$studentId" } } },
+        { $group: { _id: "$_id.batchId", submittedStudents: { $sum: 1 } } },
+      ]),
+
+      // Today's unique participating student IDs
+      Submission.distinct("studentId", { submittedAt: { $gte: todayStart } }),
+
+      // At-risk: students who submitted in last 3 days (to find the inverse)
+      Submission.distinct("studentId", { submittedAt: { $gte: threeDaysAgo } }),
+    ]);
+
+    // -------------------------------------------------------------------------
+    // BATCH 2: Derived queries that depend on BATCH 1 results
+    // -------------------------------------------------------------------------
+    const [atRiskStudents, zeroStreakStudents] = await Promise.all([
+      // Active students with NO submission in last 3 days
+      Student.countDocuments({
+        status: "Active",
+        _id: { $nin: recentSubmitterIds },
+      }),
+      // Active students with streak = 0
+      Student.countDocuments({ status: "Active", streak: 0 }),
+    ]);
+
+    // -------------------------------------------------------------------------
+    // Derived computations (pure JS — no DB calls)
+    // -------------------------------------------------------------------------
+
+    // Batch completion rate: % of batches where >=60% students submitted at least once
+    const studentEnrollmentMap = {};
+    studentsPerBatch.forEach((b) => {
+      if (b._id) studentEnrollmentMap[b._id.toString()] = b.total;
+    });
+    const submittedMap = {};
+    submissionsPerBatch.forEach((b) => {
+      if (b._id) submittedMap[b._id.toString()] = b.submittedStudents;
+    });
+    let completedBatchCount = 0;
+    for (const [batchId, enrolled] of Object.entries(studentEnrollmentMap)) {
+      const submitted = submittedMap[batchId] || 0;
+      if (enrolled > 0 && submitted / enrolled >= 0.6) completedBatchCount++;
+    }
+    const batchCompletionRate =
+      totalBatches > 0
+        ? parseFloat(((completedBatchCount / totalBatches) * 100).toFixed(1))
+        : 0;
+
+    // Today's participation rate: unique submitters today / active students
+    const todayParticipationRate =
+      activeStudents > 0
+        ? parseFloat(
+            ((todayUniqueParticipantIds.length / activeStudents) * 100).toFixed(1)
+          )
+        : 0;
+
+    const averageScore =
+      avgScoreResult.length > 0
+        ? parseFloat(avgScoreResult[0].avg.toFixed(1))
+        : 0;
+
+    const averageStreak =
+      avgStreakResult.length > 0
+        ? parseFloat(avgStreakResult[0].avg.toFixed(2))
+        : 0;
+
+    const topPerformingBatch = topBatchResult.length > 0 ? topBatchResult[0] : null;
+
+    // -------------------------------------------------------------------------
+    // Response
+    // -------------------------------------------------------------------------
+    return res.status(200).json({
+      // Platform users (app learners)
+      totalUsers,
+      clubMembers,
+      activeUsers,
+      totalCourses,
+
+      // College & Batch health
+      totalColleges,
+      totalBatches,
+      activeBatches,
+
+      // Projects
+      majorProjects,
+      miniProjects,
+      midProjects,
+      totalProjects: majorProjects + miniProjects + midProjects,
+
+      // Student cohort
+      totalStudents,
+      activeStudents,
+      inactiveStudents,
+      activeVsInactiveRatio:
+        inactiveStudents > 0
+          ? parseFloat((activeStudents / inactiveStudents).toFixed(2))
+          : null,
+
+      // Submission volume
+      totalSubmissions,
+      todaySubmissions,
+      todayUniqueParticipants: todayUniqueParticipantIds.length,
+
+      // Score & streak quality
+      averageScore,
+      averageStreak,
+
+      // Engagement health
+      todayParticipationRate,  // % of active students who submitted today
+      batchCompletionRate,     // % of batches with >=60% student participation
+
+      // At-risk signals (feeds drop-off alerts)
+      atRiskStudents,      // Active students with no submission in last 3 days
+      zeroStreakStudents,  // Active students with streak = 0
+
+      // Track breakdown
+      trackBreakdown,  // [{ trackType: "Core", count: N }, ...]
+
+      // Top performing batch
+      topPerformingBatch,  // { batchName, avgScore } | null if no submissions yet
     });
   } catch (err) {
     console.error("Admin Metrics Error:", err);
-    res.status(500).json({ error: "Failed to fetch admin metrics" });
+    return res.status(500).json({ error: "Failed to fetch admin metrics" });
   }
 };
