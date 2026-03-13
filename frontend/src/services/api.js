@@ -1,7 +1,7 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 
 
@@ -22,6 +22,14 @@ const handleResponse = async (response) => {
       url: response.url,
       error
     });
+
+    // Handle 401 Unauthorized - clear token and redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('authToken'); // Also clear backup token
+      window.location.href = '/login';
+    }
+
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
   }
   return response.json();

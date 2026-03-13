@@ -32,10 +32,11 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
+import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
 import UserCoding from './pages/Coding/UserCoding';
-
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
@@ -583,9 +584,19 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
-  const showFooter = !['/coding','/mcq'].includes(location.pathname);
+  
+  // NEW: Updated visibility logic so our new dashboard views don't get double navbars or footers
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
+                           location.pathname.startsWith('/track-templates') || 
+                           location.pathname.startsWith('/track/');
 
+  const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
+                     !location.pathname.startsWith('/coding/') && 
+                     !isDashboardRoute;
+
+  const showFooter = !['/mcq'].includes(location.pathname) && 
+                     !location.pathname.startsWith('/coding/') && 
+                     !isDashboardRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -593,12 +604,15 @@ function LayoutWrapper() {
 
       <main className="flex-grow">
         <Routes>
-          
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          
           <Route element={<PrivateRoute />}>
+            {/* NEW: Updated protected routes for Dashboard and Track Templates */}
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/track-templates" element={<TrackTemplate />} />
+            <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
           <Route path="/profile" element={<Profile />} />
@@ -622,14 +636,15 @@ function LayoutWrapper() {
           <Route path="/build/midproject/:id" element={<ProjectDetail />} />
           <Route path="/build/major/:id" element={<ProjectDetail />} />
           <Route path="/payment" element={<ProjectPayment />} />
-           <Route path="/payment-gateway" element={<PaymentGateway />} />
+          <Route path="/payment-gateway" element={<PaymentGateway />} />
           <Route path="/build/ui-library" element={<UILibrary />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/mcq/:linkId" element={<UserMcq />} />
-          <Route path="/coding/:linkId" element={ <UserCoding />} />
+          <Route path="/coding/:linkId" element={<UserCoding />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
@@ -637,16 +652,16 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
-            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
-            <Route path="/admin/mcqupload" element={<McqUpload/>} />
+            <Route path="/admin/codingroundupload" element={<CodingRoundUpload />} />
+            <Route path="/admin/mcqupload" element={<McqUpload />} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
           </Route>
-          <Route path="/about" element={<About />} />
           
+          <Route path="/about" element={<About />} />
         </Routes>
       </main>
       
-      {showFooter && <Footer />}
+      {showFooter && <Footer />}
     </div>
   );
 }
