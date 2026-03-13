@@ -21,7 +21,7 @@ import {
 const adminRouter = express.Router();
 
 // Admin metrics route (protected)
-adminRouter.get("/metrics", protect, isAdmin, getAdminMetrics);
+adminRouter.get("/dashboard/stats", protect, isAdmin, getAdminMetrics);
 
 // Course topics for dashboard
 adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
