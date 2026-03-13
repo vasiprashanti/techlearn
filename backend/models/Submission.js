@@ -53,5 +53,7 @@ const submissionSchema = new mongoose.Schema(
 );
 
 submissionSchema.index({ studentId: 1, workingDay: 1 });
+submissionSchema.index({ batchId: 1, workingDay: 1 });
+submissionSchema.index({ batchId: 1, trackId: 1 });
 
 export default mongoose.model("Submission", submissionSchema);

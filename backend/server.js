@@ -111,6 +111,7 @@ app.use(uiLibraryRoutes); // Handles its own path
 //ADMIN DASHBOARD Routes
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/submission", submissionRoutes);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {
