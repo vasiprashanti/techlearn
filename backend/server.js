@@ -32,6 +32,7 @@ import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
+import submissionRoutes from "./routes/submissionRoutes.js";
 
 dotenv.config();
 const app = express();
