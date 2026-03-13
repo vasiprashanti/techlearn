@@ -128,3 +128,61 @@ export const bulkUploadStudents = async (req, res) => {
         return res.status(500).json({ message: "Server error during CSV upload.", error: error.message });
     }
 };
+
+/**
+ * Upload an individual student
+ * Expected body: { name, email, rollNo, collegeId, batchId }
+ */
+export const individualUploadStudent = async (req, res) => {
+    try {
+        const { name, email, rollNo, collegeId, batchId } = req.body;
+
+        // 1. Validate required fields
+        if (!name || !email || !rollNo || !collegeId || !batchId) {
+            return res.status(400).json({ message: "Name, email, roll number, college ID, and batch ID are all required." });
+        }
+
+        // Sanitize data
+        const sanitizedName = name.trim();
+        const sanitizedEmail = email.trim().toLowerCase();
+        const sanitizedRollNo = rollNo.trim();
+
+        // 2. Verify college and batch exist
+        const [collegeExists, batchExists] = await Promise.all([
+            College.findById(collegeId),
+            Batch.findById(batchId),
+        ]);
+
+        if (!collegeExists) return res.status(404).json({ message: "College not found." });
+        if (!batchExists) return res.status(404).json({ message: "Batch not found." });
+
+        // 3. Duplicate check in database
+        const existingStudent = await Student.findOne({ email: sanitizedEmail });
+        if (existingStudent) {
+            return res.status(409).json({ message: "A student with this email already exists." });
+        }
+
+        // 4. Create student
+        const newStudent = new Student({
+            collegeId,
+            batchId,
+            name: sanitizedName,
+            email: sanitizedEmail,
+            rollNo: sanitizedRollNo,
+            status: "Active",
+            streak: 0,
+            longestStreak: 0
+        });
+
+        await newStudent.save();
+
+        return res.status(201).json({
+            message: "Student uploaded successfully.",
+            student: newStudent
+        });
+
+    } catch (error) {
+        console.error("Individual Student Upload Error:", error);
+        return res.status(500).json({ message: "Server error during individual student upload.", error: error.message });
+    }
+};
