@@ -588,7 +588,8 @@ function LayoutWrapper() {
   // NEW: Updated visibility logic so our new dashboard views don't get double navbars or footers
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
                            location.pathname.startsWith('/track-templates') || 
-                           location.pathname.startsWith('/track/');
+                           location.pathname.startsWith('/track/') ||
+                           location.pathname.startsWith('/admin');
 
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
