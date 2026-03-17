@@ -1,7 +1,7 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
 
 
 
