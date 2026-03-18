@@ -28,6 +28,7 @@ import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
 import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
+
 // Auth pages
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
@@ -73,6 +74,14 @@ import SystemHealth from './pages/AdminDashbaord/SystemHealth';
 import Colleges from './pages/AdminDashbaord/Colleges';
 import Batches from './pages/AdminDashbaord/Batches';
 import Students from './pages/AdminDashbaord/Students';
+import QuestionBank from './pages/AdminDashbaord/QuestionBank';
+import Resources from './pages/AdminDashbaord/Resources';
+import Certificates from './pages/AdminDashbaord/Certificates';
+import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
+import Notifications from './pages/AdminDashbaord/Notifications';
+import AuditLogs from './pages/AdminDashbaord/AuditLogs';
+import Reports from './pages/AdminDashbaord/Reports';
+
 // Contact component
 import Contact from './pages/Contact/Contact'
 
@@ -681,6 +690,15 @@ function LayoutWrapper() {
             <Route path="/colleges" element={<Colleges />} />
 <Route path="/batches" element={<Batches />} />
 <Route path="/students" element={<Students />} />
+<Route path="/question-bank" element={<QuestionBank />} />
+<Route path="/resources" element={<Resources />} />
+<Route path="/certificates" element={<Certificates />} />
+<Route path="/submission-monitor" element={<SubmissionMonitor />} />
+<Route path="/notifications" element={<Notifications />} />
+<Route path="/audit-logs" element={<AuditLogs />} />
+<Route path="/reports" element={<Reports />} />
+
+
           </Route>
           
           <Route path="/about" element={<About />} />
