@@ -102,7 +102,7 @@ const FloatingCourseLogos = () => {
       for (let i = 0; i < logoCount; i++) {
         const course = availableCourses[i % availableCourses.length];
         const position = generateRandomPosition();
-        
+
         initialLogos.push({
           id: `logo-${i}`,
           ...course,
@@ -142,7 +142,7 @@ const FloatingCourseLogos = () => {
         const rect = container.getBoundingClientRect();
         // Check if mouse is within the container bounds
         if (e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          e.clientY >= rect.top && e.clientY <= rect.bottom) {
           setMousePosition({
             x: e.clientX - rect.left,
             y: e.clientY - rect.top
@@ -298,7 +298,9 @@ const FloatingCourseLogos = () => {
               className={`${isMobile ? 'w-10 h-10' : 'w-14 h-14'} object-contain filter drop-shadow-lg hover:drop-shadow-xl transition-all duration-300`}
               onError={(e) => {
                 e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'block';
+                if (e.target.nextSibling) {
+                  e.target.nextSibling.style.display = 'block';
+                }
               }}
             />
           ) : (
