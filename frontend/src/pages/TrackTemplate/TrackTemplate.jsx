@@ -321,79 +321,59 @@ export default function TrackTemplate() {
               ))}
             </div>
 
-            {/* Templates Section */}
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-8">
-              {/* Section Header with filters and action */}
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
-                  All Templates
-                </h3>
-                <div className="flex items-center gap-3">
-                  {/* Filter Tabs */}
-                  {['All', 'Active', 'Draft'].map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setTemplateFilter(tab)}
-                      className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
-                        templateFilter === tab
-                          ? 'border-[#3C83F6]/30 bg-[#3C83F6]/10 text-[#3C83F6] dark:border-white/30 dark:bg-white/10 dark:text-white'
-                          : 'border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:border-black/20 dark:hover:border-white/20'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                  <button className="flex items-center gap-2 px-4 py-2 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-[11px] font-medium tracking-wide rounded-lg transition-colors">
-                    <FiPlus className="w-3.5 h-3.5" />
-                    New Template
-                  </button>
-                </div>
+            {/* Search + Create Row */}
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={templateFilter === 'All' ? '' : ''}
+                  readOnly
+                  className="w-full pl-10 pr-4 py-2.5 bg-white/40 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-xl backdrop-blur-md text-sm text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/20 transition-all"
+                />
               </div>
 
-              {/* Template List Rows — same row style as other admin pages */}
-              <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 ml-auto">
+                {['All', 'Active', 'Draft'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setTemplateFilter(tab)}
+                    className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                      templateFilter === tab
+                        ? 'border-[#3C83F6]/30 bg-[#3C83F6]/10 text-[#3C83F6] dark:border-white/30 dark:bg-white/10 dark:text-white'
+                        : 'border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:border-black/20 dark:hover:border-white/20'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+                <button className="flex items-center gap-2 px-4 py-2.5 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-[11px] font-medium tracking-wide rounded-xl transition-colors shadow-sm shadow-blue-500/20">
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Create Template
+                </button>
+              </div>
+            </div>
+
+            {/* 3-Column Card Grid — matches screenshot layout */}
+            {filteredTracks.length === 0 ? (
+              <div className="py-20 text-center text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30">
+                No templates match the selected filter
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTracks.map((track) => {
                   const Icon = track.icon;
                   return (
                     <div
                       key={track.id}
-                      className="flex items-center justify-between p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-lg cursor-pointer group shadow-sm"
+                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col gap-4 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group"
                     >
-                      {/* Left: Icon + Info */}
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center shrink-0 group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                          <Icon className="w-5 h-5 text-black/50 dark:text-white/50 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
+                      {/* Top row: icon + status badge */}
+                      <div className="flex items-start justify-between">
+                        <div className="w-11 h-11 rounded-xl bg-white/50 dark:bg-black/50 border border-black/5 dark:border-white/5 flex items-center justify-center shadow-sm">
+                          <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
                         </div>
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {track.name}
-                          </h4>
-                          <p className="text-[10px] text-black/50 dark:text-white/50 truncate mt-0.5">
-                            {track.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Center: Stats */}
-                      <div className="hidden md:flex items-center gap-10 px-8">
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Total Days</p>
-                          <p className="text-lg font-light text-[#3C83F6] dark:text-white mt-0.5">{track.totalDays}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Questions</p>
-                          <p className="text-lg font-light text-[#3C83F6] dark:text-white mt-0.5">
-                            {track.questionsAssigned} / {track.totalDays}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Category</p>
-                          <p className="text-xs font-medium text-black/60 dark:text-white/60 mt-0.5">{track.category}</p>
-                        </div>
-                      </div>
-
-                      {/* Right: Status badge + Actions */}
-                      <div className="flex items-center gap-3 shrink-0">
                         <span className={`text-[8px] uppercase tracking-widest px-2 py-1 border rounded-sm
                           ${track.status === 'Active'
                             ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
@@ -402,32 +382,53 @@ export default function TrackTemplate() {
                         >
                           {track.status}
                         </span>
+                      </div>
 
+                      {/* Track name + description */}
+                      <div>
+                        <h3 className="text-lg font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                          {track.name}
+                        </h3>
+                        <p className="text-xs text-black/50 dark:text-white/50 mt-1 leading-relaxed">
+                          {track.description}
+                        </p>
+                      </div>
+
+                      {/* Stats - matching screenshot layout with dividers */}
+                      <div className="flex flex-col gap-3 py-4 border-t border-b border-black/5 dark:border-white/5">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1">Total Days</p>
+                          <p className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{track.totalDays}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1">Questions Assigned</p>
+                          <p className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                            {track.questionsAssigned} / {track.totalDays}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Actions row */}
+                      <div className="flex items-center gap-2 pt-1">
                         <button
                           onClick={() => navigate(`/track/${track.id}/day/1`)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-[10px] font-medium tracking-wide rounded-lg transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-medium rounded-xl transition-colors shadow-sm shadow-blue-500/20"
                         >
-                          <FiEye className="w-3 h-3" />
-                          View
+                          <FiEye className="w-4 h-4" />
+                          View Template
                         </button>
-                        <button className="p-1.5 rounded-lg text-black/30 dark:text-white/30 hover:text-black/60 dark:hover:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                          <FiEdit2 className="w-3.5 h-3.5" />
+                        <button className="p-2.5 rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                          <FiEdit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-1.5 rounded-lg text-black/30 dark:text-white/30 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                          <FiTrash2 className="w-3.5 h-3.5" />
+                        <button className="p-2.5 rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                          <FiTrash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
                   );
                 })}
-
-                {filteredTracks.length === 0 && (
-                  <div className="py-16 text-center text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30">
-                    No templates match the selected filter
-                  </div>
-                )}
               </div>
-            </div>
+            )}
 
           </div>
         </main>
@@ -435,3 +436,4 @@ export default function TrackTemplate() {
     </>
   );
 }
+
