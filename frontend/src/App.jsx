@@ -81,6 +81,7 @@ import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
 import Notifications from './pages/AdminDashbaord/Notifications';
 import AuditLogs from './pages/AdminDashbaord/AuditLogs';
 import Reports from './pages/AdminDashbaord/Reports';
+import Settings from './pages/AdminDashbaord/Settings';
 
 // Contact component
 import Contact from './pages/Contact/Contact'
@@ -614,7 +615,8 @@ function LayoutWrapper() {
     '/submission-monitor', 
     '/notifications', 
     '/audit-logs', 
-    '/reports'
+    '/reports',
+    '/settings'
   ];
 
   const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
@@ -697,6 +699,7 @@ function LayoutWrapper() {
 <Route path="/notifications" element={<Notifications />} />
 <Route path="/audit-logs" element={<AuditLogs />} />
 <Route path="/reports" element={<Reports />} />
+<Route path="/settings" element={<Settings />} />
 
 
           </Route>

@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell } from 'react-icons/fi';
 
 // --- Mock Data ---
 const mockTracks = [
@@ -40,15 +40,6 @@ const mockTracks = [
   },
 ];
 
-const kpis = [
-  { title: 'Total Templates', value: 4, subtitle: 'across all categories' },
-  { title: 'Active Templates', value: 3, subtitle: 'currently published' },
-  { title: 'Draft Templates', value: 1, subtitle: 'pending review' },
-  { title: 'Total Days', value: 90, subtitle: 'combined curriculum' },
-  { title: 'Questions Assigned', value: 6, subtitle: 'across all tracks' },
-  { title: 'Avg Completion', value: '68%', subtitle: 'student progress' },
-];
-
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
   { id: 'analytics', title: 'Analytics', category: 'Overview' },
@@ -61,19 +52,20 @@ const searchRoutes = [
   { id: 'resources', title: 'Resources', category: 'Learning' },
   { id: 'certificates', title: 'Certificates', category: 'Learning' },
   { id: 'submission-monitor', title: 'Submission Monitor', category: 'Operations' },
+  { id: 'settings', title: 'Settings', category: 'Configuration' },
 ];
 
 export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [templateFilter, setTemplateFilter] = useState('All');
+  const [templateSearch, setTemplateSearch] = useState('');
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
@@ -110,9 +102,16 @@ export default function TrackTemplate() {
     navigate(`/${id}`);
   };
 
-  const filteredTracks = templateFilter === 'All'
-    ? mockTracks
-    : mockTracks.filter(t => t.status === templateFilter);
+  const filteredTracks = mockTracks.filter((track) => {
+    const query = templateSearch.trim().toLowerCase();
+    if (!query) return true;
+
+    return (
+      track.name.toLowerCase().includes(query) ||
+      track.description.toLowerCase().includes(query) ||
+      track.category.toLowerCase().includes(query)
+    );
+  });
 
   return (
     <>
@@ -182,14 +181,14 @@ export default function TrackTemplate() {
         <main
           className={`flex-1 transition-all duration-700 ease-in-out z-10
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
-            pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
+            pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header — same as AdminDashboard */}
-            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
                 Track Templates
               </h1>
@@ -209,11 +208,9 @@ export default function TrackTemplate() {
                   </div>
                 </button>
 
-                <button
-                  onClick={toggleTheme}
-                  className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors"
-                >
-                  {isDarkMode ? 'Light' : 'Dark'}
+                <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                  <FiBell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
                 </button>
 
                 <div className="relative">
@@ -289,74 +286,33 @@ export default function TrackTemplate() {
               </div>
             </header>
 
-            {/* KPI Row — same pattern as AdminDashboard */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {kpis.map((kpi, i) => (
-                <div
-                  key={i}
-                  className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
-                >
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">
-                    {kpi.title}
-                  </span>
-                  <div className="mt-6 mb-1">
-                    <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
-                      {kpi.value}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-black/40 dark:text-white/40">
-                    {kpi.subtitle}
-                  </span>
-                </div>
-              ))}
-            </div>
-
             {/* Search + Create Row */}
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="relative flex-1">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
                 <input
                   type="text"
                   placeholder="Search templates..."
-                  value={templateFilter === 'All' ? '' : ''}
-                  readOnly
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/40 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-xl backdrop-blur-md text-sm text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/20 transition-all"
+                  value={templateSearch}
+                  onChange={(e) => setTemplateSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white/40 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-xl backdrop-blur-md text-sm text-black/70 dark:text-white/70 placeholder:text-black/30 dark:placeholder:text-white/30 outline-none focus:border-black/20 dark:focus:border-white/20 transition-colors"
                 />
               </div>
 
-              <div className="flex items-center gap-2 ml-auto">
-                {['All', 'Active', 'Draft'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setTemplateFilter(tab)}
-                    className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
-                      templateFilter === tab
-                        ? 'border-[#3C83F6]/30 bg-[#3C83F6]/10 text-[#3C83F6] dark:border-white/30 dark:bg-white/10 dark:text-white'
-                        : 'border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:border-black/20 dark:hover:border-white/20'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-                <button className="flex items-center gap-2 px-4 py-2.5 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-[11px] font-medium tracking-wide rounded-xl transition-colors shadow-sm shadow-blue-500/20">
-                  <FiPlus className="w-3.5 h-3.5" />
-                  Create Template
-                </button>
-              </div>
+              <button className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-widest rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
+                <FiPlus className="w-3.5 h-3.5" />
+                Create Template
+              </button>
             </div>
 
-            {/* Info Banner — matching screenshot layout */}
-            <div className="bg-[#3C83F6]/5 dark:bg-white/5 border border-[#3C83F6]/10 dark:border-white/10 rounded-2xl p-6 backdrop-blur-xl">
-              <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white mb-2">How Track Templates work</h4>
-              <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed max-w-4xl">
-                Track Templates are reusable day-wise curricula built from the Question Bank. When you create a Batch, all active templates are automatically attached as copies — so editing a template later won't affect existing batches.
-              </p>
-            </div>
+            <p className="text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30 -mt-2">
+              {filteredTracks.length} of {mockTracks.length} templates
+            </p>
 
-            {/* 3-Column Card Grid — matches screenshot layout */}
+            {/* 3-Column Card Grid */}
             {filteredTracks.length === 0 ? (
               <div className="py-20 text-center text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30">
-                No templates match the selected filter
+                No templates match your search
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -365,60 +321,60 @@ export default function TrackTemplate() {
                   return (
                     <div
                       key={track.id}
-                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col hover:bg-white/60 dark:hover:bg-black/60 transition-colors group h-full"
+                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7 flex flex-col gap-5 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group"
                     >
                       {/* Top row: icon + status badge */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="w-11 h-11 rounded-xl bg-white/50 dark:bg-black/50 border border-black/5 dark:border-white/5 flex items-center justify-center shadow-sm">
+                      <div className="flex items-start justify-between">
+                        <div className="w-10 h-10 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/10 dark:border-white/10 flex items-center justify-center shrink-0">
                           <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
                         </div>
-                        <span className={`text-[8px] uppercase tracking-widest px-2 py-1 border rounded-sm
+                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg border
                           ${track.status === 'Active'
-                            ? 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                            : 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10'
+                            ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
+                            : 'border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5'
                           }`}
                         >
                           {track.status}
                         </span>
                       </div>
 
-                      {/* Track name + description - fixed min-height ensures horizontal alignment of what's below */}
-                      <div className="mb-6 min-h-[6rem]">
-                        <h3 className="text-lg font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {/* Track name + description */}
+                      <div className="min-h-[4.5rem]">
+                        <h3 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white">
                           {track.name}
                         </h3>
-                        <p className="text-xs text-black/50 dark:text-white/50 mt-1 leading-relaxed line-clamp-2">
+                        <p className="text-sm text-black/45 dark:text-white/45 mt-1 font-light leading-relaxed line-clamp-2">
                           {track.description}
                         </p>
                       </div>
 
-                      {/* Stats - matching screenshot layout with dividers */}
-                      <div className="flex flex-col gap-3 py-4 border-t border-b border-black/5 dark:border-white/5 mb-4">
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1">Total Days</p>
-                          <p className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{track.totalDays}</p>
+                      {/* Stats */}
+                      <div className="space-y-2">
+                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
+                          <p className="text-[8px] uppercase tracking-widest text-black/30 dark:text-white/30">Total Days</p>
+                          <p className="text-xl font-light text-black/75 dark:text-white/80 mt-1 leading-none">{track.totalDays}</p>
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1">Questions Assigned</p>
-                          <p className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
+                          <p className="text-[8px] uppercase tracking-widest text-black/30 dark:text-white/30">Questions Assigned</p>
+                          <p className="text-xl font-light text-black/75 dark:text-white/80 mt-1 leading-none">
                             {track.questionsAssigned} / {track.totalDays}
                           </p>
                         </div>
                       </div>
 
                       {/* Actions row */}
-                      <div className="flex items-center gap-2 pt-1">
+                      <div className="flex items-center gap-3 mt-auto">
                         <button
                           onClick={() => navigate(`/track/${track.id}/day/1`)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-medium rounded-xl transition-colors shadow-sm shadow-blue-500/20"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 px-4 text-[10px] uppercase tracking-widest rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
                         >
                           <FiEye className="w-4 h-4" />
                           View Template
                         </button>
-                        <button className="p-2.5 rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                           <FiEdit2 className="w-4 h-4" />
                         </button>
-                        <button className="p-2.5 rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                           <FiTrash2 className="w-4 h-4" />
                         </button>
                       </div>

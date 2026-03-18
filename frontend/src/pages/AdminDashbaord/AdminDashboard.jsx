@@ -12,7 +12,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORR
 import LoadingScreen from "../../components/Loader/Loader3D"; 
 
 // Icons
-import { FiSearch } from "react-icons/fi";
+import { FiSearch, FiBell, FiClock, FiTrendingUp, FiAward } from "react-icons/fi";
 import {
   FaUsers,
   FaUserCheck,
@@ -87,6 +87,7 @@ const searchRoutes = [
   { id: "notifications", title: "Notifications", category: "Operations" },
   { id: "audit-logs", title: "Audit Logs", category: "Operations" },
   { id: "reports", title: "Reports", category: "Operations" },
+  { id: "settings", title: "Settings", category: "Configuration" },
 ];
 
 export default function AdminDashboard() {
@@ -108,7 +109,7 @@ export default function AdminDashboard() {
     .day();
 
   // --- Dashboard States ---
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -246,14 +247,14 @@ export default function AdminDashboard() {
         <main
           className={`flex-1 transition-all duration-700 ease-in-out z-10 
             ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} 
-            pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
+            pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
-            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
-                Overview
+                Dashboard
               </h1>
 
               <div className="flex items-center gap-6">
@@ -271,11 +272,9 @@ export default function AdminDashboard() {
                   </div>
                 </button>
 
-                <button
-                  onClick={toggleTheme}
-                  className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors"
-                >
-                  {isDarkMode ? "Light" : "Dark"}
+                <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                  <FiBell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
                 </button>
 
                 <div className="relative">
@@ -463,118 +462,122 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
-                  Recent Student Activity
-                </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-2">
-                  {adminStats.recentActivity.map((activity, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-black/50 flex items-center justify-center text-[10px] font-medium text-[#3C83F6] dark:text-white border border-black/10 dark:border-white/10 shrink-0 shadow-sm group-hover:bg-[#3C83F6] group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
-                          {activity.name.charAt(0)}
-                        </div>
-                        <div className="min-w-0 pr-2">
-                          <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white truncate">
-                            {activity.name}
-                          </h4>
-                          <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
-                            {activity.batch} · Streak: {activity.streak} days
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] text-black/30 dark:text-white/30 shrink-0">
-                        {activity.date}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
-                  Most Solved Questions
-                </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-2">
-                  {adminStats.mostSolved.map((question, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="min-w-0 pr-4">
-                        <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                          {question.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1 truncate">
-                          <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
-                            {question.track}
-                          </p>
-                          <span
-                            className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm shrink-0
-                            ${
-                              question.difficulty === "Easy"
-                                ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
-                                : question.difficulty === "Medium"
-                                ? "border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5"
-                                : "border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5"
-                            }
-                          `}
-                          >
-                            {question.difficulty}
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
+                  <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-3 shrink-0">
+                    <FiClock className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
+                    Recent Student Activity
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-1">
+                    {adminStats.recentActivity.map((activity, i) => (
+                      <div
+                        key={i}
+                        className={`py-3 ${i !== adminStats.recentActivity.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white truncate">
+                              {activity.name}
+                            </h4>
+                            <p className="text-xs text-black/55 dark:text-white/55 truncate">
+                              {activity.batch} · Streak: {activity.streak} days
+                            </p>
+                          </div>
+                          <span className="text-xs text-black/45 dark:text-white/45 shrink-0">
+                            {activity.date}
                           </span>
                         </div>
                       </div>
-                      <span className="text-xs font-light text-black/70 dark:text-white/70 whitespace-nowrap shrink-0">
-                        {question.count}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
+                  <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-3 shrink-0">
+                    <FiTrendingUp className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
+                    Most Solved Questions
+                  </h3>
+                  <div className="flex-1 overflow-y-auto pr-1">
+                    {adminStats.mostSolved.map((question, i) => (
+                      <div
+                        key={i}
+                        className={`py-3 ${i !== adminStats.mostSolved.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white truncate">
+                              {question.title}
+                            </h4>
+                            <p className="text-xs text-black/55 dark:text-white/55 truncate">
+                              {question.track}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0 pl-2">
+                            <span
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full border font-medium
+                              ${
+                                question.difficulty === "Easy"
+                                  ? "border-emerald-500/20 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5"
+                                  : question.difficulty === "Medium"
+                                  ? "border-amber-500/20 text-amber-700 dark:text-amber-400 bg-amber-500/5"
+                                  : "border-rose-500/20 text-rose-700 dark:text-rose-400 bg-rose-500/5"
+                              }`}
+                            >
+                              {question.difficulty}
+                            </span>
+                            <span className="text-xs text-black/55 dark:text-white/55 whitespace-nowrap">
+                              {question.count} solved
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[280px]">
+                <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-4 shrink-0">
+                  <FiAward className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                   Upcoming & Active Batches
                 </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-3">
-                  {adminStats.batches.map((batch, i) => (
-                    <div
-                      key={i}
-                      className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-lg cursor-pointer group shadow-sm"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <div className="flex-1 overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {adminStats.batches.map((batch, i) => (
+                      <div
+                        key={i}
+                        className="p-4 border border-black/8 dark:border-white/10 bg-white/25 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/35 transition-colors rounded-lg cursor-pointer group"
+                      >
+                        <div className="flex items-center justify-between mb-2 gap-3">
+                          <h4 className="text-lg font-medium text-[#2563eb] dark:text-white truncate">
                             {batch.id}
                           </h4>
                           <span
-                            className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm
+                              className={`text-[10px] px-2.5 py-1 rounded-lg border uppercase tracking-wide font-semibold shrink-0
                             ${
                               batch.status === "Active"
-                                ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
-                                : "border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10"
-                            }
-                          `}
+                                ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
+                                : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                            }`}
                           >
                             {batch.status}
                           </span>
                         </div>
+                        <p className="text-sm text-black/75 dark:text-white/75 font-medium truncate">
+                          {batch.college}
+                        </p>
+                        <p className="text-sm text-black/60 dark:text-white/60 truncate mt-0.5">
+                          {batch.track}
+                        </p>
+                        <div className="flex items-center gap-2 text-xs text-black/45 dark:text-white/45 mt-2">
+                          <span>{batch.start}</span>
+                          <span>→</span>
+                          <span>{batch.end}</span>
+                        </div>
                       </div>
-                      <p className="text-[10px] text-black/60 dark:text-white/60 mb-2 font-medium truncate">
-                        {batch.college} ·{" "}
-                        <span className="font-light">{batch.track}</span>
-                      </p>
-                      <div className="flex items-center gap-1 text-[9px] text-black/40 dark:text-white/40 uppercase tracking-widest">
-                        <span>{batch.start}</span>
-                        <span className="mx-1">→</span>
-                        <span>{batch.end}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

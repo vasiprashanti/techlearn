@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import ThemeToggle from '../../components/Dashboard/ThemeToggle';
-import { FiSearch, FiRefreshCw } from 'react-icons/fi';
+import {  FiSearch, FiRefreshCw , FiBell } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard',          title: 'Dashboard',          category: 'Overview'     },
@@ -108,8 +107,7 @@ export default function SubmissionMonitor() {
                 : filteredRoutes.map(r => (
                   <button key={r.id} onClick={() => handleRouteSelect(r.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                     <div>
-                      <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{r.title}</h4>
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">{r.category}</p>
+                      <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{r.title}</h4>
                     </div>
                     <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                   </button>
@@ -128,10 +126,9 @@ export default function SubmissionMonitor() {
           <div className="max-w-[1400px] mx-auto space-y-8">
 
             {/* Header */}
-            <header className="flex items-center justify-between pb-6 border-b border-black/[0.06] dark:border-white/5">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Submission Monitor</h1>
-                <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Live student submissions and judge results</p>
+                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Submission Monitor</h1>
               </div>
               <div className="flex items-center gap-5">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-60 bg-white/30 dark:bg-black/20 border border-black/[0.06] dark:border-white/5 py-2 pl-10 pr-12 rounded-xl backdrop-blur-md hover:bg-white/50 dark:hover:bg-black/30 transition-colors text-left group">
@@ -139,7 +136,7 @@ export default function SubmissionMonitor() {
                   <span className="text-sm text-black/35 dark:text-white/35">Search...</span>
                   <div className="absolute right-3 text-[9px] font-medium text-black/30 dark:text-white/30 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">⌘K</div>
                 </button>
-                <ThemeToggle />
+                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
                 <div className="relative">
                   <button onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200">
                     {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}

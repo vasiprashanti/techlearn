@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
-import ThemeToggle from '../../components/Dashboard/ThemeToggle';
-import { FiSearch, FiPlus } from 'react-icons/fi';
+import {  FiSearch, FiPlus , FiBell } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -48,8 +47,7 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
             : filteredRoutes.map(route => (
               <button key={route.id} onClick={() => { onClose(); navigate(`/${route.id}`); }} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                 <div>
-                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">{route.category}</p>
+                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
                 </div>
                 <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
               </button>
@@ -103,14 +101,13 @@ const Colleges = () => {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header */}
-            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Colleges</h1>
-                <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Overview of all partner colleges and cohort performance</p>
+                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Colleges</h1>
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -118,7 +115,7 @@ const Colleges = () => {
                   <span className="text-sm text-black/40 dark:text-white/40">Search...</span>
                   <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded"><span>⌘</span><span>K</span></div>
                 </button>
-                <ThemeToggle />
+                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
                 <div className="relative">
                   <button
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}

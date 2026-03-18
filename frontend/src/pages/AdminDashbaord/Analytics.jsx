@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
-import ThemeToggle from '../../components/Dashboard/ThemeToggle';
-import { FiSearch } from 'react-icons/fi';
+import {  FiSearch , FiBell } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -167,10 +166,7 @@ const Analytics = () => {
                     <div>
                       <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {route.title}
-                      </h4>
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">
-                        {route.category}
-                      </p>
+                      </h4>
                     </div>
                     <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
                   </button>
@@ -196,19 +192,16 @@ const Analytics = () => {
         <main
           className={`flex-1 transition-all duration-700 ease-in-out z-10 
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} 
-            pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
+            pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header */}
-            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Analytics</h1>
-                <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">
-                  Platform performance and engagement overview
-                </p>
+                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Analytics</h1>
               </div>
               <div className="flex items-center gap-6">
                 <button
@@ -221,7 +214,7 @@ const Analytics = () => {
                     <span>⌘</span><span>K</span>
                   </div>
                 </button>
-                <ThemeToggle />
+                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
                 <div className="relative">
                   <button
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}

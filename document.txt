@@ -1,0 +1,1584 @@
+﻿Project Overview
+Project Overview – TRACE
+TRACE (Technical Round Assessment & Coding Ecosystem) is a structured, cohort-based coding assessment platform built exclusively for colleges. It is not a public coding site, not a subscription model, and not a practice marketplace. TRACE is an institutional assessment engine designed to simulate real technical interview preparation within controlled college batches.
+The goal of TRACE is to bring discipline, accountability, and measurable improvement into campus coding preparation. Instead of random practice or open platforms, students are enrolled batch-wise into structured Tracks where they solve one curated problem daily. Performance, streaks, rankings, and analytics are automatically calculated, creating a competitive yet controlled technical growth ecosystem.
+TRACE is built for internal college cohorts only — no guest users, no external signups, and no public question access.
+________________
+
+
+Core Vision
+TRACE is designed to solve three major problems in campus technical preparation:
+1. Lack of structured daily consistency.
+
+2. No batch-level performance visibility.
+
+3. No real technical round simulation discipline.
+
+The system enforces a fixed daily problem schedule, streak logic, ranking system, and track-based progression to replicate real hiring preparation timelines.
+________________
+
+
+System Model
+TRACE follows a strict hierarchical engine:
+College → Batch → Track → Daily Question → Submission → Analytics
+Everything inside the platform depends on:
+   * College
+
+   * Batch
+
+   * Track
+
+   * Question
+
+   * Submission
+
+Students cannot exist independently outside this structure.
+________________
+
+
+Platform Architecture
+TRACE has two major interfaces:
+1️⃣ Student Portal (User Side)
+Designed for daily coding discipline and measurable improvement.
+Key Functionalities
+Daily Challenge Engine
+Students receive exactly one question per working day based on their batch start date and assigned track. Future questions remain locked.
+Structured Roadmap
+Track-based progression ensures a predefined sequence of curated problems (DSA, core topics, interview-level questions).
+Submission Engine
+Students submit code, which is evaluated against test cases. Results are stored with attempt count, accuracy, and timestamps.
+Streak & Ranking System
+Streak resets if a day is missed. Ranking is dynamically calculated based on:
+      * Total Correct
+
+      * Accuracy
+
+      * Submission Speed
+
+Performance Analytics
+Students can view:
+         * Overall accuracy
+
+         * Topic-wise accuracy
+
+         * Attempt trends
+
+         * Improvement percentage
+
+         * Batch rank
+
+No Distractions
+There is no practice mode, no public browsing, no discussion forum — only structured daily execution.
+________________
+
+
+2️⃣ Admin Portal
+Designed for complete cohort control and performance visibility.
+Key Functionalities
+College Management
+Create and activate/deactivate colleges. Inactive colleges automatically block student access.
+Batch Management
+Assign:
+            * College
+
+            * Track
+
+            * Start Date
+
+Changing the start date dynamically recalculates working day logic for all students in that batch.
+Track Management
+Define:
+               * Duration in days
+
+               * Ordered list of question IDs
+
+The order remains fixed to preserve track integrity.
+Student Management
+Bulk upload students via CSV.
+Assign them to batches.
+Deactivate students if needed.
+Question Bank Management
+Add, edit, delete coding questions.
+Each question contains:
+                  * Title
+
+                  * Description
+
+                  * Constraints
+
+                  * Input/Output format
+
+                  * Topic
+
+                  * Difficulty
+
+                  * Solution
+
+Reports & Rankings
+View batch-wise:
+                     * Rankings
+
+                     * Accuracy
+
+                     * Total attempts
+
+                     * Active participation
+
+                     * Submission trends
+
+________________
+
+
+Core Engine Logic
+Working Day Calculation
+workingDay = floor((currentDate - batch.startDate) / 1 day)
+Question Mapping
+questionId = track.questionIds[workingDay]
+Access Control
+If:
+                        * Student has no batch → Access denied
+
+                        * Student inactive → Login blocked
+
+                        * College inactive → Login blocked
+
+                        * Working day exceeds track duration → Completed state
+
+Streak Logic
+If submission exists for current workingDay → increment
+If missed → reset
+Rank Logic
+Sorted by:
+                           1. Total Correct
+
+                           2. Accuracy
+
+                           3. Fastest Average Submission Time
+
+________________
+
+
+Technology Stack
+Frontend
+React.js (Vite)
+Tailwind CSS
+Firebase Authentication
+Backend
+Node.js
+Express.js
+MongoDB (Mongoose)
+Authentication
+Firebase token verification
+College email-based access only
+Deployment
+Frontend – Vercel
+Backend – Render
+________________
+
+
+What TRACE Is Not
+                              * No guest users
+
+                              * No public signups
+
+                              * No payments
+
+                              * No subscriptions
+
+                              * No marketplace
+
+                              * No certificates (MVP)
+
+                              * No discussion forums
+
+                              * No notifications
+
+This is a controlled academic assessment engine, not a consumer coding platform until testing for functionality and validation is done with first co-hort is done successfully.
+________________
+
+
+Long-Term Vision
+TRACE aims to become a standardized technical assessment layer within colleges. Instead of scattered preparation across platforms, institutions can:
+                                 * Track real technical growth
+
+                                 * Identify top performers early
+
+                                 * Simulate hiring discipline
+
+                                 * Create internal technical leaderboards
+
+Future expansions may include:
+                                    * Multi-track parallel systems
+
+                                    * Company-specific mock rounds
+
+                                    * Interview simulation modes
+
+                                    * Placement cell integrations
+
+                                    * Performance export for recruiters
+
+________________
+
+
+Final Positioning
+TRACE is solving structural inefficiency in campus technical preparation.
+TRACE is not just a coding website.
+It is a cohort-driven technical growth engine.
+
+
+
+
+PRODUCT REQUIREMENTS DOCUMENT (PRD)
+📘 TRACE – PRODUCT REQUIREMENTS DOCUMENT (PRD)
+Version: 1.0
+Product: TRACE (Cohort-Based Coding Assessment System)
+Scope: College Cohorts Only
+Owner: UniEats / TRACE Team
+________________
+
+
+1️⃣ PRODUCT OVERVIEW
+TRACE is a cohort-based daily coding assessment platform for colleges.
+It allows:
+                                       * Admins to create structured coding tracks
+                                       * Batches to start on defined dates
+                                       * Students to receive daily coding challenges
+                                       * Automatic ranking, streak tracking, and analytics
+TRACE is not a public coding platform.
+It is an identity-driven, college-controlled assessment engine.
+________________
+
+
+2️⃣ PROBLEM STATEMENT
+Colleges struggle with:
+                                       * Tracking daily coding discipline
+                                       * Measuring real performance
+                                       * Ensuring structured preparation
+                                       * Monitoring batch progress
+Students struggle with:
+                                       * Consistency
+                                       * Accountability
+                                       * Clear progress visibility
+                                       * Peer benchmarking
+________________
+
+
+3️⃣ PRODUCT GOALS
+Primary Goals:
+                                       * Deliver one structured coding problem per working day
+                                       * Enforce cohort-based discipline
+                                       * Provide measurable analytics
+                                       * Enable ranking within batch
+                                       * Allow admin-level monitoring
+Success Metrics:
+                                       * Daily submission rate > 75%
+                                       * Average streak > 5 days
+                                       * Completion rate of track > 60%
+                                       * Zero unauthorized access
+________________
+
+
+4️⃣ TARGET USERS
+User Types:
+                                       1. Admin (College or System Admin)
+                                       2. Student (Cohort-based, assigned to batch)
+No guest users in MVP.
+________________
+
+
+5️⃣ USER STORIES
+Student
+                                       * As a student, I want to log in using my college email.
+                                       * I want to see today’s coding question.
+                                       * I want to submit code.
+                                       * I want to see my rank in my batch.
+                                       * I want to track my streak.
+                                       * I want to view my past submissions.
+                                       * I want to see topic-wise performance.
+Admin
+                                       * As an admin, I want to create colleges.
+                                       * I want to create batches with start dates.
+                                       * I want to assign tracks to batches.
+                                       * I want to bulk upload students.
+                                       * I want to manage questions.
+                                       * I want to view batch rankings.
+                                       * I want to export reports.
+________________
+
+
+6️⃣ CORE FEATURES
+Student Side
+                                       * Secure login (Firebase)
+                                       * Dashboard overview
+                                       * Daily coding challenge
+                                       * Code submission
+                                       * Streak tracking
+                                       * Rank calculation
+                                       * Roadmap visualization
+                                       * Analytics page
+                                       * Submission history
+Admin Side
+                                       * College management
+                                       * Batch management
+                                       * Track creation
+                                       * Student management
+                                       * Question management
+                                       * Reporting dashboard
+________________
+
+
+7️⃣ FUNCTIONAL REQUIREMENTS
+Authentication
+                                       * Only registered students can log in.
+                                       * Role-based access control must be enforced.
+Working Day Logic
+                                       * Question served based on:
+floor((today - batch.startDate)/1 day)
+Daily Challenge
+                                          * Only one question per working day.
+                                          * Multiple attempts allowed.
+                                          * First correct submission recorded as final score.
+Ranking
+                                          * Rank based on:
+                                          * Total correct
+                                          * Accuracy
+                                          * Speed
+Streak
+                                          * Streak increases only if submission exists on working day.
+                                          * Missing a day resets streak.
+Roadmap
+                                          * Future days locked.
+                                          * Completed days marked.
+                                          * Missed days marked.
+Reports
+                                          * Exportable CSV ranking.
+                                          * Accuracy per student.
+                                          * Total attempts per student.
+________________
+
+
+8️⃣ NON-FUNCTIONAL REQUIREMENTS
+Performance
+                                          * API response < 500ms
+                                          * Submission processing < 2 seconds
+Security
+                                          * Firebase token verification on all routes
+                                          * Role middleware enforcement
+                                          * Students cannot access other students’ data
+Scalability
+                                          * Support 10,000+ students
+                                          * Track-level isolation
+Availability
+                                          * 99% uptime target
+________________
+
+
+9️⃣ MVP SCOPE
+Included
+                                          * Cohort-based engine
+                                          * Admin management
+                                          * Ranking
+                                          * Analytics
+                                          * CSV export
+Excluded
+                                          * Guest mode
+                                          * Subscription
+                                          * Practice mode
+                                          * Notifications
+                                          * Certificates
+                                          * Discussion forum
+________________
+
+
+🔟 RISKS
+                                          * Incorrect working day logic
+                                          * Rank miscalculation
+                                          * Data inconsistency in submissions
+                                          * Admin misconfiguration of track order
+Mitigation:
+                                          * Strict validation
+                                          * Automated testing
+                                          * Clear audit logging
+________________
+
+
+                                          *                                           * totalAttempts
+                                          * accuracy = correct/attempts
+                                          * avgSubmissionTime
+                                          1. Sort by:
+                                          * totalCorrect DESC
+                                          * accuracy DESC
+                                          * avgSubmissionTime ASC
+Assign rank sequentially.
+________________
+
+
+TECHNICAL REQUIREMENTS DOCUMENT (TRD)
+TRACE – TECHNICAL REQUIREMENTS DOCUMENT (TRD)
+Version: 1.0
+Document Type: Engineering Implementation Specification
+Purpose: Defines HOW TRACE must be built.
+________________
+
+
+1. SYSTEM OVERVIEW
+TRACE is a multi-college coding evaluation platform.
+Platform Hierarchy:
+Super Admin (TRACE Team)
+→ College
+→ Batch
+→ Track (Core, DSA, SQL – auto-created)
+→ Student
+→ Daily Question
+→ Submission
+→ Scoring
+→ Ranking
+Each batch automatically contains 3 tracks:
+                                          * Core
+
+                                          * DSA
+
+                                          * SQL
+
+Each student:
+                                             * Is assigned to one batch
+
+                                             * Solves 1 question per track per working day
+
+                                             * Gets scored out of 10
+
+                                             * Ranked within their batch only
+
+________________
+
+
+2. SYSTEM ARCHITECTURE
+Architecture Type: Monolith (Single Backend Service)
+Frontend:
+                                                * React (Vite)
+
+                                                * Tailwind CSS
+
+                                                * Firebase Authentication
+
+Backend:
+                                                   * Node.js
+
+                                                   * Express.js
+
+                                                   * MongoDB (Mongoose)
+
+External:
+                                                      * Judge Engine (e.g., Judge0)
+
+Deployment:
+                                                         * Frontend → Vercel
+
+                                                         * Backend → Vercel
+
+                                                         * MongoDB → Managed Cluster
+
+________________
+
+
+3. ACCESS CONTROL MODEL
+Roles:
+                                                            * Admin
+
+                                                            * Student
+
+Access Rules:
+Student:
+                                                               * Can access only own submissions
+
+                                                               * Can view leaderboard of own batch only
+
+                                                               * Cannot access other college data
+
+                                                               * Blocked if:
+
+                                                                  * student inactive
+
+                                                                  * batch expired
+
+                                                                  * college inactive
+
+Admin:
+                                                                     * Can access only assigned college
+
+                                                                     * Can manage batches, students, questions
+
+                                                                     * Cannot access other college data
+
+All routes must enforce:
+                                                                        * Firebase token verification
+
+                                                                        * Role-based middleware
+
+                                                                        * Batch isolation
+
+________________
+
+
+4. CORE ENGINE LOGIC
+WORKING DAY CALCULATION:
+workingDay = floor((currentDate - batch.startDate) / 1 day)
+Constraints:
+                                                                           * workingDay >= 0
+
+                                                                           * workingDay < track.durationDays
+
+                                                                           * current time >= releaseTime
+
+Question Mapping:
+questionId = track.orderedQuestionIds[workingDay]
+Future days remain locked.
+________________
+
+
+5. DATA MODELS (MANDATORY FIELDS)
+All foreign keys must be indexed.
+College
+                                                                              * name
+
+                                                                              * code
+
+                                                                              * status (Active / Inactive)
+
+                                                                              * createdAt
+
+Batch
+                                                                                 * collegeId
+
+                                                                                 * name
+
+                                                                                 * startDate
+
+                                                                                 * expiryDate
+
+                                                                                 * releaseTime
+
+                                                                                 * status (Draft / Active / Expired / Archived)
+
+Track
+                                                                                    * batchId
+
+                                                                                    * name (Core / DSA / SQL)
+
+                                                                                    * durationDays
+
+                                                                                    * orderedQuestionIds[]
+
+                                                                                    * isLockedAfterActivation
+
+Student
+                                                                                       * collegeId
+
+                                                                                       * batchId
+
+                                                                                       * name
+
+                                                                                       * email
+
+                                                                                       * rollNo
+
+                                                                                       * status (Active / Inactive / Suspended)
+
+                                                                                       * streak
+
+                                                                                       * longestStreak
+
+Question
+                                                                                          * title
+
+                                                                                          * description
+
+                                                                                          * trackType
+
+                                                                                          * difficulty
+
+                                                                                          * timeLimit
+
+                                                                                          * memoryLimit
+
+                                                                                          * visibleTestCases
+
+                                                                                          * hiddenTestCases
+
+                                                                                          * version
+
+                                                                                          * isActive
+
+Submission
+                                                                                             * studentId
+
+                                                                                             * batchId
+
+                                                                                             * trackId
+
+                                                                                             * questionId
+
+                                                                                             * workingDay
+
+                                                                                             * runCount
+
+                                                                                             * accuracyScore
+
+                                                                                             * efficiencyScore
+
+                                                                                             * disciplineScore
+
+                                                                                             * totalScore
+
+                                                                                             * executionTime
+
+                                                                                             * status (Passed / Failed / Timeout / Error)
+
+                                                                                             * submittedAt
+
+Admin
+                                                                                                * collegeId
+
+                                                                                                * email
+
+                                                                                                * role
+
+                                                                                                * isActive
+
+________________
+
+
+6. SUBMISSION ENGINE
+Daily Limits:
+                                                                                                   * Max 3 Runs
+
+                                                                                                   * Max 1 Final Submit
+
+Rules:
+                                                                                                      * Duplicate submission for same workingDay blocked
+
+                                                                                                      * Validate question belongs to track
+
+                                                                                                      * Validate student belongs to batch
+
+                                                                                                      * Validate workingDay matches question index
+
+                                                                                                      * Submission endpoint must be idempotent
+
+                                                                                                      * Prevent race conditions using atomic DB operations
+
+Judge Flow:
+                                                                                                         1. Receive code
+
+                                                                                                         2. Send to Judge
+
+                                                                                                         3. Receive result
+
+                                                                                                         4. Store result
+
+                                                                                                         5. Calculate score
+
+                                                                                                         6. Update streak
+
+                                                                                                         7. Recalculate leaderboard (atomic)
+
+________________
+
+
+7. SCORING SYSTEM (OUT OF 10)
+Score = Accuracy (5) + Efficiency (3) + Discipline (2)
+Accuracy (0–5):
+Based on % test cases passed.
+Efficiency (0–3):
+Based on execution_time / time_limit.
+Discipline (0–2):
+                                                                                                            * Solved in 1 run → 2
+
+                                                                                                            * 2 runs → 1
+
+                                                                                                            * 3 runs → 0
+
+                                                                                                            * Failed → 0
+
+Recalculation Trigger:
+                                                                                                               * Only on successful final submission
+
+                                                                                                               * Must be atomic
+
+________________
+
+
+8. RANKING ALGORITHM
+Sort By:
+                                                                                                                  1. Total Correct
+
+                                                                                                                  2. Accuracy %
+
+                                                                                                                  3. Average Submission Time
+
+                                                                                                                  4. Earliest Submission Timestamp
+
+Batch-isolated only.
+Leaderboard must support pagination.
+Target query performance: < 200ms.
+________________
+
+
+9. ROUTE MAP & PAGES
+________________
+
+
+ADMIN
+Page
+	Path
+	Component
+	Description
+	Login
+	/admin/login
+	AdminLogin.jsx
+	Admin authentication via Firebase
+	Dashboard
+	/admin/dashboard
+	AdminDashboard.jsx
+	Active batches, total students, submissions summary, alerts
+	Colleges
+	/admin/colleges
+	AdminColleges.jsx
+	Create & manage colleges (activate/deactivate)
+	Batches
+	/admin/batches
+	AdminBatches.jsx
+	Create batches, set start/expiry date, release time
+	Batch Details
+	/admin/batches/:batchId
+	AdminBatchDetails.jsx
+	View batch info, tracks, students, performance summary
+	Tracks
+	/admin/tracks/:batchId
+	AdminTracks.jsx
+	Configure track duration & ordered question IDs
+	Students
+	/admin/students
+	AdminStudents.jsx
+	Bulk upload, manage student status
+	Questions
+	/admin/questions
+	AdminQuestions.jsx
+	CRUD Question Bank (version-controlled)
+	Reports
+	/admin/reports
+	AdminReports.jsx
+	Batch-wise leaderboard, accuracy metrics, drop-off risk
+	Analytics
+	/admin/analytics
+	AdminAnalytics.jsx
+	Platform insights: submissions, average score, streak trends
+	Audit Logs
+	/admin/audit-logs
+	AdminAuditLogs.jsx
+	View admin action logs
+	Settings
+	/admin/settings
+	AdminSettings.jsx
+	Release time defaults, system configurations
+	
+
+STUDENT SIDE
+
+
+Page
+	Path
+	Component
+	Description
+	Login
+	/login
+	Login.jsx
+	Firebase authentication
+	Dashboard
+	/dashboard
+	Dashboard.jsx
+	Streak, rank, today status, progress overview
+	Daily Challenge
+	/challenge
+	DailyChallenge.jsx
+	Today’s question (Run max 3, Submit once)
+	Roadmap
+	/roadmap
+	Roadmap.jsx
+	Day-by-day progress view (locked/unlocked days)
+	Submissions
+	/submissions
+	Submissions.jsx
+	Past attempts with score breakdown
+	Submission Details
+	/submissions/:id
+	SubmissionDetails.jsx
+	View run history, execution time, score components
+	Analytics
+	/analytics
+	Analytics.jsx
+	Accuracy %, avg execution time, performance trends
+	Leaderboard
+	/leaderboard
+	Leaderboard.jsx
+	Batch-isolated ranking list
+	Profile
+	/profile
+	Profile.jsx
+	Student info, batch info, streak stats
+	
+
+________________
+
+
+10. FEATURE FLOW
+________________
+
+
+Authentication
+Firebase Authentication for login.
+Flow:
+                                                                                                                     1. User logs in via Firebase.
+
+                                                                                                                     2. Frontend sends Firebase ID token to backend.
+
+                                                                                                                     3. Backend verifies token using Firebase Admin SDK.
+
+                                                                                                                     4. Backend resolves user from database.
+
+                                                                                                                     5. Role assigned from DB:
+
+                                                                                                                        * Admin
+
+                                                                                                                        * Student
+
+Access granted only if:
+                                                                                                                           * User exists in DB
+
+                                                                                                                           * College is active
+
+                                                                                                                           * Batch is active (for students)
+
+                                                                                                                           * User status is Active
+
+All APIs require:
+Authorization: Bearer <FirebaseToken>
+________________
+
+
+ADMIN FLOW
+                                                                                                                              * Login
+→ Firebase Auth
+→ Backend verifies role = Admin
+If verified → Redirect to Admin Dashboard
+Dashboard
+
+→ View:
+Active Colleges
+Active Batches
+Total Students
+Total Submissions
+Average Score
+Today’s Submissions
+Drop-off Alerts
+Streak Consistency Overview
+
+
+                                                                                                                                 * College Management
+Create College
+→ Set name, code, status (Active/Inactive)
+                                                                                                                                 * Edit College
+→ Update name or status
+                                                                                                                                 * Deactivate College
+→ All associated students blocked from login
+                                                                                                                                 * Delete College
+→ Allowed only if no active batches exist
+
+
+Batch Management
+
+Create Batch
+→ Assign to College
+→ Set startDate, expiryDate, releaseTime
+                                                                                                                                    * System Auto-Creates:
+Core Track
+DSA Track
+SQL Track
+                                                                                                                                    * Activate Batch
+→ Locks track configuration
+→ Locks question ordering
+→ Starts workingDay calculation
+                                                                                                                                    * Expire Batch
+→ Students blocked from submissions
+                                                                                                                                    * Archive Batch
+→ Moves batch to historical state
+                                                                                                                                    * Track Configuration
+Configure:
+durationDays
+ordered questionIds
+                                                                                                                                    * Constraint:
+Question order cannot change after batch activation
+durationDays must match ordered questionIds length
+
+
+Student Management
+ Bulk Upload via CSV:
+name
+email
+batchId
+                                                                                                                                       * Rules:
+Duplicate email rejected
+Email must be unique across platform
+Batch must exist
+Default status = Active
+                                                                                                                                       * Admin can:
+Suspend student
+Reactivate student
+Deactivate student
+Move student to another batch (if allowed by rules)
+                                                                                                                                       * Student Detail View:
+Total submissions
+Average score
+Current streak
+Longest streak
+Track-wise performance
+
+
+Question Bank Management
+
+                                                                                                                                          * Create Question
+                                                                                                                                          * Edit Question
+→ Creates new version
+                                                                                                                                          * Delete Question
+→ Only if not assigned to active track
+                                                                                                                                          * Each Question Contains:
+Title
+Description
+Time limit
+Memory limit
+Visible test cases
+Hidden test cases
+Difficulty
+Track type
+
+
+Reports
+
+View batch-wise:
+Leaderboard
+Day-wise score list
+Weekly performance matrix
+Average accuracy
+Total submissions
+Inactive students
+Streak consistency
+                                                                                                                                             * Export Options:
+CSV
+Excel
+
+
+Analytics
+
+Platform-level insights:
+Average score trend
+Completion rate
+Track performance comparison
+Submission volume per day
+Streak distribution
+Top performers
+Drop-off risk students
+________________
+
+
+STUDENT FLOW
+Login
+→ Firebase Auth
+→ Backend verifies:
+                                                                                                                                                * Student exists
+
+                                                                                                                                                * College active
+
+                                                                                                                                                * Batch active
+
+                                                                                                                                                * Student status active
+
+If valid → Redirect to Dashboard.
+________________
+
+
+Dashboard
+Displays:
+                                                                                                                                                   * Current workingDay
+
+                                                                                                                                                   * Today’s challenge status
+
+                                                                                                                                                   * Current streak
+
+                                                                                                                                                   * Longest streak
+
+                                                                                                                                                   * Rank in batch
+
+                                                                                                                                                   * Overall accuracy %
+
+                                                                                                                                                   * Progress bar
+
+CTA:
+"Solve Today’s Challenge"
+________________
+
+
+Daily Challenge Flow
+Step 1: Load Question
+GET /user/today-question
+Backend computes:
+workingDay = floor((currentDate - batch.startDate) / 1 day)
+Checks:
+                                                                                                                                                      * workingDay >= 0
+
+                                                                                                                                                      * workingDay < track.durationDays
+
+                                                                                                                                                      * currentTime >= releaseTime
+
+                                                                                                                                                      * submission already exists?
+
+Returns:
+                                                                                                                                                         * Question (if unlocked)
+
+                                                                                                                                                         * Locked state (if early)
+
+                                                                                                                                                         * Completed state (if already submitted)
+
+________________
+
+
+Step 2: Run Code (Max 3)
+Student clicks Run.
+Backend:
+                                                                                                                                                            * Validate runCount < 3
+
+                                                                                                                                                            * Send code to Judge
+
+                                                                                                                                                            * Store run result
+
+Run does NOT affect final score.
+________________
+
+
+Step 3: Submit (Only Once)
+Student clicks Submit.
+Backend:
+                                                                                                                                                               * Validate not already submitted
+
+                                                                                                                                                               * Validate workingDay matches
+
+                                                                                                                                                               * Send to Judge
+
+                                                                                                                                                               * Store final result
+
+                                                                                                                                                               * Calculate score
+
+                                                                                                                                                               * Update streak
+
+                                                                                                                                                               * Recalculate rank (atomic)
+
+Submission becomes locked permanently.
+________________
+
+
+Scoring System
+Score out of 10:
+Accuracy (5)
+Efficiency (3)
+Discipline (2)
+Score stored in Submission record.
+________________
+
+
+Roadmap
+GET /user/progress
+Shows:
+                                                                                                                                                                  * Completed days
+
+                                                                                                                                                                  * Missed days
+
+                                                                                                                                                                  * Locked future days
+
+                                                                                                                                                                  * Current workingDay
+
+Future days remain locked until eligible.
+________________
+
+
+Leaderboard
+GET /user/leaderboard
+Rules:
+                                                                                                                                                                     * Batch isolated
+
+                                                                                                                                                                     * Sorted by:
+
+                                                                                                                                                                        1. Total Correct
+
+                                                                                                                                                                        2. Accuracy %
+
+                                                                                                                                                                        3. Avg Submission Time
+
+Pagination required.
+Rank updates immediately after submission.
+________________
+
+
+Submissions
+Student can view:
+                                                                                                                                                                           * All past submissions
+
+                                                                                                                                                                           * Score breakdown
+
+                                                                                                                                                                           * Execution time
+
+                                                                                                                                                                           * Run history
+
+Cannot edit past submissions.
+________________
+
+
+Analytics
+Displays:
+                                                                                                                                                                              * Accuracy %
+
+                                                                                                                                                                              * Average execution time
+
+                                                                                                                                                                              * Track-wise performance
+
+                                                                                                                                                                              * Streak graph
+
+                                                                                                                                                                              * Score trend over time
+
+________________
+
+
+Profile
+View:
+                                                                                                                                                                                 * Name
+
+                                                                                                                                                                                 * Batch
+
+                                                                                                                                                                                 * College
+
+                                                                                                                                                                                 * Streak stats
+
+Cannot modify batch assignment.
+________________
+
+
+SYSTEM STATE FLOW
+Batch Lifecycle:
+Draft → Active → Expired → Archived
+Student Status:
+Active → Suspended → Inactive
+Submission Status:
+Pending → Passed → Failed → Timeout → Error
+________________
+
+
+REAL-TIME BEHAVIOR
+Rank updates:
+After every successful submission.
+Streak updates:
+Once per workingDay only.
+Lock Conditions:
+                                                                                                                                                                                    * Before releaseTime → Locked
+
+                                                                                                                                                                                    * After submission → Locked
+
+                                                                                                                                                                                    * After expiryDate → Locked
+
+
+________________
+
+
+11. SYSTEM WORKFLOW STATES
+Batch:
+                                                                                                                                                                                       * Draft
+
+                                                                                                                                                                                       * Active
+
+                                                                                                                                                                                       * Expired
+
+                                                                                                                                                                                       * Archived
+
+Student:
+                                                                                                                                                                                          * Active
+
+                                                                                                                                                                                          * Inactive
+
+                                                                                                                                                                                          * Suspended
+
+Submission:
+                                                                                                                                                                                             * Pending
+
+                                                                                                                                                                                             * Passed
+
+                                                                                                                                                                                             * Failed
+
+                                                                                                                                                                                             * Timeout
+
+                                                                                                                                                                                             * Error
+
+________________
+
+
+12. PERFORMANCE REQUIREMENTS
+Submission processing < 3 sec
+Dashboard load < 1 sec
+Leaderboard query < 200ms
+Support 1000 concurrent users
+Indexes required on:
+                                                                                                                                                                                                * batchId
+
+                                                                                                                                                                                                * studentId
+
+                                                                                                                                                                                                * questionId
+
+                                                                                                                                                                                                * submittedAt
+
+                                                                                                                                                                                                * workingDay
+
+________________
+
+
+13. SECURITY REQUIREMENTS
+                                                                                                                                                                                                   * Firebase token verification middleware
+
+                                                                                                                                                                                                   * Role-based access control
+
+                                                                                                                                                                                                   * Submission rate limiting
+
+                                                                                                                                                                                                   * Input validation on all endpoints
+
+                                                                                                                                                                                                   * HTTPS enforced
+
+                                                                                                                                                                                                   * Admin audit logging
+
+                                                                                                                                                                                                   * Batch-isolated queries only
+
+                                                                                                                                                                                                   * No direct DB exposure
+
+________________
+
+
+14. FAILURE HANDLING
+Judge timeout → retry once
+DB failure → safe error response
+Manual leaderboard recalculation endpoint
+Log invariant violations
+________________
+
+
+15. ACCEPTANCE TESTS
+Student:
+                                                                                                                                                                                                      * No batch → blocked
+
+                                                                                                                                                                                                      * Before releaseTime → locked
+
+                                                                                                                                                                                                      * Submits twice → rejected
+
+                                                                                                                                                                                                      * Streak increments once per day
+
+                                                                                                                                                                                                      * Rank updates instantly
+
+                                                                                                                                                                                                      * Cannot access other batch leaderboard
+
+Admin:
+                                                                                                                                                                                                         * Creating batch without track → rejected
+
+                                                                                                                                                                                                         * Changing startDate updates workingDay dynamically
+
+                                                                                                                                                                                                         * Deactivating student blocks login
+
+                                                                                                                                                                                                         * Reports match submission records
+
+                                                                                                                                                                                                         * Deleting active question → blocked
+
+
+
+
+
+ADMIN DASHBOARD EXECUTION PLAN (15 DAYS)
+ADMIN DASHBOARD EXECUTION PLAN (15 DAYS)
+ Duration: 3 Weeks
+Work Cycle: 5 Days per Week
+Teams: Pair A, Pair B, Pair C
+Objective: Build complete Admin Dashboard with CRUD, Monitoring, Reports, and Analytics
+Constraint: Must integrate smoothly with upcoming Student Module
+WEEK 1 – FOUNDATION LAYER (Hierarchy + Batch Engine)
+DAY 1 – College Schema + API Setup
+Pair A
+Backend
+☐ Create College schema with indexes
+☐ Add unique code validation
+☐ Add status field (Active/Inactive)
+☐ Implement Create College API
+☐ Implement Get Colleges API (pagination)
+Frontend
+☐ Create College List page
+☐ Create Add College form
+☐ Connect list API
+Pair B
+☐ Define Batch schema structure
+☐ Draft batch state enum logic
+Pair C
+☐ Setup Admin layout
+☐ Setup sidebar navigation
+☐ Create dashboard skeleton
+EOD Outcome
+College creation and listing works end-to-end.
+________________
+
+
+DAY 2 – College CRUD Completion + Dashboard Stats Base
+Pair A
+☐ Implement Update College API
+☐ Implement Delete College with validation
+☐ Implement status toggle
+☐ Connect edit/delete UI
+Pair B
+☐ Create Batch schema
+☐ Add collegeId reference
+☐ Add state (Draft default)
+☐ Add indexes (collegeId + batchId)
+Pair C
+Backend
+☐ Create dashboard stats API (counts)
+Frontend
+☐ Connect stats cards to API
+EOD Outcome
+College fully manageable.
+Dashboard shows real counts.
+________________
+
+
+DAY 3 – Batch Creation + Auto Track Setup
+Pair B
+Backend
+☐ Create Batch API
+☐ Auto-create 3 tracks (Core, DSA, SQL)
+☐ Store releaseTime, startDate, expiryDate
+Frontend
+☐ Batch create form
+☐ Batch list page
+Pair A
+☐ Create Track schema
+☐ Add batchId index
+☐ Add trackType validation
+Pair C
+☐ Create Batch Detail page layout
+EOD Outcome
+Batch creation works.
+Tracks auto-created.
+________________
+
+
+DAY 4 – Batch Activation + WorkingDay Utility
+Pair B
+☐ Implement batch state transitions
+☐ Implement Activate Batch API
+☐ Add lock logic
+Pair A
+☐ Implement workingDay calculation utility
+☐ Export utility as reusable service
+Pair C
+☐ Show batch status on dashboard
+☐ Connect batch detail stats
+EOD Outcome
+Batch activation works.
+workingDay logic finalized for future student side.
+________________
+
+
+DAY 5 – Track Configuration
+Pair A
+Backend
+☐ Add durationDays validation
+☐ Add orderedQuestionIds validation
+☐ Lock configuration after activation
+Frontend
+☐ Track configuration UI
+☐ Question ordering UI
+Pair B
+☐ Validate orderedQuestionIds length equals durationDays
+Pair C
+☐ QA integration
+EOD Outcome
+Track configuration complete and immutable after activation.
+________________
+
+
+WEEK 2 – EXECUTION CONTROL LAYER (Students + Submissions)
+DAY 6 – Student Schema + Upload Base
+Pair B
+Backend
+☐ Create Student schema
+☐ Add streak + longestStreak fields
+☐ Add status field
+☐ Add indexes (batchId + collegeId)
+☐ Build CSV upload parser
+Frontend
+☐ Create Student list page
+☐ Create Upload CSV UI
+Pair A
+☐ Validate batch existence before student creation
+Pair C
+☐ Prepare Submission schema draft
+EOD Outcome
+Students can be bulk uploaded.
+________________
+
+
+DAY 7 – Student Management Completion
+Pair B
+☐ Implement student status toggle
+☐ Implement student detail API
+☐ Add duplicate email validation
+☐ Connect detail view UI
+Pair A
+☐ Validate institutional email rule
+ADMIN DASHBOARD EXECUTION PLAN (15 DAYS)Pair C
+☐ Prepare submission index strategy
+EOD Outcome
+Students fully manageable.
+________________
+
+
+DAY 8 – Submission Schema + Monitoring Base
+Pair C
+Backend
+☐ Create Submission schema
+☐ Add required indexes
+☐ Add workingDay field
+☐ Add score fields (accuracy, efficiency, discipline)
+Frontend
+☐ Submission list page
+☐ Basic filter UI
+Pair B
+☐ Connect submission list to batch filter
+EOD Outcome
+Submission model finalized and visible in admin.
+________________
+
+
+DAY 9 – Submission Filters + Monitoring Details
+Pair C
+☐ Implement filtered submission API
+☐ Add pagination
+☐ Add submission detail endpoint
+Frontend
+☐ Add filters (college, batch, student, track, day)
+☐ Create submission detail modal
+Pair A
+☐ QA query performance
+EOD Outcome
+Admin can monitor submissions with filters.
+________________
+
+
+DAY 10 – Integration + Data Integrity Day
+All Pairs
+☐ Validate referential integrity
+☐ Test batch activation locking
+☐ Test student status blocking logic
+☐ Verify index performance
+☐ Fix integration bugs
+EOD Outcome
+Admin structure + execution layer stable and production ready.
+________________
+
+
+WEEK 3 – INTELLIGENCE + REPORTING LAYER
+DAY 11 – Question Bank Core
+Pair A
+Backend
+☐ Create Question schema
+☐ Add version field
+☐ Add trackType validation
+☐ Prevent delete if assigned
+Frontend
+☐ Question list page
+☐ Create question form
+Pair B
+☐ Validate question-track consistency
+EOD Outcome
+Question bank operational.
+________________
+
+
+DAY 12 – Question Versioning + Assignment Support
+Pair A
+☐ Implement question version increment logic
+☐ Store version reference in submission schema
+Frontend
+☐ Add version history view
+Pair C
+☐ Validate assignment preview logic
+EOD Outcome
+Version-controlled question system ready.
+________________
+
+
+DAY 13 – Leaderboard + Reports Engine
+Pair B
+Backend
+☐ Build ranking aggregation pipeline
+☐ Build leaderboard API
+☐ Build day-wise score API
+☐ Build weekly matrix API
+☐ Implement CSV export
+Frontend
+☐ Reports page
+☐ Export buttons
+EOD Outcome
+Leaderboard and reports exportable.
+________________
+
+
+DAY 14 – Analytics Engine
+Pair C
+Backend
+☐ Average score trend API
+☐ Completion rate API
+☐ Track comparison API
+☐ Submission volume API
+Frontend
+☐ Add analytics charts
+☐ Integrate dashboard graphs
+EOD Outcome
+Analytics fully visible on dashboard.
+________________
+
+
+DAY 15 – Final Integration + Production Hardening
+All Pairs
+☐ Test college isolation
+☐ Test batch lifecycle transitions
+☐ Test report accuracy vs DB
+☐ Validate index performance (<200ms leaderboard)
+☐ Validate dashboard load (<1 sec)
+☐ Review security middleware
+☐ Fix final bugs
+EOD Outcome
+Admin Dashboard fully production-ready.
+No schema refactor required for Student Side.
+All services reusable for upcoming user module.
+________________
+
+
+What You Achieve in 15 Days
+Complete Admin CRUD
+Batch + Track Engine
+Student Management
+Submission Monitoring
+Question Bank
+Leaderboard Engine
+Reports Export
+Analytics Dashboard
+Student side can now plug in without touching Admin logic.
