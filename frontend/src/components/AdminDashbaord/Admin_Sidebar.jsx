@@ -85,7 +85,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-28 border-r border-black/5 dark:border-white/5">
+      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-11 border-r border-black/5 dark:border-white/5">
         <div className="flex-1 overflow-y-auto px-4 scrollbar-hide">
           {renderNavLinks()}
         </div>
@@ -129,7 +129,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 pt-28 shadow-2xl"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 pt-11 shadow-2xl"
             >
               <div className="flex-1 overflow-y-auto px-4 h-full scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
