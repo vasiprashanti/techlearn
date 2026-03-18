@@ -8,7 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import { adminStats } from "../../data/adminDashboardMock";
 
 // Components
-import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin// <-- FIXED: Now using the exact Dashboard Sidebar
+import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; 
 import LoadingScreen from "../../components/Loader/Loader3D"; 
 
 // Icons
@@ -20,56 +20,6 @@ import {
   FaFolderOpen,
   FaUserFriends,
 } from "react-icons/fa";
-
-// --- AdminDashboard Backend Logic (Calendar & Analytics) ---
-function getMonthDays(year, month) {
-  const days = [];
-  const lastDay = dayjs().year(year).month(month + 1).date(0);
-  for (let i = 1; i <= lastDay.date(); i++) {
-    days.push(dayjs().year(year).month(month).date(i));
-  }
-  return days;
-}
-
-const analytics = [
-  {
-    label: "Total Registered Users",
-    value: 45,
-    icon: <FaUsers className="text-2xl text-purple-400" />,
-    bg: "bg-white/50 dark:bg-gray-800/70 from-purple-50 to-blue-50",
-    isButton: false,
-  },
-  {
-    label: "Club Members Count",
-    value: 32,
-    icon: <FaUserFriends className="text-2xl text-purple-400" />,
-    bg: "bg-white/50 dark:bg-gray-800/70 from-purple-50 to-blue-50",
-    isButton: false,
-  },
-  {
-    label: "Active Users Today",
-    value: 29,
-    icon: <FaUserCheck className="text-2xl text-blue-400" />,
-    bg: "bg-white/50 dark:bg-gray-800/70 from-blue-50 to-purple-50",
-    isButton: false,
-  },
-  {
-    label: "Course Details",
-    value: 12,
-    icon: <FaBookOpen className="text-2xl text-purple-400" />,
-    bg: "bg-white/50 dark:bg-gray-800/70 from-purple-50 to-blue-50",
-    isButton: true,
-    to: "/admin/courses",
-  },
-  {
-    label: "Project Details",
-    value: 9,
-    icon: <FaFolderOpen className="text-2xl text-blue-400" />,
-    bg: "bg-white/50 dark:bg-gray-800/70 from-blue-50 to-purple-50",
-    isButton: true,
-    to: "/admin/projects",
-  },
-];
 
 // --- Dashboard Logic (Search Routes) ---
 const searchRoutes = [
@@ -96,16 +46,6 @@ export default function AdminDashboard() {
   // --- AdminDashboard States ---
   const [loading, setLoading] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const today = dayjs();
-  const [calendarMonth, setCalendarMonth] = useState(today.month());
-  const [calendarYear, setCalendarYear] = useState(today.year());
-  const days = getMonthDays(calendarYear, calendarMonth);
-  const weekdayShort = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-  const firstWeekday = dayjs()
-    .year(calendarYear)
-    .month(calendarMonth)
-    .date(1)
-    .day();
 
   // --- Dashboard States ---
   const { theme, toggleTheme } = useTheme();
@@ -250,7 +190,7 @@ export default function AdminDashboard() {
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
           `}
         >
-          <div className="max-w-[1600px] mx-auto space-y-8">
+          <div className="max-w-[1600px] mx-auto space-y-6">
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
                 Overview
@@ -286,7 +226,7 @@ export default function AdminDashboard() {
                     {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
                   </button>
 
-                  {/* Luxury Profile Dropdown */}
+                  {/* Profile Dropdown */}
                   {profileDropdownOpen && (
                     <>
                       <div
@@ -321,7 +261,6 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => {
                               setProfileDropdownOpen(false);
-                              // Navigate to profile settings if needed
                             }}
                             className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
                           >
@@ -370,7 +309,8 @@ export default function AdminDashboard() {
               </div>
             </header>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {/* KPIs Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
               {adminStats.kpis.map((kpi, i) => (
                 <div
                   key={i}
@@ -391,6 +331,7 @@ export default function AdminDashboard() {
               ))}
             </div>
 
+            {/* Middle Section: Charts & Top Students */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-8 shrink-0">
@@ -463,96 +404,111 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Bottom Section: Asymmetric Bento Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
-                  Recent Student Activity
-                </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-2">
-                  {adminStats.recentActivity.map((activity, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between group"
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-black/50 flex items-center justify-center text-[10px] font-medium text-[#3C83F6] dark:text-white border border-black/10 dark:border-white/10 shrink-0 shadow-sm group-hover:bg-[#3C83F6] group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
-                          {activity.name.charAt(0)}
+              
+              {/* Left Column: Stacked Grids */}
+              <div className="flex flex-col gap-6 lg:col-span-1">
+                
+                {/* Box 1: Recent Student Activity */}
+                <div className="flex-1 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 md:p-8 rounded-xl flex flex-col">
+                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
+                    Recent Activity
+                  </h3>
+                  <div className="flex flex-col justify-between gap-4">
+                    {adminStats.recentActivity.map((activity, i) => (
+                      <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-white/50 dark:bg-black/50 flex items-center justify-center text-[10px] font-medium text-[#3C83F6] dark:text-white border border-black/10 dark:border-white/10 shrink-0 shadow-sm group-hover:bg-[#3C83F6] group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
+                            {activity.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0 pr-2">
+                            <h4 className="text-sm font-medium text-black dark:text-white truncate group-hover:text-[#3C83F6] transition-colors">
+                              {activity.name}
+                            </h4>
+                            <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
+                              {activity.batch} · Streak: {activity.streak}
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0 pr-2">
-                          <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white truncate">
-                            {activity.name}
+                        <span className="text-[10px] text-black/30 dark:text-white/30 shrink-0">
+                          {activity.date}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Box 2: Most Solved Questions */}
+                <div className="flex-1 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 md:p-8 rounded-xl flex flex-col">
+                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
+                    Trending Questions
+                  </h3>
+                  <div className="flex flex-col justify-between gap-3">
+                    {adminStats.mostSolved.map((question, i) => (
+                      <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors">
+                        <div className="min-w-0 pr-4">
+                          <h4 className="text-sm font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors truncate">
+                            {question.title}
                           </h4>
-                          <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
-                            {activity.batch} · Streak: {activity.streak} days
-                          </p>
+                          <div className="flex items-center gap-2 mt-1 truncate">
+                            <span
+                              className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm shrink-0
+                              ${
+                                question.difficulty === "Easy"
+                                  ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
+                                  : question.difficulty === "Medium"
+                                  ? "border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5"
+                                  : "border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5"
+                              }
+                            `}
+                            >
+                              {question.difficulty}
+                            </span>
+                            <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
+                              {question.track}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end shrink-0 pl-2">
+                           <span className="text-xs font-semibold text-[#3C83F6] dark:text-white">
+                             {question.count}
+                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] text-black/30 dark:text-white/30 shrink-0">
-                        {activity.date}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
-                  Most Solved Questions
-                </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-2">
-                  {adminStats.mostSolved.map((question, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between group cursor-pointer"
-                    >
-                      <div className="min-w-0 pr-4">
-                        <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                          {question.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1 truncate">
-                          <p className="text-[10px] text-black/50 dark:text-white/50 truncate">
-                            {question.track}
-                          </p>
-                          <span
-                            className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm shrink-0
-                            ${
-                              question.difficulty === "Easy"
-                                ? "border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5"
-                                : question.difficulty === "Medium"
-                                ? "border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5"
-                                : "border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5"
-                            }
-                          `}
-                          >
-                            {question.difficulty}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-xs font-light text-black/70 dark:text-white/70 whitespace-nowrap shrink-0">
-                        {question.count}
-                      </span>
-                    </div>
-                  ))}
+              {/* Right Column: Double-Wide Horizontal Batches */}
+              <div className="lg:col-span-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 md:p-8 rounded-xl flex flex-col h-full">
+                <div className="flex items-center justify-between mb-6 shrink-0">
+                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
+                    Active & Upcoming Batches
+                  </h3>
+                  <button className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    View All
+                  </button>
                 </div>
-              </div>
-
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col h-full min-h-[380px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
-                  Upcoming & Active Batches
-                </h3>
-                <div className="flex-1 flex flex-col justify-between space-y-3">
+                
+                {/* Single Column, Stretching Full Width */}
+                <div className="flex flex-col gap-3 flex-1">
                   {adminStats.batches.map((batch, i) => (
-                    <div
-                      key={i}
-                      className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-lg cursor-pointer group shadow-sm"
+                    <div 
+                      key={i} 
+                      className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-xl cursor-pointer group shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      
+                      {/* Left: ID & College */}
+                      <div className="flex flex-col min-w-[200px]">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h4 className="text-sm font-semibold text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {batch.id}
                           </h4>
                           <span
-                            className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm
+                            className={`text-[8px] uppercase tracking-widest px-2 py-0.5 border rounded-full
                             ${
                               batch.status === "Active"
                                 ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
@@ -563,21 +519,33 @@ export default function AdminDashboard() {
                             {batch.status}
                           </span>
                         </div>
+                        <p className="text-[11px] text-black/60 dark:text-white/60 font-medium truncate">
+                          {batch.college}
+                        </p>
                       </div>
-                      <p className="text-[10px] text-black/60 dark:text-white/60 mb-2 font-medium truncate">
-                        {batch.college} ·{" "}
-                        <span className="font-light">{batch.track}</span>
-                      </p>
-                      <div className="flex items-center gap-1 text-[9px] text-black/40 dark:text-white/40 uppercase tracking-widest">
-                        <span>{batch.start}</span>
-                        <span className="mx-1">→</span>
-                        <span>{batch.end}</span>
+
+                      {/* Middle: Track (Hidden on super small screens to preserve layout) */}
+                      <div className="flex-1 min-w-[150px] hidden md:block border-l border-black/5 dark:border-white/5 pl-4">
+                         <p className="text-[10px] text-black/40 dark:text-white/40 uppercase tracking-widest mb-0.5">Track</p>
+                         <p className="text-[11px] font-medium text-black/80 dark:text-white/80 truncate">
+                           {batch.track}
+                         </p>
                       </div>
+
+                      {/* Right: Dates */}
+                      <div className="flex items-center gap-2 text-[10px] text-black/50 dark:text-white/50 uppercase tracking-widest shrink-0 bg-white/50 dark:bg-black/50 px-3 py-2 rounded-lg border border-black/5 dark:border-white/5">
+                        <span className="font-medium text-black/70 dark:text-white/70">{batch.start}</span>
+                        <span>→</span>
+                        <span className="font-medium text-black/70 dark:text-white/70">{batch.end}</span>
+                      </div>
+
                     </div>
                   ))}
                 </div>
               </div>
+
             </div>
+
           </div>
         </main>
       </div>

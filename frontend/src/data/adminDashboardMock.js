@@ -1,3 +1,5 @@
+// src/data/adminDashboardMock.js
+
 export const adminStats = {
   kpis: [
     { title: "Total Colleges", value: "5", subtitle: "4 active" },
@@ -39,6 +41,11 @@ export const adminStats = {
     { id: "CS-2024B", status: "Active", college: "MIT", track: "Web Development", start: "2024-07-15", end: "2025-01-15" },
     { id: "DS-2024A", status: "Active", college: "Stanford University", track: "Python Programming", start: "2024-06-15", end: "2024-12-15" },
     { id: "WD-2024A", status: "Active", college: "IIT Delhi", track: "Web Development", start: "2024-08-01", end: "2025-02-01" },
-    { id: "WD-2024B", status: "Upcoming", college: "IIT Delhi", track: "Database Management", start: "2024-09-01", end: "2025-03-01" }
+    { id: "WD-2024B", status: "Upcoming", college: "IIT Delhi", track: "Database Management", start: "2024-09-01", end: "2025-03-01" },
+    // --- 4 New Batches Added Below ---
+    { id: "ML-2024A", status: "Active", college: "Harvard University", track: "Machine Learning", start: "2024-08-15", end: "2025-02-15" },
+    { id: "FS-2024C", status: "Upcoming", college: "Stanford University", track: "Full Stack Development", start: "2024-10-01", end: "2025-04-01" },
+    { id: "UX-2024A", status: "Upcoming", college: "MIT", track: "UI/UX Design", start: "2024-11-15", end: "2025-02-15" },
+    { id: "CB-2024A", status: "Active", college: "IIT Delhi", track: "Cybersecurity Basics", start: "2024-07-01", end: "2024-12-31" }
   ]
 };
