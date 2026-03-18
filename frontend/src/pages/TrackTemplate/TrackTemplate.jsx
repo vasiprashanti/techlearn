@@ -345,6 +345,14 @@ export default function TrackTemplate() {
               </div>
             </div>
 
+            {/* Info Banner — matching screenshot layout */}
+            <div className="bg-[#3C83F6]/5 dark:bg-white/5 border border-[#3C83F6]/10 dark:border-white/10 rounded-2xl p-6 backdrop-blur-xl">
+              <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white mb-2">How Track Templates work</h4>
+              <p className="text-xs text-black/60 dark:text-white/60 leading-relaxed max-w-4xl">
+                Track Templates are reusable day-wise curricula built from the Question Bank. When you create a Batch, all active templates are automatically attached as copies — so editing a template later won't affect existing batches.
+              </p>
+            </div>
+
             {/* 3-Column Card Grid — matches screenshot layout */}
             {filteredTracks.length === 0 ? (
               <div className="py-20 text-center text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30">
@@ -357,10 +365,10 @@ export default function TrackTemplate() {
                   return (
                     <div
                       key={track.id}
-                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col gap-4 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group"
+                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col hover:bg-white/60 dark:hover:bg-black/60 transition-colors group h-full"
                     >
                       {/* Top row: icon + status badge */}
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between mb-4">
                         <div className="w-11 h-11 rounded-xl bg-white/50 dark:bg-black/50 border border-black/5 dark:border-white/5 flex items-center justify-center shadow-sm">
                           <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
                         </div>
@@ -374,18 +382,18 @@ export default function TrackTemplate() {
                         </span>
                       </div>
 
-                      {/* Track name + description */}
-                      <div>
+                      {/* Track name + description - fixed min-height ensures horizontal alignment of what's below */}
+                      <div className="mb-6 min-h-[6rem]">
                         <h3 className="text-lg font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                           {track.name}
                         </h3>
-                        <p className="text-xs text-black/50 dark:text-white/50 mt-1 leading-relaxed">
+                        <p className="text-xs text-black/50 dark:text-white/50 mt-1 leading-relaxed line-clamp-2">
                           {track.description}
                         </p>
                       </div>
 
                       {/* Stats - matching screenshot layout with dividers */}
-                      <div className="flex flex-col gap-3 py-4 border-t border-b border-black/5 dark:border-white/5">
+                      <div className="flex flex-col gap-3 py-4 border-t border-b border-black/5 dark:border-white/5 mb-4">
                         <div>
                           <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1">Total Days</p>
                           <p className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{track.totalDays}</p>
