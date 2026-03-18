@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiLayers } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu } from 'react-icons/fi';
 
 // --- Mock Data ---
 const mockTracks = [
@@ -37,16 +37,6 @@ const mockTracks = [
     status: 'Active',
     icon: FiDatabase,
     category: 'Database',
-  },
-  {
-    id: 'trk_fe_01',
-    name: 'Frontend Track',
-    description: '25-day modern frontend development',
-    totalDays: 25,
-    questionsAssigned: 0,
-    status: 'Draft',
-    icon: FiLayers,
-    category: 'Web Dev',
   },
 ];
 
