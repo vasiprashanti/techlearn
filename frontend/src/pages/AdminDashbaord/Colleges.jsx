@@ -109,7 +109,7 @@ const Colleges = () => {
             {/* Header */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Colleges</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Colleges</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Overview of all partner colleges and cohort performance</p>
               </div>
               <div className="flex items-center gap-6">
@@ -217,11 +217,11 @@ const Colleges = () => {
               <div className="flex items-center gap-3">
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
                   <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Total</p>
-                  <p className="text-xl font-light tracking-tight text-black/70 dark:text-white mt-0.5">{collegesData.length}</p>
+                  <p className="text-xl font-normal tracking-tight text-black/70 dark:text-white mt-0.5">{collegesData.length}</p>
                 </div>
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
                   <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active</p>
-                  <p className="text-xl font-light tracking-tight text-emerald-500 mt-0.5">{activeCount}</p>
+                  <p className="text-xl font-normal tracking-tight text-emerald-500 mt-0.5">{activeCount}</p>
                 </div>
               </div>
 
@@ -277,7 +277,7 @@ const Colleges = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
                         <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Avg Score</p>
-                        <p className={`text-2xl font-light tracking-tight mt-2 ${college.avgScore >= 80 ? 'text-[#3C83F6] dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
+                        <p className={`text-2xl font-normal tracking-tight mt-2 ${college.avgScore >= 80 ? 'text-[#3C83F6] dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
                           {college.avgScore}%
                         </p>
                         <div className="mt-2.5 w-full h-px bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
@@ -286,7 +286,7 @@ const Colleges = () => {
                       </div>
                       <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
                         <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Activity Rate</p>
-                        <p className={`text-2xl font-light tracking-tight mt-2 ${activityRate === 100 ? 'text-emerald-500' : activityRate >= 50 ? 'text-[#3C83F6] dark:text-white' : 'text-amber-500'}`}>
+                        <p className={`text-2xl font-normal tracking-tight mt-2 ${activityRate === 100 ? 'text-emerald-500' : activityRate >= 50 ? 'text-[#3C83F6] dark:text-white' : 'text-amber-500'}`}>
                           {activityRate}%
                         </p>
                         <p className="text-[9px] text-black/30 dark:text-white/30 mt-1.5">{college.activeStudents} / {college.totalStudents} students</p>

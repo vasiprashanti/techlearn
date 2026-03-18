@@ -192,7 +192,7 @@ export default function AdminDashboard() {
         >
           <div className="max-w-[1600px] mx-auto space-y-6">
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
-              <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+              <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
                 Overview
               </h1>
 
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
                     {kpi.title}
                   </span>
                   <div className="mt-6 mb-1">
-                    <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                    <span className="text-3xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                       {kpi.value}
                     </span>
                   </div>
@@ -395,7 +395,7 @@ export default function AdminDashboard() {
                           {student.college} · {student.track}
                         </p>
                       </div>
-                      <div className="text-sm font-light text-[#3C83F6] dark:text-white shrink-0 pl-2">
+                      <div className="text-sm font-normal text-[#3C83F6] dark:text-white shrink-0 pl-2">
                         {student.score}
                       </div>
                     </div>

@@ -141,7 +141,7 @@ const Batches = () => {
             {/* Header */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Batches</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Batches</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">All active, upcoming, and completed cohorts</p>
               </div>
               <div className="flex items-center gap-6">
@@ -252,7 +252,7 @@ const Batches = () => {
               ].map(({ label, count, color }) => (
                 <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-6 py-5">
                   <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">{label}</p>
-                  <p className={`text-3xl font-light tracking-tight mt-2 ${color}`}>{count}</p>
+                  <p className={`text-3xl font-normal tracking-tight mt-2 ${color}`}>{count}</p>
                 </div>
               ))}
             </div>
@@ -313,8 +313,8 @@ const Batches = () => {
 
                   {/* Batch ID in blue + track neutral */}
                   <div>
-                    <h3 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white">{batch.id}</h3>
-                    <p className="text-sm text-black/45 dark:text-white/40 mt-1 font-light">{batch.track}</p>
+                    <h3 className="text-xl font-normal tracking-tight text-[#3C83F6] dark:text-white">{batch.id}</h3>
+                    <p className="text-sm text-black/45 dark:text-white/40 mt-1 font-normal">{batch.track}</p>
                   </div>
 
                   {/* Date + students info */}

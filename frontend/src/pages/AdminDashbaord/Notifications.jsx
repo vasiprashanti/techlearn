@@ -139,7 +139,7 @@ export default function Notifications() {
 
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Notifications</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Notifications</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Send announcements to students, batches, or colleges</p>
               </div>
               <div className="flex items-center gap-6">
@@ -197,7 +197,7 @@ export default function Notifications() {
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
                   <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">{label}</span>
-                  <div className="mt-6"><span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{value}</span></div>
+                  <div className="mt-6"><span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">{value}</span></div>
                 </div>
               ))}
             </div>

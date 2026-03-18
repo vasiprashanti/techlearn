@@ -162,7 +162,7 @@ export default function QuestionBank() {
 
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Question Bank</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Question Bank</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Manage and organise all assessment questions</p>
               </div>
               <div className="flex items-center gap-6">
@@ -222,13 +222,13 @@ export default function QuestionBank() {
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">Total Questions</span>
                 <div className="mt-6">
-                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">10</span>
+                  <span className="text-5xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">10</span>
                 </div>
               </div>
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">Total Categories</span>
                 <div className="mt-6">
-                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">5</span>
+                  <span className="text-5xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">5</span>
                 </div>
               </div>
             </div>
@@ -272,11 +272,11 @@ export default function QuestionBank() {
                     <div className="flex gap-5">
                       <div>
                         <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Total Questions</p>
-                        <p className="text-lg font-light text-black/80 dark:text-white mt-0.5">{cat.total}</p>
+                        <p className="text-lg font-normal text-black/80 dark:text-white mt-0.5">{cat.total}</p>
                       </div>
                       <div>
                         <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active Questions</p>
-                        <p className="text-lg font-light text-emerald-600 dark:text-emerald-400 mt-0.5">{cat.active}</p>
+                        <p className="text-lg font-normal text-emerald-600 dark:text-emerald-400 mt-0.5">{cat.active}</p>
                       </div>
                     </div>
                     <button className="text-[10px] tracking-widest uppercase text-[#3C83F6] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border border-[#3C83F6]/20 dark:border-blue-400/20 px-3 py-1.5 rounded-lg hover:bg-[#3C83F6]/5 dark:hover:bg-blue-400/5">

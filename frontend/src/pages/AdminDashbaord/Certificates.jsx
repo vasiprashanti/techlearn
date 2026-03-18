@@ -157,7 +157,7 @@ export default function Certificates() {
 
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Certificates</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Certificates</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Issued credentials, tests, and templates</p>
               </div>
               <div className="flex items-center gap-6">
@@ -249,11 +249,11 @@ export default function Certificates() {
                       <div className="flex gap-5">
                         <div>
                           <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Passing Score</p>
-                          <p className="text-base font-light text-[#3C83F6] dark:text-white mt-0.5">{test.passing}%</p>
+                          <p className="text-base font-normal text-[#3C83F6] dark:text-white mt-0.5">{test.passing}%</p>
                         </div>
                         <div>
                           <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Attempts</p>
-                          <p className="text-base font-light text-black/70 dark:text-white/70 mt-0.5">{test.attempts}</p>
+                          <p className="text-base font-normal text-black/70 dark:text-white/70 mt-0.5">{test.attempts}</p>
                         </div>
                       </div>
                       <button className="text-[10px] tracking-widest uppercase text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">

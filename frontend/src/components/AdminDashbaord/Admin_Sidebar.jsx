@@ -83,8 +83,8 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                   `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
                   ${
                     isActive
-                      ? "bg-[#3C83F6] text-white dark:bg-white dark:text-black font-medium shadow-md"
-                      : "text-black/50 dark:text-white/50 hover:text-black hover:bg-black/5 dark:hover:text-white dark:hover:bg-white/5 font-light"
+                      ? "bg-[#3C83F6] text-white dark:bg-white dark:text-black font-semibold shadow-md"
+                      : "text-black/50 dark:text-white/50 hover:text-black hover:bg-black/5 dark:hover:text-white dark:hover:bg-white/5 font-normal"
                   }`
                 }
               >

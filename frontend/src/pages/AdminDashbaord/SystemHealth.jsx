@@ -176,7 +176,7 @@ const SystemHealth = () => {
             {/* Header */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">System Health</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">System Health</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Platform infrastructure and service status</p>
               </div>
               
@@ -291,7 +291,7 @@ const SystemHealth = () => {
               {healthData.kpis.map((kpi, i) => (
                 <div key={i} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl">
                   <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 mb-4">{kpi.label}</span>
-                  <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{kpi.value}</span>
+                  <span className="text-3xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">{kpi.value}</span>
                 </div>
               ))}
             </div>

@@ -205,7 +205,7 @@ const Analytics = () => {
             {/* Header */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Analytics</h1>
+                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Analytics</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">
                   Platform performance and engagement overview
                 </p>
@@ -324,7 +324,7 @@ const Analytics = () => {
                     className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
                   >
                     <span className="text-[9px] uppercase tracking-widest text-black/50 dark:text-white/50 leading-snug">{kpi.label}</span>
-                    <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-5">{kpi.value}</span>
+                    <span className="text-3xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-5">{kpi.value}</span>
                   </div>
                 ))}
               </div>
@@ -346,10 +346,10 @@ const Analytics = () => {
                 <div className="mb-6 p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
                   <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Daily Active Students</span>
                   <div className="flex items-end gap-2 mt-2">
-                    <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                    <span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                       {analyticsData.studentEngagement.dailyActive}
                     </span>
-                    <span className="text-lg font-light text-black/30 dark:text-white/30 mb-1">
+                    <span className="text-lg font-normal text-black/30 dark:text-white/30 mb-1">
                       / {analyticsData.studentEngagement.totalStudents}
                     </span>
                   </div>
@@ -364,20 +364,20 @@ const Analytics = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col">
                     <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Weekly Active</span>
-                    <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
+                    <span className="text-2xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.weeklyActive}
                     </span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Inactive 3+ days</span>
-                    <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
+                    <span className="text-2xl font-normal tracking-tighter text-amber-500 mt-2">
                       {analyticsData.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
                   </div>
                   <div className="flex flex-col">
                     <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Avg Streak</span>
-                    <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
+                    <span className="text-2xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.avgStreak}
                     </span>
                     <span className="text-[9px] text-black/40 dark:text-white/40 mt-0.5">days</span>
@@ -394,7 +394,7 @@ const Analytics = () => {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-black/70 dark:text-white/70">Average Score</span>
-                      <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                      <span className="text-2xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                         {analyticsData.learningPerformance.avgScore}%
                       </span>
                     </div>
@@ -410,7 +410,7 @@ const Analytics = () => {
                   <div>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-black/70 dark:text-white/70">Submission Success Rate</span>
-                      <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                      <span className="text-2xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                         {analyticsData.learningPerformance.submissionSuccess}%
                       </span>
                     </div>
@@ -426,10 +426,10 @@ const Analytics = () => {
                   <div className="p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5 flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Average Solve Time</span>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                      <span className="text-3xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                         {analyticsData.learningPerformance.avgSolveTime}
                       </span>
-                      <span className="text-sm font-light text-black/40 dark:text-white/40">min</span>
+                      <span className="text-sm font-normal text-black/40 dark:text-white/40">min</span>
                     </div>
                   </div>
                 </div>
@@ -451,19 +451,19 @@ const Analytics = () => {
                 {/* Status pills */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
                   <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
-                    <span className="text-3xl font-light tracking-tighter text-emerald-500">
+                    <span className="text-3xl font-normal tracking-tighter text-emerald-500">
                       {analyticsData.batchPerformance.active}
                     </span>
                     <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Active</p>
                   </div>
                   <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
-                    <span className="text-3xl font-light tracking-tighter text-amber-500">
+                    <span className="text-3xl font-normal tracking-tighter text-amber-500">
                       {analyticsData.batchPerformance.upcoming}
                     </span>
                     <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Upcoming</p>
                   </div>
                   <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
-                    <span className="text-3xl font-light tracking-tighter text-black/50 dark:text-white/50">
+                    <span className="text-3xl font-normal tracking-tighter text-black/50 dark:text-white/50">
                       {analyticsData.batchPerformance.completed}
                     </span>
                     <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Completed</p>
@@ -487,7 +487,7 @@ const Analytics = () => {
                           {batch.college} · {batch.students} student{batch.students !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      <div className="text-sm font-light text-[#3C83F6] dark:text-white shrink-0">
+                      <div className="text-sm font-normal text-[#3C83F6] dark:text-white shrink-0">
                         Avg {batch.avg}%
                       </div>
                     </div>
@@ -534,7 +534,7 @@ const Analytics = () => {
                         `}>
                           {d.label}
                         </span>
-                        <span className="text-sm font-light text-[#3C83F6] dark:text-white">{d.count}</span>
+                        <span className="text-sm font-normal text-[#3C83F6] dark:text-white">{d.count}</span>
                       </div>
                     ))}
                   </div>
@@ -556,7 +556,7 @@ const Analytics = () => {
 
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Engagement Rate</span>
-                  <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
+                  <span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.engagementRate}%
                   </span>
                   <div className="mt-3 w-full h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
@@ -570,10 +570,10 @@ const Analytics = () => {
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active Students</span>
                   <div className="flex items-end gap-1 mt-2">
-                    <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
+                    <span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
                       {analyticsData.platformHealth.activeStudents}
                     </span>
-                    <span className="text-lg font-light text-black/30 dark:text-white/30 mb-1">
+                    <span className="text-lg font-normal text-black/30 dark:text-white/30 mb-1">
                       / {analyticsData.platformHealth.totalStudents}
                     </span>
                   </div>
@@ -581,14 +581,14 @@ const Analytics = () => {
 
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Resources Uploaded</span>
-                  <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
+                  <span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.resourcesUploaded}
                   </span>
                 </div>
 
                 <div className="flex flex-col">
                   <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Resources Viewed</span>
-                  <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
+                  <span className="text-4xl font-normal tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.resourcesViewed}
                   </span>
                 </div>
