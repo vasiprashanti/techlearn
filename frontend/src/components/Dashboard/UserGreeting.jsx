@@ -5,25 +5,19 @@ const UserGreeting = () => {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse">
-        <h1 className="text-3xl font-light tracking-tight text-black/30 dark:text-white/30">
+      <div className="user-greeting mt-4 ml-14 md:ml-4">
+        <h1 className="text-4xl font-poppins font text-gray-600 dark:text-gray-400 hover-gradient-text">
           Loading...
         </h1>
       </div>
     );
   }
 
-  const firstName = user?.firstName ? user.firstName : 'Guest';
-  const lastName = user?.lastName ? ` ${user.lastName}` : '';
-
   return (
-    <div>
-      <h1 className="text-4xl md:text-5xl font-light tracking-tighter text-black dark:text-white">
-        Hello, {firstName}{lastName}.
+    <div className="user-greeting mt-4 ml-14 md:ml-4">
+      <h1 className="text-4xl font-poppins font text-gray-600 dark:text-gray-400 hover-gradient-text">
+        Welcome back, {user?.firstName ? user.firstName : 'Guest'}{user?.lastName ? ` ${user.lastName}` : ''}
       </h1>
-      <p className="text-sm tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
-        Overview
-      </p>
     </div>
   );
 };
