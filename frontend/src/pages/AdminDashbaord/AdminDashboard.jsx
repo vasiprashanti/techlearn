@@ -7,7 +7,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { adminStats } from "../../data/adminDashboardMock";
 
 // Components
-import Sidebar from "../../components/Dashboard/Sidebar"; // <-- FIXED: Now using the exact Dashboard Sidebar
+import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin// <-- FIXED: Now using the exact Dashboard Sidebar
 import LoadingScreen from "../../components/Loader/Loader3D"; 
 
 // Icons

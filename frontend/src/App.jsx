@@ -68,6 +68,11 @@ import PaymentGateway from './pages/Build/PaymentGateway'
 import UILibrary from './pages/Build/UILibrary'
 import Profile from './components/Dashboard/Profile'
 
+import Analytics from './pages/AdminDashbaord/Analytics';
+import SystemHealth from './pages/AdminDashbaord/SystemHealth';
+import Colleges from './pages/AdminDashbaord/Colleges';
+import Batches from './pages/AdminDashbaord/Batches';
+import Students from './pages/AdminDashbaord/Students';
 // Contact component
 import Contact from './pages/Contact/Contact'
 
@@ -585,9 +590,25 @@ function FloatingCodeBackground() {
 function LayoutWrapper() {
   const location = useLocation();
   
-  // NEW: Updated visibility logic so our new dashboard views don't get double navbars or footers
-  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
-                           location.pathname.startsWith('/track-templates') || 
+  // NEW: Array containing all our sidebar dashboard routes
+  const adminSidebarRoutes = [
+    '/dashboard', 
+    '/analytics', 
+    '/system-health', 
+    '/colleges', 
+    '/batches', 
+    '/students', 
+    '/question-bank', 
+    '/track-templates', 
+    '/resources', 
+    '/certificates', 
+    '/submission-monitor', 
+    '/notifications', 
+    '/audit-logs', 
+    '/reports'
+  ];
+
+  const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
@@ -610,7 +631,6 @@ function LayoutWrapper() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
           <Route element={<PrivateRoute />}>
-            {/* NEW: Updated protected routes for Dashboard and Track Templates */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
@@ -656,6 +676,11 @@ function LayoutWrapper() {
             <Route path="/admin/codingroundupload" element={<CodingRoundUpload />} />
             <Route path="/admin/mcqupload" element={<McqUpload />} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/system-health" element={<SystemHealth />} />
+            <Route path="/colleges" element={<Colleges />} />
+<Route path="/batches" element={<Batches />} />
+<Route path="/students" element={<Students />} />
           </Route>
           
           <Route path="/about" element={<About />} />
