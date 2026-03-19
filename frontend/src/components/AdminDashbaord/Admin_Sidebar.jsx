@@ -185,19 +185,22 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
           dark:from-[#08163a] dark:via-[#071231] dark:to-[#060f2a]
           border-white/10`}
       >
-        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-4 py-2.5 border-b border-white/10`}>
+        <div className={`relative h-16 flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-4 border-b border-white/10`}>
           <div className="flex items-center gap-3 min-w-0">
             {renderLogo(isCollapsed)}
           </div>
-          {!isCollapsed && (
-            <button
-              onClick={() => onToggle?.(true)}
-              className="w-8 h-8 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
-              aria-label="Collapse sidebar"
-            >
-              <FiChevronLeft className="w-5 h-5" />
-            </button>
-          )}
+
+          <button
+            onClick={() => onToggle?.(!isCollapsed)}
+            className={`w-9 h-9 rounded-2xl items-center justify-center transition-colors shadow-sm
+              ${isCollapsed
+                ? "absolute right-[-18px] top-1/2 -translate-y-1/2 bg-white/90 text-[#18386d] border border-white/80 hover:bg-white"
+                : "flex text-white/80 hover:text-white hover:bg-white/10"
+              }`}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <FiChevronLeft className={`w-4 h-4 ${isCollapsed ? "rotate-180" : ""}`} />
+          </button>
         </div>
         <div
           ref={desktopNavRef}
@@ -209,17 +212,6 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         </div>
         {renderUserPanel(isCollapsed)}
       </div>
-
-      {isCollapsed && (
-        <button
-          onClick={() => onToggle?.(false)}
-          className="hidden lg:flex fixed left-20 -translate-x-1/2 top-3 z-50 w-7 h-7 rounded-lg items-center justify-center
-            bg-white/90 text-[#18386d] border border-white/80 shadow-sm"
-          aria-label="Expand sidebar"
-        >
-          <FiChevronLeft className="w-3.5 h-3.5 rotate-180" />
-        </button>
-      )}
 
       {/* Mobile hamburger */}
       <button

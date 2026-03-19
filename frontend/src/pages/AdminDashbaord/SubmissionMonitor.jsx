@@ -107,7 +107,8 @@ export default function SubmissionMonitor() {
                 : filteredRoutes.map(r => (
                   <button key={r.id} onClick={() => handleRouteSelect(r.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                     <div>
-                      <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{r.title}</h4>
+                      <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{r.title}</h4>
+
                     </div>
                     <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                   </button>
@@ -122,13 +123,14 @@ export default function SubmissionMonitor() {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-8 pb-16 px-6 md:px-12 lg:px-16 overflow-auto ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+        <main className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div className="max-w-[1400px] mx-auto space-y-8">
 
             {/* Header */}
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 py-3 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Submission Monitor</h1>
+                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Submission Monitor</h1>
+
               </div>
               <div className="flex items-center gap-5">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-60 bg-white/30 dark:bg-black/20 border border-black/[0.06] dark:border-white/5 py-2 pl-10 pr-12 rounded-xl backdrop-blur-md hover:bg-white/50 dark:hover:bg-black/30 transition-colors text-left group">
