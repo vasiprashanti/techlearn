@@ -33,6 +33,7 @@ import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import submissionRoutes from "./routes/submissionRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -111,8 +112,9 @@ app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
 app.use("/api/admin/batch", batchRoutes);
-app.use("/api/admin", adminRouter);
+app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
+app.use("/api/admin", adminRouter);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {
