@@ -28,14 +28,16 @@ import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
 import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
 import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
+
 // Auth pages
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
+import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
 import UserCoding from './pages/Coding/UserCoding';
-
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
@@ -66,6 +68,20 @@ import ProjectPayment from './pages/Build/ProjectPayment'
 import PaymentGateway from './pages/Build/PaymentGateway'
 import UILibrary from './pages/Build/UILibrary'
 import Profile from './components/Dashboard/Profile'
+
+import Analytics from './pages/AdminDashbaord/Analytics';
+import SystemHealth from './pages/AdminDashbaord/SystemHealth';
+import Colleges from './pages/AdminDashbaord/Colleges';
+import Batches from './pages/AdminDashbaord/Batches';
+import Students from './pages/AdminDashbaord/Students';
+import QuestionBank from './pages/AdminDashbaord/QuestionBank';
+import Resources from './pages/AdminDashbaord/Resources';
+import Certificates from './pages/AdminDashbaord/Certificates';
+import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
+import Notifications from './pages/AdminDashbaord/Notifications';
+import AuditLogs from './pages/AdminDashbaord/AuditLogs';
+import Reports from './pages/AdminDashbaord/Reports';
+import Settings from './pages/AdminDashbaord/Settings';
 
 // Contact component
 import Contact from './pages/Contact/Contact'
@@ -583,9 +599,37 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  const showNavbar = !['/dashboard', '/admin', '/coding/:linkId','/mcq','/admin/codingroundupload'].includes(location.pathname);
-  const showFooter = !['/coding','/mcq'].includes(location.pathname);
+  
+  // NEW: Array containing all our sidebar dashboard routes
+  const adminSidebarRoutes = [
+    '/dashboard', 
+    '/analytics', 
+    '/system-health', 
+    '/colleges', 
+    '/batches', 
+    '/students', 
+    '/question-bank', 
+    '/track-templates', 
+    '/resources', 
+    '/certificates', 
+    '/submission-monitor', 
+    '/notifications', 
+    '/audit-logs', 
+    '/reports',
+    '/settings'
+  ];
 
+  const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
+                           location.pathname.startsWith('/track/') ||
+                           location.pathname.startsWith('/admin');
+
+  const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
+                     !location.pathname.startsWith('/coding/') && 
+                     !isDashboardRoute;
+
+  const showFooter = !['/mcq'].includes(location.pathname) && 
+                     !location.pathname.startsWith('/coding/') && 
+                     !isDashboardRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -593,12 +637,14 @@ function LayoutWrapper() {
 
       <main className="flex-grow">
         <Routes>
-          
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/track-templates" element={<TrackTemplate />} />
+            <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
           <Route path="/profile" element={<Profile />} />
@@ -622,14 +668,15 @@ function LayoutWrapper() {
           <Route path="/build/midproject/:id" element={<ProjectDetail />} />
           <Route path="/build/major/:id" element={<ProjectDetail />} />
           <Route path="/payment" element={<ProjectPayment />} />
-           <Route path="/payment-gateway" element={<PaymentGateway />} />
+          <Route path="/payment-gateway" element={<PaymentGateway />} />
           <Route path="/build/ui-library" element={<UILibrary />} />
           <Route path="/careers" element={<CareersPage />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
           <Route path="/mcq/:linkId" element={<UserMcq />} />
-          <Route path="/coding/:linkId" element={ <UserCoding />} />
+          <Route path="/coding/:linkId" element={<UserCoding />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          
           {/* All admin routes protected by AdminPrivateRoute */}
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
@@ -637,16 +684,31 @@ function LayoutWrapper() {
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
-            <Route path="/admin/codingroundupload"  element={<CodingRoundUpload/>} />
-            <Route path="/admin/mcqupload" element={<McqUpload/>} />
+            <Route path="/admin/codingroundupload" element={<CodingRoundUpload />} />
+            <Route path="/admin/mcqupload" element={<McqUpload />} />
             <Route path="/admin/upload-exercises" element={<UploadExercisesPage />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/system-health" element={<SystemHealth />} />
+            <Route path="/colleges" element={<Colleges />} />
+<Route path="/batches" element={<Batches />} />
+<Route path="/students" element={<Students />} />
+<Route path="/question-bank" element={<QuestionBank />} />
+<Route path="/resources" element={<Resources />} />
+<Route path="/certificates" element={<Certificates />} />
+<Route path="/submission-monitor" element={<SubmissionMonitor />} />
+<Route path="/notifications" element={<Notifications />} />
+<Route path="/audit-logs" element={<AuditLogs />} />
+<Route path="/reports" element={<Reports />} />
+<Route path="/settings" element={<Settings />} />
+
+
           </Route>
-          <Route path="/about" element={<About />} />
           
+          <Route path="/about" element={<About />} />
         </Routes>
       </main>
       
-      {showFooter && <Footer />}
+      {showFooter && <Footer />}
     </div>
   );
 }
