@@ -52,8 +52,15 @@ const submissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Compound indexes for common filter combinations
 submissionSchema.index({ studentId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, trackId: 1 });
+
+// Standalone indexes for sort and single-field filters
+// Note: { batchId: 1 } is intentionally omitted — the compound index above
+// serves as a prefix cover for batchId-only queries.
+submissionSchema.index({ workingDay: 1 });
+submissionSchema.index({ submittedAt: -1 });
 
 export default mongoose.model("Submission", submissionSchema);

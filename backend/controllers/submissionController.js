@@ -140,3 +140,190 @@ export const getSubmissionById = async (req, res) => {
         return res.status(500).json({ success: false, message: "Failed to fetch submission.", error: error.message });
     }
 };
+
+// ---------------------------------------------------------------------------
+// @desc    Filtered, paginated submissions — college-isolated
+// @route   GET /api/admin/submission/filter
+// @access  Private/Admin
+//
+// Query params (all optional):
+//   collegeId  - scope results to batches belonging to this college (ObjectId)
+//   batchId    - filter by batch (ObjectId)
+//   studentId  - filter by student (ObjectId)
+//   trackId    - filter by track (ObjectId)
+//   workingDay - filter by day number (positive integer)
+//   status     - filter by status: Passed | Failed | Timeout | Error
+//   page       - page number, default 1
+//   limit      - results per page, default 20, max 100
+//
+// College isolation strategy:
+//   Submission has no collegeId field. Isolation is enforced by resolving all
+//   batchIds for the given collegeId via Batch.find, then constraining
+//   filter.batchId to that set. If collegeId is absent, the batchId filter
+//   alone (if provided) still limits the result set.
+// ---------------------------------------------------------------------------
+export const filterSubmissions = async (req, res) => {
+    try {
+        const {
+            collegeId,
+            batchId,
+            studentId,
+            trackId,
+            workingDay,
+            status,
+            page = 1,
+            limit = 20,
+        } = req.query;
+
+        const VALID_STATUSES = ["Passed", "Failed", "Timeout", "Error"];
+        const validateObjectId = (value, fieldName) => {
+            if (!mongoose.Types.ObjectId.isValid(value)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid ${fieldName} format. Must be a valid ObjectId.`,
+                });
+            }
+            return null;
+        };
+
+        // ---- Validate all ObjectId fields upfront ----
+        if (collegeId) {
+            const err = validateObjectId(collegeId, "collegeId");
+            if (err) return err;
+        }
+        if (batchId) {
+            const err = validateObjectId(batchId, "batchId");
+            if (err) return err;
+        }
+        if (studentId) {
+            const err = validateObjectId(studentId, "studentId");
+            if (err) return err;
+        }
+        if (trackId) {
+            const err = validateObjectId(trackId, "trackId");
+            if (err) return err;
+        }
+
+        // ---- Validate status ----
+        if (status && !VALID_STATUSES.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status. Allowed values: ${VALID_STATUSES.join(", ")}.`,
+            });
+        }
+
+        // ---- Validate workingDay ----
+        let parsedDay;
+        if (workingDay !== undefined) {
+            parsedDay = parseInt(workingDay, 10);
+            if (isNaN(parsedDay) || parsedDay < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: "workingDay must be a positive integer.",
+                });
+            }
+        }
+
+        // ---- College isolation: resolve batchIds for the given college ----
+        // If no collegeId supplied, skip isolation (all colleges visible).
+        let collegeBatchIds = null;
+        if (collegeId) {
+            const batches = await Batch.find(
+                { collegeId: new mongoose.Types.ObjectId(collegeId) },
+                { _id: 1 }
+            ).lean();
+
+            if (batches.length === 0) {
+                // College exists but has no batches — return empty result immediately.
+                return res.status(200).json({
+                    success: true,
+                    data: {
+                        submissions: [],
+                        pagination: { total: 0, page: 1, limit: parseInt(limit, 10) || 20, totalPages: 0 },
+                    },
+                });
+            }
+            collegeBatchIds = batches.map((b) => b._id);
+        }
+
+        // ---- Build filter ----
+        const filter = {};
+
+        if (collegeBatchIds) {
+            // If a specific batchId is also requested, intersect rather than override.
+            if (batchId) {
+                const requestedBatchId = new mongoose.Types.ObjectId(batchId);
+                const isInCollege = collegeBatchIds.some(
+                    (id) => id.toString() === requestedBatchId.toString()
+                );
+                if (!isInCollege) {
+                    // The requested batch does not belong to the specified college.
+                    return res.status(400).json({
+                        success: false,
+                        message: "The specified batchId does not belong to the specified collegeId.",
+                    });
+                }
+                filter.batchId = requestedBatchId;
+            } else {
+                filter.batchId = { $in: collegeBatchIds };
+            }
+        } else if (batchId) {
+            filter.batchId = new mongoose.Types.ObjectId(batchId);
+        }
+
+        if (studentId) {
+            filter.studentId = new mongoose.Types.ObjectId(studentId);
+        }
+
+        if (trackId) {
+            filter.trackId = new mongoose.Types.ObjectId(trackId);
+        }
+
+        if (parsedDay !== undefined) {
+            filter.workingDay = parsedDay;
+        }
+
+        if (status) {
+            filter.status = status;
+        }
+
+        // ---- Pagination ----
+        const pageNum = Math.max(1, parseInt(page, 10) || 1);
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+        const skip = (pageNum - 1) * limitNum;
+
+        // ---- Run count and data fetch in parallel ----
+        const [total, submissions] = await Promise.all([
+            Submission.countDocuments(filter),
+            Submission.find(filter)
+                .sort({ submittedAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .populate("studentId", "name email")
+                .populate("batchId", "name")
+                .populate("trackId", "trackType")
+                .populate("questionId", "title")
+                .lean(),
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                submissions,
+                pagination: {
+                    total,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(total / limitNum),
+                },
+            },
+        });
+    } catch (error) {
+        console.error("filterSubmissions error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch filtered submissions.",
+            error: error.message,
+        });
+    }
+};
