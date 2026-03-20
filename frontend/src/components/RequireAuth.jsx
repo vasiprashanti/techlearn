@@ -5,7 +5,7 @@ export const RequireAuth = ({ children, adminOnly = false }) => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/signup" replace />;
   }
 
   if (adminOnly && !isAdmin) {

@@ -47,9 +47,9 @@ export default function ResetPassword() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Password reset successfully. You can now login with your new password.');
+        setMessage('Password reset successfully. You can now sign in with your new password.');
         setTimeout(() => {
-          navigate('/login');
+          navigate('/signup');
         }, 3000);
       } else {
         setError(data.message || 'Failed to reset password');

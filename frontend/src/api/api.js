@@ -21,8 +21,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear invalid token
       localStorage.removeItem('token');
-      // Redirect to login page
-      window.location.href = '/login';
+      // Redirect to signup page
+      window.location.href = '/signup';
     }
     return Promise.reject(error);
   }

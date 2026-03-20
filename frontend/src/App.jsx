@@ -30,7 +30,6 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
 
 // Auth pages
-import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
@@ -593,7 +592,7 @@ const CareersPage = () => {
 
 function FloatingCodeBackground() {
   const location = useLocation();
-  const isAuthPage = ['/login', '/signup'].includes(location.pathname);
+  const isAuthPage = ['/signup'].includes(location.pathname);
   return isAuthPage ? <FloatingCodeWords /> : null;
 }
 
@@ -637,7 +636,6 @@ function LayoutWrapper() {
 
       <main className="flex-grow">
         <Routes>
-          <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
