@@ -298,7 +298,7 @@ const Batches = () => {
             {/* Batch Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-7 rounded-2xl flex flex-col gap-5 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
+                <div key={batch.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 rounded-2xl flex flex-col gap-4 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
 
                   {/* College badge + Status */}
                   <div className="flex items-start justify-between">
@@ -311,23 +311,29 @@ const Batches = () => {
                   </div>
 
                   {/* Batch ID in blue + track neutral */}
-                  <div>
-                    <h3 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white">{batch.id}</h3>
-                    <p className="text-sm text-black/45 dark:text-white/40 mt-1 font-light">{batch.track}</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white leading-none">{batch.id}</h3>
+                    <p className="text-sm text-black/45 dark:text-white/40 font-light leading-snug">{batch.track}</p>
                   </div>
 
                   {/* Date + students info */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { label: 'Start',    value: batch.start    },
-                      { label: 'End',      value: batch.end      },
-                      { label: 'Students', value: batch.students },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                        <p className="admin-micro-label font-semibold text-black/30 dark:text-white/30">{label}</p>
-                        <p className="text-xs font-semibold text-black/65 dark:text-white/70 mt-1.5 leading-tight">{value}</p>
+                  <div className="grid grid-cols-[1.45fr_0.9fr] gap-2.5">
+                    <div className="bg-white/55 dark:bg-white/5 rounded-xl px-3 py-2.5 border border-black/5 dark:border-white/5 flex items-center justify-between gap-2 min-h-[48px]">
+                      <p className="admin-micro-label font-semibold text-black/30 dark:text-white/30">Start</p>
+                      <p className="text-[11px] font-semibold text-black/70 dark:text-white/75 leading-none whitespace-nowrap">{batch.start}</p>
+                    </div>
+
+                    <div className="row-span-2 bg-white/55 dark:bg-white/5 rounded-xl px-3 py-2.5 border border-black/5 dark:border-white/5 flex flex-col min-h-[104px]">
+                      <p className="admin-micro-label font-semibold text-black/30 dark:text-white/30 text-center">Students</p>
+                      <div className="flex-1 flex items-center justify-center">
+                        <p className="text-2xl font-semibold text-[#3C83F6] dark:text-blue-400 leading-none">{batch.students}</p>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="bg-white/55 dark:bg-white/5 rounded-xl px-3 py-2.5 border border-black/5 dark:border-white/5 flex items-center justify-between gap-2 min-h-[48px]">
+                      <p className="admin-micro-label font-semibold text-black/30 dark:text-white/30">End</p>
+                      <p className="text-[11px] font-semibold text-black/70 dark:text-white/75 leading-none whitespace-nowrap">{batch.end}</p>
+                    </div>
                   </div>
 
                   {/* View button */}
