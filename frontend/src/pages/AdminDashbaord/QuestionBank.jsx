@@ -141,7 +141,8 @@ export default function QuestionBank() {
               ) : filteredRoutes.map(route => (
                 <button key={route.id} onClick={() => handleRouteSelect(route.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                   <div>
-                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+
                   </div>
                   <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                 </button>
@@ -151,7 +152,7 @@ export default function QuestionBank() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -160,7 +161,8 @@ export default function QuestionBank() {
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Question Bank</h1>
+                <h1 className="admin-page-title">Question Bank</h1>
+
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -217,13 +219,13 @@ export default function QuestionBank() {
             {/* KPI Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">Total Questions</span>
+                <span className="admin-micro-label text-black/50 dark:text-white/50">Total Questions</span>
                 <div className="mt-6">
                   <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">10</span>
                 </div>
               </div>
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">Total Categories</span>
+                <span className="admin-micro-label text-black/50 dark:text-white/50">Total Categories</span>
                 <div className="mt-6">
                   <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">5</span>
                 </div>
@@ -232,7 +234,7 @@ export default function QuestionBank() {
 
             {/* Category search */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Question Categories</h2>
+              <h2 className="admin-section-heading">Question Categories</h2>
               <div className="relative">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/30" />
                 <input
@@ -255,7 +257,7 @@ export default function QuestionBank() {
                     </div>
                     <div className="flex gap-1 flex-wrap justify-end">
                       {cat.tags.map(tag => (
-                        <span key={tag} className="text-[9px] uppercase tracking-widest px-2 py-0.5 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-full text-black/40 dark:text-white/40">{tag}</span>
+                        <span key={tag} className="admin-micro-label px-2 py-0.5 bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-full text-black/40 dark:text-white/40">{tag}</span>
                       ))}
                     </div>
                   </div>
@@ -268,15 +270,15 @@ export default function QuestionBank() {
                   <div className="mt-5 pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
                     <div className="flex gap-5">
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Total Questions</p>
+                        <p className="admin-micro-label text-black/40 dark:text-white/40">Total Questions</p>
                         <p className="text-lg font-light text-black/80 dark:text-white mt-0.5">{cat.total}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active Questions</p>
+                        <p className="admin-micro-label text-black/40 dark:text-white/40">Active Questions</p>
                         <p className="text-lg font-light text-emerald-600 dark:text-emerald-400 mt-0.5">{cat.active}</p>
                       </div>
                     </div>
-                    <button className="text-[10px] tracking-widest uppercase text-[#3C83F6] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border border-[#3C83F6]/20 dark:border-blue-400/20 px-3 py-1.5 rounded-lg hover:bg-[#3C83F6]/5 dark:hover:bg-blue-400/5">
+                    <button className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border border-[#3C83F6]/20 dark:border-blue-400/20 px-3 py-1.5 rounded-lg hover:bg-[#3C83F6]/5 dark:hover:bg-blue-400/5">
                       View Questions
                     </button>
                   </div>

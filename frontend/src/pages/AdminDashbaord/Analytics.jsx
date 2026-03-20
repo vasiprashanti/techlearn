@@ -166,7 +166,8 @@ const Analytics = () => {
                     <div>
                       <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {route.title}
-                      </h4>
+                      </h4>
+
                     </div>
                     <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
                   </button>
@@ -178,7 +179,7 @@ const Analytics = () => {
       )}
 
       {/* MAIN LAYOUT */}
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
             isDarkMode
@@ -201,7 +202,8 @@ const Analytics = () => {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Analytics</h1>
+                <h1 className="admin-page-title">Analytics</h1>
+
               </div>
               <div className="flex items-center gap-6">
                 <button
@@ -309,14 +311,14 @@ const Analytics = () => {
 
             {/* Platform Overview */}
             <section>
-              <h2 className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-4">Platform Overview</h2>
+              <h2 className="admin-section-heading mb-4">Platform Overview</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {analyticsData.platformOverview.map((kpi, i) => (
                   <div
                     key={i}
                     className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
                   >
-                    <span className="text-[9px] uppercase tracking-widest text-black/50 dark:text-white/50 leading-snug">{kpi.label}</span>
+                    <span className="admin-micro-label text-black/50 dark:text-white/50 leading-snug">{kpi.label}</span>
                     <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-5">{kpi.value}</span>
                   </div>
                 ))}
@@ -329,15 +331,15 @@ const Analytics = () => {
               {/* Student Engagement */}
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-6 shrink-0">
-                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Student Engagement</h3>
-                  <button className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
+                  <h3 className="admin-section-heading">Student Engagement</h3>
+                  <button className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
                     View Details →
                   </button>
                 </div>
 
                 {/* Daily Active — hero stat */}
                 <div className="mb-6 p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
-                  <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Daily Active Students</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Daily Active Students</span>
                   <div className="flex items-end gap-2 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
                       {analyticsData.studentEngagement.dailyActive}
@@ -356,20 +358,20 @@ const Analytics = () => {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="flex flex-col">
-                    <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Weekly Active</span>
+                    <span className="admin-micro-label text-black/40 dark:text-white/40">Weekly Active</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.weeklyActive}
                     </span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Inactive 3+ days</span>
+                    <span className="admin-micro-label text-black/40 dark:text-white/40">Inactive 3+ days</span>
                     <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
                       {analyticsData.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Avg Streak</span>
+                    <span className="admin-micro-label text-black/40 dark:text-white/40">Avg Streak</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.avgStreak}
                     </span>
@@ -380,7 +382,7 @@ const Analytics = () => {
 
               {/* Learning Performance */}
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">Learning Performance</h3>
+                <h3 className="admin-section-heading mb-6 shrink-0">Learning Performance</h3>
                 <div className="flex-1 flex flex-col justify-between gap-6">
 
                   {/* Avg Score */}
@@ -417,7 +419,7 @@ const Analytics = () => {
 
                   {/* Avg Solve Time */}
                   <div className="p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Average Solve Time</span>
+                    <span className="admin-micro-label text-black/40 dark:text-white/40">Average Solve Time</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
                         {analyticsData.learningPerformance.avgSolveTime}
@@ -435,8 +437,8 @@ const Analytics = () => {
               {/* Batch Performance */}
               <div className="lg:col-span-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-6 shrink-0">
-                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Batch Performance</h3>
-                  <button className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
+                  <h3 className="admin-section-heading">Batch Performance</h3>
+                  <button className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
                     View Details →
                   </button>
                 </div>
@@ -447,23 +449,23 @@ const Analytics = () => {
                     <span className="text-3xl font-light tracking-tighter text-emerald-500">
                       {analyticsData.batchPerformance.active}
                     </span>
-                    <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Active</p>
+                    <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Active</p>
                   </div>
                   <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
                     <span className="text-3xl font-light tracking-tighter text-amber-500">
                       {analyticsData.batchPerformance.upcoming}
                     </span>
-                    <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Upcoming</p>
+                    <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Upcoming</p>
                   </div>
                   <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
                     <span className="text-3xl font-light tracking-tighter text-black/50 dark:text-white/50">
                       {analyticsData.batchPerformance.completed}
                     </span>
-                    <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Completed</p>
+                    <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Completed</p>
                   </div>
                 </div>
 
-                <h4 className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-4 shrink-0">
+                <h4 className="admin-section-heading mb-4 shrink-0">
                   Top Performing Batches
                 </h4>
                 <div className="flex-1 flex flex-col justify-between gap-3">
@@ -491,8 +493,8 @@ const Analytics = () => {
               {/* Content Insights */}
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-6 shrink-0">
-                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Content Insights</h3>
-                  <button className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
+                  <h3 className="admin-section-heading">Content Insights</h3>
+                  <button className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors">
                     View Details →
                   </button>
                 </div>
@@ -505,20 +507,20 @@ const Analytics = () => {
                     { label: "Avg Track Length",   value: `${analyticsData.contentInsights.avgTrackLength} days` },
                   ].map((item, i) => (
                     <div key={i} className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">{item.label}</span>
+                      <span className="admin-micro-label text-black/40 dark:text-white/40">{item.label}</span>
                       <span className="text-sm font-medium text-[#3C83F6] dark:text-white">{item.value}</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="border-t border-black/5 dark:border-white/5 pt-6">
-                  <h4 className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-4">
+                  <h4 className="admin-section-heading mb-4">
                     Difficulty Distribution
                   </h4>
                   <div className="flex flex-col gap-3">
                     {analyticsData.contentInsights.difficulty.map((d) => (
                       <div key={d.label} className="flex items-center justify-between">
-                        <span className={`text-[8px] uppercase tracking-widest px-1.5 py-0.5 border rounded-sm
+                        <span className={`admin-micro-label px-1.5 py-0.5 border rounded-sm
                           ${d.label === 'Easy'
                             ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
                             : d.label === 'Medium'
@@ -534,7 +536,7 @@ const Analytics = () => {
                 </div>
 
                 <div className="mt-6 pt-6 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">Track Templates</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Track Templates</span>
                   <span className="text-sm font-medium text-[#3C83F6] dark:text-white">
                     {analyticsData.contentInsights.trackTemplates}
                   </span>
@@ -544,11 +546,11 @@ const Analytics = () => {
 
             {/* Platform Health */}
             <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl">
-              <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-8">Platform Health</h3>
+              <h3 className="admin-section-heading mb-8">Platform Health</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
 
                 <div className="flex flex-col">
-                  <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Engagement Rate</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Engagement Rate</span>
                   <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.engagementRate}%
                   </span>
@@ -561,7 +563,7 @@ const Analytics = () => {
                 </div>
 
                 <div className="flex flex-col">
-                  <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active Students</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Active Students</span>
                   <div className="flex items-end gap-1 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
                       {analyticsData.platformHealth.activeStudents}
@@ -573,14 +575,14 @@ const Analytics = () => {
                 </div>
 
                 <div className="flex flex-col">
-                  <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Resources Uploaded</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Uploaded</span>
                   <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.resourcesUploaded}
                   </span>
                 </div>
 
                 <div className="flex flex-col">
-                  <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Resources Viewed</span>
+                  <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Viewed</span>
                   <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                     {analyticsData.platformHealth.resourcesViewed}
                   </span>

@@ -146,7 +146,7 @@ export default function Certificates() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -155,7 +155,7 @@ export default function Certificates() {
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Certificates</h1>
+                <h1 className="admin-page-title">Certificates</h1>
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -196,7 +196,7 @@ export default function Certificates() {
                 {/* Table Header */}
                 <div className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto] items-center px-6 py-3 border-b border-black/5 dark:border-white/5 gap-4">
                   {['Student Name', 'Course', 'Score', 'Date', 'Certificate ID', 'Actions'].map(h => (
-                    <span key={h} className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 font-medium">{h}</span>
+                    <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
                   ))}
                 </div>
                 {issuedCerts.map((cert, i) => {
@@ -218,7 +218,7 @@ export default function Certificates() {
                       </div>
                       <button
                         onClick={() => setRevokedIds(prev => revoked ? prev.filter(id => id !== cert.id) : [...prev, cert.id])}
-                        className={`text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-lg border transition-colors ${
+                        className={`admin-micro-label px-3 py-1.5 rounded-lg border transition-colors ${
                           revoked
                             ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/5'
                             : 'text-red-500 dark:text-red-400 border-red-500/20 hover:bg-red-500/5'
@@ -238,22 +238,22 @@ export default function Certificates() {
                 {finalTests.map(test => (
                   <div key={test.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
                     <div>
-                      <span className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 font-mono">{test.id}</span>
+                      <span className="admin-micro-label text-black/40 dark:text-white/40 font-mono">{test.id}</span>
                       <h3 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-2">{test.title}</h3>
                       <p className="text-[10px] text-black/40 dark:text-white/40 mt-1">{test.course}</p>
                     </div>
                     <div className="mt-5 pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
                       <div className="flex gap-5">
                         <div>
-                          <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Passing Score</p>
+                          <p className="admin-micro-label text-black/40 dark:text-white/40">Passing Score</p>
                           <p className="text-base font-light text-[#3C83F6] dark:text-white mt-0.5">{test.passing}%</p>
                         </div>
                         <div>
-                          <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Attempts</p>
+                          <p className="admin-micro-label text-black/40 dark:text-white/40">Attempts</p>
                           <p className="text-base font-light text-black/70 dark:text-white/70 mt-0.5">{test.attempts}</p>
                         </div>
                       </div>
-                      <button className="text-[10px] tracking-widest uppercase text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
+                      <button className="admin-micro-label text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
                         Edit
                       </button>
                     </div>
@@ -267,7 +267,7 @@ export default function Certificates() {
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
                 <div className="grid grid-cols-[1fr_auto_auto_auto] items-center px-6 py-3 border-b border-black/5 dark:border-white/5 gap-6">
                   {['Template Name', 'Template ID', 'Courses', 'Last Updated'].map(h => (
-                    <span key={h} className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 font-medium">{h}</span>
+                    <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
                   ))}
                 </div>
                 {templates.map((tpl, i) => (

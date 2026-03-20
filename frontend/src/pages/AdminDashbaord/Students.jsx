@@ -141,7 +141,7 @@ const Students = () => {
         searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate}
       />
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -151,7 +151,7 @@ const Students = () => {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Students</h1>
+                <h1 className="admin-page-title">Students</h1>
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -288,7 +288,7 @@ const Students = () => {
                     <button
                       key={s}
                       onClick={() => setStatusFilter(s)}
-                      className={`text-[10px] uppercase tracking-widest px-4 py-1.5 rounded-lg transition-all duration-200
+                      className={`admin-micro-label px-4 py-1.5 rounded-lg transition-all duration-200
                         ${statusFilter === s
                           ? 'bg-white dark:bg-white/10 text-black dark:text-white shadow-sm font-semibold'
                           : 'text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60'
@@ -304,11 +304,11 @@ const Students = () => {
 
                 <div className="flex items-center gap-2">
                   {/* Bulk Import — subtle */}
-                  <button className="flex items-center gap-2 text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/50 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 transition-colors">
+                  <button className="flex items-center gap-2 admin-micro-label px-4 py-2.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/50 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 transition-colors">
                     <FiUpload className="w-3.5 h-3.5" />Bulk Import
                   </button>
                   {/* Add Student — slightly more prominent */}
-                  <button className="flex items-center gap-2 text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
+                  <button className="flex items-center gap-2 admin-micro-label px-4 py-2.5 rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
                     <FiPlus className="w-3.5 h-3.5" />Add Student
                   </button>
                 </div>
@@ -316,7 +316,7 @@ const Students = () => {
             </div>
 
             {/* Result count */}
-            <p className="text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30 -mt-2">
+            <p className="admin-micro-label text-black/30 dark:text-white/30 -mt-2">
               {filteredStudents.length} of {studentsData.length} students
             </p>
 
@@ -336,7 +336,7 @@ const Students = () => {
                 <thead>
                   <tr className="border-b border-black/5 dark:border-white/5">
                     {['Name', 'College', 'Batch', 'Track', 'Score', 'Streak', 'Status', ''].map((col, i) => (
-                      <th key={i} className="px-5 py-4 text-left text-[9px] uppercase tracking-widest font-medium text-black/30 dark:text-white/30">{col}</th>
+                      <th key={i} className="px-5 py-4 text-left admin-micro-label font-medium text-black/30 dark:text-white/30">{col}</th>
                     ))}
                   </tr>
                 </thead>
@@ -364,7 +364,7 @@ const Students = () => {
 
                       {/* Batch — neutral */}
                       <td className="px-5 py-4">
-                        <span className="text-[10px] uppercase tracking-widest text-black/55 dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg border border-black/5 dark:border-white/5 whitespace-nowrap">
+                        <span className="admin-micro-label text-black/55 dark:text-white/50 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg border border-black/5 dark:border-white/5 whitespace-nowrap">
                           {student.batch}
                         </span>
                       </td>
@@ -391,7 +391,7 @@ const Students = () => {
 
                       {/* Status */}
                       <td className="px-5 py-4">
-                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg border whitespace-nowrap
+                        <span className={`admin-micro-label px-2.5 py-1 rounded-lg border whitespace-nowrap
                           ${student.status === 'Active'
                             ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
                             : 'border-rose-400/20 text-rose-500 dark:text-rose-400 bg-rose-400/5'
@@ -402,7 +402,7 @@ const Students = () => {
 
                       {/* Action */}
                       <td className="px-5 py-4">
-                        <button className="text-[10px] uppercase tracking-widest text-black/25 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white/60 transition-colors whitespace-nowrap">
+                        <button className="admin-micro-label text-black/25 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white/60 transition-colors whitespace-nowrap">
                           View →
                         </button>
                       </td>

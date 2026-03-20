@@ -153,7 +153,7 @@ export default function TrackTemplate() {
                       <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {route.title}
                       </h4>
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">
+                      <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">
                         {route.category}
                       </p>
                     </div>
@@ -167,7 +167,7 @@ export default function TrackTemplate() {
       )}
 
       {/* Main Layout */}
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
             isDarkMode
@@ -189,7 +189,7 @@ export default function TrackTemplate() {
 
             {/* Header — same as AdminDashboard */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-              <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+              <h1 className="admin-page-title">
                 Track Templates
               </h1>
 
@@ -299,19 +299,19 @@ export default function TrackTemplate() {
                 />
               </div>
 
-              <button className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-widest rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
+              <button className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
                 <FiPlus className="w-3.5 h-3.5" />
                 Create Template
               </button>
             </div>
 
-            <p className="text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30 -mt-2">
+            <p className="admin-micro-label text-black/30 dark:text-white/30 -mt-2">
               {filteredTracks.length} of {mockTracks.length} templates
             </p>
 
             {/* 3-Column Card Grid */}
             {filteredTracks.length === 0 ? (
-              <div className="py-20 text-center text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30">
+              <div className="py-20 text-center admin-micro-label text-black/30 dark:text-white/30">
                 No templates match your search
               </div>
             ) : (
@@ -328,7 +328,7 @@ export default function TrackTemplate() {
                         <div className="w-10 h-10 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/10 dark:border-white/10 flex items-center justify-center shrink-0">
                           <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
                         </div>
-                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg border
+                        <span className={`admin-micro-label px-2.5 py-1 rounded-lg border
                           ${track.status === 'Active'
                             ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
                             : 'border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5'
@@ -351,12 +351,12 @@ export default function TrackTemplate() {
                       {/* Stats */}
                       <div className="space-y-2">
                         <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="text-[8px] uppercase tracking-widest text-black/30 dark:text-white/30">Total Days</p>
-                          <p className="text-xl font-light text-black/75 dark:text-white/80 mt-1 leading-none">{track.totalDays}</p>
+                          <p className="admin-micro-label text-black/30 dark:text-white/30">Total Days</p>
+                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">{track.totalDays}</p>
                         </div>
                         <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="text-[8px] uppercase tracking-widest text-black/30 dark:text-white/30">Questions Assigned</p>
-                          <p className="text-xl font-light text-black/75 dark:text-white/80 mt-1 leading-none">
+                          <p className="admin-micro-label text-black/30 dark:text-white/30">Questions Assigned</p>
+                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">
                             {track.questionsAssigned} / {track.totalDays}
                           </p>
                         </div>
@@ -366,7 +366,7 @@ export default function TrackTemplate() {
                       <div className="flex items-center gap-3 mt-auto">
                         <button
                           onClick={() => navigate(`/track/${track.id}/day/1`)}
-                          className="flex-1 h-10 flex items-center justify-center gap-2 px-4 text-[10px] uppercase tracking-widest rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 px-4 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
                         >
                           <FiEye className="w-4 h-4" />
                           View Template

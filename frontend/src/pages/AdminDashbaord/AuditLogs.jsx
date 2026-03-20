@@ -145,7 +145,7 @@ export default function AuditLogs() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : ''}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography ${isDarkMode ? 'dark' : ''}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -155,7 +155,7 @@ export default function AuditLogs() {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Audit Logs</h1>
+                <h1 className="admin-page-title">Audit Logs</h1>
 
               </div>
               <div className="flex items-center gap-5">
@@ -211,7 +211,7 @@ export default function AuditLogs() {
                 { label: 'Deletions',     value: deletions   },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl px-6 py-5">
-                  <p className="text-[9px] uppercase tracking-[0.12em] font-semibold text-black/35 dark:text-white/40">{label}</p>
+                  <p className="admin-micro-label text-black/35 dark:text-white/40">{label}</p>
                   <p className="text-3xl font-light tracking-tight text-[#3C83F6] dark:text-white mt-3">{value}</p>
                 </div>
               ))}
@@ -254,7 +254,7 @@ export default function AuditLogs() {
                 <thead>
                   <tr className="bg-black/[0.025] dark:bg-white/[0.025] border-b border-black/[0.05] dark:border-white/[0.05]">
                     {['Action', 'Details', 'Type', 'By', 'Timestamp'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 text-[9px] uppercase tracking-[0.12em] font-semibold text-black/30 dark:text-white/30">{h}</th>
+                      <th key={h} className="text-left px-5 py-3 admin-micro-label text-black/30 dark:text-white/30">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -267,7 +267,7 @@ export default function AuditLogs() {
 
                         {/* Verb pill */}
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${vc.pill} ${vc.text}`}>
+                          <span className={`inline-flex items-center gap-1.5 admin-micro-label px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${vc.pill} ${vc.text}`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${vc.dot}`} />
                             {log.verb}
                           </span>
@@ -281,7 +281,7 @@ export default function AuditLogs() {
 
                         {/* Type chip */}
                         <td className="px-5 py-3.5">
-                          <span className={`text-[10px] uppercase tracking-[0.1em] font-medium px-2 py-0.5 rounded-md ${tc?.text} ${tc?.bg}`}>
+                          <span className={`admin-micro-label font-medium px-2 py-0.5 rounded-md ${tc?.text} ${tc?.bg}`}>
                             {log.type}
                           </span>
                         </td>

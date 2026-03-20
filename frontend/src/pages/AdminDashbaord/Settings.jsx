@@ -42,7 +42,7 @@ export default function Settings() {
 
   return (
     <div
-      className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${
+      className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${
         isDarkMode ? "dark" : "light"
       }`}
     >
@@ -63,7 +63,7 @@ export default function Settings() {
       >
         <div className="max-w-[1600px] mx-auto space-y-8">
           <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-            <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+            <h1 className="admin-page-title">
               Settings
             </h1>
 

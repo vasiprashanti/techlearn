@@ -135,7 +135,8 @@ const SystemHealth = () => {
                     <div>
                       <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {route.title}
-                      </h4>
+                      </h4>
+
                     </div>
                     <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">
                       →
@@ -149,7 +150,7 @@ const SystemHealth = () => {
       )}
 
       {/* MAIN LAYOUT */}
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
             isDarkMode
@@ -172,7 +173,8 @@ const SystemHealth = () => {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">System Health</h1>
+                <h1 className="admin-page-title">System Health</h1>
+
               </div>
               
               <div className="flex items-center gap-6">
@@ -285,7 +287,7 @@ const SystemHealth = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {healthData.kpis.map((kpi, i) => (
                 <div key={i} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl">
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 mb-4">{kpi.label}</span>
+                  <span className="admin-micro-label text-black/50 dark:text-white/50 mb-4">{kpi.label}</span>
                   <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{kpi.value}</span>
                 </div>
               ))}
@@ -295,7 +297,7 @@ const SystemHealth = () => {
               
               {/* Service Status Grid */}
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[400px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-8 shrink-0">Service Status</h3>
+                <h3 className="admin-section-heading mb-8 shrink-0">Service Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                   {healthData.services.map((service, i) => (
                     <div key={i} className="bg-white/20 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col justify-between hover:bg-white/40 dark:hover:bg-black/40 transition-colors">
@@ -303,7 +305,7 @@ const SystemHealth = () => {
                         <div className="text-black/40 dark:text-white/40 w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full">{service.icon}</div>
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                          <span className="text-[10px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                          <span className="admin-micro-label text-emerald-600 dark:text-emerald-400">
                             {service.status}
                           </span>
                         </div>
@@ -319,7 +321,7 @@ const SystemHealth = () => {
 
               {/* Recent Alerts Panel */}
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[400px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-8 shrink-0">Recent Alerts</h3>
+                <h3 className="admin-section-heading mb-8 shrink-0">Recent Alerts</h3>
                 <div className="flex-1 flex flex-col gap-4">
                   {healthData.recentAlerts.map((alert, i) => (
                     <div key={i} className="flex gap-5 items-start bg-white/20 dark:bg-black/20 p-5 rounded-xl border border-black/5 dark:border-white/5 hover:bg-white/30 dark:hover:bg-black/30 transition-colors">
@@ -328,7 +330,7 @@ const SystemHealth = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-black dark:text-white mb-1 leading-relaxed">{alert.msg}</p>
-                        <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">{alert.time}</span>
+                        <span className="admin-micro-label text-black/40 dark:text-white/40">{alert.time}</span>
                       </div>
                     </div>
                   ))}

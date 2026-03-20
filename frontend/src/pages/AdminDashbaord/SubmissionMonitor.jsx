@@ -119,7 +119,7 @@ export default function SubmissionMonitor() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : ''}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography ${isDarkMode ? 'dark' : ''}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -129,7 +129,7 @@ export default function SubmissionMonitor() {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Submission Monitor</h1>
+                <h1 className="admin-page-title">Submission Monitor</h1>
 
               </div>
               <div className="flex items-center gap-5">
@@ -177,7 +177,7 @@ export default function SubmissionMonitor() {
                 { label: 'Avg Exec Time', value: '320ms'            },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl px-6 py-5">
-                  <p className="text-[9px] uppercase tracking-[0.12em] font-semibold text-black/35 dark:text-white/40">{label}</p>
+                  <p className="admin-micro-label text-black/35 dark:text-white/40">{label}</p>
                   <p className="text-3xl font-light tracking-tight text-[#3C83F6] dark:text-white mt-3">{value}</p>
                 </div>
               ))}
@@ -199,7 +199,7 @@ export default function SubmissionMonitor() {
                   <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[9px]">▾</span>
                 </div>
               </div>
-              <button className="flex items-center gap-1.5 text-[10px] tracking-widest uppercase text-black/35 dark:text-white/35 hover:text-black/60 dark:hover:text-white/60 transition-colors border border-black/[0.07] dark:border-white/10 px-3 py-2 rounded-xl hover:bg-white/40 dark:hover:bg-white/5">
+              <button className="flex items-center gap-1.5 admin-micro-label text-black/35 dark:text-white/35 hover:text-black/60 dark:hover:text-white/60 transition-colors border border-black/[0.07] dark:border-white/10 px-3 py-2 rounded-xl hover:bg-white/40 dark:hover:bg-white/5">
                 <FiRefreshCw className="w-3 h-3" /> Refresh
               </button>
             </div>
@@ -219,7 +219,7 @@ export default function SubmissionMonitor() {
                 <thead>
                   <tr className="bg-black/[0.025] dark:bg-white/[0.025] border-b border-black/[0.05] dark:border-white/[0.05]">
                     {['Student', 'Batch', 'Question', 'Language', 'Status', 'Exec', 'When'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 text-[9px] uppercase tracking-[0.12em] font-semibold text-black/30 dark:text-white/30">{h}</th>
+                      <th key={h} className="text-left px-5 py-3 admin-micro-label text-black/30 dark:text-white/30">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -244,7 +244,7 @@ export default function SubmissionMonitor() {
                           <span className={`text-[12px] font-medium ${langColor[s.lang] || 'text-slate-500 dark:text-white/50'}`}>{s.lang}</span>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${sc.pill} ${sc.label}`}>
+                          <span className={`inline-flex items-center gap-1.5 admin-micro-label px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${sc.pill} ${sc.label}`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
                             {s.status}
                           </span>

@@ -85,7 +85,8 @@ export default function Notifications() {
               ) : filteredRoutes.map(route => (
                 <button key={route.id} onClick={() => handleRouteSelect(route.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                   <div>
-                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+
                   </div>
                   <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                 </button>
@@ -128,7 +129,7 @@ export default function Notifications() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -137,7 +138,8 @@ export default function Notifications() {
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Notifications</h1>
+                <h1 className="admin-page-title">Notifications</h1>
+
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -193,7 +195,7 @@ export default function Notifications() {
                 { label: 'Targeted',      value: targeted },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">{label}</span>
+                  <span className="admin-micro-label text-black/50 dark:text-white/50">{label}</span>
                   <div className="mt-6"><span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{value}</span></div>
                 </div>
               ))}
@@ -201,7 +203,7 @@ export default function Notifications() {
 
             {/* Top bar */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Sent Notifications</h2>
+              <h2 className="admin-section-heading">Sent Notifications</h2>
               <button onClick={() => setShowCompose(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3C83F6] dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-blue-600 dark:hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg">
                 <FiPlus className="w-4 h-4" />
                 <span>New Notification</span>

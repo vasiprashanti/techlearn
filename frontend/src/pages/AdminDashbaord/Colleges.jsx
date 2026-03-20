@@ -97,7 +97,7 @@ const Colleges = () => {
     <>
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -107,7 +107,7 @@ const Colleges = () => {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Colleges</h1>
+                <h1 className="admin-page-title">Colleges</h1>
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -213,11 +213,11 @@ const Colleges = () => {
               {/* Left: stats */}
               <div className="flex items-center gap-3">
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
-                  <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Total</p>
+                  <p className="admin-micro-label text-black/40 dark:text-white/40">Total</p>
                   <p className="text-xl font-light tracking-tight text-black/70 dark:text-white mt-0.5">{collegesData.length}</p>
                 </div>
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
-                  <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Active</p>
+                  <p className="admin-micro-label text-black/40 dark:text-white/40">Active</p>
                   <p className="text-xl font-light tracking-tight text-emerald-500 mt-0.5">{activeCount}</p>
                 </div>
               </div>
@@ -229,7 +229,7 @@ const Colleges = () => {
                     <button
                       key={s}
                       onClick={() => setStatusFilter(s)}
-                      className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all duration-200
+                      className={`admin-micro-label px-3 py-1.5 rounded-lg transition-all duration-200
                         ${statusFilter === s
                           ? 'bg-white dark:bg-white/10 text-black dark:text-white shadow-sm font-medium'
                           : 'text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70'
@@ -239,7 +239,7 @@ const Colleges = () => {
                     </button>
                   ))}
                 </div>
-                <button className="flex items-center gap-2 text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                <button className="flex items-center gap-2 admin-micro-label px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
                   <FiPlus className="w-3.5 h-3.5" />Add College
                 </button>
               </div>
@@ -259,10 +259,10 @@ const Colleges = () => {
                         </div>
                         <div>
                           <h3 className="text-sm font-medium text-black/80 dark:text-white">{college.name}</h3>
-                          <p className="text-[10px] uppercase tracking-widest text-black/30 dark:text-white/30 mt-0.5">{college.id}</p>
+                          <p className="admin-micro-label text-black/30 dark:text-white/30 mt-0.5">{college.id}</p>
                         </div>
                       </div>
-                      <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg border
+                      <span className={`admin-micro-label px-2.5 py-1 rounded-lg border
                         ${college.status === 'Active'
                           ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
                           : 'border-black/10 dark:border-white/10 text-black/30 dark:text-white/30'
@@ -273,7 +273,7 @@ const Colleges = () => {
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
-                        <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Avg Score</p>
+                        <p className="admin-micro-label text-black/40 dark:text-white/40">Avg Score</p>
                         <p className={`text-2xl font-light tracking-tight mt-2 ${college.avgScore >= 80 ? 'text-[#3C83F6] dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
                           {college.avgScore}%
                         </p>
@@ -282,7 +282,7 @@ const Colleges = () => {
                         </div>
                       </div>
                       <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
-                        <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">Activity Rate</p>
+                        <p className="admin-micro-label text-black/40 dark:text-white/40">Activity Rate</p>
                         <p className={`text-2xl font-light tracking-tight mt-2 ${activityRate === 100 ? 'text-emerald-500' : activityRate >= 50 ? 'text-[#3C83F6] dark:text-white' : 'text-amber-500'}`}>
                           {activityRate}%
                         </p>
@@ -290,7 +290,7 @@ const Colleges = () => {
                       </div>
                     </div>
 
-                    <button className="w-full py-2.5 text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 border border-black/5 dark:border-white/10 rounded-xl hover:border-[#3C83F6]/30 hover:text-[#3C83F6] dark:hover:text-white dark:hover:border-white/20 transition-all duration-200">
+                    <button className="w-full py-2.5 admin-micro-label text-black/40 dark:text-white/40 border border-black/5 dark:border-white/10 rounded-xl hover:border-[#3C83F6]/30 hover:text-[#3C83F6] dark:hover:text-white dark:hover:border-white/20 transition-all duration-200">
                       View College →
                     </button>
                   </div>

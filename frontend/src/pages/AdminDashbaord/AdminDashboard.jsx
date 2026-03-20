@@ -210,7 +210,7 @@ export default function AdminDashboard() {
                       <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {route.title}
                       </h4>
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">
+                      <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">
                         {route.category}
                       </p>
                     </div>
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
 
       {/* Main Layout */}
       <div
-        className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${
+        className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${
           isDarkMode ? "dark" : "light"
         }`}
       >
@@ -253,7 +253,7 @@ export default function AdminDashboard() {
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-              <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+              <h1 className="admin-page-title">
                 Dashboard
               </h1>
 
@@ -375,7 +375,7 @@ export default function AdminDashboard() {
                   key={i}
                   className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
                 >
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">
+                  <span className="admin-micro-label text-black/50 dark:text-white/50">
                     {kpi.title}
                   </span>
                   <div className="mt-6 mb-1">
@@ -392,11 +392,11 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-8 shrink-0">
+                <h3 className="admin-section-heading mb-8 shrink-0">
                   College Performance Ranking
                 </h3>
                 <div className="flex-1 flex flex-col justify-between gap-6 relative">
-                  <div className="absolute top-0 bottom-0 left-[120px] right-0 flex justify-between px-2 text-[10px] text-black/20 dark:text-white/20 pointer-events-none -z-10 items-end pb-[-20px]">
+                  <div className="absolute top-0 bottom-0 left-[180px] right-0 flex justify-between px-2 text-[10px] text-black/20 dark:text-white/20 pointer-events-none -z-10 items-end pb-[-20px]">
                     <div className="h-full w-[1px] bg-black/5 dark:bg-white/5"></div>
                     <div className="h-full w-[1px] bg-black/5 dark:bg-white/5"></div>
                     <div className="h-full w-[1px] bg-black/5 dark:bg-white/5"></div>
@@ -406,7 +406,7 @@ export default function AdminDashboard() {
 
                   {adminStats.collegeRanking.map((college, i) => (
                     <div key={i} className="flex items-center w-full z-10">
-                      <div className="w-[120px] text-xs font-medium text-black/70 dark:text-white/70 truncate pr-4">
+                      <div className="w-[180px] text-xs font-medium text-black/70 dark:text-white/70 pr-4 leading-tight whitespace-normal break-words">
                         {college.name}
                       </div>
                       <div className="flex-1 h-8 bg-black/5 dark:bg-white/5 relative group cursor-crosshair rounded-r-md overflow-hidden">
@@ -422,7 +422,7 @@ export default function AdminDashboard() {
                     </div>
                   ))}
 
-                  <div className="flex pl-[120px] justify-between text-[10px] font-medium text-black/40 dark:text-white/40 mt-2">
+                  <div className="flex pl-[180px] justify-between text-[10px] font-medium text-black/40 dark:text-white/40 mt-2">
                     <span>0</span>
                     <span>25</span>
                     <span>50</span>
@@ -433,7 +433,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-6 shrink-0">
+                <h3 className="admin-section-heading mb-6 shrink-0">
                   Top Performing Students
                 </h3>
                 <div className="flex-1 flex flex-col justify-between">
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
             <div className="space-y-5">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
-                  <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-3 shrink-0">
+                  <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiClock className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Recent Student Activity
                   </h3>
@@ -494,7 +494,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
-                  <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-3 shrink-0">
+                  <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiTrendingUp className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Most Solved Questions
                   </h3>
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[280px]">
-                <h3 className="flex items-center gap-2 text-xs tracking-widest uppercase text-black/50 dark:text-white/50 mb-4 shrink-0">
+                <h3 className="admin-section-heading flex items-center gap-2 mb-4 shrink-0">
                   <FiAward className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                   Upcoming & Active Batches
                 </h3>

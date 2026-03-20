@@ -65,7 +65,8 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
             : filteredRoutes.map(route => (
               <button key={route.id} onClick={() => { onClose(); navigate(`/${route.id}`); }} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                 <div>
-                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+
                 </div>
                 <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
               </button>
@@ -129,7 +130,7 @@ const Batches = () => {
         searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate}
       />
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -139,7 +140,8 @@ const Batches = () => {
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Batches</h1>
+                <h1 className="admin-page-title">Batches</h1>
+
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -248,7 +250,7 @@ const Batches = () => {
                 { label: 'Completed', count: counts.Completed, color: 'text-black/35 dark:text-white/40'          },
               ].map(({ label, count, color }) => (
                 <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-6 py-5">
-                  <p className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40">{label}</p>
+                  <p className="admin-micro-label text-black/40 dark:text-white/40">{label}</p>
                   <p className={`text-3xl font-light tracking-tight mt-2 ${color}`}>{count}</p>
                 </div>
               ))}
@@ -275,7 +277,7 @@ const Batches = () => {
                     <button
                       key={s}
                       onClick={() => setStatusFilter(s)}
-                      className={`text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all duration-200
+                      className={`admin-micro-label px-3 py-1.5 rounded-lg transition-all duration-200
                         ${statusFilter === s
                           ? 'bg-white dark:bg-white/10 text-black dark:text-white shadow-sm font-semibold'
                           : 'text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60'
@@ -288,7 +290,7 @@ const Batches = () => {
               </div>
 
               {/* Create Batch — blue accent */}
-              <button className="flex items-center gap-2 text-[10px] uppercase tracking-widest px-4 py-2.5 rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium shrink-0">
+              <button className="flex items-center gap-2 admin-micro-label px-4 py-2.5 rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium shrink-0">
                 <FiPlus className="w-3.5 h-3.5" />Create Batch
               </button>
             </div>
@@ -300,10 +302,10 @@ const Batches = () => {
 
                   {/* College badge + Status */}
                   <div className="flex items-start justify-between">
-                    <span className="text-[10px] uppercase tracking-widest text-black/45 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg border border-black/5 dark:border-white/5">
+                    <span className="admin-micro-label text-black/45 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2.5 py-1 rounded-lg border border-black/5 dark:border-white/5">
                       {batch.college}
                     </span>
-                    <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-lg border ${statusBadge(batch.status)}`}>
+                    <span className={`admin-micro-label px-2.5 py-1 rounded-lg border ${statusBadge(batch.status)}`}>
                       {batch.status}
                     </span>
                   </div>
@@ -322,14 +324,14 @@ const Batches = () => {
                       { label: 'Students', value: batch.students },
                     ].map(({ label, value }) => (
                       <div key={label} className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                        <p className="text-[8px] uppercase tracking-widest text-black/30 dark:text-white/30">{label}</p>
-                        <p className="text-xs font-medium text-black/65 dark:text-white/70 mt-1.5 leading-tight">{value}</p>
+                        <p className="admin-micro-label font-semibold text-black/30 dark:text-white/30">{label}</p>
+                        <p className="text-xs font-semibold text-black/65 dark:text-white/70 mt-1.5 leading-tight">{value}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* View button */}
-                  <button className="w-full py-2.5 text-[10px] uppercase tracking-widest text-black/35 dark:text-white/40 border border-black/5 dark:border-white/10 rounded-xl hover:border-black/15 dark:hover:border-white/20 hover:text-black/60 dark:hover:text-white/60 transition-all duration-200">
+                  <button className="w-full py-2.5 admin-micro-label text-black/35 dark:text-white/40 border border-black/5 dark:border-white/10 rounded-xl hover:border-black/15 dark:hover:border-white/20 hover:text-black/60 dark:hover:text-white/60 transition-all duration-200">
                     View Batch →
                   </button>
                 </div>

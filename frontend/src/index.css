@@ -257,6 +257,75 @@
     width: max-content;
   }
 
+  /* Admin dashboard scoped typography */
+  .admin-dashboard-typography {
+    font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    text-rendering: geometricPrecision;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01" 1, "cv05" 1;
+  }
+
+  .admin-dashboard-typography .admin-page-title {
+    font-size: clamp(1.4rem, 1.3rem + 0.25vw, 1.65rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #3c83f6;
+    line-height: 1.1;
+  }
+
+  .admin-dashboard-typography .admin-section-heading {
+    font-size: 1.06rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: rgba(15, 23, 42, 0.92);
+    line-height: 1.3;
+    text-transform: none;
+  }
+
+  .admin-dashboard-typography .admin-micro-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    line-height: 1.25;
+  }
+
+  .admin-dashboard-typography header.sticky.top-0 {
+    background-color: rgba(255, 255, 255, 0.96);
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+  }
+
+  .dark .admin-dashboard-typography header.sticky.top-0 {
+    background-color: rgba(0, 18, 51, 0.9);
+    border-bottom-color: rgba(248, 250, 252, 0.12);
+  }
+
+  .dark .admin-dashboard-typography .admin-page-title {
+    color: #60a5fa;
+  }
+
+  .dark .admin-dashboard-typography .admin-section-heading {
+    color: rgba(241, 245, 249, 0.94);
+  }
+
+  .admin-dashboard-typography h2,
+  .admin-dashboard-typography h3,
+  .admin-dashboard-typography h4 {
+    letter-spacing: -0.02em;
+  }
+
+  .admin-dashboard-typography p,
+  .admin-dashboard-typography span,
+  .admin-dashboard-typography button,
+  .admin-dashboard-typography input,
+  .admin-dashboard-typography textarea,
+  .admin-dashboard-typography select {
+    font-weight: 500;
+  }
+
   /* Hide scrollbar for mobile reviews */
   .overflow-x-auto::-webkit-scrollbar {
     display: none;

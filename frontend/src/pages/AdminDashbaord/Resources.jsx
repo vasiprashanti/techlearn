@@ -105,7 +105,8 @@ export default function Resources() {
               ) : filteredRoutes.map(route => (
                 <button key={route.id} onClick={() => handleRouteSelect(route.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                   <div>
-                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+                    <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+
                   </div>
                   <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                 </button>
@@ -115,7 +116,7 @@ export default function Resources() {
         </div>
       )}
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -124,7 +125,8 @@ export default function Resources() {
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-light tracking-tight text-[#3C83F6] dark:text-white">Resources</h1>
+                <h1 className="admin-page-title">Resources</h1>
+
               </div>
               <div className="flex items-center gap-6">
                 <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
@@ -182,7 +184,7 @@ export default function Resources() {
                 { label: 'Categories', value: uniqueCategories },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">{label}</span>
+                  <span className="admin-micro-label text-black/50 dark:text-white/50">{label}</span>
                   <div className="mt-6">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{value}</span>
                   </div>
@@ -212,20 +214,20 @@ export default function Resources() {
 
             {/* Resources Table */}
             <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-6 py-3 border-b border-black/5 dark:border-white/5">
+              <div className="grid grid-cols-[minmax(0,1fr)_96px_124px_90px_44px] items-center px-6 py-3 gap-6 border-b border-black/5 dark:border-white/5">
                 {['Title', 'Type', 'Date', 'Views', ''].map(h => (
-                  <span key={h} className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 font-medium">{h}</span>
+                  <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
                 ))}
               </div>
               {filteredResources.map((res, i) => {
                 const style = typeStyles[res.type];
                 return (
-                  <div key={res.id} className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center px-6 py-4 gap-6 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${i < filteredResources.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
+                  <div key={res.id} className={`grid grid-cols-[minmax(0,1fr)_96px_124px_90px_44px] items-center px-6 py-4 gap-6 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${i < filteredResources.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
                     <div>
                       <p className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{res.title}</p>
                       <p className="text-[10px] text-black/40 dark:text-white/40 mt-0.5">{res.category}</p>
                     </div>
-                    <span className={`text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-md border font-medium ${style.bg} ${style.text} ${style.border}`}>{res.type}</span>
+                    <span className={`admin-micro-label px-2.5 py-1 rounded-md border font-medium ${style.bg} ${style.text} ${style.border}`}>{res.type}</span>
                     <span className="text-xs text-black/40 dark:text-white/40 whitespace-nowrap">{res.date}</span>
                     <div className="flex items-center gap-1.5 text-xs text-black/50 dark:text-white/50">
                       <FiEye className="w-3.5 h-3.5" />
