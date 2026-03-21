@@ -1,5 +1,6 @@
 // src/services/api/api.js
 import axios from 'axios';
+import { authEvents } from '../utils/authEvents';
 
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
@@ -21,8 +22,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Clear invalid token
       localStorage.removeItem('token');
-      // Redirect to login page
-      window.location.href = '/login';
+      // Trigger login modal instead of redirect
+      authEvents.triggerLogin(window.location.pathname);
     }
     return Promise.reject(error);
   }

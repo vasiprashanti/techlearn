@@ -1,6 +1,8 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
+import { authEvents } from '../utils/authEvents';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 
@@ -23,11 +25,11 @@ const handleResponse = async (response) => {
       error
     });
 
-    // Handle 401 Unauthorized - clear token and redirect to login
+    // Handle 401 Unauthorized - clear token and trigger login modal
     if (response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('authToken'); // Also clear backup token
-      window.location.href = '/login';
+      authEvents.triggerLogin(window.location.pathname);
     }
 
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
