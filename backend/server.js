@@ -32,6 +32,8 @@ import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import analyticsRoutes from "./routes/analyticsRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -110,7 +112,11 @@ app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
 app.use("/api/admin/batch", batchRoutes);
+app.use("/api/admin/student", studentRoutes);
 app.use("/api/admin", adminRouter);
+
+// TRACE Analytics
+app.use("/api/analytics", analyticsRoutes);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {
