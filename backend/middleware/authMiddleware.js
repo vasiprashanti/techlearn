@@ -22,10 +22,18 @@ export const protect = async (req, res, next) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // // Debug: log decoded token id
-      // console.log("authMiddleware - decoded token id:", decoded && decoded.id);
-
-      req.user = await User.findById(decoded.id).select("-password");
+      // Support for hardcoded admin token fast-path
+      if (decoded.id === "admin_hardcoded") {
+        req.user = { 
+          _id: "admin_hardcoded", 
+          role: "admin", 
+          email: "admintls@123", 
+          firstName: "Admin",
+          isClub: false
+        };
+      } else {
+        req.user = await User.findById(decoded.id).select("-password");
+      }
 
       // // Debug: log found user id and role
       // console.log(
@@ -68,9 +76,18 @@ export const optionalProtect = async (req, res, next) => {
     ) {
       const token = req.headers.authorization.split(" ")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select("-password");
-      if (user) {
-        req.user = user;
+      if (decoded.id === "admin_hardcoded") {
+        req.user = { 
+          _id: "admin_hardcoded", 
+          role: "admin", 
+          email: "admintls@123", 
+          firstName: "Admin"
+        };
+      } else {
+        const user = await User.findById(decoded.id).select("-password");
+        if (user) {
+          req.user = user;
+        }
       }
     }
     return next();
