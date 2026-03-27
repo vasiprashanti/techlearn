@@ -53,7 +53,7 @@ const settingsItem = {
   icon: <FiSettings className="w-4 h-4" />,
 };
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user } = useAuth();
 
@@ -76,17 +76,15 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
   const renderLogo = (compact = false) => (
     <div
-      className={`relative shrink-0 rounded-full border border-white/70 dark:border-white/25 shadow-sm flex items-center justify-center
+      className={`relative shrink-0 flex items-center justify-center overflow-hidden
         ${compact ? "w-7 h-7" : "w-10 h-10"}
-        bg-[#0a346b] dark:bg-[#d9e8ff]`}
+      `}
     >
-      <span
-        className={`font-semibold tracking-tight leading-none select-none
-          ${compact ? "text-sm" : "text-lg"}
-          text-white dark:text-[#123766]`}
-      >
-        tls
-      </span>
+      <img
+        src="/logoo2.png"
+        alt="TLS logo"
+        className="w-full h-full object-contain"
+      />
     </div>
   );
 
@@ -179,38 +177,25 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     <>
       {/* Desktop Sidebar */}
       <div
-        className={`hidden lg:flex flex-col fixed left-0 top-0 z-40 h-screen overflow-hidden pt-0 border-r transition-all duration-300
-          ${isCollapsed ? "w-20" : "w-64"}
+        className={`hidden lg:flex flex-col fixed left-0 top-0 z-40 h-screen overflow-hidden pt-0 border-r w-64
           bg-gradient-to-b from-[#0a1a44] via-[#0a173c] to-[#091333]
           dark:from-[#08163a] dark:via-[#071231] dark:to-[#060f2a]
           border-white/10`}
       >
-        <div className={`relative h-16 flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-4 border-b border-white/10`}>
+        <div className="relative h-16 flex items-center justify-between px-4 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            {renderLogo(isCollapsed)}
+            {renderLogo(false)}
           </div>
-
-          <button
-            onClick={() => onToggle?.(!isCollapsed)}
-            className={`w-9 h-9 rounded-2xl items-center justify-center transition-colors shadow-sm
-              ${isCollapsed
-                ? "absolute right-[-18px] top-1/2 -translate-y-1/2 bg-white/90 text-[#18386d] border border-white/80 hover:bg-white"
-                : "flex text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <FiChevronLeft className={`w-4 h-4 ${isCollapsed ? "rotate-180" : ""}`} />
-          </button>
         </div>
         <div
           ref={desktopNavRef}
           onScroll={handleDesktopScroll}
           className="flex-1 overflow-y-auto px-4 pt-6 scrollbar-hide"
         >
-          {renderNavLinks(isCollapsed)}
-          {renderSettingsSection(isCollapsed)}
+          {renderNavLinks(false)}
+          {renderSettingsSection(false)}
         </div>
-        {renderUserPanel(isCollapsed)}
+        {renderUserPanel(false)}
       </div>
 
       {/* Mobile hamburger */}
