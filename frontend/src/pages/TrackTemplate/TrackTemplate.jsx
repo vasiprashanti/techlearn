@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell, FiArrowUp, FiArrowDown, FiClock } from 'react-icons/fi';
 
 // --- Mock Data ---
 const mockTracks = [
@@ -66,6 +66,18 @@ export default function TrackTemplate() {
   const [searchQuery, setSearchQuery] = useState('');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [historyTrack, setHistoryTrack] = useState(null);
+  const [trackQuestions, setTrackQuestions] = useState({
+    trk_dsa_01: ['Two Sum', 'Binary Search', 'Merge Intervals', 'Tree Traversal'],
+    trk_core_01: ['OS Basics', 'Computer Networks Intro', 'DBMS Normalization'],
+    trk_sql_01: ['SELECT & WHERE', 'JOIN Mastery', 'Window Functions'],
+  });
+  const [versionHistory, setVersionHistory] = useState({
+    trk_dsa_01: ['v3 • Added Merge Intervals', 'v2 • Reordered Tree Traversal', 'v1 • Initial template'],
+    trk_core_01: ['v2 • Added DBMS Normalization', 'v1 • Initial template'],
+    trk_sql_01: ['v1 • Initial template'],
+  });
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
@@ -112,6 +124,24 @@ export default function TrackTemplate() {
       track.category.toLowerCase().includes(query)
     );
   });
+
+  const moveQuestion = (trackId, index, direction) => {
+    setTrackQuestions((prev) => {
+      const current = [...(prev[trackId] || [])];
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return prev;
+      [current[index], current[target]] = [current[target], current[index]];
+      return { ...prev, [trackId]: current };
+    });
+  };
+
+  const saveOrdering = (trackId) => {
+    setVersionHistory((prev) => ({
+      ...prev,
+      [trackId]: [`v${(prev[trackId]?.length || 0) + 1} • Updated question ordering`, ...(prev[trackId] || [])],
+    }));
+    setSelectedTrack(null);
+  };
 
   return (
     <>
@@ -161,6 +191,49 @@ export default function TrackTemplate() {
                   </button>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedTrack && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setSelectedTrack(null)} />
+          <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Question Ordering • {selectedTrack.name}</h2>
+              <button onClick={() => setSelectedTrack(null)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-3">
+              {(trackQuestions[selectedTrack.id] || []).map((q, idx) => (
+                <div key={q + idx} className="flex items-center justify-between rounded-xl border border-black/10 dark:border-white/10 p-3 bg-white/60 dark:bg-white/5">
+                  <span className="text-sm text-black/75 dark:text-white/80">Day {idx + 1}: {q}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => moveQuestion(selectedTrack.id, idx, -1)} className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-black/50 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white"><FiArrowUp className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => moveQuestion(selectedTrack.id, idx, 1)} className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-black/50 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white"><FiArrowDown className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => saveOrdering(selectedTrack.id)} className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6]/10 text-[#3C83F6] dark:text-white dark:bg-white/10 dark:border-white/20">Save Ordering</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyTrack && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setHistoryTrack(null)} />
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Version History • {historyTrack.name}</h2>
+              <button onClick={() => setHistoryTrack(null)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-2">
+              {(versionHistory[historyTrack.id] || []).map((entry, idx) => (
+                <div key={entry + idx} className="rounded-xl border border-black/10 dark:border-white/10 p-3 bg-white/60 dark:bg-white/5 text-xs text-black/65 dark:text-white/65 flex items-center gap-2">
+                  <FiClock className="w-3.5 h-3.5" />{entry}
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -365,17 +438,17 @@ export default function TrackTemplate() {
                       {/* Actions row */}
                       <div className="flex items-center gap-3 mt-auto">
                         <button
-                          onClick={() => navigate(`/track/${track.id}/day/1`)}
+                          onClick={() => setSelectedTrack(track)}
                           className="flex-1 h-10 flex items-center justify-center gap-2 px-4 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
                         >
                           <FiEye className="w-4 h-4" />
-                          View Template
+                          Configure Order
                         </button>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                        <button onClick={() => setSelectedTrack(track)} className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                           <FiEdit2 className="w-4 h-4" />
                         </button>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                          <FiTrash2 className="w-4 h-4" />
+                        <button onClick={() => setHistoryTrack(track)} className="h-10 px-3 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-xs">
+                          History
                         </button>
                       </div>
                     </div>

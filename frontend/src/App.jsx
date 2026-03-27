@@ -71,7 +71,9 @@ import Profile from './components/Dashboard/Profile'
 import Analytics from './pages/AdminDashbaord/Analytics';
 import SystemHealth from './pages/AdminDashbaord/SystemHealth';
 import Colleges from './pages/AdminDashbaord/Colleges';
+import CollegeDetails from './pages/AdminDashbaord/CollegeDetails';
 import Batches from './pages/AdminDashbaord/Batches';
+import BatchDetails from './pages/AdminDashbaord/BatchDetails';
 import Students from './pages/AdminDashbaord/Students';
 import QuestionBank from './pages/AdminDashbaord/QuestionBank';
 import Resources from './pages/AdminDashbaord/Resources';
@@ -619,6 +621,8 @@ function LayoutWrapper() {
   ];
 
   const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
+                           location.pathname.startsWith('/colleges/') ||
+                           location.pathname.startsWith('/batches/') ||
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
@@ -688,7 +692,9 @@ function LayoutWrapper() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/system-health" element={<SystemHealth />} />
             <Route path="/colleges" element={<Colleges />} />
+<Route path="/colleges/:collegeId" element={<CollegeDetails />} />
 <Route path="/batches" element={<Batches />} />
+<Route path="/batches/:batchId" element={<BatchDetails />} />
 <Route path="/students" element={<Students />} />
 <Route path="/question-bank" element={<QuestionBank />} />
 <Route path="/resources" element={<Resources />} />

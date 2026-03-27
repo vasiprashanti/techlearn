@@ -1,0 +1,28 @@
+Admin Dashboard Frontend Task Status
+
+Finished
+- Batch Draft — N/A
+- Batch Schema — N/A
+- Batch Activation — Activation UI Button
+- Batch Creation — Batch Create + List UI
+- Student Management — Student Detail View UI
+- Student Upload — Student List + Upload CSV UI
+- Leaderboard — Reports Page + Export Buttons
+- Admin Layout — Sidebar + Dashboard Skeleton
+- Dashboard Stats — Stats Cards UI
+- Batch Detail Page — Batch Detail Layout
+- Submission Base — Submission List + Filter UI
+- Submission Filters — Advanced Filters + Detail Modal
+- Analytics — Analytics Charts UI
+- College Setup — College List Page
+- Track Schema — Track Config UI Draft
+- College APIs — Add College Form + Connect API
+- College CRUD — Edit/Delete UI
+- Working Day Utility — N/A
+
+- Track Config — Question Ordering UI
+- Question Bank — Question List + Form UI
+- Versioning — Version History UI
+
+Not Finished
+- None

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { FiBell, FiSearch } from "react-icons/fi";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import AdminHeaderControls from "../../components/AdminDashbaord/AdminHeaderControls";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
@@ -25,7 +25,7 @@ const Toggle = ({ checked, onChange }) => (
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [certificatesEnabled, setCertificatesEnabled] = useState(true);
   const [homeText, setHomeText] = useState(
@@ -66,26 +66,7 @@ export default function Settings() {
             <h1 className="admin-page-title">
               Settings
             </h1>
-
-            <div className="flex items-center gap-6">
-              <button className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40" />
-                <span className="text-sm text-black/40 dark:text-white/40">Search...</span>
-                <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">
-                  <span>⌘</span>
-                  <span>K</span>
-                </div>
-              </button>
-
-              <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                <FiBell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-              </button>
-
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-black/20">
-                {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "A"}
-              </div>
-            </div>
+            <AdminHeaderControls user={user} logout={logout} />
           </header>
 
           <section className="max-w-4xl space-y-6">
@@ -156,6 +137,12 @@ export default function Settings() {
                     onChange={(e) => setPrivacyText(e.target.value)}
                     className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
                   />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors">
+                    Save Changes
+                  </button>
                 </div>
               </div>
             </div>

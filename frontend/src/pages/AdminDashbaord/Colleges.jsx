@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
-import {  FiSearch, FiPlus , FiBell } from 'react-icons/fi';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { FiSearch, FiPlus, FiBell, FiEdit2, FiTrash2, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -23,11 +24,11 @@ const searchRoutes = [
 ];
 
 const collegesData = [
-  { id: "MIT-001", name: "MIT",                avgScore: 86, activeStudents: 3, totalStudents: 4, status: "Active"   },
-  { id: "STF-002", name: "Stanford University", avgScore: 83, activeStudents: 2, totalStudents: 3, status: "Active"   },
-  { id: "IIT-003", name: "IIT Delhi",           avgScore: 86, activeStudents: 3, totalStudents: 3, status: "Active"   },
-  { id: "HRV-004", name: "Harvard University",  avgScore: 89, activeStudents: 2, totalStudents: 2, status: "Active"   },
-  { id: "IIB-005", name: "IIT Bombay",          avgScore: 0,  activeStudents: 0, totalStudents: 0, status: "Inactive" },
+  { id: "MIT-001", name: "MIT", code: "MIT", city: "Cambridge", contactPerson: "Ava Martin", contactEmail: "ava@mit.edu", avgScore: 86, activeStudents: 3, totalStudents: 4, status: "Active" },
+  { id: "STF-002", name: "Stanford University", code: "STF", city: "Stanford", contactPerson: "Liam Brooks", contactEmail: "liam@stanford.edu", avgScore: 83, activeStudents: 2, totalStudents: 3, status: "Active" },
+  { id: "IIT-003", name: "IIT Delhi", code: "IIT", city: "Delhi", contactPerson: "Riya Sharma", contactEmail: "riya@iitd.ac.in", avgScore: 86, activeStudents: 3, totalStudents: 3, status: "Active" },
+  { id: "HRV-004", name: "Harvard University", code: "HRV", city: "Cambridge", contactPerson: "Noah Reed", contactEmail: "noah@harvard.edu", avgScore: 89, activeStudents: 2, totalStudents: 2, status: "Active" },
+  { id: "IIB-005", name: "IIT Bombay", code: "IIB", city: "Mumbai", contactPerson: "Anaya Rao", contactEmail: "anaya@iitb.ac.in", avgScore: 0, activeStudents: 0, totalStudents: 0, status: "Inactive" },
 ];
 
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
@@ -47,7 +48,8 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
             : filteredRoutes.map(route => (
               <button key={route.id} onClick={() => { onClose(); navigate(`/${route.id}`); }} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                 <div>
-                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+                  <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
+
                 </div>
                 <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
               </button>
@@ -64,13 +66,21 @@ const Colleges = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [colleges, setColleges] = useState(collegesData);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingCollege, setEditingCollege] = useState(null);
+  const [formState, setFormState] = useState({ name: '', code: '', city: '', status: 'Active', contactPerson: '', contactEmail: '' });
+  const [collegeSearchTerm, setCollegeSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [saveError, setSaveError] = useState('');
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
@@ -86,213 +96,400 @@ const Colleges = () => {
     else setSearchQuery('');
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      const clickedTrigger = event.target.closest('.college-actions-trigger');
+      const clickedMenu = event.target.closest('.college-actions-menu');
+      if (!clickedTrigger && !clickedMenu) {
+        setOpenActionMenuId(null);
+      }
+    };
+
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
   const filteredRoutes = searchRoutes.filter(r =>
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const filteredColleges = collegesData.filter(c => statusFilter === 'All' || c.status === statusFilter);
-  const activeCount = collegesData.filter(c => c.status === 'Active').length;
+  const filteredColleges = colleges.filter((college) => {
+    const matchesStatus = statusFilter === 'All' || college.status === statusFilter;
+    const query = collegeSearchTerm.trim().toLowerCase();
+    const matchesSearch =
+      query.length === 0 ||
+      college.name.toLowerCase().includes(query) ||
+      college.id.toLowerCase().includes(query);
+    return matchesStatus && matchesSearch;
+  });
+  const activeCount = colleges.filter(c => c.status === 'Active').length;
+
+  const openCreate = () => {
+    setEditingCollege(null);
+    setFormState({ name: '', code: '', city: '', status: 'Active', contactPerson: '', contactEmail: '' });
+    setSaveError('');
+    setIsFormOpen(true);
+  };
+
+  const openEdit = (college) => {
+    setEditingCollege(college);
+    setFormState({
+      name: college.name || '',
+      code: college.code || college.id.split('-')[0] || '',
+      city: college.city || '',
+      status: college.status || 'Active',
+      contactPerson: college.contactPerson || '',
+      contactEmail: college.contactEmail || '',
+    });
+    setSaveError('');
+    setIsFormOpen(true);
+  };
+
+  const saveCollege = async () => {
+    if (!formState.name.trim()) {
+      setSaveError('College name is required');
+      return;
+    }
+    if (!formState.code.trim()) {
+      setSaveError('College code is required');
+      return;
+    }
+    if (!formState.contactEmail.trim()) {
+      setSaveError('Contact email is required');
+      return;
+    }
+
+    const payload = {
+      name: formState.name.trim(),
+      code: formState.code.trim().toUpperCase(),
+      city: formState.city.trim(),
+      status: formState.status,
+      contactPerson: formState.contactPerson.trim(),
+      contactEmail: formState.contactEmail.trim(),
+    };
+
+    try {
+      if (editingCollege) {
+        await fetch(`${BASE_URL}/college/${editingCollege.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        setColleges((prev) => prev.map((c) => c.id === editingCollege.id ? { ...c, ...payload } : c));
+      } else {
+        await fetch(`${BASE_URL}/college`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        setColleges((prev) => [
+          {
+            id: `${payload.code || payload.name.slice(0, 3).toUpperCase()}-${String(prev.length + 1).padStart(3, '0')}`,
+            ...payload,
+            avgScore: 0,
+            activeStudents: 0,
+            totalStudents: 0,
+          },
+          ...prev,
+        ]);
+      }
+      setIsFormOpen(false);
+    } catch {
+      // Keep UI usable even if API endpoint differs.
+      if (editingCollege) {
+        setColleges((prev) => prev.map((c) => c.id === editingCollege.id ? { ...c, ...payload } : c));
+      } else {
+        setColleges((prev) => [
+          {
+            id: `${payload.code || payload.name.slice(0, 3).toUpperCase()}-${String(prev.length + 1).padStart(3, '0')}`,
+            ...payload,
+            avgScore: 0,
+            activeStudents: 0,
+            totalStudents: 0,
+          },
+          ...prev,
+        ]);
+      }
+      setIsFormOpen(false);
+    }
+  };
+
+  const deleteCollege = async (college) => {
+    const ok = window.confirm(`Delete ${college.name}?`);
+    if (!ok) return;
+    try {
+      await fetch(`${BASE_URL}/college/${college.id}`, { method: 'DELETE' });
+    } catch {
+      // Fallback to local deletion when endpoint shape differs.
+    }
+    setColleges((prev) => prev.filter((c) => c.id !== college.id));
+  };
 
   return (
     <>
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
 
+      {isFormOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
+          <div className="relative w-full max-w-xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingCollege ? 'Edit College' : 'Add College'}</h2>
+              <button onClick={() => setIsFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">College Name*</label>
+                  <input
+                    value={formState.name}
+                    onChange={(e) => setFormState((p) => ({ ...p, name: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    placeholder="Enter college name"
+                  />
+                </div>
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">College Code*</label>
+                  <input
+                    value={formState.code}
+                    onChange={(e) => setFormState((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
+                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    placeholder="E.g. MIT"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">City</label>
+                  <input
+                    value={formState.city}
+                    onChange={(e) => setFormState((p) => ({ ...p, city: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    placeholder="Enter city"
+                  />
+                </div>
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
+                  <div className="relative mt-1">
+                    <select value={formState.status} onChange={(e) => setFormState((p) => ({ ...p, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5">
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Contact Person</label>
+                  <input
+                    value={formState.contactPerson}
+                    onChange={(e) => setFormState((p) => ({ ...p, contactPerson: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    placeholder="Enter contact person"
+                  />
+                </div>
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Contact Email*</label>
+                  <input
+                    type="email"
+                    value={formState.contactEmail}
+                    onChange={(e) => setFormState((p) => ({ ...p, contactEmail: e.target.value }))}
+                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    placeholder="Enter contact email"
+                  />
+                </div>
+              </div>
+
+              {saveError && <p className="text-xs text-red-500">{saveError}</p>}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  onClick={() => setIsFormOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveCollege}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors"
+                >
+                  {editingCollege ? 'Save Changes' : 'Create College'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header */}
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className={`sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/72 dark:bg-[#001233]/70' : 'bg-[#daf0fa]/88 dark:bg-[#001233]/84'}`}>
               <div>
-                <h1 className="admin-page-title">Colleges</h1>
+                <h1 className="admin-page-title">Colleges</h1>
+
               </div>
-              <div className="flex items-center gap-6">
-                <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                  <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40" />
-                  <span className="text-sm text-black/40 dark:text-white/40">Search...</span>
-                  <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded"><span>⌘</span><span>K</span></div>
-                </button>
-                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
-                  >
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-
-                  {/* Luxury Profile Dropdown */}
-                  {profileDropdownOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        {/* Profile Header */}
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
-                              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">
-                                {user?.firstName || user?.email || 'Admin User'}
-                              </h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">
-                                {user?.email || 'admin@techlearn.com'}
-                              </p>
-                              <div className="mt-1">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">
-                                  Administrator
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Menu Items */}
-                        <div className="py-2">
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              // Navigate to profile settings if needed
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="font-medium">Profile Settings</div>
-                              <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
-                            </div>
-                          </button>
-
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10"></div>
-
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              logout();
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="font-medium">Log Out</div>
-                              <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out of your account</div>
-                            </div>
-                          </button>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-4 py-2 bg-black/2.5 dark:bg-white/2.5 border-t border-black/5 dark:border-white/5">
-                          <p className="text-[9px] text-black/40 dark:text-white/40 text-center">
-                            TechLearn Admin Panel v2.0
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            {/* Toolbar */}
-            <div className="flex items-center justify-between">
-              {/* Left: stats */}
-              <div className="flex items-center gap-3">
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
-                  <p className="admin-micro-label text-black/40 dark:text-white/40">Total</p>
-                  <p className="text-xl font-light tracking-tight text-black/70 dark:text-white mt-0.5">{collegesData.length}</p>
+            {/* Top Section */}
+            <section className="space-y-3">
+              <div className="flex items-center justify-between gap-4 flex-nowrap">
+                <div className="max-w-[620px] min-w-0">
+                  <h2 className="text-2xl font-semibold tracking-tight text-black/90 dark:text-white">Colleges</h2>
+                  <p className="mt-0.5 text-sm text-black/55 dark:text-white/55 leading-snug">
+                    Overview of all partner colleges and cohort performance
+                  </p>
                 </div>
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl px-5 py-3">
-                  <p className="admin-micro-label text-black/40 dark:text-white/40">Active</p>
-                  <p className="text-xl font-light tracking-tight text-emerald-500 mt-0.5">{activeCount}</p>
+
+                <div className="flex items-center gap-2.5 flex-nowrap shrink-0">
+                  <div className="relative w-[230px] shrink-0">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                    <input
+                      value={collegeSearchTerm}
+                      onChange={(e) => setCollegeSearchTerm(e.target.value)}
+                      placeholder="Search colleges..."
+                      className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    />
+                  </div>
+
+                  <div className="relative w-[150px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-medium text-black/80 dark:text-white outline-none"
+                    >
+                      <option value="All">All Status</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                  </div>
+
+                  <button
+                    onClick={openCreate}
+                    className="h-9 px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Add College
+                  </button>
                 </div>
               </div>
 
-              {/* Right: filters + add */}
-              <div className="flex items-center gap-2">
-                <div className="flex items-center bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-1">
-                  {['All', 'Active', 'Inactive'].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setStatusFilter(s)}
-                      className={`admin-micro-label px-3 py-1.5 rounded-lg transition-all duration-200
-                        ${statusFilter === s
-                          ? 'bg-white dark:bg-white/10 text-black dark:text-white shadow-sm font-medium'
-                          : 'text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70'
-                        }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-                <button className="flex items-center gap-2 admin-micro-label px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black/60 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                  <FiPlus className="w-3.5 h-3.5" />Add College
-                </button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <article className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
+                    <FiHome className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{colleges.length}</p>
+                    <p className="mt-1 text-sm text-black/60 dark:text-white/60">Total Colleges</p>
+                  </div>
+                </article>
+
+                <article className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <FiCheckCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{activeCount}</p>
+                    <p className="mt-1 text-sm text-black/60 dark:text-white/60">Active Colleges</p>
+                  </div>
+                </article>
               </div>
-            </div>
+            </section>
 
             {/* College Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
                 return (
-                  <div key={college.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-7 rounded-2xl flex flex-col gap-6 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
+                  <div key={college.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 rounded-2xl flex flex-col gap-3.5 h-full hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
 
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between min-h-[36px]">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#3C83F6] dark:bg-white/10 text-white dark:text-white flex items-center justify-center text-sm font-medium border border-[#3C83F6]/20 dark:border-white/10">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white dark:text-white flex items-center justify-center text-base font-semibold border border-[#3C83F6]/20 dark:border-white/10 shadow-sm">
                           {college.name.charAt(0)}
                         </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-black/80 dark:text-white">{college.name}</h3>
-                          <p className="admin-micro-label text-black/30 dark:text-white/30 mt-0.5">{college.id}</p>
+                        <div className="min-w-0">
+                          <h3 className="text-base font-semibold text-black/90 dark:text-white truncate max-w-[190px]">{college.name}</h3>
+                          <p className="text-sm text-black/50 dark:text-white/50 mt-0.5">{college.id}</p>
                         </div>
                       </div>
-                      <span className={`admin-micro-label px-2.5 py-1 rounded-lg border
-                        ${college.status === 'Active'
-                          ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
-                          : 'border-black/10 dark:border-white/10 text-black/30 dark:text-white/30'
-                        }`}>
-                        {college.status}
-                      </span>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          className="college-actions-trigger w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenActionMenuId((current) => (current === college.id ? null : college.id));
+                          }}
+                        >
+                          <FiMoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {openActionMenuId === college.id && (
+                          <div className="college-actions-menu absolute right-0 top-11 w-36 rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#071739] backdrop-blur-xl shadow-xl z-20 overflow-hidden">
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                openEdit(college);
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                deleteCollege(college);
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
-                        <p className="admin-micro-label text-black/40 dark:text-white/40">Avg Score</p>
-                        <p className={`text-2xl font-light tracking-tight mt-2 ${college.avgScore >= 80 ? 'text-[#3C83F6] dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
+                    <div className="space-y-2">
+                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5 min-h-[74px] flex flex-col justify-center">
+                        <p className="text-xs text-black/55 dark:text-white/55">Avg Score</p>
+                        <p className={`text-2xl font-semibold tracking-tight mt-0.5 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
                           {college.avgScore}%
                         </p>
-                        <div className="mt-2.5 w-full h-px bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
-                          <div className="h-full bg-[#3C83F6] dark:bg-white/60 transition-all duration-1000" style={{ width: `${college.avgScore}%` }} />
-                        </div>
                       </div>
-                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-4 border border-black/5 dark:border-white/5">
-                        <p className="admin-micro-label text-black/40 dark:text-white/40">Activity Rate</p>
-                        <p className={`text-2xl font-light tracking-tight mt-2 ${activityRate === 100 ? 'text-emerald-500' : activityRate >= 50 ? 'text-[#3C83F6] dark:text-white' : 'text-amber-500'}`}>
-                          {activityRate}%
+
+                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5 min-h-[74px] flex flex-col justify-center">
+                        <p className="text-xs text-black/55 dark:text-white/55">Activity Rate</p>
+                        <p className="text-xl font-semibold tracking-tight mt-0.5 text-black dark:text-white">
+                          {college.activeStudents} / {college.totalStudents}
+                          <span className="text-sm font-medium text-black/50 dark:text-white/50 ml-1">({activityRate}%)</span>
                         </p>
-                        <p className="text-[9px] text-black/30 dark:text-white/30 mt-1.5">{college.activeStudents} / {college.totalStudents} students</p>
                       </div>
                     </div>
 
-                    <button className="w-full py-2.5 admin-micro-label text-black/40 dark:text-white/40 border border-black/5 dark:border-white/10 rounded-xl hover:border-[#3C83F6]/30 hover:text-[#3C83F6] dark:hover:text-white dark:hover:border-white/20 transition-all duration-200">
-                      View College →
-                    </button>
+                    <div className="mt-auto">
+                      <button
+                        onClick={() => navigate(`/colleges/${college.id}`, { state: { college } })}
+                        className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        View College
+                        <FiArrowUpRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}

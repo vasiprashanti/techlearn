@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import {  FiSearch, FiCode, FiGlobe, FiCpu, FiDatabase, FiBarChart2 , FiBell } from 'react-icons/fi';
+import { FiSearch, FiCode, FiGlobe, FiCpu, FiDatabase, FiBarChart2, FiBell, FiPlus, FiEdit2 } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -81,6 +82,25 @@ const categories = [
   },
 ];
 
+const questionSeed = {
+  'Data Structures & Algorithms': [
+    { id: 'q-101', title: 'Two Sum', difficulty: 'Easy', version: 3 },
+    { id: 'q-102', title: 'Binary Tree Traversal', difficulty: 'Medium', version: 2 },
+  ],
+  'Web Development': [
+    { id: 'q-201', title: 'Build Debounced Search', difficulty: 'Medium', version: 1 },
+  ],
+  'Python Programming': [
+    { id: 'q-301', title: 'DataFrame Cleanup', difficulty: 'Easy', version: 1 },
+  ],
+  'Database Management': [
+    { id: 'q-401', title: 'Optimized Join Query', difficulty: 'Hard', version: 2 },
+  ],
+  'Machine Learning': [
+    { id: 'q-501', title: 'Linear Regression Baseline', difficulty: 'Medium', version: 4 },
+  ],
+};
+
 export default function QuestionBank() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -88,9 +108,14 @@ export default function QuestionBank() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState(categories[0].title);
+  const [questionsByCategory, setQuestionsByCategory] = useState(questionSeed);
+  const [isQuestionFormOpen, setIsQuestionFormOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState(null);
+  const [questionForm, setQuestionForm] = useState({ title: '', difficulty: 'Easy' });
+  const [historyQuestion, setHistoryQuestion] = useState(null);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
@@ -122,6 +147,41 @@ export default function QuestionBank() {
     c.subtitle.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
+  const currentQuestions = questionsByCategory[activeCategory] || [];
+
+  const openQuestionForm = (question = null) => {
+    setEditingQuestion(question);
+    setQuestionForm(question ? { title: question.title, difficulty: question.difficulty } : { title: '', difficulty: 'Easy' });
+    setIsQuestionFormOpen(true);
+  };
+
+  const saveQuestion = () => {
+    if (!questionForm.title.trim()) return;
+    setQuestionsByCategory((prev) => {
+      const categoryQuestions = [...(prev[activeCategory] || [])];
+      if (editingQuestion) {
+        return {
+          ...prev,
+          [activeCategory]: categoryQuestions.map((q) => q.id === editingQuestion.id
+            ? { ...q, title: questionForm.title.trim(), difficulty: questionForm.difficulty, version: q.version + 1 }
+            : q),
+        };
+      }
+
+      const next = {
+        id: `q-${Date.now()}`,
+        title: questionForm.title.trim(),
+        difficulty: questionForm.difficulty,
+        version: 1,
+      };
+      return {
+        ...prev,
+        [activeCategory]: [next, ...categoryQuestions],
+      };
+    });
+    setIsQuestionFormOpen(false);
+  };
+
   return (
     <>
       {isSearchOpen && (
@@ -152,6 +212,53 @@ export default function QuestionBank() {
         </div>
       )}
 
+      {isQuestionFormOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsQuestionFormOpen(false)} />
+          <div className="relative w-full max-w-xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingQuestion ? 'Edit Question' : 'Add Question'}</h2>
+              <button onClick={() => setIsQuestionFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="admin-micro-label text-black/40 dark:text-white/40">Question Title</label>
+                <input value={questionForm.title} onChange={(e) => setQuestionForm((p) => ({ ...p, title: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-sm" placeholder="Enter question title" />
+              </div>
+              <div>
+                <label className="admin-micro-label text-black/40 dark:text-white/40">Difficulty</label>
+                <select value={questionForm.difficulty} onChange={(e) => setQuestionForm((p) => ({ ...p, difficulty: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 text-sm">
+                  <option>Easy</option>
+                  <option>Medium</option>
+                  <option>Hard</option>
+                </select>
+              </div>
+              <button onClick={saveQuestion} className="w-full py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6]/10 text-[#3C83F6] dark:text-white dark:bg-white/10 dark:border-white/20">Save Question</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyQuestion && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setHistoryQuestion(null)} />
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Version History</h2>
+              <button onClick={() => setHistoryQuestion(null)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-2">
+              <p className="text-sm text-black/70 dark:text-white/70">{historyQuestion.title}</p>
+              {Array.from({ length: historyQuestion.version }).map((_, idx) => (
+                <div key={idx} className="rounded-lg border border-black/10 dark:border-white/10 p-3 text-xs text-black/60 dark:text-white/60">
+                  v{historyQuestion.version - idx} • Updated constraints and testcases
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -164,56 +271,7 @@ export default function QuestionBank() {
                 <h1 className="admin-page-title">Question Bank</h1>
 
               </div>
-              <div className="flex items-center gap-6">
-                <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                  <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
-                  <span className="text-sm text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors">Search...</span>
-                  <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded"><span>⌘</span><span>K</span></div>
-                </button>
-                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
-                <div className="relative">
-                  <button onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20">
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
-                              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{user?.firstName || user?.email || 'Admin User'}</h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'admin@techlearn.com'}</p>
-                              <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">Administrator</span></div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button onClick={() => setProfileDropdownOpen(false)} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                            </div>
-                            <div><div className="font-medium">Profile Settings</div><div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div></div>
-                          </button>
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                          <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                            </div>
-                            <div><div className="font-medium">Log Out</div><div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out of your account</div></div>
-                          </button>
-                        </div>
-                        <div className="px-4 py-2 bg-black/[0.025] dark:bg-white/[0.025] border-t border-black/5 dark:border-white/5">
-                          <p className="text-[9px] text-black/40 dark:text-white/40 text-center">TechLearn Admin Panel v2.0</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
             {/* KPI Row */}
@@ -278,13 +336,55 @@ export default function QuestionBank() {
                         <p className="text-lg font-light text-emerald-600 dark:text-emerald-400 mt-0.5">{cat.active}</p>
                       </div>
                     </div>
-                    <button className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border border-[#3C83F6]/20 dark:border-blue-400/20 px-3 py-1.5 rounded-lg hover:bg-[#3C83F6]/5 dark:hover:bg-blue-400/5">
+                    <button onClick={() => setActiveCategory(cat.title)} className="admin-micro-label text-[#3C83F6] dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors border border-[#3C83F6]/20 dark:border-blue-400/20 px-3 py-1.5 rounded-lg hover:bg-[#3C83F6]/5 dark:hover:bg-blue-400/5">
                       View Questions
                     </button>
                   </div>
                 </div>
               ))}
             </div>
+
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="admin-section-heading">Question List • {activeCategory}</h2>
+                <button onClick={() => openQuestionForm()} className="flex items-center gap-2 admin-micro-label px-4 py-2 rounded-xl bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20 text-[#3C83F6] dark:text-white/70">
+                  <FiPlus className="w-3.5 h-3.5" />Add Question
+                </button>
+              </div>
+              <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-black/40 overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-black/10 dark:border-white/10">
+                      {['Title', 'Difficulty', 'Version', 'Actions'].map((h) => (
+                        <th key={h} className="text-left px-5 py-3 admin-micro-label text-black/35 dark:text-white/35">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentQuestions.map((q) => (
+                      <tr key={q.id} className="border-b border-black/5 dark:border-white/5 last:border-0">
+                        <td className="px-5 py-3 text-sm text-black/75 dark:text-white/75">{q.title}</td>
+                        <td className="px-5 py-3 text-xs text-black/55 dark:text-white/55">{q.difficulty}</td>
+                        <td className="px-5 py-3 text-xs text-[#3C83F6] dark:text-white/75">v{q.version}</td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openQuestionForm(q)} className="text-xs border border-black/10 dark:border-white/10 rounded-lg px-2.5 py-1 text-black/60 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white">
+                              <FiEdit2 className="inline mr-1" />Edit
+                            </button>
+                            <button onClick={() => setHistoryQuestion(q)} className="text-xs border border-black/10 dark:border-white/10 rounded-lg px-2.5 py-1 text-black/60 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white">
+                              History
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {currentQuestions.length === 0 && (
+                      <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-black/40 dark:text-white/40">No questions in this category yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
 
           </div>
         </main>
