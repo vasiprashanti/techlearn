@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { 
@@ -95,7 +95,7 @@ const Sidebar = () => {
     ${
       isActive
         ? "bg-gradient-to-r from-[#4a8eff] to-[#3b7ff0] text-white border-white/25 dark:border-white/15 font-semibold"
-        : "text-white/70 dark:text-black/70 border-transparent hover:text-white dark:hover:text-black hover:bg-white/[0.06] dark:hover:bg-black/[0.06] font-medium"
+        : "text-white/70 dark:text-white/70 border-transparent hover:text-white dark:hover:text-white hover:bg-white/[0.06] dark:hover:bg-white/[0.08] font-medium"
     }`;
 
   const renderLogo = (compact = false) => (
@@ -105,7 +105,7 @@ const Sidebar = () => {
       `}
     >
       <img
-        src={isDarkMode ? "/logoo.png" : "/logoo2.png"}
+        src="/logoo2.png"
         alt="TLS logo"
         className="w-full h-full object-contain"
       />
@@ -118,17 +118,17 @@ const Sidebar = () => {
     const email = user?.email || "admin@trace.io";
 
     return (
-      <div className={`border-t border-white/10 dark:border-black/10 ${compact ? "p-2.5" : "p-3"}`}>
+      <div className={`border-t border-white/10 dark:border-white/10 ${compact ? "p-2.5" : "p-3"}`}>
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-[#3C83F6] text-white flex items-center justify-center text-base font-semibold tracking-tight shrink-0">
             {initial}
           </div>
           {!compact && (
             <div className="min-w-0">
-              <p className="text-xl font-semibold text-white dark:text-black/85 truncate leading-tight">
+              <p className="text-xl font-semibold text-white dark:text-white/90 truncate leading-tight">
                 {displayName}
               </p>
-              <p className="text-[11px] text-white/55 dark:text-black/55 truncate mt-0.5">
+              <p className="text-[11px] text-white/55 dark:text-white/60 truncate mt-0.5">
                 {email}
               </p>
             </div>
@@ -146,21 +146,21 @@ const Sidebar = () => {
             <button
               type="button"
               onClick={() => toggleSection(group.title)}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-white/10 dark:border-black/10 bg-white/[0.03] dark:bg-black/[0.03] hover:bg-white/[0.07] dark:hover:bg-black/[0.06] transition-colors"
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-white/10 dark:border-white/10 bg-white/[0.03] dark:bg-white/[0.03] hover:bg-white/[0.07] dark:hover:bg-white/[0.08] transition-colors"
               aria-expanded={!collapsedSections[group.title]}
               aria-label={`${collapsedSections[group.title] ? 'Expand' : 'Collapse'} ${group.title} section`}
             >
-              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 dark:text-black/50">
+              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 dark:text-white/50">
                 {group.title}
               </h4>
               <FiChevronDown
-                className={`w-3.5 h-3.5 text-white/40 dark:text-black/45 transition-transform duration-200 ${collapsedSections[group.title] ? '-rotate-90' : 'rotate-0'}`}
+                className={`w-3.5 h-3.5 text-white/40 dark:text-white/45 transition-transform duration-200 ${collapsedSections[group.title] ? '-rotate-90' : 'rotate-0'}`}
               />
             </button>
           )}
           <AnimatePresence initial={false}>
             {compact || !collapsedSections[group.title] ? (
-              <motion.div
+              <Motion.div
                 key={`${group.title}-items`}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -182,7 +182,7 @@ const Sidebar = () => {
                     </NavLink>
                   ))}
                 </div>
-              </motion.div>
+              </Motion.div>
             ) : null}
           </AnimatePresence>
         </div>
@@ -191,7 +191,7 @@ const Sidebar = () => {
   );
 
   const renderSettingsSection = (compact = false, onClickAction = () => {}) => (
-    <div className="-mx-4 px-4 pt-4 pb-4 border-t border-white/10 dark:border-black/10">
+    <div className="-mx-4 px-4 pt-4 pb-4 border-t border-white/10 dark:border-white/10">
       <NavLink
         to={`/${settingsItem.id}`}
         onClick={onClickAction}
@@ -210,10 +210,10 @@ const Sidebar = () => {
       <div
         className={`hidden lg:flex flex-col fixed left-0 top-0 z-40 h-screen overflow-hidden pt-0 border-r w-64
           bg-gradient-to-b from-[#0a1a44] via-[#0a173c] to-[#091333]
-          dark:from-[#e3ebff] dark:via-[#d9e4ff] dark:to-[#cfddff]
-          border-white/10 dark:border-black/10`}
+          dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
+          border-white/10 dark:border-white/10`}
       >
-        <div className="relative h-16 flex items-center justify-between px-4 border-b border-white/10 dark:border-black/10">
+        <div className="relative h-16 flex items-center justify-between px-4 border-b border-white/10 dark:border-white/10">
           <div className="flex items-center gap-3 min-w-0">
             {renderLogo(false)}
           </div>
@@ -232,7 +232,7 @@ const Sidebar = () => {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-6 left-6 z-50 p-2 text-black dark:text-black bg-white/50 dark:bg-[#d9e4ff]/80 backdrop-blur-md rounded-md border border-black/10 dark:border-black/10"
+        className="lg:hidden fixed top-6 left-6 z-50 p-2 text-black dark:text-white bg-white/50 dark:bg-[#0f1f43]/85 backdrop-blur-md rounded-md border border-black/10 dark:border-white/15"
       >
         <FiMenu className="w-5 h-5" />
       </button>
@@ -242,7 +242,7 @@ const Sidebar = () => {
         {mobileMenuOpen && (
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="lg:hidden fixed top-6 right-6 z-[60] p-2 text-black dark:text-black bg-white/50 dark:bg-[#d9e4ff]/80 backdrop-blur-md rounded-md border border-black/10 dark:border-black/10"
+            className="lg:hidden fixed top-6 right-6 z-[60] p-2 text-black dark:text-white bg-white/50 dark:bg-[#0f1f43]/85 backdrop-blur-md rounded-md border border-black/10 dark:border-white/15"
           >
             <FiX className="w-5 h-5" />
           </button>
@@ -253,29 +253,29 @@ const Sidebar = () => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
               className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             />
-            <motion.div
+            <Motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
               className="lg:hidden fixed left-0 top-0 bottom-0 w-72 z-50 shadow-2xl border-r
                 bg-gradient-to-b from-[#0a1a44] via-[#0a173c] to-[#091333]
-                dark:from-[#e3ebff] dark:via-[#d9e4ff] dark:to-[#cfddff]
-                border-white/10 dark:border-black/10"
+                dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
+                border-white/10 dark:border-white/10"
             >
               <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 dark:border-black/10">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 dark:border-white/10">
                   {renderLogo()}
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-8 h-8 rounded-lg text-white/80 dark:text-black/65 hover:text-white dark:hover:text-black hover:bg-white/10 dark:hover:bg-black/5 transition-colors flex items-center justify-center"
+                    className="w-8 h-8 rounded-lg text-white/80 dark:text-white/80 hover:text-white dark:hover:text-white hover:bg-white/10 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
                     aria-label="Close sidebar"
                   >
                     <FiChevronLeft className="w-5 h-5" />
@@ -287,7 +287,7 @@ const Sidebar = () => {
                 </div>
                 {renderUserPanel(false)}
               </div>
-            </motion.div>
+            </Motion.div>
           </>
         )}
       </AnimatePresence>

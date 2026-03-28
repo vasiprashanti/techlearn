@@ -172,7 +172,7 @@ export default function AdminHeaderControls({ user, logout }) {
     <>
       {typeof document !== 'undefined' && createPortal(commandModal, document.body)}
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-6">
         <button
           onClick={() => setIsCommandOpen(true)}
           className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group"
@@ -185,7 +185,7 @@ export default function AdminHeaderControls({ user, logout }) {
           </div>
         </button>
 
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
@@ -198,7 +198,7 @@ export default function AdminHeaderControls({ user, logout }) {
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-3 z-50">
+            <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-1.5rem))] sm:w-80 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-3 z-50">
               <div className="flex items-center justify-between px-2 py-1">
                 <p className="text-sm font-semibold text-black/75 dark:text-white/80">Notifications</p>
                 <button
@@ -225,7 +225,7 @@ export default function AdminHeaderControls({ user, logout }) {
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => {
               setIsProfileOpen((prev) => !prev);
@@ -237,7 +237,7 @@ export default function AdminHeaderControls({ user, logout }) {
           </button>
 
           {isProfileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-52 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-50">
+            <div className="absolute right-0 top-full mt-2 w-[min(13rem,calc(100vw-1.5rem))] sm:w-52 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-50">
               <button
                 onClick={() => {
                   setIsProfileOpen(false);

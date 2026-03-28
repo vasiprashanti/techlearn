@@ -213,10 +213,10 @@ export default function Certificates() {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <main className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="max-w-[1400px] mx-auto space-y-5">
 
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
                 <h1 className="admin-page-title">Certificates</h1>
 
@@ -242,38 +242,42 @@ export default function Certificates() {
 
             {activeTab === 'Issued Certificates' && (
               <div className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f]">
-                <div className="grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-3 border-b border-black/10 dark:border-white/10">
-                  {['Student Name', 'Course', 'Score', 'Date', 'Certificate ID', 'Actions'].map(h => (
-                    <span key={h} className="text-xs md:text-sm font-semibold text-[#5f7592] dark:text-slate-300">{h}</span>
-                  ))}
-                </div>
-
-                {issuedCerts.map((cert, i) => {
-                  const revoked = revokedIds.includes(cert.id);
-                  return (
-                    <div key={cert.id} className={`grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-2.5 ${i < issuedCerts.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
-                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.student}</span>
-                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.course}</span>
-                      <span className={`justify-self-start inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${scorePillClass(cert.score)}`}>
-                        {cert.score}%
-                      </span>
-                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white whitespace-nowrap">{cert.date}</span>
-                      <span className="text-xs md:text-sm font-mono text-[#0f1f3d] dark:text-white">{cert.id}</span>
-                      <button
-                        onClick={() => {
-                          if (revoked) {
-                            setRevokedIds((prev) => prev.filter((id) => id !== cert.id));
-                          } else {
-                            setRevokeTarget(cert);
-                          }
-                        }}
-                        className={`text-sm md:text-base font-semibold ${revoked ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'} hover:opacity-80`}
-                      >
-                        {revoked ? 'Restore' : 'Revoke'}
-                      </button>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[920px]">
+                    <div className="grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-3 border-b border-black/10 dark:border-white/10">
+                      {['Student Name', 'Course', 'Score', 'Date', 'Certificate ID', 'Actions'].map(h => (
+                        <span key={h} className="text-xs md:text-sm font-semibold text-[#5f7592] dark:text-slate-300">{h}</span>
+                      ))}
                     </div>
-                  );
-                })}
+
+                    {issuedCerts.map((cert, i) => {
+                      const revoked = revokedIds.includes(cert.id);
+                      return (
+                        <div key={cert.id} className={`grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-2.5 ${i < issuedCerts.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                          <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.student}</span>
+                          <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.course}</span>
+                          <span className={`justify-self-start inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${scorePillClass(cert.score)}`}>
+                            {cert.score}%
+                          </span>
+                          <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white whitespace-nowrap">{cert.date}</span>
+                          <span className="text-xs md:text-sm font-mono text-[#0f1f3d] dark:text-white">{cert.id}</span>
+                          <button
+                            onClick={() => {
+                              if (revoked) {
+                                setRevokedIds((prev) => prev.filter((id) => id !== cert.id));
+                              } else {
+                                setRevokeTarget(cert);
+                              }
+                            }}
+                            className={`text-sm md:text-base font-semibold ${revoked ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'} hover:opacity-80`}
+                          >
+                            {revoked ? 'Restore' : 'Revoke'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
