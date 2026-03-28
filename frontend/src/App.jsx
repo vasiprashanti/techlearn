@@ -76,6 +76,7 @@ import Batches from './pages/AdminDashbaord/Batches';
 import BatchDetails from './pages/AdminDashbaord/BatchDetails';
 import Students from './pages/AdminDashbaord/Students';
 import QuestionBank from './pages/AdminDashbaord/QuestionBank';
+import QuestionCategoryDetails from './pages/AdminDashbaord/QuestionCategoryDetails';
 import Resources from './pages/AdminDashbaord/Resources';
 import Certificates from './pages/AdminDashbaord/Certificates';
 import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
@@ -623,6 +624,7 @@ function LayoutWrapper() {
   const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
                            location.pathname.startsWith('/colleges/') ||
                            location.pathname.startsWith('/batches/') ||
+                           location.pathname.startsWith('/question-bank/') ||
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
@@ -697,6 +699,7 @@ function LayoutWrapper() {
 <Route path="/batches/:batchId" element={<BatchDetails />} />
 <Route path="/students" element={<Students />} />
 <Route path="/question-bank" element={<QuestionBank />} />
+<Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
 <Route path="/resources" element={<Resources />} />
 <Route path="/certificates" element={<Certificates />} />
 <Route path="/submission-monitor" element={<SubmissionMonitor />} />
