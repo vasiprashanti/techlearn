@@ -33,6 +33,7 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
+import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
@@ -625,6 +626,7 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/colleges/') ||
                            location.pathname.startsWith('/batches/') ||
                            location.pathname.startsWith('/question-bank/') ||
+                           location.pathname.startsWith('/track-templates/') ||
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
@@ -648,6 +650,7 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
+            <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           

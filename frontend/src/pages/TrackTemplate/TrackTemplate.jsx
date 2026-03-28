@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell, FiArrowUp, FiArrowDown, FiClock } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell, FiArrowUp, FiArrowDown, FiClock, FiChevronDown } from 'react-icons/fi';
 
 // --- Mock Data ---
 const mockTracks = [
@@ -16,7 +16,7 @@ const mockTracks = [
     questionsAssigned: 4,
     status: 'Active',
     icon: FiCode,
-    category: 'Algorithms',
+    category: 'Data Structures & Algorithms',
   },
   {
     id: 'trk_core_01',
@@ -26,7 +26,7 @@ const mockTracks = [
     questionsAssigned: 1,
     status: 'Active',
     icon: FiCpu,
-    category: 'Fundamentals',
+    category: 'Web Development',
   },
   {
     id: 'trk_sql_01',
@@ -36,7 +36,7 @@ const mockTracks = [
     questionsAssigned: 1,
     status: 'Active',
     icon: FiDatabase,
-    category: 'Database',
+    category: 'Database Management',
   },
 ];
 
@@ -66,6 +66,17 @@ export default function TrackTemplate() {
   const [searchQuery, setSearchQuery] = useState('');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [tracks, setTracks] = useState(mockTracks);
+  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [createTemplateForm, setCreateTemplateForm] = useState({
+    name: '',
+    category: '',
+    description: '',
+    totalDays: '30',
+    status: 'Active',
+  });
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [historyTrack, setHistoryTrack] = useState(null);
   const [trackQuestions, setTrackQuestions] = useState({
@@ -114,7 +125,7 @@ export default function TrackTemplate() {
     navigate(`/${id}`);
   };
 
-  const filteredTracks = mockTracks.filter((track) => {
+  const filteredTracks = tracks.filter((track) => {
     const query = templateSearch.trim().toLowerCase();
     if (!query) return true;
 
@@ -141,6 +152,105 @@ export default function TrackTemplate() {
       [trackId]: [`v${(prev[trackId]?.length || 0) + 1} • Updated question ordering`, ...(prev[trackId] || [])],
     }));
     setSelectedTrack(null);
+  };
+
+  const updateCreateTemplateField = (field, value) => {
+    setCreateTemplateForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const closeCreateTemplateModal = () => {
+    setIsCreateTemplateOpen(false);
+    setEditingTemplateId(null);
+    setCreateTemplateForm({
+      name: '',
+      category: '',
+      description: '',
+      totalDays: '30',
+      status: 'Active',
+    });
+  };
+
+  const openCreateTemplateModal = () => {
+    setEditingTemplateId(null);
+    setCreateTemplateForm({
+      name: '',
+      category: '',
+      description: '',
+      totalDays: '30',
+      status: 'Active',
+    });
+    setIsCreateTemplateOpen(true);
+  };
+
+  const openEditTemplateModal = (track) => {
+    setEditingTemplateId(track.id);
+    setCreateTemplateForm({
+      name: track.name || '',
+      category: track.category || '',
+      description: track.description || '',
+      totalDays: String(track.totalDays || 1),
+      status: track.status || 'Active',
+    });
+    setIsCreateTemplateOpen(true);
+  };
+
+  const submitTemplate = () => {
+    if (!createTemplateForm.name.trim() || !createTemplateForm.category) return;
+
+    const totalDays = Number(createTemplateForm.totalDays) > 0 ? Number(createTemplateForm.totalDays) : 1;
+
+    if (editingTemplateId) {
+      setTracks((prev) =>
+        prev.map((track) =>
+          track.id === editingTemplateId
+            ? {
+                ...track,
+                name: createTemplateForm.name.trim(),
+                category: createTemplateForm.category,
+                description:
+                  createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+                totalDays,
+                status: createTemplateForm.status,
+              }
+            : track
+        )
+      );
+    } else {
+      const newId = `trk_${Date.now()}`;
+      const newTrack = {
+        id: newId,
+        name: createTemplateForm.name.trim(),
+        description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+        totalDays,
+        questionsAssigned: 0,
+        status: createTemplateForm.status,
+        icon: FiCode,
+        category: createTemplateForm.category,
+      };
+
+      setTracks((prev) => [newTrack, ...prev]);
+      setTrackQuestions((prev) => ({ ...prev, [newId]: [] }));
+      setVersionHistory((prev) => ({ ...prev, [newId]: ['v1 • Initial template'] }));
+    }
+
+    closeCreateTemplateModal();
+  };
+
+  const deleteTemplate = (trackId) => {
+    setTracks((prev) => prev.filter((track) => track.id !== trackId));
+    setTrackQuestions((prev) => {
+      const next = { ...prev };
+      delete next[trackId];
+      return next;
+    });
+    setVersionHistory((prev) => {
+      const next = { ...prev };
+      delete next[trackId];
+      return next;
+    });
+    if (selectedTrack?.id === trackId) setSelectedTrack(null);
+    if (historyTrack?.id === trackId) setHistoryTrack(null);
+    if (deleteTarget?.id === trackId) setDeleteTarget(null);
   };
 
   return (
@@ -234,6 +344,128 @@ export default function TrackTemplate() {
                   <FiClock className="w-3.5 h-3.5" />{entry}
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateTemplateOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCreateTemplateModal} />
+          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
+                <input
+                  value={createTemplateForm.name}
+                  onChange={(e) => updateCreateTemplateField('name', e.target.value)}
+                  placeholder="Enter template name"
+                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                <div className="relative mt-1">
+                  <select
+                    value={createTemplateForm.category}
+                    onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                  >
+                    <option value="">Select category</option>
+                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
+                    <option value="Database Management">Database Management</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Python Programming">Python Programming</option>
+                    <option value="Machine Learning">Machine Learning</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Description</label>
+                <textarea
+                  value={createTemplateForm.description}
+                  onChange={(e) => updateCreateTemplateField('description', e.target.value)}
+                  rows={3}
+                  placeholder="Describe this template"
+                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Total days</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={createTemplateForm.totalDays}
+                    onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Status</label>
+                  <div className="relative mt-1">
+                    <select
+                      value={createTemplateForm.status}
+                      onChange={(e) => updateCreateTemplateField('status', e.target.value)}
+                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                    >
+                      <option value="Active">active</option>
+                      <option value="Draft">draft</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  onClick={closeCreateTemplateModal}
+                  className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitTemplate}
+                  className="h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                >
+                  {editingTemplateId ? 'Save Changes' : 'Create Template'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-6">
+            <h3 className="text-lg font-semibold text-black/85 dark:text-white/90">Delete Template?</h3>
+            <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+              Are you sure you want to delete <span className="font-semibold">{deleteTarget.name}</span>?
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteTemplate(deleteTarget.id)}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -372,14 +604,17 @@ export default function TrackTemplate() {
                 />
               </div>
 
-              <button className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
+              <button
+                onClick={openCreateTemplateModal}
+                className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] border border-[#3C83F6] text-white transition-colors font-semibold text-sm"
+              >
                 <FiPlus className="w-3.5 h-3.5" />
                 Create Template
               </button>
             </div>
 
             <p className="admin-micro-label text-black/30 dark:text-white/30 -mt-2">
-              {filteredTracks.length} of {mockTracks.length} templates
+              {filteredTracks.length} of {tracks.length} templates
             </p>
 
             {/* 3-Column Card Grid */}
@@ -391,20 +626,30 @@ export default function TrackTemplate() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTracks.map((track) => {
                   const Icon = track.icon;
+                  const iconTileBgClass =
+                    track.id === 'trk_dsa_01'
+                      ? 'from-blue-500/15 to-indigo-500/15'
+                      : track.id === 'trk_core_01'
+                        ? 'from-orange-500/15 to-amber-500/15'
+                        : 'from-violet-500/15 to-purple-500/15';
+                  const iconColorClass =
+                    track.id === 'trk_dsa_01'
+                      ? 'text-blue-600 dark:text-blue-300'
+                      : track.id === 'trk_core_01'
+                        ? 'text-orange-600 dark:text-orange-300'
+                        : 'text-violet-600 dark:text-violet-300';
                   return (
-                    <div
-                      key={track.id}
-                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7 flex flex-col gap-5 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group"
-                    >
+                    <div key={track.id} className="rounded-2xl bg-white dark:bg-[#0f1e3e] border border-black/10 dark:border-white/10 p-6 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+                      <div className="space-y-4">
                       {/* Top row: icon + status badge */}
                       <div className="flex items-start justify-between">
-                        <div className="w-10 h-10 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/10 dark:border-white/10 flex items-center justify-center shrink-0">
-                          <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 ${iconTileBgClass}`}>
+                          <Icon className={`w-[22px] h-[22px] ${iconColorClass}`} />
                         </div>
-                        <span className={`admin-micro-label px-2.5 py-1 rounded-lg border
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold
                           ${track.status === 'Active'
-                            ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
-                            : 'border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700/40'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-700/40'
                           }`}
                         >
                           {track.status}
@@ -412,43 +657,44 @@ export default function TrackTemplate() {
                       </div>
 
                       {/* Track name + description */}
-                      <div className="min-h-[4.5rem]">
-                        <h3 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+                      <div>
+                        <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">
                           {track.name}
                         </h3>
-                        <p className="text-sm text-black/45 dark:text-white/45 mt-1 font-light leading-relaxed line-clamp-2">
+                        <p className="text-xs text-[#64748b] dark:text-slate-300 mt-1 line-clamp-2">
                           {track.description}
                         </p>
                       </div>
 
                       {/* Stats */}
-                      <div className="space-y-2">
-                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="admin-micro-label text-black/30 dark:text-white/30">Total Days</p>
-                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">{track.totalDays}</p>
+                      <div className="space-y-2.5">
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Total Days</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
                         </div>
-                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="admin-micro-label text-black/30 dark:text-white/30">Questions Assigned</p>
-                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Questions Assigned</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                             {track.questionsAssigned} / {track.totalDays}
                           </p>
                         </div>
                       </div>
+                      </div>
 
                       {/* Actions row */}
-                      <div className="flex items-center gap-3 mt-auto">
+                      <div className="flex items-center gap-2 mt-5">
                         <button
-                          onClick={() => setSelectedTrack(track)}
-                          className="flex-1 h-10 flex items-center justify-center gap-2 px-4 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
+                          onClick={() => navigate(`/track-templates/${track.id}`)}
+                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-md px-4 text-sm font-medium bg-[#3C83F6] hover:bg-[#2563eb] text-white transition-colors whitespace-nowrap"
                         >
-                          <FiEye className="w-4 h-4" />
-                          Configure Order
+                          <FiEye className="w-[15px] h-[15px]" />
+                          View Template
                         </button>
-                        <button onClick={() => setSelectedTrack(track)} className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                          <FiEdit2 className="w-4 h-4" />
+                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                          <FiEdit2 className="w-[15px] h-[15px]" />
                         </button>
-                        <button onClick={() => setHistoryTrack(track)} className="h-10 px-3 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-xs">
-                          History
+                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                          <FiTrash2 className="w-[15px] h-[15px]" />
                         </button>
                       </div>
                     </div>
