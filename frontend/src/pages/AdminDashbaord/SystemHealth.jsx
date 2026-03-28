@@ -183,7 +183,7 @@ const SystemHealth = () => {
             {/* Top KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {healthData.kpis.map((kpi, i) => (
-                <div key={i} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl">
+                <div key={i} className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-6 flex flex-col justify-between hover:bg-white transition-colors rounded-xl">
                   <span className="admin-micro-label text-black/50 dark:text-white/50 mb-4">{kpi.label}</span>
                   <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{kpi.value}</span>
                 </div>
@@ -193,11 +193,11 @@ const SystemHealth = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* Service Status Grid */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[400px]">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Service Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                   {healthData.services.map((service, i) => (
-                    <div key={i} className="bg-white/20 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col justify-between hover:bg-white/40 dark:hover:bg-black/40 transition-colors">
+                    <div key={i} className="bg-white dark:bg-white backdrop-blur-md border border-black/10 dark:border-black/20 p-6 rounded-xl flex flex-col justify-between hover:bg-white transition-colors">
                       <div className="flex justify-between items-start mb-4">
                         <div className="text-black/40 dark:text-white/40 w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full">{service.icon}</div>
                         <div className="flex items-center gap-2">
@@ -217,11 +217,11 @@ const SystemHealth = () => {
               </div>
 
               {/* Recent Alerts Panel */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[400px]">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Recent Alerts</h3>
                 <div className="flex-1 flex flex-col gap-4">
                   {healthData.recentAlerts.map((alert, i) => (
-                    <div key={i} className="flex gap-5 items-start bg-white/20 dark:bg-black/20 p-5 rounded-xl border border-black/5 dark:border-white/5 hover:bg-white/30 dark:hover:bg-black/30 transition-colors">
+                    <div key={i} className="flex gap-5 items-start bg-white dark:bg-white p-5 rounded-xl border border-black/10 dark:border-black/20 hover:bg-white transition-colors">
                       <div className="mt-0.5 text-amber-500 shrink-0">
                         <FiAlertCircle className="w-5 h-5" />
                       </div>

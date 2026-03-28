@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import {  FiSearch, FiAward , FiBell } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiPlus } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -44,8 +44,10 @@ const templates = [
   { id: 'TPL-003', name: 'Completion Badge', courses: 8, lastUpdated: '2024-12-01' },
 ];
 
-const scoreColor = s => s >= 90 ? 'text-emerald-600 dark:text-emerald-400' : s >= 80 ? 'text-[#3C83F6] dark:text-blue-400' : 'text-amber-500 dark:text-amber-400';
-const scoreBg   = s => s >= 90 ? 'bg-emerald-500/10 border-emerald-500/20' : s >= 80 ? 'bg-[#3C83F6]/10 border-[#3C83F6]/20' : 'bg-amber-500/10 border-amber-500/20';
+const scorePillClass = (score) =>
+  score >= 80
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
 
 const tabs = ['Issued Certificates', 'Final Tests', 'Templates'];
 
@@ -60,6 +62,15 @@ export default function Certificates() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Issued Certificates');
   const [revokedIds, setRevokedIds] = useState([]);
+  const [revokeTarget, setRevokeTarget] = useState(null);
+  const [testQuestions, setTestQuestions] = useState([
+    { id: 'tq-1', question: 'What is a React component?', answer: 'A reusable piece of UI' },
+    { id: 'tq-2', question: 'What is JSX?', answer: 'JavaScript XML syntax extension' },
+  ]);
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newAnswer, setNewAnswer] = useState('');
+  const [passingPercentage, setPassingPercentage] = useState('70');
+  const [timeLimitEnabled, setTimeLimitEnabled] = useState(false);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
@@ -85,6 +96,30 @@ export default function Certificates() {
   );
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
+
+  const confirmRevoke = () => {
+    if (!revokeTarget) return;
+    setRevokedIds((prev) => (prev.includes(revokeTarget.id) ? prev : [...prev, revokeTarget.id]));
+    setRevokeTarget(null);
+  };
+
+  const addTestQuestion = () => {
+    if (!newQuestion.trim() || !newAnswer.trim()) return;
+    setTestQuestions((prev) => [
+      ...prev,
+      {
+        id: `tq-${Date.now()}`,
+        question: newQuestion.trim(),
+        answer: newAnswer.trim(),
+      },
+    ]);
+    setNewQuestion('');
+    setNewAnswer('');
+  };
+
+  const removeTestQuestion = (id) => {
+    setTestQuestions((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const ProfileDropdown = () => (
     <>
@@ -148,12 +183,38 @@ export default function Certificates() {
         </div>
       )}
 
+      {revokeTarget && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setRevokeTarget(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-[#0f1f3d] dark:text-white">Revoke Certificate?</h3>
+            <p className="mt-2 text-sm text-[#5f7592] dark:text-slate-300">
+              Do you really want to revoke the certificate for <span className="font-semibold text-[#0f1f3d] dark:text-white">{revokeTarget.student}</span>?
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setRevokeTarget(null)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-[#0f1f3d] dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRevoke}
+                className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+          <div className="max-w-[1400px] mx-auto space-y-5">
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
@@ -163,16 +224,15 @@ export default function Certificates() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 bg-white/30 dark:bg-black/30 border border-black/5 dark:border-white/5 rounded-xl p-1 w-fit">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/45 dark:bg-[#0f274f]/70 border border-black/10 dark:border-white/10 w-fit">
               {tabs.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-5 py-2 rounded-lg text-xs tracking-wide transition-all duration-200 ${
+                  className={`px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
                     activeTab === tab
-                      ? 'bg-[#3C83F6] dark:bg-white text-white dark:text-black font-medium shadow-md'
-                      : 'text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                      ? 'bg-transparent border-2 border-[#3C83F6] text-[#0f1f3d] dark:text-white'
+                      : 'text-[#5f7592] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
                   }`}
                 >
                   {tab}
@@ -180,39 +240,34 @@ export default function Certificates() {
               ))}
             </div>
 
-            {/* Issued Certificates Tab */}
             {activeTab === 'Issued Certificates' && (
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
-                {/* Table Header */}
-                <div className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto] items-center px-6 py-3 border-b border-black/5 dark:border-white/5 gap-4">
+              <div className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f]">
+                <div className="grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-3 border-b border-black/10 dark:border-white/10">
                   {['Student Name', 'Course', 'Score', 'Date', 'Certificate ID', 'Actions'].map(h => (
-                    <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
+                    <span key={h} className="text-xs md:text-sm font-semibold text-[#5f7592] dark:text-slate-300">{h}</span>
                   ))}
                 </div>
+
                 {issuedCerts.map((cert, i) => {
                   const revoked = revokedIds.includes(cert.id);
                   return (
-                    <div key={cert.id} className={`grid grid-cols-[1fr_1fr_auto_auto_auto_auto] items-center px-6 py-4 gap-4 group transition-colors ${revoked ? 'opacity-40' : 'hover:bg-white/30 dark:hover:bg-white/5'} ${i < issuedCerts.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#3C83F6]/20 to-[#2563eb]/20 dark:from-white/10 dark:to-gray-200/10 text-[#3C83F6] dark:text-white flex items-center justify-center text-xs font-medium shrink-0">
-                          {cert.student.charAt(0)}
-                        </div>
-                        <span className="text-sm font-medium text-[#3C83F6] dark:text-white">{cert.student}</span>
-                      </div>
-                      <span className="text-sm text-black/60 dark:text-white/60 truncate">{cert.course}</span>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-md border ${scoreBg(cert.score)} ${scoreColor(cert.score)}`}>{cert.score}%</span>
-                      <span className="text-xs text-black/40 dark:text-white/40 whitespace-nowrap">{cert.date}</span>
-                      <div className="flex items-center gap-1.5">
-                        <FiAward className="w-3.5 h-3.5 text-black/30 dark:text-white/30" />
-                        <span className="text-xs font-mono text-black/40 dark:text-white/40">{cert.id}</span>
-                      </div>
+                    <div key={cert.id} className={`grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-2.5 ${i < issuedCerts.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.student}</span>
+                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.course}</span>
+                      <span className={`justify-self-start inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${scorePillClass(cert.score)}`}>
+                        {cert.score}%
+                      </span>
+                      <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white whitespace-nowrap">{cert.date}</span>
+                      <span className="text-xs md:text-sm font-mono text-[#0f1f3d] dark:text-white">{cert.id}</span>
                       <button
-                        onClick={() => setRevokedIds(prev => revoked ? prev.filter(id => id !== cert.id) : [...prev, cert.id])}
-                        className={`admin-micro-label px-3 py-1.5 rounded-lg border transition-colors ${
-                          revoked
-                            ? 'text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/5'
-                            : 'text-red-500 dark:text-red-400 border-red-500/20 hover:bg-red-500/5'
-                        }`}
+                        onClick={() => {
+                          if (revoked) {
+                            setRevokedIds((prev) => prev.filter((id) => id !== cert.id));
+                          } else {
+                            setRevokeTarget(cert);
+                          }
+                        }}
+                        className={`text-sm md:text-base font-semibold ${revoked ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'} hover:opacity-80`}
                       >
                         {revoked ? 'Restore' : 'Revoke'}
                       </button>
@@ -222,56 +277,99 @@ export default function Certificates() {
               </div>
             )}
 
-            {/* Final Tests Tab */}
             {activeTab === 'Final Tests' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {finalTests.map(test => (
-                  <div key={test.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
-                    <div>
-                      <span className="admin-micro-label text-black/40 dark:text-white/40 font-mono">{test.id}</span>
-                      <h3 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-2">{test.title}</h3>
-                      <p className="text-[10px] text-black/40 dark:text-white/40 mt-1">{test.course}</p>
-                    </div>
-                    <div className="mt-5 pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between">
-                      <div className="flex gap-5">
-                        <div>
-                          <p className="admin-micro-label text-black/40 dark:text-white/40">Passing Score</p>
-                          <p className="text-base font-light text-[#3C83F6] dark:text-white mt-0.5">{test.passing}%</p>
-                        </div>
-                        <div>
-                          <p className="admin-micro-label text-black/40 dark:text-white/40">Attempts</p>
-                          <p className="text-base font-light text-black/70 dark:text-white/70 mt-0.5">{test.attempts}</p>
-                        </div>
-                      </div>
-                      <button className="admin-micro-label text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors border border-black/10 dark:border-white/10 px-3 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5">
-                        Edit
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+              <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
+                <h3 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">Test Questions</h3>
 
-            {/* Templates Tab */}
-            {activeTab === 'Templates' && (
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-[1fr_auto_auto_auto] items-center px-6 py-3 border-b border-black/5 dark:border-white/5 gap-6">
-                  {['Template Name', 'Template ID', 'Courses', 'Last Updated'].map(h => (
-                    <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
+                <div className="mt-3 space-y-2.5">
+                  {testQuestions.map((item) => (
+                    <article key={item.id} className="rounded-xl bg-[#e9eff5] dark:bg-[#17345f] px-4 py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-base font-medium text-[#0f1f3d] dark:text-white">{item.question}</p>
+                        <p className="mt-0.5 text-sm text-[#5f7592] dark:text-slate-300">Answer: {item.answer}</p>
+                      </div>
+                      <button onClick={() => removeTestQuestion(item.id)} className="text-[#0f1f3d] dark:text-white/90 hover:text-red-500" aria-label="Delete test question">
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </article>
                   ))}
                 </div>
-                {templates.map((tpl, i) => (
-                  <div key={tpl.id} className={`grid grid-cols-[1fr_auto_auto_auto] items-center px-6 py-5 gap-6 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors cursor-pointer ${i < templates.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
-                        <FiAward className="w-4 h-4" />
-                      </div>
-                      <span className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{tpl.name}</span>
+
+                <div className="mt-4 h-px bg-black/10 dark:bg-white/10" />
+
+                <div className="mt-4 space-y-2.5">
+                  <input
+                    value={newQuestion}
+                    onChange={(e) => setNewQuestion(e.target.value)}
+                    placeholder="Question text"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                  />
+                  <input
+                    value={newAnswer}
+                    onChange={(e) => setNewAnswer(e.target.value)}
+                    placeholder="Correct answer"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                  />
+                  <button
+                    onClick={addTestQuestion}
+                    className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] text-[#0f1f3d] dark:text-white text-sm font-semibold inline-flex items-center gap-2"
+                  >
+                    <FiPlus className="w-4 h-4" />
+                    Add Question
+                  </button>
+                </div>
+
+                <div className="mt-5 h-px bg-black/10 dark:bg-white/10" />
+
+                <div className="mt-4 flex items-center gap-4">
+                  <label className="text-base font-semibold text-[#0f1f3d] dark:text-white">Passing Percentage (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={passingPercentage}
+                    onChange={(e) => setPassingPercentage(e.target.value)}
+                    className="w-28 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3 text-base text-[#0f1f3d] dark:text-white"
+                  />
+                </div>
+
+                <div className="mt-4 flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTimeLimitEnabled((prev) => !prev)}
+                    aria-pressed={timeLimitEnabled}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${timeLimitEnabled ? 'bg-[#3C83F6]' : 'bg-[#d5deea] dark:bg-[#27446d]'}`}
+                    aria-label="Toggle time limit"
+                  >
+                    <span
+                      className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${timeLimitEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                  <span className="text-base font-medium text-[#0f1f3d] dark:text-white">Enable Time Limit</span>
+                </div>
+
+                <button className="mt-5 h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-base font-semibold">
+                  Save Test
+                </button>
+              </section>
+            )}
+
+            {activeTab === 'Templates' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { key: 'Classic', title: 'Classic Template' },
+                  { key: 'Modern', title: 'Modern Template' },
+                  { key: 'Minimal', title: 'Minimal Template' },
+                ].map((tpl) => (
+                  <article key={tpl.key} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
+                    <div className="h-28 rounded-xl bg-[#e2e8ef] dark:bg-[#17345f] flex items-center justify-center">
+                      <span className="text-3xl font-semibold text-[#b4bfcc] dark:text-slate-400">{tpl.key}</span>
                     </div>
-                    <span className="text-xs font-mono text-black/40 dark:text-white/40">{tpl.id}</span>
-                    <span className="text-xs text-black/60 dark:text-white/60">{tpl.courses} courses</span>
-                    <span className="text-xs text-black/40 dark:text-white/40">{tpl.lastUpdated}</span>
-                  </div>
+                    <div className="mt-4 text-center">
+                      <h4 className="text-xl font-medium text-[#0f1f3d] dark:text-white">{tpl.title}</h4>
+                      <p className="mt-1.5 text-sm text-[#5f7592] dark:text-slate-300">Certificate design template</p>
+                    </div>
+                  </article>
                 ))}
               </div>
             )}

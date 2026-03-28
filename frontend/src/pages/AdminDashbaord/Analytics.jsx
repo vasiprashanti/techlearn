@@ -218,7 +218,7 @@ const Analytics = () => {
                 {analyticsData.platformOverview.map((kpi, i) => (
                   <div
                     key={i}
-                    className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
+                    className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-5 flex flex-col justify-between hover:bg-white transition-colors rounded-xl"
                   >
                     <span className="admin-micro-label text-black/50 dark:text-white/50 leading-snug">{kpi.label}</span>
                     <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-5">{kpi.value}</span>
@@ -231,7 +231,7 @@ const Analytics = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               {/* Student Engagement */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-6 shrink-0">
                   <h3 className="admin-section-heading">Student Engagement</h3>
                   <button
@@ -243,7 +243,7 @@ const Analytics = () => {
                 </div>
 
                 {/* Daily Active — hero stat */}
-                <div className="mb-6 p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
+                <div className="mb-6 p-5 bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Daily Active Students</span>
                   <div className="flex items-end gap-2 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
@@ -286,7 +286,7 @@ const Analytics = () => {
               </div>
 
               {/* Learning Performance */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl flex flex-col">
                 <h3 className="admin-section-heading mb-6 shrink-0">Learning Performance</h3>
                 <div className="flex-1 flex flex-col justify-between gap-6">
 
@@ -323,7 +323,7 @@ const Analytics = () => {
                   </div>
 
                   {/* Avg Solve Time */}
-                  <div className="p-5 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5 flex items-center justify-between">
+                  <div className="p-5 bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 flex items-center justify-between">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Average Solve Time</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
@@ -338,7 +338,7 @@ const Analytics = () => {
 
             {/* Batch Performance */}
             <div className="grid grid-cols-1 gap-6">
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-6 shrink-0">
                   <h3 className="admin-section-heading">Batch Performance</h3>
                   <button
@@ -351,19 +351,19 @@ const Analytics = () => {
 
                 {/* Status pills */}
                 <div className="grid grid-cols-3 gap-4 mb-8">
-                  <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
+                  <div className="text-center p-4 bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20">
                     <span className="text-3xl font-light tracking-tighter text-emerald-500">
                       {analyticsData.batchPerformance.active}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Active</p>
                   </div>
-                  <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
+                  <div className="text-center p-4 bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20">
                     <span className="text-3xl font-light tracking-tighter text-amber-500">
                       {analyticsData.batchPerformance.upcoming}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Upcoming</p>
                   </div>
-                  <div className="text-center p-4 bg-white/30 dark:bg-black/30 rounded-xl border border-black/5 dark:border-white/5">
+                  <div className="text-center p-4 bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20">
                     <span className="text-3xl font-light tracking-tighter text-black/50 dark:text-white/50">
                       {analyticsData.batchPerformance.completed}
                     </span>
@@ -398,7 +398,7 @@ const Analytics = () => {
             </div>
 
             {/* Content Insights */}
-            <section className="bg-white/50 dark:bg-black/35 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl">
+            <section className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-6 rounded-xl">
               <div className="flex items-center justify-between mb-5 shrink-0">
                 <h3 className="admin-section-heading">Content Insights</h3>
                 <button
@@ -411,7 +411,7 @@ const Analytics = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-4 items-stretch">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <article className="bg-white/55 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiCode className="w-5 h-5" />
                     </div>
@@ -421,7 +421,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white/55 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiGitBranch className="w-5 h-5" />
                     </div>
@@ -431,7 +431,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white/55 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiFileText className="w-5 h-5" />
                     </div>
@@ -441,7 +441,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white/55 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiBarChart2 className="w-5 h-5" />
                     </div>
@@ -452,7 +452,7 @@ const Analytics = () => {
                   </article>
                 </div>
 
-                <article className="bg-white/55 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between min-h-[264px]">
+                <article className="bg-white dark:bg-white rounded-xl border border-black/10 dark:border-black/20 p-5 flex flex-col justify-between min-h-[264px]">
                   <h4 className="text-xl font-medium text-black/85 dark:text-white/90 mb-5">Difficulty Distribution</h4>
                   <div className="space-y-4">
                     {contentInsights.difficulty.map((item) => {
@@ -481,10 +481,10 @@ const Analytics = () => {
             </section>
 
             {/* Platform Health */}
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl">
+            <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-8 rounded-xl">
               <h3 className="admin-section-heading mb-8">Platform Health</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="min-h-[150px] bg-white/55 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between">
+                <div className="min-h-[150px] bg-white dark:bg-white rounded-2xl border border-black/10 dark:border-black/20 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Engagement Rate</span>
                   <div>
                     <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.engagementRate}%</span>
@@ -497,12 +497,12 @@ const Analytics = () => {
                   </div>
                 </div>
 
-                <div className="min-h-[150px] bg-white/55 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between">
+                <div className="min-h-[150px] bg-white dark:bg-white rounded-2xl border border-black/10 dark:border-black/20 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Uploaded</span>
                   <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.resourcesUploaded}</span>
                 </div>
 
-                <div className="min-h-[150px] bg-white/55 dark:bg-white/5 rounded-2xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between">
+                <div className="min-h-[150px] bg-white dark:bg-white rounded-2xl border border-black/10 dark:border-black/20 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Viewed</span>
                   <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.resourcesViewed}</span>
                 </div>

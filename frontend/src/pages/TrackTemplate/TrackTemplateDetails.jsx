@@ -64,11 +64,16 @@ const categorySlugMap = {
   'Machine Learning': 'machine-learning',
 };
 
-const difficultyClass = (difficulty) => {
-  if (difficulty === 'Easy') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
-  if (difficulty === 'Medium') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
-  return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300';
+const difficultyPillClass = (difficulty) => {
+  if (difficulty === 'Easy') return 'bg-[#16a34a] text-white';
+  if (difficulty === 'Medium') return 'bg-[#dbe7ff] text-[#3c83f6]';
+  return 'bg-[#fee2e2] text-[#b91c1c]';
 };
+
+const statusPillClass = (status) =>
+  status === 'Active'
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
 
 const PAGE_TITLE_STYLE = {
   fontSize: 'clamp(1.4rem, 1.3rem + 0.25vw, 1.65rem)',
@@ -182,58 +187,58 @@ export default function TrackTemplateDetails() {
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddDayModal} />
 
-          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-6 md:p-7">
+          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-4 md:p-5">
             <button
               onClick={closeAddDayModal}
-              className="absolute right-4 top-4 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white"
+              className="absolute right-3.5 top-3.5 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white"
               aria-label="Close assign question modal"
             >
-              <FiX className="w-6 h-6" />
+              <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-2xl md:text-3xl font-semibold text-[#1a2335] dark:text-white">Assign Question to Day</h2>
+            <h2 className="text-xl md:text-2xl font-semibold text-[#1a2335] dark:text-white">Assign Question to Day</h2>
 
-            <div className="mt-8 space-y-7">
+            <div className="mt-5 space-y-4.5">
               <div>
-                <label className="block text-xl font-medium text-[#1a2335] dark:text-white">Day Number</label>
+                <label className="block text-base font-medium text-[#1a2335] dark:text-white">Day Number</label>
                 <input
                   type="number"
                   min="1"
                   value={addDayForm.dayNumber}
                   onChange={(e) => setAddDayForm((prev) => ({ ...prev, dayNumber: e.target.value }))}
-                  className="mt-3 w-full h-14 rounded-3xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-4 text-3xl text-[#1a2335] dark:text-white"
+                  className="mt-2 w-full h-11 rounded-2xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 text-xl text-[#1a2335] dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-xl font-medium text-[#1a2335] dark:text-white">
+                <label className="block text-base font-medium text-[#1a2335] dark:text-white">
                   Question (from {track.category})
                 </label>
-                <div className="relative mt-3">
+                <div className="relative mt-2">
                   <select
                     value={addDayForm.questionId}
                     onChange={(e) => setAddDayForm((prev) => ({ ...prev, questionId: e.target.value }))}
-                    className="appearance-none w-full h-14 rounded-3xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-4 pr-12 text-2xl text-[#1a2335] dark:text-white"
+                    className="appearance-none w-full h-11 rounded-2xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 pr-10 text-base text-[#1a2335] dark:text-white"
                   >
                     <option value="">Select a question</option>
                     {dayWiseQuestions.map((question) => (
                       <option key={question.id} value={question.id}>{question.title}</option>
                     ))}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-black/55 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-4 flex items-center justify-end gap-2.5">
                 <button
                   onClick={closeAddDayModal}
-                  className="h-14 px-8 rounded-3xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-xl font-medium"
+                  className="h-10 px-5 rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={assignQuestionToDay}
-                  className="h-14 px-8 rounded-3xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xl font-semibold"
+                  className="h-10 px-5 rounded-2xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold"
                 >
                   Assign Question
                 </button>
@@ -331,7 +336,7 @@ export default function TrackTemplateDetails() {
               </div>
 
               <div className="flex items-center gap-3 self-start md:self-auto md:ml-auto">
-                <span className={`inline-flex items-center rounded-full px-3 py-1 text-base font-semibold ${track.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'}`}>
+                <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(track.status)}`}>
                   {track.status}
                 </span>
               </div>
@@ -379,7 +384,7 @@ export default function TrackTemplateDetails() {
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${difficultyClass(question.difficulty)}`}>
+                    <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                       {question.difficulty}
                     </span>
                     <button

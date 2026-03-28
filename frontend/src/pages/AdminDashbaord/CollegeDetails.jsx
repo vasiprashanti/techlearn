@@ -23,6 +23,11 @@ const fallbackCollegeMap = {
   },
 };
 
+const statusPillClass = (status) =>
+  status === 'Active'
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
+
 const CollegeDetails = () => {
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -129,7 +134,7 @@ const CollegeDetails = () => {
                 <h2 className="text-3xl font-semibold tracking-tight text-black/90 dark:text-white">{college.name}</h2>
                 <p className="mt-1 text-lg text-black/55 dark:text-white/55">{college.id} {college.city ? `· ${college.city}` : ''}</p>
               </div>
-              <span className={`ml-auto px-3 py-1 rounded-full text-sm font-medium border ${college.status === 'Active' ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-black/10 dark:border-white/10 text-black/45 dark:text-white/45'}`}>
+              <span className={`ml-auto inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(college.status)}`}>
                 {college.status}
               </span>
             </div>
@@ -177,7 +182,7 @@ const CollegeDetails = () => {
                       <span>{batch.students}</span>
                       <span>{batch.avgScore}%</span>
                       <span>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${batch.status === 'Active' ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-black/10 dark:border-white/10 text-black/45 dark:text-white/45'}`}>
+                        <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(batch.status)}`}>
                           {batch.status}
                         </span>
                       </span>

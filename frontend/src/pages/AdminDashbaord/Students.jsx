@@ -262,58 +262,59 @@ const Students = () => {
       {selectedStudent && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-          <div className="relative w-full max-w-3xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">Student Detail</h2>
-                <p className="text-xs text-black/45 dark:text-white/40 mt-0.5">{selectedStudent.name} • {selectedStudent.batch}</p>
-              </div>
-              <button onClick={() => setSelectedStudent(null)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70">Close</button>
+          <div className="relative w-full max-w-xl bg-[#e8edf4] dark:bg-[#e8edf4] border border-black/10 rounded-2xl shadow-2xl overflow-hidden text-slate-900">
+            <div className="px-4 py-3 flex items-start justify-between">
+              <h2 className="text-[22px] leading-none font-semibold text-slate-900">{selectedStudent.name}</h2>
+              <button
+                onClick={() => setSelectedStudent(null)}
+                className="text-xl leading-none text-slate-500 hover:text-slate-700 transition-colors"
+                aria-label="Close student detail"
+              >
+                ×
+              </button>
             </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Name</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.name}</p>
+            <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-[15px] leading-snug">
+              <div>
+                <span className="text-slate-500 font-normal">Email:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.email}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Email</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.email}</p>
+              <div>
+                <span className="text-slate-500 font-normal">College:</span>{' '}
+                <span className="text-slate-900 font-semibold">{selectedStudent.college}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">College</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.college}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Batch:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.batch}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Batch</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.batch}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Track:</span>{' '}
+                <span className="text-slate-900 font-semibold">{selectedStudent.track}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Track</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.track}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Score:</span>{' '}
+                <span className="inline-flex items-center rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em] leading-none">{selectedStudent.score}%</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Score</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.score}%</p>
+              <div>
+                <span className="text-slate-500 font-normal">Streak:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.streak} days</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Streak</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.streak} days</p>
+              <div>
+                <span className="text-slate-500 font-normal">Tests Taken:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.testsTaken ?? Math.max(4, Math.floor(selectedStudent.score / 8))}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Tests Taken</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.testsTaken ?? Math.max(4, Math.floor(selectedStudent.score / 8))}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Last Active:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.lastActive ?? `${Math.max(1, Math.floor(selectedStudent.streak / 2))} days ago`}</span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Last Active</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.lastActive ?? `${Math.max(1, Math.floor(selectedStudent.streak / 2))} days ago`}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Status:</span>{' '}
+                <span className={`inline-flex items-center rounded-full text-white font-semibold px-2 py-0.5 text-[0.76em] leading-none ${selectedStudent.status === 'Active' ? 'bg-emerald-600' : 'bg-rose-500'}`}>
+                  {selectedStudent.status}
+                </span>
               </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Status</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.status}</p>
-              </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Joined</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedStudent.joined ?? 'Jun 2024'}</p>
+              <div>
+                <span className="text-slate-500 font-normal">Joined:</span>{' '}
+                <span className="text-slate-900 font-medium">{selectedStudent.joined ?? '2024-06-01'}</span>
               </div>
             </div>
           </div>
@@ -535,7 +536,7 @@ const Students = () => {
             </div>
 
             {/* Table */}
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl overflow-auto max-h-[78vh]">
+            <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 rounded-2xl overflow-auto max-h-[78vh]">
               <table className="w-full min-w-[1320px] table-fixed">
                 <colgroup>
                   <col className="w-[15%]" />
@@ -548,16 +549,16 @@ const Students = () => {
                   <col className="w-[8%]" />
                   <col className="w-[10%]" />
                 </colgroup>
-                <thead>
-                  <tr className="border-b border-black/5 dark:border-white/5 sticky top-0 bg-[#daf0fa]/95 dark:bg-[#001233]/95 backdrop-blur">
+                <thead className="border-b-2 border-black/12 dark:border-black/15">
+                  <tr className="sticky top-0 bg-white/95 dark:bg-white/95 backdrop-blur">
                     {['Name', 'Email', 'College', 'Batch', 'Track', 'Score', 'Streak', 'Status', 'Actions'].map((col, i) => (
-                      <th key={i} className={`${i === 0 ? 'pl-4 pr-2' : 'px-4'} py-3 text-left admin-micro-label font-medium text-black/30 dark:text-white/30`}>{col}</th>
+                      <th key={i} className={`${i === 0 ? 'pl-4 pr-2' : 'px-4'} py-3 text-left text-sm font-semibold text-black/55 dark:text-black/55`}>{col}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="border-t border-black/20 dark:border-black/25">
                   {filteredStudents.map((student, i) => (
-                    <tr key={i} className="border-b border-black/5 dark:border-white/5 last:border-0 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors group">
+                    <tr key={i} className="border-b border-black/12 dark:border-black/15 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors group">
                       <td className="pl-4 pr-2 py-3 align-middle">
                         <p className="text-sm font-semibold text-black/85 dark:text-white truncate leading-tight">{student.name}</p>
                       </td>

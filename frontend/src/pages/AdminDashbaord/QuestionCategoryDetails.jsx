@@ -17,11 +17,16 @@ import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderCont
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { getQuestionCategoryBySlug, questionBankQuestions } from '../../data/adminQuestionBankData';
 
-const difficultyBadgeClass = (difficulty) => {
-  if (difficulty === 'Easy') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
-  if (difficulty === 'Medium') return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300';
-  return 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300';
+const difficultyPillClass = (difficulty) => {
+  if (difficulty === 'Easy') return 'bg-[#16a34a] text-white';
+  if (difficulty === 'Medium') return 'bg-[#dbe7ff] text-[#3c83f6]';
+  return 'bg-[#fee2e2] text-[#b91c1c]';
 };
+
+const statusPillClass = (status) =>
+  status === 'Active'
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
 
 const createTestCase = () => ({ input: '', output: '', explanation: '' });
 
@@ -270,27 +275,27 @@ export default function QuestionCategoryDetails() {
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 py-6">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeQuestionModal} />
 
-          <div className="relative w-full max-w-6xl max-h-[92vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-[#e3edf5] dark:bg-[#0a1d45] shadow-2xl">
-            <div className="sticky top-0 z-20 px-5 py-4 border-b border-black/10 dark:border-white/10 bg-[#e3edf5]/95 dark:bg-[#0a1d45]/95 backdrop-blur flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-black/85 dark:text-white/90">{editingQuestionId ? 'Edit Question' : 'Add Question'}</h2>
+          <div className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-[#e3edf5] dark:bg-[#0a1d45] shadow-2xl">
+            <div className="sticky top-0 z-20 px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 bg-[#e3edf5]/95 dark:bg-[#0a1d45]/95 backdrop-blur flex items-center justify-between">
+              <h2 className="text-base font-semibold text-black/85 dark:text-white/90">{editingQuestionId ? 'Edit Question' : 'Add Question'}</h2>
               <button
                 onClick={closeQuestionModal}
-                className="h-8 w-8 rounded-lg border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10"
+                className="h-7 w-7 rounded-lg border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10"
                 aria-label="Close add question form"
               >
-                <FiX className="w-4 h-4" />
+                <FiX className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-3.5 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 <div className="md:col-span-2">
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Question title*</label>
                   <input
                     value={questionForm.title}
                     onChange={(e) => updateFormField('title', e.target.value)}
                     placeholder="Enter question title"
-                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 text-sm"
+                    className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm"
                   />
                 </div>
 
@@ -300,7 +305,7 @@ export default function QuestionCategoryDetails() {
                     <select
                       value={questionForm.trackType}
                       onChange={(e) => updateFormField('trackType', e.target.value)}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 pr-11 text-sm"
+                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm"
                     >
                       <option value="">Select track type</option>
                       {trackOptions.map((track) => (
@@ -317,7 +322,7 @@ export default function QuestionCategoryDetails() {
                     <select
                       value={questionForm.difficulty}
                       onChange={(e) => updateFormField('difficulty', e.target.value)}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 pr-11 text-sm"
+                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm"
                     >
                       <option>Easy</option>
                       <option>Medium</option>
@@ -334,9 +339,9 @@ export default function QuestionCategoryDetails() {
                       value={questionForm.tagInput}
                       onChange={(e) => updateFormField('tagInput', e.target.value)}
                       placeholder="Add a tag"
-                      className="flex-1 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 text-sm"
+                      className="flex-1 h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm"
                     />
-                    <button onClick={addTag} className="h-10 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-medium">Add</button>
+                    <button onClick={addTag} className="h-9 px-3.5 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-medium">Add</button>
                   </div>
                   {questionForm.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -357,7 +362,7 @@ export default function QuestionCategoryDetails() {
                   <textarea
                     value={questionForm.problemDescription}
                     onChange={(e) => updateFormField('problemDescription', e.target.value)}
-                    rows={5}
+                    rows={4}
                     placeholder="Describe the problem statement"
                     className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
                   />
@@ -368,7 +373,7 @@ export default function QuestionCategoryDetails() {
                   <textarea
                     value={questionForm.inputFormat}
                     onChange={(e) => updateFormField('inputFormat', e.target.value)}
-                    rows={3}
+                    rows={2}
                     placeholder="Describe input format"
                     className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
                   />
@@ -379,7 +384,7 @@ export default function QuestionCategoryDetails() {
                   <textarea
                     value={questionForm.outputFormat}
                     onChange={(e) => updateFormField('outputFormat', e.target.value)}
-                    rows={3}
+                    rows={2}
                     placeholder="Describe output format"
                     className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
                   />
@@ -387,12 +392,12 @@ export default function QuestionCategoryDetails() {
 
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Time limit (seconds)</label>
-                  <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 text-sm" />
+                  <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
                 </div>
 
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Memory limit (MB)</label>
-                  <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 text-sm" />
+                  <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
                 </div>
               </div>
 
@@ -400,23 +405,23 @@ export default function QuestionCategoryDetails() {
                 <button
                   type="button"
                   onClick={() => toggleFormSection('visible')}
-                  className="w-full px-5 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                  className="w-full px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-semibold text-black/85 dark:text-white/90">Visible Test Cases</h3>
-                    <span className="inline-flex items-center justify-center h-8 min-w-8 px-2 rounded-full bg-[#d1e6f8] dark:bg-[#1f365c] text-sm font-semibold text-black/75 dark:text-white/85">{questionForm.visibleTestCases.length}</span>
+                    <h3 className="text-sm font-semibold text-black/85 dark:text-white/90">Visible Test Cases</h3>
+                    <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-full bg-[#d1e6f8] dark:bg-[#1f365c] text-[11px] font-semibold text-black/75 dark:text-white/85">{questionForm.visibleTestCases.length}</span>
                   </div>
                   <FiChevronDown
-                    className={`w-5 h-5 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.visible ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.visible ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {expandedFormSections.visible && (
-                  <div className="px-5 py-4 space-y-4">
+                  <div className="px-3.5 py-2.5 space-y-2.5">
                     <p className="text-sm text-black/55 dark:text-white/60">These test cases are visible to students when they run their code.</p>
                     {questionForm.visibleTestCases.map((testCase, index) => (
-                      <div key={`visible-${index}`} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-4 space-y-3">
-                        <p className="text-lg font-semibold text-black/75 dark:text-white/85">Test Case #{index + 1}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div key={`visible-${index}`} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-2.5 space-y-2">
+                        <p className="text-sm font-semibold text-black/75 dark:text-white/85">Test Case #{index + 1}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                           <div>
                             <label className="admin-micro-label text-black/45 dark:text-white/45">Input</label>
                             <textarea value={testCase.input} onChange={(e) => updateTestCase('visibleTestCases', index, 'input', e.target.value)} rows={4} className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 py-2 text-sm" />
@@ -432,7 +437,7 @@ export default function QuestionCategoryDetails() {
                         </div>
                       </div>
                     ))}
-                    <button onClick={() => addTestCase('visibleTestCases')} className="w-full h-12 rounded-xl border border-black/10 dark:border-white/10 text-xl font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Visible Test Case</button>
+                    <button onClick={() => addTestCase('visibleTestCases')} className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Visible Test Case</button>
                   </div>
                 )}
               </section>
@@ -441,23 +446,23 @@ export default function QuestionCategoryDetails() {
                 <button
                   type="button"
                   onClick={() => toggleFormSection('hidden')}
-                  className="w-full px-5 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                  className="w-full px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-semibold text-black/85 dark:text-white/90">Hidden Test Cases</h3>
-                    <span className="inline-flex items-center justify-center h-8 min-w-8 px-2 rounded-full bg-[#d1e6f8] dark:bg-[#1f365c] text-sm font-semibold text-black/75 dark:text-white/85">{questionForm.hiddenTestCases.length}</span>
+                    <h3 className="text-sm font-semibold text-black/85 dark:text-white/90">Hidden Test Cases</h3>
+                    <span className="inline-flex items-center justify-center h-6 min-w-6 px-1.5 rounded-full bg-[#d1e6f8] dark:bg-[#1f365c] text-[11px] font-semibold text-black/75 dark:text-white/85">{questionForm.hiddenTestCases.length}</span>
                   </div>
                   <FiChevronDown
-                    className={`w-5 h-5 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.hidden ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.hidden ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {expandedFormSections.hidden && (
-                  <div className="px-5 py-4 space-y-4">
+                  <div className="px-3.5 py-2.5 space-y-2.5">
                     <p className="text-sm text-black/55 dark:text-white/60">Hidden test cases are used for grading and are not visible to students.</p>
                     {questionForm.hiddenTestCases.map((testCase, index) => (
-                      <div key={`hidden-${index}`} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-4 space-y-3">
-                        <p className="text-lg font-semibold text-black/75 dark:text-white/85">Hidden Test Case #{index + 1}</p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div key={`hidden-${index}`} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-2.5 space-y-2">
+                        <p className="text-sm font-semibold text-black/75 dark:text-white/85">Hidden Test Case #{index + 1}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                           <div>
                             <label className="admin-micro-label text-black/45 dark:text-white/45">Input</label>
                             <textarea value={testCase.input} onChange={(e) => updateTestCase('hiddenTestCases', index, 'input', e.target.value)} rows={4} className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 py-2 text-sm" />
@@ -473,7 +478,7 @@ export default function QuestionCategoryDetails() {
                         </div>
                       </div>
                     ))}
-                    <button onClick={() => addTestCase('hiddenTestCases')} className="w-full h-12 rounded-xl border border-black/10 dark:border-white/10 text-xl font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Hidden Test Case</button>
+                    <button onClick={() => addTestCase('hiddenTestCases')} className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Hidden Test Case</button>
                   </div>
                 )}
               </section>
@@ -482,19 +487,19 @@ export default function QuestionCategoryDetails() {
                 <button
                   type="button"
                   onClick={() => toggleFormSection('reference')}
-                  className="w-full px-5 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
+                  className="w-full px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
                 >
-                  <h3 className="text-xl font-semibold text-black/85 dark:text-white/90">Reference Solution</h3>
+                  <h3 className="text-sm font-semibold text-black/85 dark:text-white/90">Reference Solution</h3>
                   <FiChevronDown
-                    className={`w-5 h-5 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.reference ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-black/55 dark:text-white/60 transition-transform ${expandedFormSections.reference ? 'rotate-180' : ''}`}
                   />
                 </button>
                 {expandedFormSections.reference && (
-                  <div className="p-5 space-y-4">
+                  <div className="p-3.5 space-y-2.5">
                     <div>
                       <label className="admin-micro-label text-black/50 dark:text-white/50">Language</label>
                       <div className="relative mt-1">
-                        <select value={questionForm.referenceLanguage} onChange={(e) => updateFormField('referenceLanguage', e.target.value)} className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 pr-11 text-sm">
+                        <select value={questionForm.referenceLanguage} onChange={(e) => updateFormField('referenceLanguage', e.target.value)} className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm">
                           <option>C++</option>
                           <option>Python</option>
                           <option>Java</option>
@@ -505,19 +510,19 @@ export default function QuestionCategoryDetails() {
                     </div>
                     <div>
                       <label className="admin-micro-label text-black/50 dark:text-white/50">Solution code</label>
-                      <textarea value={questionForm.solutionCode} onChange={(e) => updateFormField('solutionCode', e.target.value)} rows={7} placeholder="Paste reference solution code" className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm font-mono" />
+                      <textarea value={questionForm.solutionCode} onChange={(e) => updateFormField('solutionCode', e.target.value)} rows={6} placeholder="Paste reference solution code" className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-sm font-mono" />
                     </div>
                     <div>
                       <label className="admin-micro-label text-black/50 dark:text-white/50">Explanation / Editorial</label>
-                      <textarea value={questionForm.editorial} onChange={(e) => updateFormField('editorial', e.target.value)} rows={4} placeholder="Add editorial notes" className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm" />
+                      <textarea value={questionForm.editorial} onChange={(e) => updateFormField('editorial', e.target.value)} rows={3} placeholder="Add editorial notes" className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-2 text-sm" />
                     </div>
                   </div>
                 )}
               </section>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button onClick={closeQuestionModal} className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10">Cancel</button>
-                <button onClick={saveQuestion} className="h-10 px-6 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold">{editingQuestionId ? 'Save Changes' : 'Save Question'}</button>
+              <div className="flex items-center justify-end gap-2.5 pt-1.5">
+                <button onClick={closeQuestionModal} className="h-8 px-4 rounded-xl border border-black/10 dark:border-white/10 text-xs font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10">Cancel</button>
+                <button onClick={saveQuestion} className="h-8 px-4.5 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold">{editingQuestionId ? 'Save Changes' : 'Save Question'}</button>
               </div>
             </div>
           </div>
@@ -539,7 +544,7 @@ export default function QuestionCategoryDetails() {
             <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{viewQuestion.title}</h2>
 
             <div className="mt-4 flex flex-wrap gap-2">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${difficultyBadgeClass(viewQuestion.difficulty)}`}>
+              <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(viewQuestion.difficulty)}`}>
                 {viewQuestion.difficulty}
               </span>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-black/10 dark:border-white/15 text-slate-800 dark:text-slate-200 bg-white/55 dark:bg-white/10">
@@ -706,14 +711,14 @@ export default function QuestionCategoryDetails() {
                           <tr key={question.id} className="border-b border-black/10 dark:border-white/10 last:border-0">
                             <td className="px-4 py-4 text-sm md:text-base leading-tight font-semibold text-slate-900 dark:text-white">{question.title || 'Untitled Question'}</td>
                             <td className="px-4 py-4">
-                              <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] md:text-xs font-semibold ${difficultyBadgeClass(question.difficulty)}`}>
+                              <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                                 {question.difficulty}
                               </span>
                             </td>
                             <td className="px-4 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-300">{question.track || 'General'}</td>
                             <td className="px-4 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-300">{question.created}</td>
                             <td className="px-4 py-4">
-                              <span className="inline-flex items-center rounded-full px-3 py-1 text-[11px] md:text-xs font-semibold text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/20">
+                              <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(question.status)}`}>
                                 {question.status}
                               </span>
                             </td>

@@ -55,6 +55,11 @@ const searchRoutes = [
   { id: 'settings', title: 'Settings', category: 'Configuration' },
 ];
 
+const statusPillClass = (status) =>
+  status === 'Active'
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
+
 export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -646,12 +651,7 @@ export default function TrackTemplate() {
                         <div className={`w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 ${iconTileBgClass}`}>
                           <Icon className={`w-[22px] h-[22px] ${iconColorClass}`} />
                         </div>
-                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold
-                          ${track.status === 'Active'
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700/40'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-700/40'
-                          }`}
-                        >
+                        <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(track.status)}`}>
                           {track.status}
                         </span>
                       </div>

@@ -33,6 +33,12 @@ const searchRoutes = [
   { id: "settings", title: "Settings", category: "Configuration" },
 ];
 
+const difficultyPillClass = (difficulty) => {
+  if (difficulty === "Easy") return "bg-[#16a34a] text-white";
+  if (difficulty === "Medium") return "bg-[#dbe7ff] text-[#3c83f6]";
+  return "bg-[#fee2e2] text-[#b91c1c]";
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -196,7 +202,7 @@ export default function AdminDashboard() {
               {adminStats.kpis.map((kpi, i) => (
                 <div
                   key={i}
-                  className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-5 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl"
+                  className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-5 flex flex-col justify-between hover:bg-white transition-colors rounded-xl"
                 >
                   <span className="admin-micro-label text-black/50 dark:text-white/50">
                     {kpi.title}
@@ -213,8 +219,8 @@ export default function AdminDashboard() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">
                   College Performance Ranking
                 </h3>
@@ -255,7 +261,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-6 shrink-0">
                   Top Performing Students
                 </h3>
@@ -287,7 +293,7 @@ export default function AdminDashboard() {
 
             <div className="space-y-5">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
+                <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[360px]">
                   <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiClock className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Recent Student Activity
@@ -316,7 +322,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[360px]">
+                <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[360px]">
                   <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiTrendingUp className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Most Solved Questions
@@ -338,14 +344,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex items-center gap-3 shrink-0 pl-2">
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-full border font-medium
-                              ${
-                                question.difficulty === "Easy"
-                                  ? "border-emerald-500/20 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5"
-                                  : question.difficulty === "Medium"
-                                  ? "border-amber-500/20 text-amber-700 dark:text-amber-400 bg-amber-500/5"
-                                  : "border-rose-500/20 text-rose-700 dark:text-rose-400 bg-rose-500/5"
-                              }`}
+                              className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}
                             >
                               {question.difficulty}
                             </span>
@@ -360,7 +359,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 rounded-xl flex flex-col h-[280px]">
+              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[280px]">
                 <h3 className="admin-section-heading flex items-center gap-2 mb-4 shrink-0">
                   <FiAward className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                   Upcoming & Active Batches
@@ -370,18 +369,18 @@ export default function AdminDashboard() {
                     {adminStats.batches.map((batch, i) => (
                       <div
                         key={i}
-                        className="p-4 border border-black/8 dark:border-white/10 bg-white/25 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/35 transition-colors rounded-lg cursor-pointer group"
+                        className="p-4 border border-black/8 dark:border-black/10 bg-white dark:bg-white hover:bg-white transition-colors rounded-lg cursor-pointer group"
                       >
                         <div className="flex items-center justify-between mb-2 gap-3">
                           <h4 className="text-lg font-medium text-[#2563eb] dark:text-white truncate">
                             {batch.id}
                           </h4>
                           <span
-                              className={`text-[10px] px-2.5 py-1 rounded-lg border uppercase tracking-wide font-semibold shrink-0
+                            className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none shrink-0
                             ${
                               batch.status === "Active"
-                                ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 bg-emerald-500/10"
-                                : "border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                                ? "bg-[#16a34a] text-white"
+                                : "bg-[#dbe7ff] text-[#3c83f6]"
                             }`}
                           >
                             {batch.status}

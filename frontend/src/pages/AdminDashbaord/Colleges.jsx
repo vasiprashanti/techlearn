@@ -387,7 +387,7 @@ const Colleges = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                <article className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
+                <article className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                     <FiHome className="w-5 h-5" />
                   </div>
@@ -397,7 +397,7 @@ const Colleges = () => {
                   </div>
                 </article>
 
-                <article className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
+                <article className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 rounded-2xl px-5 py-4 min-h-[104px] flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                     <FiCheckCircle className="w-5 h-5" />
                   </div>
@@ -414,7 +414,7 @@ const Colleges = () => {
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
                 return (
-                  <div key={college.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 rounded-2xl flex flex-col gap-3.5 h-full hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
+                  <div key={college.id} className="bg-white dark:bg-white backdrop-blur-xl border border-black/10 dark:border-black/20 p-4 rounded-2xl flex flex-col gap-3.5 h-full hover:bg-white transition-colors group">
 
                     <div className="flex items-start justify-between min-h-[36px]">
                       <div className="flex items-center gap-3">
@@ -465,14 +465,14 @@ const Colleges = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5 min-h-[74px] flex flex-col justify-center">
+                      <div className="bg-white dark:bg-white rounded-xl p-3 border border-black/10 dark:border-black/20 min-h-[74px] flex flex-col justify-center">
                         <p className="text-xs text-black/55 dark:text-white/55">Avg Score</p>
                         <p className={`text-2xl font-semibold tracking-tight mt-0.5 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
                           {college.avgScore}%
                         </p>
                       </div>
 
-                      <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5 min-h-[74px] flex flex-col justify-center">
+                      <div className="bg-white dark:bg-white rounded-xl p-3 border border-black/10 dark:border-black/20 min-h-[74px] flex flex-col justify-center">
                         <p className="text-xs text-black/55 dark:text-white/55">Activity Rate</p>
                         <p className="text-xl font-semibold tracking-tight mt-0.5 text-black dark:text-white">
                           {college.activeStudents} / {college.totalStudents}

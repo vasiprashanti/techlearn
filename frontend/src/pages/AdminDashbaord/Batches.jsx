@@ -44,11 +44,10 @@ const formatDisplayDate = (dateValue) => {
     : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-// Upcoming → indigo instead of amber
 const statusBadge = (status) => {
-  if (status === 'Active')    return 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5';
-  if (status === 'Upcoming')  return 'border-indigo-400/20 text-indigo-500 dark:text-indigo-400 bg-indigo-400/5';
-  return 'border-black/10 dark:border-white/10 text-black/35 dark:text-white/30 bg-black/3';
+  if (status === 'Active') return 'bg-[#16a34a] text-white';
+  if (status === 'Upcoming') return 'bg-[#dbe7ff] text-[#3c83f6]';
+  return 'bg-[#e5e7eb] text-[#475569]';
 };
 
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
@@ -453,7 +452,7 @@ const Batches = () => {
                 { label: 'Upcoming',  count: counts.Upcoming,  color: 'text-indigo-500 dark:text-indigo-400'      },
                 { label: 'Completed', count: counts.Completed, color: 'text-black/35 dark:text-white/40'          },
               ].map(({ label, count, color }) => (
-                <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl px-6 py-5">
+                <div key={label} className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 rounded-2xl px-6 py-5">
                   <p className="admin-micro-label text-black/40 dark:text-white/40">{label}</p>
                   <p className={`text-3xl font-light tracking-tight mt-2 ${color}`}>{count}</p>
                 </div>
@@ -463,7 +462,7 @@ const Batches = () => {
             {/* Batch Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white/45 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white/65 dark:hover:bg-black/55 transition-colors group shadow-sm">
+                <div key={batch.id} className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white transition-colors group shadow-sm">
 
                   {/* College + Status */}
                   <div className="flex items-start justify-between gap-2">
@@ -471,7 +470,7 @@ const Batches = () => {
                       <FiHome className="w-3.5 h-3.5" />
                       <span>{batch.college}</span>
                     </p>
-                    <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${statusBadge(batch.status)}`}>
+                    <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusBadge(batch.status)}`}>
                       {batch.status}
                     </span>
                   </div>
