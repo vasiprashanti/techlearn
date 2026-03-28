@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import {  FiSearch, FiRefreshCw , FiBell } from 'react-icons/fi';
+import { FiSearch, FiMonitor, FiCheckCircle, FiClock, FiPlayCircle, FiXCircle, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard',          title: 'Dashboard',          category: 'Overview'     },
@@ -24,30 +24,24 @@ const searchRoutes = [
 ];
 
 const submissions = [
-  { id: 1, student: 'Alex Johnson',   batch: 'CS-2024A',  question: 'Two Sum',                lang: 'Python',     status: 'Accepted',     exec: '120ms',  when: '2m ago'  },
-  { id: 2, student: 'Sarah Williams', batch: 'DS-2024A',  question: 'DataFrame Manipulation', lang: 'Python',     status: 'Wrong Answer', exec: '340ms',  when: '5m ago'  },
-  { id: 3, student: 'Mike Chen',      batch: 'CS-2024B',  question: 'React Component Design', lang: 'JavaScript', status: 'Running',      exec: '—',      when: 'now'     },
-  { id: 4, student: 'Priya Patel',    batch: 'DSA-2024C', question: 'Binary Tree Traversal',  lang: 'C++',        status: 'TLE',          exec: '2000ms', when: '8m ago'  },
-  { id: 5, student: 'Kevin Zhang',    batch: 'ML-2024A',  question: 'Linear Regression',      lang: 'Python',     status: 'Accepted',     exec: '890ms',  when: '12m ago' },
-  { id: 6, student: 'Lisa Anderson',  batch: 'CS-2024A',  question: 'Maximum Subarray Sum',   lang: 'Java',       status: 'Accepted',     exec: '95ms',   when: '15m ago' },
-  { id: 7, student: 'David Kim',      batch: 'WD-2024B',  question: 'SQL Join Operations',    lang: 'SQL',        status: 'Wrong Answer', exec: '45ms',   when: '20m ago' },
-  { id: 8, student: 'Tom Brown',      batch: 'CS-2024B',  question: 'Reverse Linked List',    lang: 'Python',     status: 'Accepted',     exec: '110ms',  when: '25m ago' },
+  { id: 1, student: 'Alex Johnson',   batch: 'CS-2024A',  question: 'Two Sum',                lang: 'Python',     status: 'Accepted',     exec: '120ms',  when: '2 min ago'  },
+  { id: 2, student: 'Sarah Williams', batch: 'DS-2024A',  question: 'DataFrame Manipulation', lang: 'Python',     status: 'Wrong Answer', exec: '340ms',  when: '5 min ago'  },
+  { id: 3, student: 'Mike Chen',      batch: 'CS-2024B',  question: 'React Component Design', lang: 'JavaScript', status: 'Running',      exec: '-',      when: 'Just now'   },
+  { id: 4, student: 'Priya Patel',    batch: 'DSA-2024C', question: 'Binary Tree Traversal',  lang: 'C++',        status: 'TLE',          exec: '2000ms', when: '8 min ago'  },
+  { id: 5, student: 'Kevin Zhang',    batch: 'ML-2024A',  question: 'Linear Regression',      lang: 'Python',     status: 'Accepted',     exec: '890ms',  when: '12 min ago' },
+  { id: 6, student: 'Lisa Anderson',  batch: 'CS-2024A',  question: 'Maximum Subarray Sum',   lang: 'Java',       status: 'Accepted',     exec: '95ms',   when: '15 min ago' },
+  { id: 7, student: 'David Kim',      batch: 'WD-2024B',  question: 'SQL Join Operations',    lang: 'SQL',        status: 'Wrong Answer', exec: '45ms',   when: '20 min ago' },
+  { id: 8, student: 'Tom Brown',      batch: 'CS-2024B',  question: 'Reverse Linked List',    lang: 'Python',     status: 'Accepted',     exec: '110ms',  when: '25 min ago' },
 ];
 
 const statusConfig = {
-  'Accepted':     { dot: 'bg-emerald-500',             label: 'text-slate-700 dark:text-emerald-400', pill: 'bg-white dark:bg-emerald-500/10 border border-black/[0.18] dark:border-emerald-500/20' },
-  'Wrong Answer': { dot: 'bg-slate-400 dark:bg-rose-400',   label: 'text-slate-600 dark:text-rose-400',    pill: 'bg-white dark:bg-rose-500/10 border border-black/[0.18] dark:border-rose-500/20'    },
-  'Running':      { dot: 'bg-[#3C83F6] animate-pulse', label: 'text-slate-700 dark:text-blue-400',    pill: 'bg-white dark:bg-blue-500/10 border border-black/[0.18] dark:border-blue-500/20'    },
-  'TLE':          { dot: 'bg-slate-400 dark:bg-amber-400',  label: 'text-slate-600 dark:text-amber-400',  pill: 'bg-white dark:bg-amber-500/10 border border-black/[0.18] dark:border-amber-500/20'  },
+  'Accepted':     { Icon: FiCheckCircle, label: 'text-emerald-500 dark:text-emerald-400' },
+  'Wrong Answer': { Icon: FiXCircle,     label: 'text-rose-500 dark:text-rose-400' },
+  'Running':      { Icon: FiPlayCircle,  label: 'text-[#3C83F6] dark:text-blue-400' },
+  'TLE':          { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
 };
 
-const langColor = {
-  'Python':     'text-blue-600 dark:text-blue-400',
-  'JavaScript': 'text-amber-600 dark:text-amber-400',
-  'C++':        'text-violet-600 dark:text-violet-400',
-  'Java':       'text-rose-500 dark:text-rose-400',
-  'SQL':        'text-teal-600 dark:text-teal-400',
-};
+const langPill = 'inline-flex items-center justify-center min-w-[56px] h-6 px-2.5 rounded-full text-xs font-semibold bg-[#dce9f6] dark:bg-white/10 text-[#1f3652] dark:text-white/85';
 
 export default function SubmissionMonitor() {
   const { theme } = useTheme();
@@ -58,10 +52,6 @@ export default function SubmissionMonitor() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [batchFilter, setBatchFilter] = useState('All Batches');
-  const [langFilter, setLangFilter] = useState('All Languages');
-  const [slowOnly, setSlowOnly] = useState(false);
   const [tableSearch, setTableSearch] = useState('');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
@@ -86,18 +76,9 @@ export default function SubmissionMonitor() {
   );
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const uniqueBatches = ['All Batches', ...new Set(submissions.map((s) => s.batch))];
-  const uniqueLangs = ['All Languages', ...new Set(submissions.map((s) => s.lang))];
-
   const filteredSubs = submissions.filter(s => {
     const q = tableSearch.toLowerCase();
-    const matchSearch = !q || s.student.toLowerCase().includes(q) || s.question.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q);
-    const matchStatus = statusFilter === 'All' || s.status === statusFilter;
-    const matchBatch = batchFilter === 'All Batches' || s.batch === batchFilter;
-    const matchLang = langFilter === 'All Languages' || s.lang === langFilter;
-    const execMs = Number.parseInt(s.exec, 10);
-    const matchSpeed = !slowOnly || (Number.isFinite(execMs) && execMs > 500);
-    return matchSearch && matchStatus && matchBatch && matchLang && matchSpeed;
+    return !q || s.student.toLowerCase().includes(q) || s.question.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q);
   });
 
   const accepted = submissions.filter(s => s.status === 'Accepted').length;
@@ -175,7 +156,7 @@ export default function SubmissionMonitor() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+          <div className="max-w-[1400px] mx-auto space-y-4">
 
             {/* Header */}
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
@@ -186,116 +167,105 @@ export default function SubmissionMonitor() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            <section className="space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Submission Monitor</h2>
+              <p className="text-xs text-[#5f7590] dark:text-white/60">Live student submissions and judge results</p>
+            </section>
+
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {[
-                { label: 'Total Today',   value: submissions.length },
-                { label: 'Accepted',      value: accepted           },
-                { label: 'Success Rate',  value: `${Math.round((accepted / submissions.length) * 100)}%` },
-                { label: 'Avg Exec Time', value: '320ms'            },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl px-6 py-5">
-                  <p className="admin-micro-label text-black/35 dark:text-white/40">{label}</p>
-                  <p className="text-3xl font-light tracking-tight text-[#3C83F6] dark:text-white mt-3">{value}</p>
+                { label: 'Total Today',   value: submissions.length, icon: FiMonitor },
+                { label: 'Accepted',      value: accepted,           icon: FiCheckCircle },
+                { label: 'Success Rate',  value: `${Math.round((accepted / submissions.length) * 100)}%`, icon: FiCheckCircle },
+                { label: 'Avg Exec Time', value: '320ms',            icon: FiClock },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#6d8198] dark:text-white/70">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-semibold leading-none tracking-tight text-[#0e2240] dark:text-white">{value}</p>
+                      <p className="mt-1 text-xs font-medium text-[#567089] dark:text-white/60">{label}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2.5">
-                <div className="relative">
-                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/25 dark:text-white/25 pointer-events-none" />
-                  <input type="text" placeholder="Search student, question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
-                    className="pl-9 pr-4 py-2 text-[13px] bg-white/60 dark:bg-white/5 border border-black/[0.07] dark:border-white/10 rounded-xl focus:outline-none focus:bg-white/80 dark:focus:bg-white/8 text-slate-700 dark:text-white/70 placeholder:text-black/25 dark:placeholder:text-white/25 transition-all w-52" />
-                </div>
-                <div className="relative">
-                  <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                    className="appearance-none text-[11px] tracking-wide pl-3.5 pr-7 py-2 rounded-xl border border-black/[0.07] dark:border-white/10 bg-white/60 dark:bg-black/40 text-slate-600 dark:text-white/60 focus:outline-none cursor-pointer">
-                    {['All', 'Accepted', 'Wrong Answer', 'Running', 'TLE'].map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[9px]">▾</span>
-                </div>
-                <div className="relative">
-                  <select value={batchFilter} onChange={e => setBatchFilter(e.target.value)}
-                    className="appearance-none text-[11px] tracking-wide pl-3.5 pr-7 py-2 rounded-xl border border-black/[0.07] dark:border-white/10 bg-white/60 dark:bg-black/40 text-slate-600 dark:text-white/60 focus:outline-none cursor-pointer">
-                    {uniqueBatches.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[9px]">▾</span>
-                </div>
-                <div className="relative">
-                  <select value={langFilter} onChange={e => setLangFilter(e.target.value)}
-                    className="appearance-none text-[11px] tracking-wide pl-3.5 pr-7 py-2 rounded-xl border border-black/[0.07] dark:border-white/10 bg-white/60 dark:bg-black/40 text-slate-600 dark:text-white/60 focus:outline-none cursor-pointer">
-                    {uniqueLangs.map(s => <option key={s}>{s}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[9px]">▾</span>
-                </div>
-                <label className="flex items-center gap-2 text-[11px] text-black/50 dark:text-white/50 px-2">
-                  <input type="checkbox" checked={slowOnly} onChange={(e) => setSlowOnly(e.target.checked)} />
-                  Slow only
-                </label>
+            <div className="flex items-center justify-between gap-3">
+              <div className="relative w-full md:max-w-[520px]">
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/35 pointer-events-none" />
+                <input type="text" placeholder="Search by student or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
+                  className="w-full h-10 pl-10 pr-3.5 text-xs bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 text-slate-700 dark:text-white/80 placeholder:text-black/30 dark:placeholder:text-white/35 transition-all" />
               </div>
-              <button className="flex items-center gap-1.5 admin-micro-label text-black/35 dark:text-white/35 hover:text-black/60 dark:hover:text-white/60 transition-colors border border-black/[0.07] dark:border-white/10 px-3 py-2 rounded-xl hover:bg-white/40 dark:hover:bg-white/5">
-                <FiRefreshCw className="w-3 h-3" /> Refresh
+              <button
+                onClick={() => setTableSearch('')}
+                className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-[#5e748d] dark:text-white/70 hover:bg-[#f0f5fb] dark:hover:bg-white/[0.04] transition-colors"
+              >
+                <FiRefreshCw className="w-3.5 h-3.5" />
+                Refresh
               </button>
             </div>
 
             {/* Table */}
-            <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full table-fixed">
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+              <div className="overflow-x-scroll">
+              <table className="w-full min-w-[1120px] table-auto">
                 <colgroup>
-                  <col className="w-[21%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[23%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[17%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[9%]"  />
+                  <col className="w-[18%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[22%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[15%]" />
+                  <col className="w-[11%]" />
+                  <col className="w-[10%]"  />
                 </colgroup>
                 <thead>
-                  <tr className="bg-black/[0.025] dark:bg-white/[0.025] border-b border-black/[0.05] dark:border-white/[0.05]">
-                    {['Student', 'Batch', 'Question', 'Language', 'Status', 'Exec', 'When'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 admin-micro-label text-black/30 dark:text-white/30">{h}</th>
+                  <tr className="bg-[#f0f5fb] dark:bg-white/[0.04] border-b border-black/8 dark:border-white/10">
+                    {['Student', 'Batch', 'Question', 'Language', 'Status', 'Exec Time', 'When'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-[#6a8097] dark:text-white/55">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+                <tbody className="divide-y divide-black/8 dark:divide-white/10">
                   {filteredSubs.map(s => {
                     const sc = statusConfig[s.status];
+                    const StatusIcon = sc.Icon;
                     return (
                       <tr onClick={() => setSelectedSubmission(s)} key={s.id} className="group hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors cursor-pointer">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white/80 flex items-center justify-center text-[11px] font-bold shrink-0">{s.student.charAt(0)}</div>
-                            <span className="text-[13px] font-medium text-[#3C83F6] dark:text-white/90 truncate leading-none">{s.student}</span>
-                          </div>
+                        <td className="px-4 py-3">
+                          <span className="text-base font-semibold text-[#1d3149] dark:text-white/90 truncate leading-none block">{s.student}</span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-[10px] font-mono text-black/45 dark:text-white/45 bg-black/[0.04] dark:bg-white/[0.06] px-1.5 py-0.5 rounded-md tracking-tight">{s.batch}</span>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-[#6a8097] dark:text-white/60">{s.batch}</span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-[13px] text-slate-600 dark:text-white/60 block truncate">{s.question}</span>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-[#2d3e54] dark:text-white/75 block truncate">{s.question}</span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`text-[12px] font-medium ${langColor[s.lang] || 'text-slate-500 dark:text-white/50'}`}>{s.lang}</span>
+                        <td className="px-4 py-3">
+                          <span className={langPill}>{s.lang}</span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 admin-micro-label px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${sc.pill} ${sc.label}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 text-sm font-semibold whitespace-nowrap ${sc.label}`}>
+                            <StatusIcon className="w-3.5 h-3.5" />
                             {s.status}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`text-[12px] font-mono tabular-nums ${s.exec === '—' ? 'text-black/20 dark:text-white/20' : 'text-slate-500 dark:text-white/50'}`}>{s.exec}</span>
+                        <td className="px-4 py-3">
+                          <span className={`text-sm font-semibold tabular-nums ${s.exec === '-' ? 'text-black/25 dark:text-white/25' : 'text-[#6a8097] dark:text-white/60'}`}>{s.exec}</span>
                         </td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-[11px] text-black/30 dark:text-white/30 whitespace-nowrap">{s.when}</span>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-[#6a8097] dark:text-white/55 whitespace-nowrap">{s.when}</span>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+              </div>
               {filteredSubs.length === 0 && (
                 <div className="py-16 text-center text-sm text-black/30 dark:text-white/30">No submissions match your filters.</div>
               )}

@@ -536,7 +536,7 @@ const Students = () => {
             </div>
 
             {/* Table */}
-            <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 rounded-2xl overflow-auto max-h-[78vh]">
+            <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
               <table className="w-full min-w-[1320px] table-fixed">
                 <colgroup>
                   <col className="w-[15%]" />
@@ -549,16 +549,16 @@ const Students = () => {
                   <col className="w-[8%]" />
                   <col className="w-[10%]" />
                 </colgroup>
-                <thead className="border-b-2 border-black/12 dark:border-black/15">
-                  <tr className="sticky top-0 bg-white/95 dark:bg-white/95 backdrop-blur">
+                <thead className="border-b-2 border-black/12 dark:border-white/12">
+                  <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
                     {['Name', 'Email', 'College', 'Batch', 'Track', 'Score', 'Streak', 'Status', 'Actions'].map((col, i) => (
-                      <th key={i} className={`${i === 0 ? 'pl-4 pr-2' : 'px-4'} py-3 text-left text-sm font-semibold text-black/55 dark:text-black/55`}>{col}</th>
+                      <th key={i} className={`${i === 0 ? 'pl-4 pr-2' : 'px-4'} py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60`}>{col}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="border-t border-black/20 dark:border-black/25">
+                <tbody className="border-t border-black/20 dark:border-white/10">
                   {filteredStudents.map((student, i) => (
-                    <tr key={i} className="border-b border-black/12 dark:border-black/15 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors group">
+                    <tr key={i} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04] transition-colors group">
                       <td className="pl-4 pr-2 py-3 align-middle">
                         <p className="text-sm font-semibold text-black/85 dark:text-white truncate leading-tight">{student.name}</p>
                       </td>

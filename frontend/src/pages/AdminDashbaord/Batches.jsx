@@ -452,7 +452,7 @@ const Batches = () => {
                 { label: 'Upcoming',  count: counts.Upcoming,  color: 'text-indigo-500 dark:text-indigo-400'      },
                 { label: 'Completed', count: counts.Completed, color: 'text-black/35 dark:text-white/40'          },
               ].map(({ label, count, color }) => (
-                <div key={label} className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 rounded-2xl px-6 py-5">
+                <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl px-6 py-5">
                   <p className="admin-micro-label text-black/40 dark:text-white/40">{label}</p>
                   <p className={`text-3xl font-light tracking-tight mt-2 ${color}`}>{count}</p>
                 </div>
@@ -462,7 +462,7 @@ const Batches = () => {
             {/* Batch Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white transition-colors group shadow-sm">
+                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
 
                   {/* College + Status */}
                   <div className="flex items-start justify-between gap-2">

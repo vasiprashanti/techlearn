@@ -632,7 +632,7 @@ export default function QuestionCategoryDetails() {
 
       <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden`}>
         <div className="max-w-[1600px] mx-auto space-y-6">
-          <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-white/95 dark:bg-[#001233]/92 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+          <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
             <div>
               <h1 className="admin-page-title" style={PAGE_TITLE_STYLE}>Question Bank</h1>
             </div>

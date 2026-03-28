@@ -297,7 +297,7 @@ const BatchDetails = () => {
                 <FiBell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
               </button>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-black/20">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-white/15">
                 {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
               </div>
             </div>
@@ -329,21 +329,21 @@ const BatchDetails = () => {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-black/55"><FiUsers className="w-4 h-4" /><span className="text-xs font-medium">Total Students</span></p>
-                <p className="text-2xl font-bold text-black dark:text-black leading-none">{batch.students}</p>
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiUsers className="w-4 h-4" /><span className="text-xs font-medium">Total Students</span></p>
+                <p className="text-2xl font-bold text-black dark:text-white leading-none">{batch.students}</p>
               </div>
-              <div className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-black/55"><FiActivity className="w-4 h-4" /><span className="text-xs font-medium">Active Students Today</span></p>
-                <p className="text-2xl font-bold text-black dark:text-black leading-none">{activeToday}</p>
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiActivity className="w-4 h-4" /><span className="text-xs font-medium">Active Students Today</span></p>
+                <p className="text-2xl font-bold text-black dark:text-white leading-none">{activeToday}</p>
               </div>
-              <div className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-black/55"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Average Score</span></p>
-                <p className="text-2xl font-bold text-black dark:text-black leading-none">{batch.avgScore}%</p>
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Average Score</span></p>
+                <p className="text-2xl font-bold text-black dark:text-white leading-none">{batch.avgScore}%</p>
               </div>
-              <div className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-black/55"><FiClock className="w-4 h-4" /><span className="text-xs font-medium">Average Streak</span></p>
-                <p className="text-2xl font-bold text-black dark:text-black leading-none">{batch.avgStreakDays} days</p>
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3 hover:shadow-md transition-shadow">
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiClock className="w-4 h-4" /><span className="text-xs font-medium">Average Streak</span></p>
+                <p className="text-2xl font-bold text-black dark:text-white leading-none">{batch.avgStreakDays} days</p>
               </div>
             </div>
 
@@ -351,17 +351,17 @@ const BatchDetails = () => {
               <h3 className="admin-section-heading">Attached Tracks</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {batch.tracks.map((track) => (
-                  <div key={track.name} className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl p-5 space-y-3">
-                    <h4 className="text-base font-bold text-black/85 dark:text-black/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
-                    <p className="text-xs text-black/45 dark:text-black/45">{track.questionsAssigned} questions assigned</p>
+                  <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3">
+                    <h4 className="text-base font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
+                    <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
                     <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                       {track.days.length === 0 ? (
-                        <p className="text-sm text-black/45 dark:text-black/45">No day assignments yet.</p>
+                        <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
                       ) : (
                         track.days.map((dayItem, index) => (
                           <div key={`${track.name}-${index}`} className="flex items-center gap-2 text-xs">
                             <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] w-10 shrink-0">Day {index + 1}</span>
-                            <span className="text-black/80 dark:text-black/80 truncate">{dayItem}</span>
+                            <span className="text-black/80 dark:text-white/80 truncate">{dayItem}</span>
                           </div>
                         ))
                       )}
@@ -373,27 +373,27 @@ const BatchDetails = () => {
 
             <div className="space-y-4">
               <h3 className="admin-section-heading">Students</h3>
-              <div className="bg-white dark:bg-white border border-black/5 dark:border-black/10 rounded-2xl overflow-hidden">
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-black/5 dark:border-black/10">
-                      <th className="text-left text-xs font-semibold text-black/45 dark:text-black/45 px-6 py-4">Student Name</th>
-                      <th className="text-left text-xs font-semibold text-black/45 dark:text-black/45 px-6 py-4">Email</th>
-                      <th className="text-left text-xs font-semibold text-black/45 dark:text-black/45 px-6 py-4">Score</th>
-                      <th className="text-left text-xs font-semibold text-black/45 dark:text-black/45 px-6 py-4">Streak</th>
+                    <tr className="border-b border-black/5 dark:border-white/10">
+                      <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-6 py-4">Student Name</th>
+                      <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-6 py-4">Email</th>
+                      <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-6 py-4">Score</th>
+                      <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-6 py-4">Streak</th>
                     </tr>
                   </thead>
                   <tbody>
                     {batch.studentsTable.map((student, index) => (
-                      <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-black/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-black/[0.02] transition-colors">
-                        <td className="px-6 py-4 text-sm font-medium text-black/85 dark:text-black/85">{student.name}</td>
-                        <td className="px-6 py-4 text-sm text-black/55 dark:text-black/55">{student.email}</td>
+                      <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                        <td className="px-6 py-4 text-sm font-medium text-black/85 dark:text-white/85">{student.name}</td>
+                        <td className="px-6 py-4 text-sm text-black/55 dark:text-white/60">{student.email}</td>
                         <td className="px-6 py-4">
                           <span className={`justify-self-start inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${scorePillClass(student.score)}`}>
                             {student.score}%
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-black/60 dark:text-black/60"><span className="font-medium text-black/85 dark:text-black/85">{String(student.streak).split('/')[0].trim()}</span> / {String(student.streak).split('/')[1]?.trim() || '-'}</td>
+                        <td className="px-6 py-4 text-sm text-black/60 dark:text-white/65"><span className="font-medium text-black/85 dark:text-white/85">{String(student.streak).split('/')[0].trim()}</span> / {String(student.streak).split('/')[1]?.trim() || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

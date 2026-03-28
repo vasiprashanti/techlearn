@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FiBell, FiSearch, FiX, FiUser, FiLogOut } from 'react-icons/fi';
+import { adminNotifications } from '../../data/adminNotificationsData';
 
 const quickActions = [
   { label: 'Create college', path: '/colleges' },
@@ -25,12 +26,6 @@ const studentSearchData = [
   { name: 'Mike Chen', college: 'MIT' },
   { name: 'Emily Davis', college: 'IIT Delhi' },
   { name: 'Kevin Zhang', college: 'Harvard University' },
-];
-
-const notifications = [
-  { id: 1, text: '3 new student submissions pending review' },
-  { id: 2, text: 'Batch CS-2024A report generated' },
-  { id: 3, text: 'Platform maintenance scheduled for tonight' },
 ];
 
 export default function AdminHeaderControls({ user, logout }) {
@@ -215,12 +210,14 @@ export default function AdminHeaderControls({ user, logout }) {
                 </button>
               </div>
               <div className="mt-2 space-y-1.5">
-                {notifications.map((note) => (
+                {adminNotifications.map((note) => (
                   <div
                     key={note.id}
                     className="px-2 py-2 rounded-xl text-xs text-black/60 dark:text-white/60 bg-black/[0.03] dark:bg-white/[0.04]"
                   >
-                    {note.text}
+                    <p className="font-semibold text-black/75 dark:text-white/80">{note.title}</p>
+                    <p className="mt-0.5 text-black/55 dark:text-white/60">{note.body}</p>
+                    <p className="mt-1 text-[10px] text-black/45 dark:text-white/45">{note.date}</p>
                   </div>
                 ))}
               </div>

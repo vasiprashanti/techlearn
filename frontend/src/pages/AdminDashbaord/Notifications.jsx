@@ -4,7 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiBell, FiGlobe, FiUsers } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiBell, FiX, FiChevronDown, FiUsers, FiSend } from 'react-icons/fi';
+import { adminNotifications } from '../../data/adminNotificationsData';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -21,12 +22,6 @@ const searchRoutes = [
   { id: 'notifications', title: 'Notifications', category: 'Operations' },
   { id: 'audit-logs', title: 'Audit Logs', category: 'Operations' },
   { id: 'reports', title: 'Reports', category: 'Operations' },
-];
-
-const notifications = [
-  { id: 1, title: 'Daily Challenge Reminder', body: "Don't forget to solve today's challenge!", target: 'All Students', isGlobal: true,  date: '2025-03-08 09:00' },
-  { id: 2, title: 'Maintenance Notice',        body: 'Platform will be under maintenance tonight 11 PM - 2 AM.', target: 'All Students', isGlobal: true,  date: '2025-03-07 18:00' },
-  { id: 3, title: 'Batch Announcement',        body: 'New track template has been assigned to your batch.',  target: 'CS-2024A',    isGlobal: false, date: '2025-03-06 10:00' },
 ];
 
 export default function Notifications() {
@@ -65,8 +60,8 @@ export default function Notifications() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const global = notifications.filter(n => n.isGlobal).length;
-  const targeted = notifications.filter(n => !n.isGlobal).length;
+  const global = adminNotifications.filter((n) => n.isGlobal).length;
+  const targeted = adminNotifications.filter((n) => !n.isGlobal).length;
 
   return (
     <>
@@ -100,30 +95,60 @@ export default function Notifications() {
       {showCompose && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center px-4 font-sans">
           <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setShowCompose(false)} />
-          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#020b23]/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6">
-            <h2 className="text-sm font-medium text-[#3C83F6] dark:text-white mb-5">New Notification</h2>
-            <div className="space-y-4">
+          <div className="relative w-full max-w-2xl bg-[#dfe9f5] dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-4 md:p-5">
+            <button
+              onClick={() => setShowCompose(false)}
+              className="absolute right-5 top-5 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors"
+              aria-label="Close send notification modal"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-xl font-semibold tracking-tight text-[#1c2c43] dark:text-white mb-4">Send Notification</h2>
+
+            <div className="space-y-3.5">
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1.5 block">Title</label>
-                <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Notification title..." className="w-full px-4 py-2.5 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-black/20 dark:focus:border-white/20 text-black/70 dark:text-white/70 placeholder:text-black/25 dark:placeholder:text-white/25 transition-colors" />
+                <label className="text-sm font-semibold text-[#1d2d43] dark:text-white/90 mb-1 block">Title</label>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                  placeholder="e.g. Daily Reminder"
+                  className="w-full h-10 px-3.5 text-sm bg-[#e4edf7] dark:bg-[#14264d] border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 text-[#1f3148] dark:text-white/85 placeholder:text-[#61778f] dark:placeholder:text-white/40 transition-colors"
+                />
               </div>
+
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1.5 block">Message</label>
-                <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Write your message..." rows={3} className="w-full px-4 py-2.5 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-black/20 dark:focus:border-white/20 text-black/70 dark:text-white/70 placeholder:text-black/25 dark:placeholder:text-white/25 transition-colors resize-none" />
+                <label className="text-sm font-semibold text-[#1d2d43] dark:text-white/90 mb-1 block">Message</label>
+                <textarea
+                  value={form.body}
+                  onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 text-sm bg-[#e4edf7] dark:bg-[#14264d] border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 text-[#1f3148] dark:text-white/85 placeholder:text-[#61778f] dark:placeholder:text-white/40 transition-colors resize-none"
+                />
               </div>
+
               <div>
-                <label className="text-[9px] uppercase tracking-widest text-black/40 dark:text-white/40 mb-1.5 block">Target</label>
+                <label className="text-sm font-semibold text-[#1d2d43] dark:text-white/90 mb-1 block">Audience</label>
                 <div className="relative">
-                  <select value={form.target} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} className="w-full appearance-none text-sm pl-4 pr-8 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 text-black/60 dark:text-white/60 focus:outline-none transition-colors cursor-pointer">
-                    {['All Students', 'CS-2024A', 'CS-2024B', 'DS-2024A', 'DSA-2024C', 'ML-2024A', 'WD-2024B'].map(t => <option key={t} value={t}>{t}</option>)}
+                  <FiUsers className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#445b74] dark:text-white/60" />
+                  <select
+                    value={form.target}
+                    onChange={e => setForm(f => ({ ...f, target: e.target.value }))}
+                    className="w-full h-10 appearance-none text-sm pl-10 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#e4edf7] dark:bg-[#14264d] text-[#1f3148] dark:text-white/85 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 transition-colors cursor-pointer"
+                  >
+                    {['All Students', 'Specific College', 'Specific batch'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[10px]">▾</span>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6d8198] dark:text-white/60" />
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button onClick={() => setShowCompose(false)} className="px-4 py-2 text-sm text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors">Cancel</button>
-              <button onClick={() => setShowCompose(false)} className="px-5 py-2 rounded-xl bg-[#3C83F6] dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-blue-600 dark:hover:bg-gray-100 transition-colors shadow-md">Send</button>
+
+            <div className="flex items-center justify-end mt-4">
+              <button onClick={() => setShowCompose(false)} className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
+                <FiSend className="w-3.5 h-3.5" />
+                Send
+              </button>
             </div>
           </div>
         </div>
@@ -134,7 +159,7 @@ export default function Notifications() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+          <div className="max-w-[1400px] mx-auto space-y-5">
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
@@ -144,47 +169,50 @@ export default function Notifications() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            <section className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Notifications</h2>
+                <p className="mt-1 text-xs text-[#5f7590] dark:text-white/60">Send announcements to students, batches, or colleges</p>
+              </div>
+              <button onClick={() => setShowCompose(true)} className="shrink-0 min-w-[200px] inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-2xl bg-[#3C83F6] text-white text-sm font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
+                <FiPlus className="w-3.5 h-3.5" />
+                <span>New Notification</span>
+              </button>
+            </section>
+
             {/* KPIs */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { label: 'Total Sent',    value: notifications.length },
+                { label: 'Total Sent',    value: adminNotifications.length },
                 { label: 'Platform-wide', value: global },
                 { label: 'Targeted',      value: targeted },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                  <span className="admin-micro-label text-black/50 dark:text-white/50">{label}</span>
-                  <div className="mt-6"><span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{value}</span></div>
+                <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4">
+                  <p className="text-3xl font-semibold leading-none tracking-tight text-[#0e2240] dark:text-white">{value}</p>
+                  <p className="mt-1.5 text-sm font-medium text-[#567089] dark:text-white/60">{label}</p>
                 </div>
               ))}
             </div>
 
-            {/* Top bar */}
-            <div className="flex items-center justify-between">
-              <h2 className="admin-section-heading">Sent Notifications</h2>
-              <button onClick={() => setShowCompose(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3C83F6] dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-blue-600 dark:hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg">
-                <FiPlus className="w-4 h-4" />
-                <span>New Notification</span>
-              </button>
-            </div>
-
             {/* Notification Cards */}
-            <div className="space-y-3">
-              {notifications.map(n => (
-                <div key={n.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-5 flex items-start gap-4 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${n.isGlobal ? 'bg-[#3C83F6]/10 text-[#3C83F6] dark:text-blue-400' : 'bg-violet-500/10 text-violet-600 dark:text-violet-400'}`}>
-                    {n.isGlobal ? <FiGlobe className="w-4 h-4" /> : <FiUsers className="w-4 h-4" />}
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+              {adminNotifications.map((n, index) => (
+                <div key={n.id} className={`flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < adminNotifications.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
+                  <div className="min-w-0 flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center shrink-0">
+                      <FiBell className="w-3.5 h-3.5 text-[#6d8198] dark:text-white/70" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold text-[#11284a] dark:text-white/90">{n.title}</p>
+                      <p className="truncate text-sm text-[#5c7590] dark:text-white/60">{n.body}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <h3 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{n.title}</h3>
-                      <span className="text-[10px] text-black/40 dark:text-white/40 whitespace-nowrap shrink-0">{n.date}</span>
-                    </div>
-                    <p className="text-sm text-black/60 dark:text-white/60 mt-1">{n.body}</p>
-                    <div className="flex items-center gap-2 mt-2.5">
-                      <span className={`text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full border font-medium ${n.isGlobal ? 'bg-[#3C83F6]/10 text-[#3C83F6] border-[#3C83F6]/20 dark:text-blue-400' : 'bg-violet-500/10 text-violet-600 border-violet-500/20 dark:text-violet-400'}`}>
-                        {n.target}
-                      </span>
-                    </div>
+
+                  <div className="shrink-0 text-right">
+                    <span className="inline-flex items-center justify-center min-w-[96px] h-7 px-2.5 rounded-full bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-xs font-semibold text-[#163156] dark:text-white/85">
+                      {n.target}
+                    </span>
+                    <p className="mt-1 text-xs font-medium text-[#607893] dark:text-white/55">{n.date}</p>
                   </div>
                 </div>
               ))}

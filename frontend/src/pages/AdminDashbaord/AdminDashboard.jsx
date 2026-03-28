@@ -202,7 +202,7 @@ export default function AdminDashboard() {
               {adminStats.kpis.map((kpi, i) => (
                 <div
                   key={i}
-                  className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-5 flex flex-col justify-between hover:bg-white transition-colors rounded-xl"
+                  className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-xl"
                 >
                   <span className="admin-micro-label text-black/50 dark:text-white/50">
                     {kpi.title}
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-8 rounded-xl flex flex-col min-h-[300px]">
+              <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">
                   College Performance Ranking
                 </h3>
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-8 rounded-xl flex flex-col min-h-[300px]">
+              <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-6 shrink-0">
                   Top Performing Students
                 </h3>
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
 
             <div className="space-y-5">
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[360px]">
+                <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 rounded-xl flex flex-col h-[360px]">
                   <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiClock className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Recent Student Activity
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[360px]">
+                <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 rounded-xl flex flex-col h-[360px]">
                   <h3 className="admin-section-heading flex items-center gap-2 mb-3 shrink-0">
                     <FiTrendingUp className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                     Most Solved Questions
@@ -359,7 +359,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-white backdrop-blur-xl border border-black/5 dark:border-black/10 p-6 rounded-xl flex flex-col h-[280px]">
+              <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-6 rounded-xl flex flex-col h-[280px]">
                 <h3 className="admin-section-heading flex items-center gap-2 mb-4 shrink-0">
                   <FiAward className="w-4 h-4 text-[#3C83F6] dark:text-white/80" />
                   Upcoming & Active Batches
@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                     {adminStats.batches.map((batch, i) => (
                       <div
                         key={i}
-                        className="p-4 border border-black/8 dark:border-black/10 bg-white dark:bg-white hover:bg-white transition-colors rounded-lg cursor-pointer group"
+                        className="p-4 border border-black/8 dark:border-white/10 bg-white dark:bg-[#0f1f43] hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-lg cursor-pointer group"
                       >
                         <div className="flex items-center justify-between mb-2 gap-3">
                           <h4 className="text-lg font-medium text-[#2563eb] dark:text-white truncate">

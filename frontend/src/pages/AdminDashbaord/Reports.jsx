@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import {  FiSearch, FiDownload, FiClock , FiBell } from 'react-icons/fi';
+import { FiSearch, FiDownload, FiClock, FiAward, FiUsers, FiCode, FiHome, FiBookOpen, FiFileText } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -24,12 +24,12 @@ const searchRoutes = [
 ];
 
 const reportTypes = [
-  { id: 1, title: 'Batch Leaderboard',    desc: 'Rankings and scores for each batch',              formats: ['CSV', 'Excel'] },
-  { id: 2, title: 'Student Performance',  desc: 'Individual student progress and scores',           formats: ['CSV', 'Excel'] },
-  { id: 3, title: 'Submission Records',   desc: 'All submissions with status and timings',          formats: ['CSV'] },
-  { id: 4, title: 'College Performance',  desc: 'Aggregate performance by college',                 formats: ['CSV', 'Excel'] },
-  { id: 5, title: 'Batch Summary',        desc: 'Batch details, tracks, and student counts',        formats: ['CSV', 'Excel'] },
-  { id: 6, title: 'Question Usage',       desc: 'Question bank usage across tracks and batches',    formats: ['CSV'] },
+  { id: 1, title: 'Batch Leaderboard',   desc: 'Rankings and scores for each batch',           formats: ['CSV', 'Excel'], icon: FiAward },
+  { id: 2, title: 'Student Performance', desc: 'Individual student progress and scores',        formats: ['CSV', 'Excel'], icon: FiUsers },
+  { id: 3, title: 'Submission Records',  desc: 'All submissions with status and timings',       formats: ['CSV'],          icon: FiCode },
+  { id: 4, title: 'College Performance', desc: 'Aggregate performance by college',              formats: ['CSV', 'Excel'], icon: FiHome },
+  { id: 5, title: 'Batch Summary',       desc: 'Batch details, tracks, and student counts',     formats: ['CSV', 'Excel'], icon: FiBookOpen },
+  { id: 6, title: 'Question Usage',      desc: 'Question bank usage across tracks and batches', formats: ['CSV'],          icon: FiFileText },
 ];
 
 const recentExports = [
@@ -39,8 +39,8 @@ const recentExports = [
 ];
 
 const formatStyle = {
-  CSV:   { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
-  Excel: { bg: 'bg-blue-500/10 border-blue-500/20',       text: 'text-[#3C83F6] dark:text-blue-400' },
+  CSV:   { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
+  Excel: { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
 };
 
 export default function Reports() {
@@ -116,7 +116,7 @@ export default function Reports() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+          <div className="max-w-[1400px] mx-auto space-y-6">
 
             <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
@@ -126,15 +126,26 @@ export default function Reports() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            <section className="-mt-1">
+              <h2 className="text-xl leading-none font-semibold tracking-tight text-[#1b2b42] dark:text-white">Reports</h2>
+              <p className="mt-1 text-xs text-[#5f7590] dark:text-white/60">Export platform data for analysis and record-keeping</p>
+            </section>
+
             {/* Report Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
               {reportTypes.map(report => (
-                <div key={report.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
-                  <div>
-                    <h3 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{report.title}</h3>
-                    <p className="text-[10px] text-black/40 dark:text-white/40 mt-1.5">{report.desc}</p>
+                <article key={report.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 min-h-[132px] shadow-sm transition-colors flex flex-col">
+                  <div className="flex items-start gap-3 min-h-[68px]">
+                    <div className="h-10 w-10 rounded-lg bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
+                      <report.icon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base leading-tight font-semibold text-[#1a2a41] dark:text-white">{report.title}</h3>
+                      <p className="mt-1 text-[11px] leading-snug text-[#67809a] dark:text-white/60">{report.desc}</p>
+                    </div>
                   </div>
-                  <div className="mt-5 pt-4 border-t border-black/5 dark:border-white/5 flex items-center gap-2">
+
+                  <div className="mt-auto pt-3 flex items-center gap-2">
                     {report.formats.map(fmt => {
                       const key = `${report.id}-${fmt}`;
                       const isLoading = downloading === key;
@@ -143,7 +154,7 @@ export default function Reports() {
                         <button
                           key={fmt}
                           onClick={() => handleDownload(key)}
-                          className={`flex items-center gap-1.5 admin-micro-label px-3 py-1.5 rounded-lg border font-medium transition-all ${fs.bg} ${fs.text} hover:opacity-80 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full text-[11px] font-semibold transition-all ${fs.bg} ${fs.text} hover:brightness-95 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           <FiDownload className={`w-3 h-3 ${isLoading ? 'animate-bounce' : ''}`} />
                           {isLoading ? 'Exporting...' : fmt}
@@ -151,38 +162,34 @@ export default function Reports() {
                       );
                     })}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
 
             {/* Recent Exports */}
-            <div>
-              <h2 className="admin-section-heading mb-4">Recent Exports</h2>
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
+            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
+              <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
                 {recentExports.map((exp, i) => {
                   const fs = formatStyle[exp.format];
                   return (
-                    <div key={exp.id} className={`flex items-center justify-between px-6 py-4 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${i < recentExports.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/40 dark:text-white/40">
-                          <FiClock className="w-3.5 h-3.5" />
+                    <div key={exp.id} className={`flex items-center justify-between gap-3 px-4 py-2.5 bg-white dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExports.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#5f7590] dark:text-white/70">
+                          <FiClock className="w-3 h-3" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{exp.title}</p>
-                          <p className="text-[10px] text-black/40 dark:text-white/40 mt-0.5">{exp.date}</p>
-                        </div>
+                        <p className="truncate text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-md border font-medium ${fs.bg} ${fs.text}`}>{exp.format}</span>
-                        <button onClick={() => handleDownload(`re-${exp.id}`)} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-blue-400">
-                          <FiDownload className="w-4 h-4" />
-                        </button>
+
+                      <div className="shrink-0 flex items-center gap-2.5">
+                        <span className={`inline-flex items-center justify-center min-w-[52px] h-6 px-2 rounded-full text-[10px] font-semibold ${fs.bg} ${fs.text}`}>{exp.format}</span>
+                        <span className="text-[11px] font-medium text-[#7087a0] dark:text-white/60">{exp.date}</span>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
 
           </div>
         </main>

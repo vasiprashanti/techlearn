@@ -4,20 +4,26 @@ import AdminHeaderControls from "../../components/AdminDashbaord/AdminHeaderCont
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
-const Toggle = ({ checked, onChange }) => (
+const Toggle = ({ checked, onChange, isDarkMode = false }) => (
   <button
     type="button"
     onClick={onChange}
-    className={`relative h-8 w-14 rounded-full border transition-colors ${
+    className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C83F6]/40 ${
       checked
-        ? "bg-[#3C83F6] border-[#3C83F6]/70"
-        : "bg-[#d0dae7] border-[#c5d1de]"
+        ? "bg-[#3C83F6] border-[#2f73e0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]"
+        : isDarkMode
+          ? "bg-white/10 border-white/20"
+          : "bg-[#e8eef6] border-[#cdd8e6]"
     }`}
     aria-pressed={checked}
   >
     <span
-      className={`absolute top-0.5 h-6 w-6 rounded-full bg-[#dce8f6] shadow-sm transition-all ${
-        checked ? "left-7" : "left-0.5"
+      className={`inline-block h-5 w-5 rounded-full shadow-sm transition-transform duration-200 ease-out ${
+        checked
+          ? "translate-x-6 bg-white"
+          : isDarkMode
+            ? "translate-x-1 bg-white/90"
+            : "translate-x-1 bg-white"
       }`}
     />
   </button>
@@ -70,72 +76,73 @@ export default function Settings() {
           </header>
 
           <section className="max-w-4xl space-y-6">
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7">
-              <h2 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white mb-7">General Settings</h2>
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">General Settings</h2>
 
               <div className="space-y-8">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-base font-medium text-black/80 dark:text-white">Certificates</p>
-                    <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                    <p className="text-base font-medium text-black/85 dark:text-white/90">Certificates</p>
+                    <p className="text-sm text-black/55 dark:text-white/60 mt-1">
                       Enable or disable certificate generation
                     </p>
                   </div>
                   <Toggle
                     checked={certificatesEnabled}
                     onChange={() => setCertificatesEnabled((prev) => !prev)}
+                    isDarkMode={isDarkMode}
                   />
                 </div>
 
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-base font-medium text-black/80 dark:text-white">Dark Mode</p>
-                    <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                    <p className="text-base font-medium text-black/85 dark:text-white/90">Dark Mode</p>
+                    <p className="text-sm text-black/55 dark:text-white/60 mt-1">
                       Switch between light and dark theme
                     </p>
                   </div>
-                  <Toggle checked={isDarkMode} onChange={toggleTheme} />
+                  <Toggle checked={isDarkMode} onChange={toggleTheme} isDarkMode={isDarkMode} />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7">
-              <h2 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white mb-7">Content</h2>
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">Content</h2>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Homepage Content
                   </label>
                   <textarea
                     rows={3}
                     value={homeText}
                     onChange={(e) => setHomeText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Terms & Conditions
                   </label>
                   <textarea
                     rows={3}
                     value={termsText}
                     onChange={(e) => setTermsText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Privacy Policy
                   </label>
                   <textarea
                     rows={3}
                     value={privacyText}
                     onChange={(e) => setPrivacyText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
