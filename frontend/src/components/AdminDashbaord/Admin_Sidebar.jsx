@@ -56,6 +56,12 @@ const settingsItem = {
 
 const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(() =>
+    menuGroups.reduce((acc, group) => {
+      acc[group.title] = false;
+      return acc;
+    }, {})
+  );
   const { user } = useAuth();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -76,6 +82,21 @@ const Sidebar = () => {
       localStorage.setItem(SCROLL_KEY, desktopNavRef.current.scrollTop);
     }
   };
+
+  const toggleSection = (title) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
+
+  const getNavItemClasses = (isActive, compact = false) =>
+    `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-normal transition-all duration-200 ease-out border
+    ${
+      isActive
+        ? "bg-gradient-to-r from-[#4a8eff] to-[#3b7ff0] text-white border-white/25 dark:border-white/15 font-semibold"
+        : "text-white/70 dark:text-black/70 border-transparent hover:text-white dark:hover:text-black hover:bg-white/[0.06] dark:hover:bg-black/[0.06] font-medium"
+    }`;
 
   const renderLogo = (compact = false) => (
     <div
@@ -118,38 +139,52 @@ const Sidebar = () => {
   };
 
   const renderNavLinks = (compact = false, onClickAction = () => {}) => (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-7">
       {menuGroups.map((group, idx) => (
         <div key={idx} className={compact ? "space-y-2" : "space-y-3"}>
           {!compact && (
-            <div className="flex items-center justify-between px-4">
-              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/35 dark:text-black/45">
+            <button
+              type="button"
+              onClick={() => toggleSection(group.title)}
+              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-white/10 dark:border-black/10 bg-white/[0.03] dark:bg-black/[0.03] hover:bg-white/[0.07] dark:hover:bg-black/[0.06] transition-colors"
+              aria-expanded={!collapsedSections[group.title]}
+              aria-label={`${collapsedSections[group.title] ? 'Expand' : 'Collapse'} ${group.title} section`}
+            >
+              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 dark:text-black/50">
                 {group.title}
               </h4>
-              <FiChevronDown className="w-3.5 h-3.5 text-white/30 dark:text-black/40" />
-            </div>
+              <FiChevronDown
+                className={`w-3.5 h-3.5 text-white/40 dark:text-black/45 transition-transform duration-200 ${collapsedSections[group.title] ? '-rotate-90' : 'rotate-0'}`}
+              />
+            </button>
           )}
-          <div className="space-y-1">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.id}
-                to={`/${item.id}`}
-                onClick={onClickAction}
-                className={({ isActive }) =>
-                  `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-wide transition-all duration-300 ease-out border
-                  ${
-                    isActive
-                      ? "bg-[#3C83F6] text-white border-white/70 dark:border-white/20 font-semibold shadow-[0_0_0_2px_rgba(255,255,255,0.9)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.22)]"
-                      : "text-white/55 dark:text-black/60 border-transparent hover:text-white dark:hover:text-black hover:bg-white/5 dark:hover:bg-black/5 font-medium"
-                  }`
-                }
-                title={compact ? item.title : undefined}
+          <AnimatePresence initial={false}>
+            {compact || !collapsedSections[group.title] ? (
+              <motion.div
+                key={`${group.title}-items`}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
               >
-                {item.icon}
-                {!compact && <span>{item.title}</span>}
-              </NavLink>
-            ))}
-          </div>
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.id}
+                      to={`/${item.id}`}
+                      onClick={onClickAction}
+                      className={({ isActive }) => getNavItemClasses(isActive, compact)}
+                      title={compact ? item.title : undefined}
+                    >
+                      {item.icon}
+                      {!compact && <span>{item.title}</span>}
+                    </NavLink>
+                  ))}
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       ))}
     </div>
@@ -160,14 +195,7 @@ const Sidebar = () => {
       <NavLink
         to={`/${settingsItem.id}`}
         onClick={onClickAction}
-        className={({ isActive }) =>
-          `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-wide transition-all duration-300 ease-out border
-          ${
-            isActive
-              ? "bg-[#3C83F6] text-white border-white/70 dark:border-white/20 font-semibold shadow-[0_0_0_2px_rgba(255,255,255,0.9)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.22)]"
-              : "text-white/55 dark:text-black/60 border-transparent hover:text-white dark:hover:text-black hover:bg-white/5 dark:hover:bg-black/5 font-medium"
-          }`
-        }
+        className={({ isActive }) => getNavItemClasses(isActive, compact)}
         title={compact ? settingsItem.title : undefined}
       >
         {settingsItem.icon}

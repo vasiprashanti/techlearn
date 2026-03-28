@@ -212,7 +212,7 @@ export default function AdminDashboard() {
                       {kpi.value}
                     </span>
                   </div>
-                  <span className="text-[10px] text-black/40 dark:text-white/40">
+                  <span className="text-[10px] text-[#16a34a] dark:text-[#4ade80]">
                     {kpi.subtitle}
                   </span>
                 </div>
