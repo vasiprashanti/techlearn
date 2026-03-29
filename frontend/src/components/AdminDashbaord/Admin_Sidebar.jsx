@@ -7,7 +7,6 @@ import {
   FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings
 } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext";
 
 const menuGroups = [
   {
@@ -63,8 +62,6 @@ const Sidebar = () => {
     }, {})
   );
   const { user } = useAuth();
-  const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
 
   // Ref for the desktop scrollable nav
   const desktopNavRef = useRef(null);
@@ -232,9 +229,10 @@ const Sidebar = () => {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-6 left-6 z-50 p-2 text-black dark:text-white bg-white/50 dark:bg-[#0f1f43]/85 backdrop-blur-md rounded-md border border-black/10 dark:border-white/15"
+        aria-label="Open sidebar"
+        className="lg:hidden fixed left-3 top-[4.75rem] sm:top-6 z-50 w-10 h-10 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white bg-white/85 dark:bg-[#0f1f43]/95 backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-[0_10px_22px_rgba(15,34,64,0.18)] dark:shadow-[0_10px_22px_rgba(0,0,0,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-200"
       >
-        <FiMenu className="w-5 h-5" />
+        <FiMenu className="w-[18px] h-[18px]" />
       </button>
 
       {/* Mobile close button */}
@@ -242,9 +240,10 @@ const Sidebar = () => {
         {mobileMenuOpen && (
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="lg:hidden fixed top-6 right-6 z-[60] p-2 text-black dark:text-white bg-white/50 dark:bg-[#0f1f43]/85 backdrop-blur-md rounded-md border border-black/10 dark:border-white/15"
+            aria-label="Close sidebar"
+            className="lg:hidden fixed top-4 right-4 z-[60] w-10 h-10 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white bg-white/90 dark:bg-[#0f1f43]/95 backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-[0_10px_22px_rgba(15,34,64,0.18)] dark:shadow-[0_10px_22px_rgba(0,0,0,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-200"
           >
-            <FiX className="w-5 h-5" />
+            <FiX className="w-[18px] h-[18px]" />
           </button>
         )}
       </AnimatePresence>

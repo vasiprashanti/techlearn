@@ -326,6 +326,50 @@
     font-weight: 500;
   }
 
+  @media (max-width: 768px) {
+    .admin-dashboard-typography {
+      line-height: 1.5;
+    }
+
+    .admin-dashboard-typography .admin-page-title {
+      font-size: clamp(1.55rem, 1.15rem + 1.5vw, 1.95rem);
+      line-height: 1.15;
+    }
+
+    .admin-dashboard-typography .admin-section-heading {
+      font-size: 1.02rem;
+      line-height: 1.4;
+    }
+
+    .admin-dashboard-typography .truncate {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      overflow-wrap: anywhere;
+    }
+
+    .admin-dashboard-typography .line-clamp-1,
+    .admin-dashboard-typography .line-clamp-2,
+    .admin-dashboard-typography .line-clamp-3 {
+      display: block;
+      -webkit-line-clamp: unset;
+      overflow: visible;
+    }
+
+    .admin-dashboard-typography .overflow-x-auto,
+    .admin-dashboard-typography .overflow-x-scroll {
+      -ms-overflow-style: auto;
+      scrollbar-width: thin;
+    }
+
+    .admin-dashboard-typography .overflow-x-auto::-webkit-scrollbar,
+    .admin-dashboard-typography .overflow-x-scroll::-webkit-scrollbar {
+      display: block;
+      height: 8px;
+      width: 8px;
+    }
+  }
+
   /* Hide scrollbar for mobile reviews */
   .overflow-x-auto::-webkit-scrollbar {
     display: none;
@@ -492,12 +536,6 @@
       -webkit-box-orient: vertical !important;
     }
 
-    /* Global mobile spacing override - remove ALL gaps */
-    section {
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-
     /* Remove gaps between marquee sections specifically */
     .marquee-header + .marquee-header-2,
     .marquee-header-2 + .marquee-header,
@@ -512,28 +550,12 @@
       margin-bottom: 40px !important;
     }
 
-    /* Add spacing between Learn Reviews and Footer */
-    footer {
-      margin-top: 0px !important;
-    }
-
-    /* Target any divs that might be creating gaps */
-    .min-h-screen > div,
-    .container > div {
-      margin: 0 !important;
-    }
-
     /* Aggressive override for ALL elements between marquee sections */
     .marquee-header + .marquee-header,
     .marquee-header + .marquee-header-2,
     .marquee-header-2 + .marquee-header,
     .marquee-header-2 + .marquee-header-2 {
       margin-top: 0 !important;
-    }
-
-    /* Remove any potential spacing from parent containers */
-    body > div > div {
-      margin: 0 !important;
     }
 
     /* Force specific elements to have no margin */

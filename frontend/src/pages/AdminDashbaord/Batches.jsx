@@ -462,13 +462,13 @@ const Batches = () => {
             {/* Batch Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
+                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 sm:p-4 rounded-2xl flex flex-col gap-3 sm:gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
 
                   {/* College + Status */}
                   <div className="flex items-start justify-between gap-2">
-                    <p className="inline-flex items-center gap-1.5 text-xs font-medium text-black/55 dark:text-white/55">
+                    <p className="inline-flex items-center gap-1.5 text-xs font-medium text-black/55 dark:text-white/55 min-w-0">
                       <FiHome className="w-3.5 h-3.5" />
-                      <span>{batch.college}</span>
+                      <span className="break-words">{batch.college}</span>
                     </p>
                     <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusBadge(batch.status)}`}>
                       {batch.status}
@@ -477,21 +477,21 @@ const Batches = () => {
 
                   {/* Batch title */}
                   <div className="space-y-0.5">
-                    <h3 className="text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none">{batch.id}</h3>
-                    <p className="text-sm md:text-base text-black/55 dark:text-white/50 leading-snug line-clamp-2">{batch.track}</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none">{batch.id}</h3>
+                    <p className="text-[13px] sm:text-sm md:text-base text-black/55 dark:text-white/50 leading-relaxed sm:leading-snug line-clamp-2">{batch.track}</p>
                   </div>
 
                   <div className="h-px bg-black/5 dark:bg-white/10" />
 
                   {/* Start / End / Students */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                     <div className="space-y-1.5 min-w-0">
                       <p className="text-[11px] text-black/45 dark:text-white/45">Start</p>
-                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white truncate">{batch.start}</p>
+                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white break-words">{batch.start}</p>
                     </div>
                     <div className="space-y-1.5 min-w-0">
                       <p className="text-[11px] text-black/45 dark:text-white/45">End</p>
-                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white truncate">{batch.end}</p>
+                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white break-words">{batch.end}</p>
                     </div>
                     <div className="space-y-1.5 min-w-0">
                       <p className="text-[11px] text-black/45 dark:text-white/45">Students</p>
@@ -499,10 +499,10 @@ const Batches = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-[minmax(0,1fr)_42px_42px] gap-2 pt-0.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_42px_42px] gap-2 pt-0.5">
                     <button
                       onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
-                      className="w-full h-10 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors"
+                      className="col-span-2 sm:col-span-1 w-full h-10 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
@@ -512,14 +512,14 @@ const Batches = () => {
                     </button>
                     <button
                       onClick={() => openEditBatch(batch)}
-                      className="h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
+                      className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
                       aria-label={`Edit ${batch.id}`}
                     >
                       <FiEdit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setPendingDeleteBatch(batch)}
-                      className="h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
+                      className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
                       aria-label={`Delete ${batch.id}`}
                     >
                       <FiTrash2 className="w-4 h-4" />

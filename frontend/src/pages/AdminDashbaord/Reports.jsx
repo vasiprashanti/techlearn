@@ -116,7 +116,7 @@ export default function Reports() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-6">
+          <div className="max-w-[1400px] mx-auto space-y-5 sm:space-y-6">
 
             <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
               <div>
@@ -126,26 +126,28 @@ export default function Reports() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            <section className="-mt-1">
-              <h2 className="text-xl leading-none font-semibold tracking-tight text-[#1b2b42] dark:text-white">Reports</h2>
-              <p className="mt-1 text-xs text-[#5f7590] dark:text-white/60">Export platform data for analysis and record-keeping</p>
+            <section className="pt-2 sm:pt-1">
+              <div className="rounded-2xl bg-white/72 dark:bg-[#0f1f43]/72 border border-black/10 dark:border-white/10 p-4 sm:p-0 sm:rounded-none sm:bg-transparent sm:dark:bg-transparent sm:border-0">
+                <h2 className="text-[1.35rem] sm:text-xl leading-none font-semibold tracking-tight text-[#1b2b42] dark:text-white">Reports</h2>
+                <p className="mt-2 sm:mt-1 text-[13px] sm:text-xs leading-relaxed text-[#5f7590] dark:text-white/60">Export platform data for analysis and record-keeping</p>
+              </div>
             </section>
 
             {/* Report Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-3.5">
               {reportTypes.map(report => (
-                <article key={report.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 min-h-[132px] shadow-sm transition-colors flex flex-col">
-                  <div className="flex items-start gap-3 min-h-[68px]">
-                    <div className="h-10 w-10 rounded-lg bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
-                      <report.icon className="w-4 h-4" />
+                <article key={report.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 sm:p-4 min-h-0 sm:min-h-[132px] shadow-sm transition-colors flex flex-col">
+                  <div className="flex items-start gap-3.5 sm:gap-3 min-h-0 sm:min-h-[68px]">
+                    <div className="h-11 w-11 sm:h-10 sm:w-10 rounded-xl sm:rounded-lg bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
+                      <report.icon className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-base leading-tight font-semibold text-[#1a2a41] dark:text-white">{report.title}</h3>
-                      <p className="mt-1 text-[11px] leading-snug text-[#67809a] dark:text-white/60">{report.desc}</p>
+                      <h3 className="text-[1.08rem] sm:text-base leading-tight font-semibold text-[#1a2a41] dark:text-white">{report.title}</h3>
+                      <p className="mt-1.5 sm:mt-1 text-[13px] sm:text-[11px] leading-relaxed sm:leading-snug text-[#67809a] dark:text-white/60">{report.desc}</p>
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-3 flex items-center gap-2">
+                  <div className="mt-3 sm:mt-auto pt-0.5 sm:pt-3 flex items-center gap-2.5 sm:gap-2 flex-wrap">
                     {report.formats.map(fmt => {
                       const key = `${report.id}-${fmt}`;
                       const isLoading = downloading === key;
@@ -154,7 +156,7 @@ export default function Reports() {
                         <button
                           key={fmt}
                           onClick={() => handleDownload(key)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 h-7 rounded-full text-[11px] font-semibold transition-all ${fs.bg} ${fs.text} hover:brightness-95 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+                          className={`inline-flex items-center gap-1.5 px-3 sm:px-2.5 h-8 sm:h-7 rounded-full text-xs sm:text-[11px] font-semibold transition-all ${fs.bg} ${fs.text} hover:brightness-95 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           <FiDownload className={`w-3 h-3 ${isLoading ? 'animate-bounce' : ''}`} />
                           {isLoading ? 'Exporting...' : fmt}
@@ -169,21 +171,21 @@ export default function Reports() {
             {/* Recent Exports */}
             <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
               <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
-              <div className="mt-3 overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
+              <div className="mt-3 overflow-visible sm:overflow-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0">
                 {recentExports.map((exp, i) => {
                   const fs = formatStyle[exp.format];
                   return (
-                    <div key={exp.id} className={`flex items-center justify-between gap-3 px-4 py-2.5 bg-white dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExports.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                    <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExports.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#5f7590] dark:text-white/70">
                           <FiClock className="w-3 h-3" />
                         </div>
-                        <p className="truncate text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
+                        <p className="truncate text-base sm:text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
                       </div>
 
-                      <div className="shrink-0 flex items-center gap-2.5">
+                      <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-2.5 pl-8 sm:pl-0">
                         <span className={`inline-flex items-center justify-center min-w-[52px] h-6 px-2 rounded-full text-[10px] font-semibold ${fs.bg} ${fs.text}`}>{exp.format}</span>
-                        <span className="text-[11px] font-medium text-[#7087a0] dark:text-white/60">{exp.date}</span>
+                        <span className="text-xs sm:text-[11px] font-medium text-[#7087a0] dark:text-white/60">{exp.date}</span>
                       </div>
                     </div>
                   );

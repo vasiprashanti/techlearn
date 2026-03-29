@@ -232,7 +232,7 @@ const Analytics = () => {
 
               {/* Student Engagement */}
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col">
-                <div className="flex items-center justify-between mb-6 shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between items-center text-center sm:text-left gap-2 mb-6 shrink-0">
                   <h3 className="admin-section-heading">Student Engagement</h3>
                   <button
                     onClick={() => navigate('/students')}
@@ -243,9 +243,9 @@ const Analytics = () => {
                 </div>
 
                 {/* Daily Active — hero stat */}
-                <div className="mb-6 p-5 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
+                <div className="mb-6 p-5 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 text-center sm:text-left">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Daily Active Students</span>
-                  <div className="flex items-end gap-2 mt-2">
+                  <div className="flex items-end justify-center sm:justify-start gap-2 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
                       {analyticsData.studentEngagement.dailyActive}
                     </span>
@@ -261,21 +261,21 @@ const Analytics = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="flex flex-col">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Weekly Active</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.weeklyActive}
                     </span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Inactive 3+ days</span>
                     <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
                       {analyticsData.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Avg Streak</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsData.studentEngagement.avgStreak}

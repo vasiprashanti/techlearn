@@ -361,7 +361,7 @@ const BatchDetails = () => {
                         track.days.map((dayItem, index) => (
                           <div key={`${track.name}-${index}`} className="flex items-center gap-2 text-xs">
                             <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] w-10 shrink-0">Day {index + 1}</span>
-                            <span className="text-black/80 dark:text-white/80 truncate">{dayItem}</span>
+                            <span className="text-black/80 dark:text-white/80 break-words">{dayItem}</span>
                           </div>
                         ))
                       )}
@@ -374,7 +374,8 @@ const BatchDetails = () => {
             <div className="space-y-4">
               <h3 className="admin-section-heading">Students</h3>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[760px]">
                   <thead>
                     <tr className="border-b border-black/5 dark:border-white/10">
                       <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-6 py-4">Student Name</th>
@@ -398,6 +399,7 @@ const BatchDetails = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           </section>

@@ -240,7 +240,7 @@ export default function Resources() {
             </div>
 
             <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="relative max-w-lg flex-1 min-w-[240px]">
+              <div className="relative max-w-lg flex-1 min-w-0 w-full sm:w-auto">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b] dark:text-slate-300" />
                 <input
                   type="text"
@@ -251,7 +251,7 @@ export default function Resources() {
                 />
               </div>
 
-              <button onClick={openAddResourceModal} className="h-9 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1.5">
+              <button onClick={openAddResourceModal} className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5">
                 <FiPlus className="w-3.5 h-3.5" />
                 Add Resource
               </button>
@@ -261,28 +261,30 @@ export default function Resources() {
               {filteredResources.map((res, i) => {
                 const TypeIcon = typeIconMap[res.type] || FiFileText;
                 return (
-                  <article key={res.id} className={`flex items-center justify-between gap-2.5 px-4 py-3 ${i < filteredResources.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                  <article key={res.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 py-3 ${i < filteredResources.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 rounded-lg bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                         <TypeIcon className="w-3.5 h-3.5 text-[#6e809b] dark:text-slate-300" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-sm md:text-base font-normal text-[#0b1b38] dark:text-white truncate">{res.title}</h3>
-                        <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">{res.category} · {res.date}</p>
+                        <h3 className="text-sm md:text-base font-normal text-[#0b1b38] dark:text-white break-words">{res.title}</h3>
+                        <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 break-words">{res.category} · {res.date}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 shrink-0 mt-0.5 sm:mt-0">
                       <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#d6e6f4] text-[#0f2b54] dark:bg-[#21446f] dark:text-blue-200">
                         {res.type}
                       </span>
-                      <div className="inline-flex items-center gap-1 text-sm text-[#5f7592] dark:text-slate-300">
-                        <FiEye className="w-3.5 h-3.5" />
-                        <span>{res.views}</span>
+                      <div className="inline-flex items-center gap-2 shrink-0">
+                        <div className="inline-flex items-center gap-1 text-sm text-[#5f7592] dark:text-slate-300">
+                          <FiEye className="w-3.5 h-3.5" />
+                          <span>{res.views}</span>
+                        </div>
+                        <button className="h-8 w-8 rounded-full inline-flex items-center justify-center border border-transparent text-[#0f1f3d] dark:text-slate-200 transition-all hover:border-[#3C83F6] hover:text-[#3C83F6] hover:ring-2 hover:ring-[#3C83F6]/40 hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Download ${res.title}`}>
+                          <FiDownload className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <button className="h-8 w-8 rounded-full inline-flex items-center justify-center border border-transparent text-[#0f1f3d] dark:text-slate-200 transition-all hover:border-[#3C83F6] hover:text-[#3C83F6] hover:ring-2 hover:ring-[#3C83F6]/40 hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Download ${res.title}`}>
-                        <FiDownload className="w-3.5 h-3.5" />
-                      </button>
                     </div>
                   </article>
                 );

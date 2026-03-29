@@ -169,12 +169,12 @@ export default function Notifications() {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            <section className="flex items-start justify-between gap-3">
+            <section className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Notifications</h2>
                 <p className="mt-1 text-xs text-[#5f7590] dark:text-white/60">Send announcements to students, batches, or colleges</p>
               </div>
-              <button onClick={() => setShowCompose(true)} className="shrink-0 min-w-[200px] inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-2xl bg-[#3C83F6] text-white text-sm font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
+              <button onClick={() => setShowCompose(true)} className="w-full sm:w-auto shrink-0 min-w-0 sm:min-w-[200px] inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-2xl bg-[#3C83F6] text-white text-sm font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
                 <FiPlus className="w-3.5 h-3.5" />
                 <span>New Notification</span>
               </button>
@@ -197,22 +197,22 @@ export default function Notifications() {
             {/* Notification Cards */}
             <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
               {adminNotifications.map((n, index) => (
-                <div key={n.id} className={`flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < adminNotifications.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
-                  <div className="min-w-0 flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center shrink-0">
+                <div key={n.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-4 py-3.5 sm:py-3 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < adminNotifications.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
+                  <div className="min-w-0 flex items-start sm:items-center gap-3 sm:gap-2.5">
+                    <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                       <FiBell className="w-3.5 h-3.5 text-[#6d8198] dark:text-white/70" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-[#11284a] dark:text-white/90">{n.title}</p>
-                      <p className="truncate text-sm text-[#5c7590] dark:text-white/60">{n.body}</p>
+                      <p className="text-[15px] sm:text-base font-semibold leading-snug text-[#11284a] dark:text-white/90 break-words">{n.title}</p>
+                      <p className="mt-0.5 text-[13px] sm:text-sm leading-relaxed sm:leading-normal text-[#5c7590] dark:text-white/60 break-words">{n.body}</p>
                     </div>
                   </div>
 
-                  <div className="shrink-0 text-right">
-                    <span className="inline-flex items-center justify-center min-w-[96px] h-7 px-2.5 rounded-full bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-xs font-semibold text-[#163156] dark:text-white/85">
+                  <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:block sm:text-right">
+                    <span className="inline-flex items-center justify-center min-w-[92px] sm:min-w-[96px] h-7 px-2.5 rounded-full bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-xs font-semibold text-[#163156] dark:text-white/85">
                       {n.target}
                     </span>
-                    <p className="mt-1 text-xs font-medium text-[#607893] dark:text-white/55">{n.date}</p>
+                    <p className="text-xs font-medium text-[#607893] dark:text-white/55 sm:mt-1">{n.date}</p>
                   </div>
                 </div>
               ))}

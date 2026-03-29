@@ -472,7 +472,7 @@ const Students = () => {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-10 lg:px-14 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+        <main className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className="max-w-[1600px] mx-auto space-y-4">
 
             {/* Header */}
@@ -485,8 +485,8 @@ const Students = () => {
             </header>
 
             {/* Top controls */}
-            <div className="flex items-center justify-end gap-1.5 flex-wrap xl:flex-nowrap mt-1">
-              <div className="relative min-w-[190px] xl:min-w-[210px]">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap xl:flex-nowrap items-stretch sm:items-center justify-end gap-2.5 mt-1">
+              <div className="relative w-full sm:min-w-[190px] xl:min-w-[210px] sm:w-auto">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/30" />
                 <input
                   type="text"
@@ -497,21 +497,21 @@ const Students = () => {
                 />
               </div>
 
-              <div className="relative min-w-[145px]">
+              <div className="relative w-full sm:min-w-[145px] sm:w-auto">
                 <select value={collegeFilter} onChange={e => setCollegeFilter(e.target.value)} className={`${dropdownClass} w-full`}>
                   {uniqueColleges.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>
 
-              <div className="relative min-w-[140px]">
+              <div className="relative w-full sm:min-w-[140px] sm:w-auto">
                 <select value={trackFilter} onChange={e => setTrackFilter(e.target.value)} className={`${dropdownClass} w-full`}>
                   {uniqueTracks.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>
 
-              <div className="relative min-w-[110px]">
+              <div className="relative w-full sm:min-w-[110px] sm:w-auto">
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={`${dropdownClass} w-full`}>
                   <option value="All">All</option>
                   <option value="Active">Active</option>
@@ -522,14 +522,14 @@ const Students = () => {
 
               <button
                 onClick={triggerBulkImport}
-                className="flex items-center gap-2 h-10 px-3.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/60 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 transition-colors text-sm font-medium whitespace-nowrap"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/60 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 transition-colors text-sm font-medium whitespace-nowrap"
               >
                 <FiUpload className="w-3.5 h-3.5" />Bulk Import
               </button>
 
               <button
                 onClick={openAddStudent}
-                className="flex items-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] transition-colors text-sm font-medium whitespace-nowrap"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] transition-colors text-sm font-medium whitespace-nowrap"
               >
                 <FiPlus className="w-3.5 h-3.5" />Add Student
               </button>

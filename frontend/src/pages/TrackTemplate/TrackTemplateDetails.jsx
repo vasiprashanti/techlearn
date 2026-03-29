@@ -196,29 +196,29 @@ export default function TrackTemplateDetails() {
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-xl md:text-2xl font-semibold text-[#1a2335] dark:text-white">Assign Question to Day</h2>
+            <h2 className="text-lg md:text-xl font-semibold text-[#1a2335] dark:text-white">Assign Question to Day</h2>
 
-            <div className="mt-5 space-y-4.5">
+            <div className="mt-4 space-y-3.5">
               <div>
-                <label className="block text-base font-medium text-[#1a2335] dark:text-white">Day Number</label>
+                <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Day Number</label>
                 <input
                   type="number"
                   min="1"
                   value={addDayForm.dayNumber}
                   onChange={(e) => setAddDayForm((prev) => ({ ...prev, dayNumber: e.target.value }))}
-                  className="mt-2 w-full h-11 rounded-2xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 text-xl text-[#1a2335] dark:text-white"
+                  className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 text-base text-[#1a2335] dark:text-white"
                 />
               </div>
 
               <div>
-                <label className="block text-base font-medium text-[#1a2335] dark:text-white">
+                <label className="block text-sm font-medium text-[#1a2335] dark:text-white">
                   Question (from {track.category})
                 </label>
-                <div className="relative mt-2">
+                <div className="relative mt-1.5">
                   <select
                     value={addDayForm.questionId}
                     onChange={(e) => setAddDayForm((prev) => ({ ...prev, questionId: e.target.value }))}
-                    className="appearance-none w-full h-11 rounded-2xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 pr-10 text-base text-[#1a2335] dark:text-white"
+                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
                   >
                     <option value="">Select a question</option>
                     {dayWiseQuestions.map((question) => (
@@ -229,16 +229,16 @@ export default function TrackTemplateDetails() {
                 </div>
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-2.5">
+              <div className="pt-3 flex items-center justify-end gap-2">
                 <button
                   onClick={closeAddDayModal}
-                  className="h-10 px-5 rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-medium"
+                  className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={assignQuestionToDay}
-                  className="h-10 px-5 rounded-2xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                  className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold"
                 >
                   Assign Question
                 </button>
