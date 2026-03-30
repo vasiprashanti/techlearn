@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import { FiBell, FiArrowLeft, FiUsers, FiActivity, FiLayers, FiTrendingUp, FiBarChart2, FiArrowUpRight } from 'react-icons/fi';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { FiArrowLeft, FiUsers, FiActivity, FiLayers, FiTrendingUp, FiBarChart2, FiArrowUpRight } from 'react-icons/fi';
 
 const fallbackCollegeMap = {
   'MIT-001': {
@@ -30,7 +31,7 @@ const statusPillClass = (status) =>
 
 const CollegeDetails = () => {
   const { theme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { collegeId } = useParams();
@@ -105,16 +106,8 @@ const CollegeDetails = () => {
       >
         <div className="max-w-[1600px] mx-auto space-y-8">
           <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-            <h1 className="admin-page-title">Colleges</h1>
-            <div className="flex items-center gap-6">
-              <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                <FiBell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-              </button>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-white/15">
-                {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-              </div>
-            </div>
+            <div className="flex-1" />
+            <AdminHeaderControls user={user} logout={logout} />
           </header>
 
           <section className="space-y-5">

@@ -14,6 +14,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { questionBankQuestions } from '../../data/adminQuestionBankData';
 
@@ -74,14 +75,6 @@ const statusPillClass = (status) =>
   status === 'Active'
     ? 'bg-[#16a34a] text-white'
     : 'bg-[#dbe7ff] text-[#3c83f6]';
-
-const PAGE_TITLE_STYLE = {
-  fontSize: 'clamp(1.4rem, 1.3rem + 0.25vw, 1.65rem)',
-  fontWeight: 700,
-  letterSpacing: '-0.03em',
-  color: '#3c83f6',
-  lineHeight: 1.1,
-};
 
 export default function TrackTemplateDetails() {
   const navigate = useNavigate();
@@ -182,7 +175,7 @@ export default function TrackTemplateDetails() {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+    <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
       {isAddDayModalOpen && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddDayModal} />
@@ -254,61 +247,8 @@ export default function TrackTemplateDetails() {
       <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden`}>
         <div className="max-w-[1600px] mx-auto space-y-5">
           <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-white/95 dark:bg-white/95 backdrop-blur-xl border-b border-black/5 dark:border-black/5 flex items-center justify-between">
-            <h1 className="admin-page-title" style={PAGE_TITLE_STYLE}>Track Templates</h1>
-
-            <div className="flex items-center gap-6">
-              <button
-                className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group"
-              >
-                <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
-                <span className="text-sm text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors">
-                  Search...
-                </span>
-                <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">
-                  <span>⌘</span>
-                  <span>K</span>
-                </div>
-              </button>
-
-              <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                <FiBell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
-                >
-                  {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                </button>
-
-                {profileDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                      <div className="py-2">
-                        <button
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                        >
-                          Profile Settings
-                        </button>
-                        <button
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            logout();
-                          }}
-                          className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        >
-                          Log Out
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            <div className="flex-1" />
+            <AdminHeaderControls user={user} logout={logout} />
           </header>
 
           <section className="space-y-3">

@@ -334,7 +334,7 @@ const Colleges = () => {
           <div className="max-w-[1600px] mx-auto space-y-6 sm:space-y-8">
 
             {/* Header */}
-            <header className={`sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/72 dark:bg-[#001233]/70' : 'bg-[#daf0fa]/88 dark:bg-[#001233]/84'}`}>
+            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/78 dark:bg-[#001233]/76' : 'bg-[#daf0fa]/92 dark:bg-[#001233]/90'}`}>
               <div>
                 <h1 className="admin-page-title">Colleges</h1>
 
@@ -344,48 +344,43 @@ const Colleges = () => {
 
             {/* Top Section */}
             <section className="space-y-4 sm:space-y-3">
-              <div className="rounded-2xl bg-white/70 dark:bg-[#0f1f43]/70 border border-black/10 dark:border-white/10 p-4 sm:p-0 sm:rounded-none sm:bg-transparent sm:dark:bg-transparent sm:border-0">
-                <div className="max-w-[620px] min-w-0">
-                  <h2 className="text-[1.35rem] sm:text-2xl font-semibold tracking-tight text-black/90 dark:text-white">Colleges</h2>
-                  <p className="mt-1 sm:mt-0.5 text-[13px] sm:text-sm text-black/55 dark:text-white/55 leading-relaxed sm:leading-snug">
-                    Overview of all partner colleges and cohort performance
-                  </p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                {/* Controls Row: Search (left, wide), Dropdown (middle), Add (right) */}
+                <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2.5">
+                  <div className="flex flex-row w-full gap-2.5">
+                    <div className="relative flex-1 min-w-0">
+                      <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                      <input
+                        value={collegeSearchTerm}
+                        onChange={(e) => setCollegeSearchTerm(e.target.value)}
+                        placeholder="Search colleges..."
+                        className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                      />
+                    </div>
+                    <div className="relative w-[160px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="appearance-none w-full h-10 sm:h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-medium text-black/80 dark:text-white outline-none"
+                      >
+                        <option value="All">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                    </div>
+                    <div className="flex-1 hidden sm:block" />
+                    <button
+                      onClick={openCreate}
+                      className="h-10 sm:h-9 px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors ml-auto"
+                      style={{ minWidth: 0 }}
+                    >
+                      <FiPlus className="w-3.5 h-3.5" />
+                      Add College
+                    </button>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2.5">
-                  <div className="relative w-full sm:w-[230px] sm:shrink-0">
-                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
-                    <input
-                      value={collegeSearchTerm}
-                      onChange={(e) => setCollegeSearchTerm(e.target.value)}
-                      placeholder="Search colleges..."
-                      className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                    />
-                  </div>
-
-                  <div className="relative w-full sm:w-[150px] sm:shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="appearance-none w-full h-10 sm:h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-medium text-black/80 dark:text-white outline-none"
-                    >
-                      <option value="All">All Status</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
-                  </div>
-
-                  <button
-                    onClick={openCreate}
-                    className="w-full sm:w-auto h-10 sm:h-9 px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <FiPlus className="w-3.5 h-3.5" />
-                    Add College
-                  </button>
-                </div>
-              
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">

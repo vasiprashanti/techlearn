@@ -72,14 +72,6 @@ const formFromQuestion = (question) => ({
   editorial: question.editorial || '',
 });
 
-const PAGE_TITLE_STYLE = {
-  fontSize: 'clamp(1.4rem, 1.3rem + 0.25vw, 1.65rem)',
-  fontWeight: 700,
-  letterSpacing: '-0.03em',
-  color: '#3c83f6',
-  lineHeight: 1.1,
-};
-
 export default function QuestionCategoryDetails() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -270,7 +262,7 @@ export default function QuestionCategoryDetails() {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+    <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
       {isQuestionFormOpen && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 py-6">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeQuestionModal} />
@@ -521,8 +513,8 @@ export default function QuestionCategoryDetails() {
               </section>
 
               <div className="flex items-center justify-end gap-2.5 pt-1.5">
-                <button onClick={closeQuestionModal} className="h-8 px-4 rounded-xl border border-black/10 dark:border-white/10 text-xs font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10">Cancel</button>
-                <button onClick={saveQuestion} className="h-8 px-4.5 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold">{editingQuestionId ? 'Save Changes' : 'Save Question'}</button>
+                <button onClick={closeQuestionModal} className="h-9 w-[120px] rounded-xl border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">Cancel</button>
+                <button onClick={saveQuestion} className="h-9 w-[120px] rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] inline-flex items-center justify-center text-white text-sm font-semibold leading-none shadow-sm transition-colors">{editingQuestionId ? 'Save Changes' : 'Save'}</button>
               </div>
             </div>
           </div>
@@ -634,7 +626,7 @@ export default function QuestionCategoryDetails() {
         <div className="max-w-[1600px] mx-auto space-y-6">
           <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
             <div>
-              <h1 className="admin-page-title" style={PAGE_TITLE_STYLE}>Question Bank</h1>
+              <h1 className="admin-page-title">Question Bank</h1>
             </div>
             <AdminHeaderControls user={user} logout={logout} />
           </header>

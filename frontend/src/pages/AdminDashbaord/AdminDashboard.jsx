@@ -191,9 +191,7 @@ export default function AdminDashboard() {
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
             <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-              <h1 className="admin-page-title">
-                Dashboard
-              </h1>
+              <div className="flex-1" />
 
               <AdminHeaderControls user={user} logout={logout} />
             </header>

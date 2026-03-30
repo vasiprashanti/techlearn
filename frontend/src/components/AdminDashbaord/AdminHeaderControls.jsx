@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiSearch, FiX, FiUser, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiSearch, FiX, FiSettings, FiLogOut } from 'react-icons/fi';
 import { adminNotifications } from '../../data/adminNotificationsData';
 
 const quickActions = [
@@ -172,14 +172,14 @@ export default function AdminHeaderControls({ user, logout }) {
     <>
       {typeof document !== 'undefined' && createPortal(commandModal, document.body)}
 
-      <div className="flex items-center gap-2 sm:gap-3 md:gap-6">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
         <button
           onClick={() => setIsCommandOpen(true)}
-          className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group"
+          className="relative inline-flex items-center justify-center sm:justify-start h-9 w-9 sm:w-40 md:w-48 lg:w-[15.5rem] bg-white/55 dark:bg-white/[0.06] border border-black/10 dark:border-white/12 py-2 sm:pl-9 sm:pr-10 rounded-xl backdrop-blur-md hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors text-left group"
         >
-          <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40" />
-          <span className="text-sm text-black/40 dark:text-white/40">Search...</span>
-          <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">
+          <FiSearch className="sm:absolute sm:left-3 w-3.5 h-3.5 text-black/45 dark:text-white/45" />
+          <span className="hidden sm:inline text-xs text-black/45 dark:text-white/45">Search...</span>
+          <div className="hidden lg:flex absolute right-2.5 items-center gap-1 text-[9px] font-medium text-black/45 dark:text-white/45 border border-black/10 dark:border-white/12 px-1.5 py-0.5 rounded">
             <span>⌘</span>
             <span>K</span>
           </div>
@@ -191,10 +191,10 @@ export default function AdminHeaderControls({ user, logout }) {
               setIsNotificationsOpen((prev) => !prev);
               setIsProfileOpen(false);
             }}
-            className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            className="relative w-9 h-9 inline-flex items-center justify-center text-black/60 dark:text-white/65 hover:text-black dark:hover:text-white rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors"
           >
-            <FiBell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
+            <FiBell className="w-4 h-4" />
+            <span className="absolute top-[9px] right-[9px] w-1.5 h-1.5 rounded-full bg-red-500" />
           </button>
 
           {isNotificationsOpen && (
@@ -231,7 +231,7 @@ export default function AdminHeaderControls({ user, logout }) {
               setIsProfileOpen((prev) => !prev);
               setIsNotificationsOpen(false);
             }}
-            className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-black/20"
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-[13px] font-semibold tracking-wide shadow-md border border-white/30 dark:border-black/20"
           >
             {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
           </button>
@@ -245,8 +245,8 @@ export default function AdminHeaderControls({ user, logout }) {
                 }}
                 className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-2"
               >
-                <FiUser className="w-4 h-4" />
-                Open Profile
+                <FiSettings className="w-4 h-4" />
+                Open Settings
               </button>
               <button
                 onClick={() => {

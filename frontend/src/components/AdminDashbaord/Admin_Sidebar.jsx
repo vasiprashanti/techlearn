@@ -53,7 +53,9 @@ const settingsItem = {
   icon: <FiSettings className="w-4 h-4" />,
 };
 
-const Sidebar = () => {
+export const OPEN_ADMIN_SIDEBAR_EVENT = 'admin-sidebar:open-mobile';
+
+const Sidebar = ({ showMobileMenuButton = true }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState(() =>
     menuGroups.reduce((acc, group) => {
@@ -74,6 +76,12 @@ const Sidebar = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleOpenMobileSidebar = () => setMobileMenuOpen(true);
+    window.addEventListener(OPEN_ADMIN_SIDEBAR_EVENT, handleOpenMobileSidebar);
+    return () => window.removeEventListener(OPEN_ADMIN_SIDEBAR_EVENT, handleOpenMobileSidebar);
+  }, []);
+
   const handleDesktopScroll = () => {
     if (desktopNavRef.current) {
       localStorage.setItem(SCROLL_KEY, desktopNavRef.current.scrollTop);
@@ -88,10 +96,10 @@ const Sidebar = () => {
   };
 
   const getNavItemClasses = (isActive, compact = false) =>
-    `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-normal transition-all duration-200 ease-out border
+    `flex items-center ${compact ? "justify-center" : "gap-3"} px-3.5 py-1.5 rounded-2xl text-[12px] tracking-normal transition-all duration-200 ease-out border
     ${
       isActive
-        ? "bg-gradient-to-r from-[#4a8eff] to-[#3b7ff0] text-white border-white/25 dark:border-white/15 font-semibold"
+        ? "bg-[#daf0fa] dark:bg-[#001233] text-[#17345f] dark:text-white border-black/10 dark:border-white/15 font-semibold"
         : "text-white/70 dark:text-white/70 border-transparent hover:text-white dark:hover:text-white hover:bg-white/[0.06] dark:hover:bg-white/[0.08] font-medium"
     }`;
 
@@ -136,14 +144,14 @@ const Sidebar = () => {
   };
 
   const renderNavLinks = (compact = false, onClickAction = () => {}) => (
-    <div className="space-y-8 pb-7">
+    <div className="space-y-4 pb-7">
       {menuGroups.map((group, idx) => (
-        <div key={idx} className={compact ? "space-y-2" : "space-y-3"}>
+        <div key={idx} className={compact ? "space-y-2" : "space-y-1.5"}>
           {!compact && (
             <button
               type="button"
               onClick={() => toggleSection(group.title)}
-              className="w-full flex items-center justify-between px-3.5 py-2 rounded-xl border border-white/10 dark:border-white/10 bg-white/[0.03] dark:bg-white/[0.03] hover:bg-white/[0.07] dark:hover:bg-white/[0.08] transition-colors"
+              className="w-full flex items-center justify-between px-1 py-1 bg-transparent border-0 hover:text-white transition-colors"
               aria-expanded={!collapsedSections[group.title]}
               aria-label={`${collapsedSections[group.title] ? 'Expand' : 'Collapse'} ${group.title} section`}
             >
@@ -165,7 +173,7 @@ const Sidebar = () => {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="overflow-hidden"
               >
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                   {group.items.map((item) => (
                     <NavLink
                       key={item.id}
@@ -210,7 +218,7 @@ const Sidebar = () => {
           dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
           border-white/10 dark:border-white/10`}
       >
-        <div className="relative h-16 flex items-center justify-between px-4 border-b border-white/10 dark:border-white/10">
+        <div className="relative h-14 flex items-center justify-between px-4 border-b border-white/10 dark:border-white/10">
           <div className="flex items-center gap-3 min-w-0">
             {renderLogo(false)}
           </div>
@@ -218,7 +226,7 @@ const Sidebar = () => {
         <div
           ref={desktopNavRef}
           onScroll={handleDesktopScroll}
-          className="flex-1 overflow-y-auto px-4 pt-6 scrollbar-hide"
+          className="flex-1 overflow-y-auto px-4 pt-3 scrollbar-hide"
         >
           {renderNavLinks(false)}
           {renderSettingsSection(false)}
@@ -227,13 +235,15 @@ const Sidebar = () => {
       </div>
 
       {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileMenuOpen(true)}
-        aria-label="Open sidebar"
-        className="lg:hidden fixed left-3 top-[4.75rem] sm:top-6 z-50 w-10 h-10 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white bg-white/85 dark:bg-[#0f1f43]/95 backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-[0_10px_22px_rgba(15,34,64,0.18)] dark:shadow-[0_10px_22px_rgba(0,0,0,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-200"
-      >
-        <FiMenu className="w-[18px] h-[18px]" />
-      </button>
+      {showMobileMenuButton && (
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open sidebar"
+          className="lg:hidden fixed left-3 top-2.5 z-50 w-9 h-9 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white border border-slate-900/12 dark:border-white/20 bg-transparent hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+        >
+          <FiMenu className="w-4.5 h-4.5" />
+        </button>
+      )}
 
       {/* Mobile close button */}
       <AnimatePresence>
@@ -280,7 +290,7 @@ const Sidebar = () => {
                     <FiChevronLeft className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 pt-6 scrollbar-hide">
+                <div className="flex-1 overflow-y-auto px-4 pt-3 scrollbar-hide">
                   {renderNavLinks(false, () => setMobileMenuOpen(false))}
                   {renderSettingsSection(false, () => setMobileMenuOpen(false))}
                 </div>

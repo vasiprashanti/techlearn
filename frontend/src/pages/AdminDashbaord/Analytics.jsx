@@ -4,7 +4,20 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiBell, FiCode, FiGitBranch, FiFileText, FiBarChart2 } from 'react-icons/fi';
+import {
+  FiSearch,
+  FiBell,
+  FiCode,
+  FiGitBranch,
+  FiFileText,
+  FiBarChart2,
+  FiHome,
+  FiBookOpen,
+  FiUsers,
+  FiUserCheck,
+  FiBook,
+  FiAward,
+} from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -78,6 +91,17 @@ const analyticsData = {
     resourcesUploaded: 48,
     resourcesViewed: 312,
   },
+};
+
+const platformOverviewIconMap = {
+  'Total Colleges': FiHome,
+  'Total Batches': FiBookOpen,
+  'Total Students': FiUsers,
+  'Active Students Today': FiUserCheck,
+  'Total Questions': FiCode,
+  'Track Templates': FiGitBranch,
+  'Total Courses': FiBook,
+  'Certificates Issued': FiAward,
 };
 
 const Analytics = () => {
@@ -212,18 +236,28 @@ const Analytics = () => {
             </header>
 
             {/* Platform Overview */}
-            <section>
-              <h2 className="admin-section-heading mb-4">Platform Overview</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {analyticsData.platformOverview.map((kpi, i) => (
-                  <div
-                    key={i}
-                    className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-xl"
-                  >
-                    <span className="admin-micro-label text-black/50 dark:text-white/50 leading-snug">{kpi.label}</span>
-                    <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-5">{kpi.value}</span>
-                  </div>
-                ))}
+            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 rounded-xl p-4 md:p-5">
+              <h2 className="admin-section-heading mb-3">Platform Overview</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
+                {analyticsData.platformOverview.map((kpi, i) => {
+                  const Icon = platformOverviewIconMap[kpi.label] || FiBarChart2;
+                  const isPrimaryMetric = i < 4;
+
+                  return (
+                    <div
+                      key={i}
+                      className="h-full min-h-[116px] bg-[#f9fcff] dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-3.5 md:p-4 flex flex-col justify-between rounded-xl hover:bg-white dark:hover:bg-[#162a52] hover:shadow-sm transition-all duration-200"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-[#e8edf5] dark:bg-white/10 flex items-center justify-center shrink-0">
+                          <Icon className={`w-4.5 h-4.5 ${isPrimaryMetric ? 'text-[#3C83F6]' : 'text-slate-500 dark:text-slate-300'}`} />
+                        </div>
+                        <p className="text-2xl md:text-[1.75rem] leading-none font-semibold text-[#0f172a] dark:text-white">{kpi.value}</p>
+                      </div>
+                      <p className="mt-3 text-[13px] md:text-sm leading-snug text-slate-600 dark:text-slate-300">{kpi.label}</p>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 

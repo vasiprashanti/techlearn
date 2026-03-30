@@ -18,14 +18,6 @@ const categoryIconMap = {
   chart: FiBarChart2,
 };
 
-const PAGE_TITLE_STYLE = {
-  fontSize: 'clamp(1.4rem, 1.3rem + 0.25vw, 1.65rem)',
-  fontWeight: 700,
-  letterSpacing: '-0.03em',
-  color: '#3c83f6',
-  lineHeight: 1.1,
-};
-
 export default function QuestionBank() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -45,7 +37,7 @@ export default function QuestionBank() {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+    <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#c7e5f4] to-[#daf0fa]'}`} />
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -55,7 +47,7 @@ export default function QuestionBank() {
         <div className="max-w-[1600px] mx-auto space-y-6">
           <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
             <div>
-              <h1 className="admin-page-title" style={PAGE_TITLE_STYLE}>Question Bank</h1>
+              <h1 className="admin-page-title">Question Bank</h1>
             </div>
             <AdminHeaderControls user={user} logout={logout} />
           </header>
