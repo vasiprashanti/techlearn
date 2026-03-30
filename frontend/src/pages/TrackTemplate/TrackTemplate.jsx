@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiBell } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown } from 'react-icons/fi';
 
 // --- Mock Data ---
 const mockTracks = [
@@ -16,7 +17,7 @@ const mockTracks = [
     questionsAssigned: 4,
     status: 'Active',
     icon: FiCode,
-    category: 'Algorithms',
+    category: 'Data Structures & Algorithms',
   },
   {
     id: 'trk_core_01',
@@ -26,7 +27,7 @@ const mockTracks = [
     questionsAssigned: 1,
     status: 'Active',
     icon: FiCpu,
-    category: 'Fundamentals',
+    category: 'Web Development',
   },
   {
     id: 'trk_sql_01',
@@ -36,7 +37,7 @@ const mockTracks = [
     questionsAssigned: 1,
     status: 'Active',
     icon: FiDatabase,
-    category: 'Database',
+    category: 'Database Management',
   },
 ];
 
@@ -55,17 +56,46 @@ const searchRoutes = [
   { id: 'settings', title: 'Settings', category: 'Configuration' },
 ];
 
+const statusPillClass = (status) =>
+  status === 'Active'
+    ? 'bg-[#16a34a] text-white'
+    : 'bg-[#dbe7ff] text-[#3c83f6]';
+
 export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
+  const [tracks, setTracks] = useState(mockTracks);
+  const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [createTemplateForm, setCreateTemplateForm] = useState({
+    name: '',
+    category: '',
+    description: '',
+    totalDays: '30',
+    status: 'Active',
+  });
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  const [historyTrack, setHistoryTrack] = useState(null);
+  const [trackQuestions, setTrackQuestions] = useState({
+    trk_dsa_01: ['Two Sum', 'Binary Search', 'Merge Intervals', 'Tree Traversal'],
+    trk_core_01: ['OS Basics', 'Computer Networks Intro', 'DBMS Normalization'],
+    trk_sql_01: ['SELECT & WHERE', 'JOIN Mastery', 'Window Functions'],
+  });
+  const [versionHistory, setVersionHistory] = useState({
+    trk_dsa_01: ['v3 • Added Merge Intervals', 'v2 • Reordered Tree Traversal', 'v1 • Initial template'],
+    trk_core_01: ['v2 • Added DBMS Normalization', 'v1 • Initial template'],
+    trk_sql_01: ['v1 • Initial template'],
+  });
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
@@ -102,7 +132,7 @@ export default function TrackTemplate() {
     navigate(`/${id}`);
   };
 
-  const filteredTracks = mockTracks.filter((track) => {
+  const filteredTracks = tracks.filter((track) => {
     const query = templateSearch.trim().toLowerCase();
     if (!query) return true;
 
@@ -112,6 +142,123 @@ export default function TrackTemplate() {
       track.category.toLowerCase().includes(query)
     );
   });
+
+  const moveQuestion = (trackId, index, direction) => {
+    setTrackQuestions((prev) => {
+      const current = [...(prev[trackId] || [])];
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return prev;
+      [current[index], current[target]] = [current[target], current[index]];
+      return { ...prev, [trackId]: current };
+    });
+  };
+
+  const saveOrdering = (trackId) => {
+    setVersionHistory((prev) => ({
+      ...prev,
+      [trackId]: [`v${(prev[trackId]?.length || 0) + 1} • Updated question ordering`, ...(prev[trackId] || [])],
+    }));
+    setSelectedTrack(null);
+  };
+
+  const updateCreateTemplateField = (field, value) => {
+    setCreateTemplateForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const closeCreateTemplateModal = () => {
+    setIsCreateTemplateOpen(false);
+    setEditingTemplateId(null);
+    setCreateTemplateForm({
+      name: '',
+      category: '',
+      description: '',
+      totalDays: '30',
+      status: 'Active',
+    });
+  };
+
+  const openCreateTemplateModal = () => {
+    setEditingTemplateId(null);
+    setCreateTemplateForm({
+      name: '',
+      category: '',
+      description: '',
+      totalDays: '30',
+      status: 'Active',
+    });
+    setIsCreateTemplateOpen(true);
+  };
+
+  const openEditTemplateModal = (track) => {
+    setEditingTemplateId(track.id);
+    setCreateTemplateForm({
+      name: track.name || '',
+      category: track.category || '',
+      description: track.description || '',
+      totalDays: String(track.totalDays || 1),
+      status: track.status || 'Active',
+    });
+    setIsCreateTemplateOpen(true);
+  };
+
+  const submitTemplate = () => {
+    if (!createTemplateForm.name.trim() || !createTemplateForm.category) return;
+
+    const totalDays = Number(createTemplateForm.totalDays) > 0 ? Number(createTemplateForm.totalDays) : 1;
+
+    if (editingTemplateId) {
+      setTracks((prev) =>
+        prev.map((track) =>
+          track.id === editingTemplateId
+            ? {
+                ...track,
+                name: createTemplateForm.name.trim(),
+                category: createTemplateForm.category,
+                description:
+                  createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+                totalDays,
+                status: createTemplateForm.status,
+              }
+            : track
+        )
+      );
+    } else {
+      const newId = `trk_${Date.now()}`;
+      const newTrack = {
+        id: newId,
+        name: createTemplateForm.name.trim(),
+        description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+        totalDays,
+        questionsAssigned: 0,
+        status: createTemplateForm.status,
+        icon: FiCode,
+        category: createTemplateForm.category,
+      };
+
+      setTracks((prev) => [newTrack, ...prev]);
+      setTrackQuestions((prev) => ({ ...prev, [newId]: [] }));
+      setVersionHistory((prev) => ({ ...prev, [newId]: ['v1 • Initial template'] }));
+    }
+
+    closeCreateTemplateModal();
+  };
+
+  const deleteTemplate = (trackId) => {
+    setTracks((prev) => prev.filter((track) => track.id !== trackId));
+    setTrackQuestions((prev) => {
+      const next = { ...prev };
+      delete next[trackId];
+      return next;
+    });
+    setVersionHistory((prev) => {
+      const next = { ...prev };
+      delete next[trackId];
+      return next;
+    });
+    if (selectedTrack?.id === trackId) setSelectedTrack(null);
+    if (historyTrack?.id === trackId) setHistoryTrack(null);
+    if (deleteTarget?.id === trackId) setDeleteTarget(null);
+  };
 
   return (
     <>
@@ -166,6 +313,171 @@ export default function TrackTemplate() {
         </div>
       )}
 
+      {selectedTrack && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setSelectedTrack(null)} />
+          <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Question Ordering • {selectedTrack.name}</h2>
+              <button onClick={() => setSelectedTrack(null)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-3">
+              {(trackQuestions[selectedTrack.id] || []).map((q, idx) => (
+                <div key={q + idx} className="flex items-center justify-between rounded-xl border border-black/10 dark:border-white/10 p-3 bg-white/60 dark:bg-white/5">
+                  <span className="text-sm text-black/75 dark:text-white/80">Day {idx + 1}: {q}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => moveQuestion(selectedTrack.id, idx, -1)} className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-black/50 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white"><FiArrowUp className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => moveQuestion(selectedTrack.id, idx, 1)} className="w-8 h-8 rounded-lg border border-black/10 dark:border-white/10 flex items-center justify-center text-black/50 dark:text-white/60 hover:text-[#3C83F6] dark:hover:text-white"><FiArrowDown className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => saveOrdering(selectedTrack.id)} className="w-full mt-2 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6]/10 text-[#3C83F6] dark:text-white dark:bg-white/10 dark:border-white/20">Save Ordering</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {historyTrack && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setHistoryTrack(null)} />
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Version History • {historyTrack.name}</h2>
+              <button onClick={() => setHistoryTrack(null)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+            </div>
+            <div className="p-6 space-y-2">
+              {(versionHistory[historyTrack.id] || []).map((entry, idx) => (
+                <div key={entry + idx} className="rounded-xl border border-black/10 dark:border-white/10 p-3 bg-white/60 dark:bg-white/5 text-xs text-black/65 dark:text-white/65 flex items-center gap-2">
+                  <FiClock className="w-3.5 h-3.5" />{entry}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateTemplateOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCreateTemplateModal} />
+          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
+                <input
+                  value={createTemplateForm.name}
+                  onChange={(e) => updateCreateTemplateField('name', e.target.value)}
+                  placeholder="Enter template name"
+                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                <div className="relative mt-1">
+                  <select
+                    value={createTemplateForm.category}
+                    onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                  >
+                    <option value="">Select category</option>
+                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
+                    <option value="Database Management">Database Management</option>
+                    <option value="Web Development">Web Development</option>
+                    <option value="Python Programming">Python Programming</option>
+                    <option value="Machine Learning">Machine Learning</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Description</label>
+                <textarea
+                  value={createTemplateForm.description}
+                  onChange={(e) => updateCreateTemplateField('description', e.target.value)}
+                  rows={3}
+                  placeholder="Describe this template"
+                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Total days</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={createTemplateForm.totalDays}
+                    onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Status</label>
+                  <div className="relative mt-1">
+                    <select
+                      value={createTemplateForm.status}
+                      onChange={(e) => updateCreateTemplateField('status', e.target.value)}
+                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                    >
+                      <option value="Active">active</option>
+                      <option value="Draft">draft</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  onClick={closeCreateTemplateModal}
+                  className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitTemplate}
+                  className="h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                >
+                  {editingTemplateId ? 'Save Changes' : 'Create Template'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-6">
+            <h3 className="text-lg font-semibold text-black/85 dark:text-white/90">Delete Template?</h3>
+            <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+              Are you sure you want to delete <span className="font-semibold">{deleteTarget.name}</span>?
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteTemplate(deleteTarget.id)}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Layout */}
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
@@ -179,6 +491,7 @@ export default function TrackTemplate() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
             pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
@@ -188,102 +501,9 @@ export default function TrackTemplate() {
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header — same as AdminDashboard */}
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-              <h1 className="admin-page-title">
-                Track Templates
-              </h1>
-
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={() => setIsSearchOpen(true)}
-                  className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group"
-                >
-                  <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
-                  <span className="text-sm text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors">
-                    Search...
-                  </span>
-                  <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">
-                    <span>⌘</span>
-                    <span>K</span>
-                  </div>
-                </button>
-
-                <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                  <FiBell className="w-5 h-5" />
-                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-                </button>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
-                  >
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
-                              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">
-                                {user?.firstName || user?.email || 'Admin User'}
-                              </h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">
-                                {user?.email || 'admin@techlearn.com'}
-                              </p>
-                              <div className="mt-1">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">
-                                  Administrator
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button
-                            onClick={() => setProfileDropdownOpen(false)}
-                            className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="font-medium">Profile Settings</div>
-                              <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
-                            </div>
-                          </button>
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                          <button
-                            onClick={() => { setProfileDropdownOpen(false); logout(); }}
-                            className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                              </svg>
-                            </div>
-                            <div>
-                              <div className="font-medium">Log Out</div>
-                              <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out of your account</div>
-                            </div>
-                          </button>
-                        </div>
-                        <div className="px-4 py-2 bg-black/2.5 dark:bg-white/2.5 border-t border-black/5 dark:border-white/5">
-                          <p className="text-[9px] text-black/40 dark:text-white/40 text-center">TechLearn Admin Panel v2.0</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+            <header className={`sticky top-0 z-40 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
+              <div className="flex-1" />
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
             {/* Search + Create Row */}
@@ -299,14 +519,17 @@ export default function TrackTemplate() {
                 />
               </div>
 
-              <button className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium">
+              <button
+                onClick={openCreateTemplateModal}
+                className="w-full md:w-auto md:ml-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] border border-[#3C83F6] text-white transition-colors font-semibold text-sm"
+              >
                 <FiPlus className="w-3.5 h-3.5" />
                 Create Template
               </button>
             </div>
 
             <p className="admin-micro-label text-black/30 dark:text-white/30 -mt-2">
-              {filteredTracks.length} of {mockTracks.length} templates
+              {filteredTracks.length} of {tracks.length} templates
             </p>
 
             {/* 3-Column Card Grid */}
@@ -318,64 +541,70 @@ export default function TrackTemplate() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTracks.map((track) => {
                   const Icon = track.icon;
+                  const iconTileBgClass =
+                    track.id === 'trk_dsa_01'
+                      ? 'from-blue-500/15 to-indigo-500/15'
+                      : track.id === 'trk_core_01'
+                        ? 'from-orange-500/15 to-amber-500/15'
+                        : 'from-violet-500/15 to-purple-500/15';
+                  const iconColorClass =
+                    track.id === 'trk_dsa_01'
+                      ? 'text-blue-600 dark:text-blue-300'
+                      : track.id === 'trk_core_01'
+                        ? 'text-orange-600 dark:text-orange-300'
+                        : 'text-violet-600 dark:text-violet-300';
                   return (
-                    <div
-                      key={track.id}
-                      className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7 flex flex-col gap-5 hover:bg-white/60 dark:hover:bg-black/60 transition-colors group"
-                    >
+                    <div key={track.id} className="rounded-2xl bg-white dark:bg-[#0f1e3e] border border-black/10 dark:border-white/10 p-6 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+                      <div className="space-y-4">
                       {/* Top row: icon + status badge */}
                       <div className="flex items-start justify-between">
-                        <div className="w-10 h-10 rounded-lg bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/10 dark:border-white/10 flex items-center justify-center shrink-0">
-                          <Icon className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 ${iconTileBgClass}`}>
+                          <Icon className={`w-[22px] h-[22px] ${iconColorClass}`} />
                         </div>
-                        <span className={`admin-micro-label px-2.5 py-1 rounded-lg border
-                          ${track.status === 'Active'
-                            ? 'border-emerald-500/20 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5'
-                            : 'border-amber-500/20 text-amber-600 dark:text-amber-400 bg-amber-500/5'
-                          }`}
-                        >
+                        <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(track.status)}`}>
                           {track.status}
                         </span>
                       </div>
 
                       {/* Track name + description */}
-                      <div className="min-h-[4.5rem]">
-                        <h3 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white">
+                      <div>
+                        <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">
                           {track.name}
                         </h3>
-                        <p className="text-sm text-black/45 dark:text-white/45 mt-1 font-light leading-relaxed line-clamp-2">
+                        <p className="text-xs text-[#64748b] dark:text-slate-300 mt-1 line-clamp-2">
                           {track.description}
                         </p>
                       </div>
 
                       {/* Stats */}
-                      <div className="space-y-2">
-                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="admin-micro-label text-black/30 dark:text-white/30">Total Days</p>
-                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">{track.totalDays}</p>
+                      <div className="space-y-2.5">
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Total Days</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
                         </div>
-                        <div className="bg-white/50 dark:bg-white/5 rounded-xl p-3 border border-black/5 dark:border-white/5">
-                          <p className="admin-micro-label text-black/30 dark:text-white/30">Questions Assigned</p>
-                          <p className="text-lg font-light text-black/75 dark:text-white/80 mt-1 leading-none">
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Questions Assigned</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
                             {track.questionsAssigned} / {track.totalDays}
                           </p>
                         </div>
                       </div>
+                      </div>
 
                       {/* Actions row */}
-                      <div className="flex items-center gap-3 mt-auto">
+                      <div className="flex items-center gap-2 mt-5">
                         <button
-                          onClick={() => navigate(`/track/${track.id}/day/1`)}
-                          className="flex-1 h-10 flex items-center justify-center gap-2 px-4 admin-micro-label rounded-xl bg-[#3C83F6]/10 dark:bg-white/5 border border-[#3C83F6]/20 dark:border-white/10 text-[#3C83F6] dark:text-white/60 hover:bg-[#3C83F6]/15 dark:hover:bg-white/10 transition-colors font-medium"
+                          onClick={() => navigate(`/track-templates/${track.id}`)}
+                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-md px-4 text-sm font-medium bg-[#3C83F6] hover:bg-[#2563eb] text-white transition-colors whitespace-nowrap"
                         >
-                          <FiEye className="w-4 h-4" />
+                          <FiEye className="w-[15px] h-[15px]" />
                           View Template
                         </button>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                          <FiEdit2 className="w-4 h-4" />
+                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                          <FiEdit2 className="w-[15px] h-[15px]" />
                         </button>
-                        <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-black/40 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                          <FiTrash2 className="w-4 h-4" />
+                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                          <FiTrash2 className="w-[15px] h-[15px]" />
                         </button>
                       </div>
                     </div>

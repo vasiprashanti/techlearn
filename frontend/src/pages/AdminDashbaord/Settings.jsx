@@ -1,23 +1,29 @@
 import { useState } from "react";
-import { FiBell, FiSearch } from "react-icons/fi";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import AdminHeaderControls from "../../components/AdminDashbaord/AdminHeaderControls";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
-const Toggle = ({ checked, onChange }) => (
+const Toggle = ({ checked, onChange, isDarkMode = false }) => (
   <button
     type="button"
     onClick={onChange}
-    className={`relative h-8 w-14 rounded-full border transition-colors ${
+    className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-all duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3C83F6]/40 ${
       checked
-        ? "bg-[#3C83F6] border-[#3C83F6]/70"
-        : "bg-[#d0dae7] border-[#c5d1de]"
+        ? "bg-[#3C83F6] border-[#2f73e0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]"
+        : isDarkMode
+          ? "bg-white/10 border-white/20"
+          : "bg-[#e8eef6] border-[#cdd8e6]"
     }`}
     aria-pressed={checked}
   >
     <span
-      className={`absolute top-0.5 h-6 w-6 rounded-full bg-[#dce8f6] shadow-sm transition-all ${
-        checked ? "left-7" : "left-0.5"
+      className={`inline-block h-5 w-5 rounded-full shadow-sm transition-transform duration-200 ease-out ${
+        checked
+          ? "translate-x-6 bg-white"
+          : isDarkMode
+            ? "translate-x-1 bg-white/90"
+            : "translate-x-1 bg-white"
       }`}
     />
   </button>
@@ -25,8 +31,9 @@ const Toggle = ({ checked, onChange }) => (
 
 export default function Settings() {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [certificatesEnabled, setCertificatesEnabled] = useState(true);
   const [homeText, setHomeText] = useState(
     "Welcome to our learning platform. Explore courses designed to boost your skills and career."
@@ -57,105 +64,92 @@ export default function Settings() {
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
         className={`flex-1 h-screen transition-all duration-500 ease-out z-10 ${
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-        } pt-0 pb-10 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden`}
+        } pt-0 pb-10 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
       >
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
-            <h1 className="admin-page-title">
-              Settings
-            </h1>
-
-            <div className="flex items-center gap-6">
-              <button className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40" />
-                <span className="text-sm text-black/40 dark:text-white/40">Search...</span>
-                <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">
-                  <span>⌘</span>
-                  <span>K</span>
-                </div>
-              </button>
-
-              <button className="relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                <FiBell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500" />
-              </button>
-
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg border-2 border-white/20 dark:border-black/20">
-                {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "A"}
-              </div>
-            </div>
+          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
+            <div className="flex-1" />
+            <AdminHeaderControls user={user} logout={logout} />
           </header>
 
           <section className="max-w-4xl space-y-6">
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7">
-              <h2 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white mb-7">General Settings</h2>
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">General Settings</h2>
 
               <div className="space-y-8">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-base font-medium text-black/80 dark:text-white">Certificates</p>
-                    <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                    <p className="text-base font-medium text-black/85 dark:text-white/90">Certificates</p>
+                    <p className="text-sm text-black/55 dark:text-white/60 mt-1">
                       Enable or disable certificate generation
                     </p>
                   </div>
                   <Toggle
                     checked={certificatesEnabled}
                     onChange={() => setCertificatesEnabled((prev) => !prev)}
+                    isDarkMode={isDarkMode}
                   />
                 </div>
 
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-base font-medium text-black/80 dark:text-white">Dark Mode</p>
-                    <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                    <p className="text-base font-medium text-black/85 dark:text-white/90">Dark Mode</p>
+                    <p className="text-sm text-black/55 dark:text-white/60 mt-1">
                       Switch between light and dark theme
                     </p>
                   </div>
-                  <Toggle checked={isDarkMode} onChange={toggleTheme} />
+                  <Toggle checked={isDarkMode} onChange={toggleTheme} isDarkMode={isDarkMode} />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-7">
-              <h2 className="text-xl font-light tracking-tight text-[#3C83F6] dark:text-white mb-7">Content</h2>
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">Content</h2>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Homepage Content
                   </label>
                   <textarea
                     rows={3}
                     value={homeText}
                     onChange={(e) => setHomeText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Terms & Conditions
                   </label>
                   <textarea
                     rows={3}
                     value={termsText}
                     onChange={(e) => setTermsText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-black/70 dark:text-white/70 mb-2">
+                  <label className="block text-sm font-medium text-black/70 dark:text-white/75 mb-2">
                     Privacy Policy
                   </label>
                   <textarea
                     rows={3}
                     value={privacyText}
                     onChange={(e) => setPrivacyText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/5 text-black/75 dark:text-white/85 p-4 focus:outline-none"
+                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors">
+                    Save Changes
+                  </button>
                 </div>
               </div>
             </div>
@@ -165,3 +159,6 @@ export default function Settings() {
     </div>
   );
 }
+
+
+

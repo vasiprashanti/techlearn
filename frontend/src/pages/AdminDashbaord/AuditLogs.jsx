@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import {  FiSearch , FiBell } from 'react-icons/fi';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { FiSearch, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard',          title: 'Dashboard',          category: 'Overview'     },
@@ -35,28 +36,17 @@ const logs = [
 
 const verbConfig = {
   Created: {
-    dot:  'bg-emerald-500',
-    text: 'text-slate-700 dark:text-emerald-400',
-    pill: 'bg-white dark:bg-emerald-500/10 border border-black/[0.18] dark:border-emerald-500/20',
+    Icon: FiPlus,
+    iconWrap: 'text-emerald-500 dark:text-emerald-400',
   },
   Updated: {
-    dot:  'bg-[#3C83F6]',
-    text: 'text-slate-700 dark:text-[#3C83F6]',
-    pill: 'bg-white dark:bg-blue-500/10 border border-black/[0.18] dark:border-blue-500/20',
+    Icon: FiEdit3,
+    iconWrap: 'text-[#3C83F6] dark:text-blue-300',
   },
   Deleted: {
-    dot:  'bg-slate-400 dark:bg-white/40',
-    text: 'text-slate-500 dark:text-white/50',
-    pill: 'bg-white dark:bg-white/[0.05] border border-black/[0.18] dark:border-white/10',
+    Icon: FiTrash2,
+    iconWrap: 'text-red-500 dark:text-red-300',
   },
-};
-
-const typeConfig = {
-  Batch:    { text: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-500/10 border border-violet-300 dark:border-violet-500/20' },
-  Track:    { text: 'text-slate-600 dark:text-amber-400',   bg: 'bg-slate-50 dark:bg-amber-500/10 border border-slate-300 dark:border-amber-500/20'    },
-  Question: { text: 'text-blue-600 dark:text-blue-400',     bg: 'bg-blue-50 dark:bg-blue-500/10 border border-blue-300 dark:border-blue-500/20'        },
-  Student:  { text: 'text-teal-600 dark:text-teal-400',     bg: 'bg-teal-50 dark:bg-teal-500/10 border border-teal-300 dark:border-teal-500/20'        },
-  College:  { text: 'text-slate-600 dark:text-white/50',    bg: 'bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-white/10'             },
 };
 
 export default function AuditLogs() {
@@ -64,12 +54,11 @@ export default function AuditLogs() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
-  const [verbFilter, setVerbFilter] = useState('All');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
@@ -98,8 +87,7 @@ export default function AuditLogs() {
 
   const filteredLogs = logs.filter(l => {
     const q = tableSearch.toLowerCase();
-    const matchSearch = !q || l.action.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q) || l.type.toLowerCase().includes(q);
-    return matchSearch && (verbFilter === 'All' || l.verb === verbFilter);
+    return !q || l.action.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q) || l.type.toLowerCase().includes(q);
   });
 
   const today = logs.filter(l => l.ts.startsWith('2025-03-08')).length;
@@ -149,158 +137,84 @@ export default function AuditLogs() {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+        <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+          <div className="max-w-[1500px] mx-auto space-y-5">
 
             {/* Header */}
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
               <div>
                 <h1 className="admin-page-title">Audit Logs</h1>
 
               </div>
-              <div className="flex items-center gap-5">
-                <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-60 bg-white/30 dark:bg-black/20 border border-black/[0.06] dark:border-white/5 py-2 pl-10 pr-12 rounded-xl backdrop-blur-md hover:bg-white/50 dark:hover:bg-black/30 transition-colors text-left">
-                  <FiSearch className="absolute left-3.5 w-3.5 h-3.5 text-black/30 dark:text-white/30" />
-                  <span className="text-sm text-black/35 dark:text-white/35">Search...</span>
-                  <div className="absolute right-3 text-[9px] font-medium text-black/30 dark:text-white/30 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded">⌘K</div>
-                </button>
-                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-semibold shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-                  >
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-base font-semibold">
-                              {user?.firstName?.charAt(0)?.toUpperCase() || 'A'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{user?.firstName || 'Admin User'}</h3>
-                              <p className="text-xs text-black/50 dark:text-white/50 truncate">{user?.email || 'admin@techlearn.com'}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-1.5">
-                          <button onClick={() => setProfileDropdownOpen(false)} className="w-full px-4 py-2.5 text-left text-sm text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                            Profile Settings
-                          </button>
-                          <div className="mx-4 my-1 h-px bg-black/[0.08] dark:bg-white/[0.08]" />
-                          <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-2.5 text-left text-sm text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
-                            Log Out
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            <section className="space-y-0.5">
+              <h2 className="text-2xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Audit Logs</h2>
+              <p className="text-sm text-[#6e839b] dark:text-white/60">Track all admin actions on the platform</p>
+            </section>
+
             {/* KPIs */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
                 { label: 'Total Actions', value: logs.length },
                 { label: 'Today',         value: today       },
                 { label: 'Deletions',     value: deletions   },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl px-6 py-5">
-                  <p className="admin-micro-label text-black/35 dark:text-white/40">{label}</p>
-                  <p className="text-3xl font-light tracking-tight text-[#3C83F6] dark:text-white mt-3">{value}</p>
+                <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-xl px-5 py-4">
+                  <p className="text-3xl leading-none font-semibold tracking-tight text-[#1e2f45] dark:text-white">{value}</p>
+                  <p className="mt-1.5 text-xs font-semibold text-[#8498ad] dark:text-white/55">{label}</p>
                 </div>
               ))}
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <div className="relative">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/25 dark:text-white/25 pointer-events-none" />
+            <div className="flex items-center gap-2">
+              <div className="relative w-full md:max-w-[460px]">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/35 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search action, detail, type..."
+                  placeholder="Search logs..."
                   value={tableSearch}
                   onChange={e => setTableSearch(e.target.value)}
-                  className="pl-9 pr-4 py-2 text-[13px] bg-white/60 dark:bg-white/5 border border-black/[0.07] dark:border-white/10 rounded-xl focus:outline-none focus:bg-white/80 dark:focus:bg-white/8 text-slate-700 dark:text-white/70 placeholder:text-black/25 dark:placeholder:text-white/25 transition-all w-56"
+                  className="w-full pl-9 pr-3.5 h-10 text-xs bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 text-slate-700 dark:text-white/80 placeholder:text-black/30 dark:placeholder:text-white/35 transition-all"
                 />
-              </div>
-              <div className="relative">
-                <select
-                  value={verbFilter}
-                  onChange={e => setVerbFilter(e.target.value)}
-                  className="appearance-none text-[11px] tracking-wide pl-3.5 pr-7 py-2 rounded-xl border border-black/[0.07] dark:border-white/10 bg-white/60 dark:bg-black/40 text-slate-600 dark:text-white/60 focus:outline-none cursor-pointer"
-                >
-                  {['All', 'Created', 'Updated', 'Deleted'].map(v => <option key={v}>{v}</option>)}
-                </select>
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[9px]">▾</span>
               </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white/50 dark:bg-black/40 backdrop-blur-xl border border-black/[0.06] dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
-              <table className="w-full table-fixed">
-                <colgroup>
-                  <col className="w-[11%]" />
-                  <col className="w-[41%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[15%]" />
-                  <col className="w-[20%]" />
-                </colgroup>
-                <thead>
-                  <tr className="bg-black/[0.025] dark:bg-white/[0.025] border-b border-black/[0.05] dark:border-white/[0.05]">
-                    {['Action', 'Details', 'Type', 'By', 'Timestamp'].map(h => (
-                      <th key={h} className="text-left px-5 py-3 admin-micro-label text-black/30 dark:text-white/30">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
-                  {filteredLogs.map(log => {
-                    const vc = verbConfig[log.verb];
-                    const tc = typeConfig[log.type];
-                    return (
-                      <tr key={log.id} className="group hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors">
+            {/* Logs List */}
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+              {filteredLogs.map((log, i) => {
+                const cfg = verbConfig[log.verb] || verbConfig.Updated;
+                const Icon = cfg.Icon;
+                return (
+                  <div
+                    key={log.id}
+                    className={`flex items-center justify-between gap-2.5 px-4 py-2.5 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${
+                      i < filteredLogs.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''
+                    }`}
+                  >
+                    <div className="min-w-0 flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-full bg-[#e5edf8] dark:bg-white/10 flex items-center justify-center ${cfg.iconWrap}`}>
+                        <Icon className="w-3 h-3" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-[#23364d] dark:text-white/90">{log.action}</p>
+                        <p className="truncate text-xs text-[#7388a0] dark:text-white/60">{log.detail} · by {log.actor}</p>
+                      </div>
+                    </div>
 
-                        {/* Verb pill */}
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 admin-micro-label px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${vc.pill} ${vc.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${vc.dot}`} />
-                            {log.verb}
-                          </span>
-                        </td>
+                    <div className="shrink-0 text-right">
+                      <span className="inline-flex items-center justify-center min-w-[56px] h-6 px-2 rounded-full text-[10px] font-semibold bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-[#294460] dark:text-white/85">
+                        {log.type}
+                      </span>
+                      <p className="mt-1 text-[11px] font-semibold text-[#8ea0b3] dark:text-white/55">{log.ts}</p>
+                    </div>
+                  </div>
+                );
+              })}
 
-                        {/* Action + detail — action in blue, detail muted */}
-                        <td className="px-5 py-3.5">
-                          <p className="text-[13px] font-medium text-[#3C83F6] dark:text-white/90 truncate">{log.action}</p>
-                          <p className="text-[11px] text-black/35 dark:text-white/35 mt-0.5 truncate">{log.detail}</p>
-                        </td>
-
-                        {/* Type chip */}
-                        <td className="px-5 py-3.5">
-                          <span className={`admin-micro-label font-medium px-2 py-0.5 rounded-md ${tc?.text} ${tc?.bg}`}>
-                            {log.type}
-                          </span>
-                        </td>
-
-                        {/* Actor */}
-                        <td className="px-5 py-3.5">
-                          <span className="text-[12px] text-black/45 dark:text-white/45 truncate block">{log.actor}</span>
-                        </td>
-
-                        {/* Timestamp */}
-                        <td className="px-5 py-3.5">
-                          <span className="text-[11px] font-mono text-black/30 dark:text-white/30 whitespace-nowrap">{log.ts}</span>
-                        </td>
-
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
               {filteredLogs.length === 0 && (
                 <div className="py-16 text-center text-sm text-black/30 dark:text-white/30">No logs match your filters.</div>
               )}
@@ -312,3 +226,6 @@ export default function AuditLogs() {
     </>
   );
 }
+
+
+

@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import {  FiSearch, FiPlus, FiEye, FiExternalLink , FiBell } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiChevronDown, FiX } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -31,24 +32,23 @@ const resources = [
   { id: 5, title: 'Binary Trees Explained', category: 'DSA', date: '2024-08-01', type: 'Video', views: 445 },
 ];
 
-const typeStyles = {
-  PDF:   { bg: 'bg-rose-500/10 dark:bg-rose-400/10',   text: 'text-rose-600 dark:text-rose-400',   border: 'border-rose-500/20 dark:border-rose-400/20' },
-  Sheet: { bg: 'bg-emerald-500/10 dark:bg-emerald-400/10', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-500/20 dark:border-emerald-400/20' },
-  Video: { bg: 'bg-violet-500/10 dark:bg-violet-400/10', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-500/20 dark:border-violet-400/20' },
-  Link:  { bg: 'bg-amber-500/10 dark:bg-amber-400/10',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-500/20 dark:border-amber-400/20' },
-};
-
 export default function Resources() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [resourceEntries, setResourceEntries] = useState(resources);
+  const [resourceForm, setResourceForm] = useState({
+    title: '',
+    type: '',
+    category: '',
+  });
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
@@ -75,16 +75,46 @@ export default function Resources() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const filteredResources = resources.filter(r => {
+  const filteredResources = resourceEntries.filter(r => {
     const matchSearch = !tableSearch || r.title.toLowerCase().includes(tableSearch.toLowerCase()) || r.category.toLowerCase().includes(tableSearch.toLowerCase());
-    const matchType = typeFilter === 'All' || r.type === typeFilter;
-    return matchSearch && matchType;
+    return matchSearch;
   });
 
-  const totalViews = resources.reduce((acc, r) => acc + r.views, 0);
-  const uniqueCategories = [...new Set(resources.map(r => r.category))].length;
+  const totalViews = resourceEntries.reduce((acc, r) => acc + r.views, 0);
+  const uniqueCategories = [...new Set(resourceEntries.map(r => r.category))].length;
 
-  const dropdownClass = "appearance-none text-[11px] tracking-wide pl-4 pr-8 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 text-black/60 dark:text-white/60 focus:outline-none focus:border-black/20 dark:focus:border-white/20 transition-colors cursor-pointer";
+  const typeIconMap = {
+    PDF: FiFileText,
+    Sheet: FiFileText,
+    Video: FiVideo,
+    Link: FiLink2,
+  };
+
+  const openAddResourceModal = () => {
+    setResourceForm({ title: '', type: '', category: '' });
+    setIsAddResourceOpen(true);
+  };
+
+  const closeAddResourceModal = () => {
+    setIsAddResourceOpen(false);
+    setResourceForm({ title: '', type: '', category: '' });
+  };
+
+  const addResource = () => {
+    if (!resourceForm.title.trim() || !resourceForm.type || !resourceForm.category.trim()) return;
+
+    const newResource = {
+      id: Date.now(),
+      title: resourceForm.title.trim(),
+      category: resourceForm.category.trim(),
+      date: new Date().toISOString().slice(0, 10),
+      type: resourceForm.type,
+      views: 0,
+    };
+
+    setResourceEntries((prev) => [newResource, ...prev]);
+    closeAddResourceModal();
+  };
 
   return (
     <>
@@ -116,127 +146,149 @@ export default function Resources() {
         </div>
       )}
 
+      {isAddResourceOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddResourceModal} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl p-6">
+            <button
+              onClick={closeAddResourceModal}
+              className="absolute right-4 top-4 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
+              aria-label="Close add resource form"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">Add Resource</h2>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Title</label>
+                <input
+                  value={resourceForm.title}
+                  onChange={(e) => setResourceForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter resource title"
+                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-white/5 px-3 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Type</label>
+                <div className="relative mt-1">
+                  <select
+                    value={resourceForm.type}
+                    onChange={(e) => setResourceForm((prev) => ({ ...prev, type: e.target.value }))}
+                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-white/5 px-3 pr-10 text-sm"
+                  >
+                    <option value="">Select type</option>
+                    <option value="PDF">pdf</option>
+                    <option value="Link">link</option>
+                    <option value="Video">video</option>
+                    <option value="Sheet">sheet</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/50" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Category</label>
+                <input
+                  value={resourceForm.category}
+                  onChange={(e) => setResourceForm((prev) => ({ ...prev, category: e.target.value }))}
+                  placeholder="Enter category"
+                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-white/5 px-3 text-sm"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end">
+                <button
+                  onClick={addResource}
+                  className="h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+        <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-[1600px] mx-auto space-y-6">
 
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
               <div>
                 <h1 className="admin-page-title">Resources</h1>
 
               </div>
-              <div className="flex items-center gap-6">
-                <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                  <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
-                  <span className="text-sm text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors">Search...</span>
-                  <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded"><span>⌘</span><span>K</span></div>
-                </button>
-                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
-                <div className="relative">
-                  <button onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20">
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
-                              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{user?.firstName || user?.email || 'Admin User'}</h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'admin@techlearn.com'}</p>
-                              <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">Administrator</span></div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button onClick={() => setProfileDropdownOpen(false)} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
-                            <div><div className="font-medium">Profile Settings</div><div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div></div>
-                          </button>
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                          <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg></div>
-                            <div><div className="font-medium">Log Out</div><div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out of your account</div></div>
-                          </button>
-                        </div>
-                        <div className="px-4 py-2 bg-black/[0.025] dark:bg-white/[0.025] border-t border-black/5 dark:border-white/5">
-                          <p className="text-[9px] text-black/40 dark:text-white/40 text-center">TechLearn Admin Panel v2.0</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            {/* KPI Row */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { label: 'Total Resources', value: resources.length },
+                { label: 'Total Resources', value: resourceEntries.length },
                 { label: 'Total Views', value: totalViews.toLocaleString() },
                 { label: 'Categories', value: uniqueCategories },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between">
-                  <span className="admin-micro-label text-black/50 dark:text-white/50">{label}</span>
-                  <div className="mt-6">
-                    <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{value}</span>
-                  </div>
-                </div>
+                <article key={label} className="rounded-2xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-5 py-4">
+                  <p className="text-xs text-[#5f7491] dark:text-slate-300">{label}</p>
+                  <p className="mt-1.5 text-3xl font-bold text-[#0b1b38] dark:text-white">{value}</p>
+                </article>
               ))}
             </div>
 
-            {/* Toolbar */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="relative">
-                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/30" />
-                  <input type="text" placeholder="Search title or category..." value={tableSearch} onChange={e => setTableSearch(e.target.value)} className="pl-9 pr-4 py-2.5 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-black/20 dark:focus:border-white/20 text-black/70 dark:text-white/70 placeholder:text-black/25 dark:placeholder:text-white/25 transition-colors w-56" />
-                </div>
-                <div className="relative">
-                  <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className={dropdownClass}>
-                    {['All', 'PDF', 'Sheet', 'Video', 'Link'].map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-black/30 dark:text-white/30 text-[10px]">▾</span>
-                </div>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="relative max-w-lg flex-1 min-w-0 w-full sm:w-auto">
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#64748b] dark:text-slate-300" />
+                <input
+                  type="text"
+                  placeholder="Search resources..."
+                  value={tableSearch}
+                  onChange={e => setTableSearch(e.target.value)}
+                  className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#18365f] pl-9 pr-4 text-xs text-[#5f7592] dark:text-slate-200 placeholder:text-[#6e809b] dark:placeholder:text-slate-300/80"
+                />
               </div>
-              <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#3C83F6] dark:bg-white text-white dark:text-black text-sm font-medium hover:bg-blue-600 dark:hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg">
-                <FiPlus className="w-4 h-4" />
-                <span>Add Resource</span>
+
+              <button onClick={openAddResourceModal} className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5">
+                <FiPlus className="w-3.5 h-3.5" />
+                Add Resource
               </button>
             </div>
 
-            {/* Resources Table */}
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_96px_124px_90px_44px] items-center px-6 py-3 gap-6 border-b border-black/5 dark:border-white/5">
-                {['Title', 'Type', 'Date', 'Views', ''].map(h => (
-                  <span key={h} className="admin-micro-label text-black/40 dark:text-white/40 font-medium">{h}</span>
-                ))}
-              </div>
+            <div className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f]">
               {filteredResources.map((res, i) => {
-                const style = typeStyles[res.type];
+                const TypeIcon = typeIconMap[res.type] || FiFileText;
                 return (
-                  <div key={res.id} className={`grid grid-cols-[minmax(0,1fr)_96px_124px_90px_44px] items-center px-6 py-4 gap-6 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${i < filteredResources.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                    <div>
-                      <p className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{res.title}</p>
-                      <p className="text-[10px] text-black/40 dark:text-white/40 mt-0.5">{res.category}</p>
+                  <article key={res.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 py-3 ${i < filteredResources.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
+                        <TypeIcon className="w-3.5 h-3.5 text-[#6e809b] dark:text-slate-300" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm md:text-base font-normal text-[#0b1b38] dark:text-white break-words">{res.title}</h3>
+                        <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 break-words">{res.category} · {res.date}</p>
+                      </div>
                     </div>
-                    <span className={`admin-micro-label px-2.5 py-1 rounded-md border font-medium ${style.bg} ${style.text} ${style.border}`}>{res.type}</span>
-                    <span className="text-xs text-black/40 dark:text-white/40 whitespace-nowrap">{res.date}</span>
-                    <div className="flex items-center gap-1.5 text-xs text-black/50 dark:text-white/50">
-                      <FiEye className="w-3.5 h-3.5" />
-                      <span>{res.views.toLocaleString()}</span>
+
+                    <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 shrink-0 mt-0.5 sm:mt-0">
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#d6e6f4] text-[#0f2b54] dark:bg-[#21446f] dark:text-blue-200">
+                        {res.type}
+                      </span>
+                      <div className="inline-flex items-center gap-2 shrink-0">
+                        <div className="inline-flex items-center gap-1 text-sm text-[#5f7592] dark:text-slate-300">
+                          <FiEye className="w-3.5 h-3.5" />
+                          <span>{res.views}</span>
+                        </div>
+                        <button className="h-8 w-8 rounded-full inline-flex items-center justify-center border border-transparent text-[#0f1f3d] dark:text-slate-200 transition-all hover:border-[#3C83F6] hover:text-[#3C83F6] hover:ring-2 hover:ring-[#3C83F6]/40 hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Download ${res.title}`}>
+                          <FiDownload className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-blue-400">
-                      <FiExternalLink className="w-4 h-4" />
-                    </button>
-                  </div>
+                  </article>
                 );
               })}
               {filteredResources.length === 0 && (
@@ -250,3 +302,6 @@ export default function Resources() {
     </>
   );
 }
+
+
+

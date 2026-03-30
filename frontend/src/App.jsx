@@ -34,6 +34,7 @@ import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
+import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
@@ -72,9 +73,12 @@ import Profile from './components/Dashboard/Profile'
 import Analytics from './pages/AdminDashbaord/Analytics';
 import SystemHealth from './pages/AdminDashbaord/SystemHealth';
 import Colleges from './pages/AdminDashbaord/Colleges';
+import CollegeDetails from './pages/AdminDashbaord/CollegeDetails';
 import Batches from './pages/AdminDashbaord/Batches';
+import BatchDetails from './pages/AdminDashbaord/BatchDetails';
 import Students from './pages/AdminDashbaord/Students';
 import QuestionBank from './pages/AdminDashbaord/QuestionBank';
+import QuestionCategoryDetails from './pages/AdminDashbaord/QuestionCategoryDetails';
 import Resources from './pages/AdminDashbaord/Resources';
 import Certificates from './pages/AdminDashbaord/Certificates';
 import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
@@ -620,6 +624,10 @@ function LayoutWrapper() {
   ];
 
   const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
+                           location.pathname.startsWith('/colleges/') ||
+                           location.pathname.startsWith('/batches/') ||
+                           location.pathname.startsWith('/question-bank/') ||
+                           location.pathname.startsWith('/track-templates/') ||
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
@@ -644,6 +652,7 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
+            <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
@@ -690,9 +699,12 @@ function LayoutWrapper() {
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/system-health" element={<SystemHealth />} />
             <Route path="/colleges" element={<Colleges />} />
+<Route path="/colleges/:collegeId" element={<CollegeDetails />} />
 <Route path="/batches" element={<Batches />} />
+<Route path="/batches/:batchId" element={<BatchDetails />} />
 <Route path="/students" element={<Students />} />
 <Route path="/question-bank" element={<QuestionBank />} />
+<Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
 <Route path="/resources" element={<Resources />} />
 <Route path="/certificates" element={<Certificates />} />
 <Route path="/submission-monitor" element={<SubmissionMonitor />} />

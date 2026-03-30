@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import {  FiSearch, FiDownload, FiClock , FiBell } from 'react-icons/fi';
+import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { FiSearch, FiDownload, FiClock, FiAward, FiUsers, FiCode, FiHome, FiBookOpen, FiFileText } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -23,12 +24,12 @@ const searchRoutes = [
 ];
 
 const reportTypes = [
-  { id: 1, title: 'Batch Leaderboard',    desc: 'Rankings and scores for each batch',              formats: ['CSV', 'Excel'] },
-  { id: 2, title: 'Student Performance',  desc: 'Individual student progress and scores',           formats: ['CSV', 'Excel'] },
-  { id: 3, title: 'Submission Records',   desc: 'All submissions with status and timings',          formats: ['CSV'] },
-  { id: 4, title: 'College Performance',  desc: 'Aggregate performance by college',                 formats: ['CSV', 'Excel'] },
-  { id: 5, title: 'Batch Summary',        desc: 'Batch details, tracks, and student counts',        formats: ['CSV', 'Excel'] },
-  { id: 6, title: 'Question Usage',       desc: 'Question bank usage across tracks and batches',    formats: ['CSV'] },
+  { id: 1, title: 'Batch Leaderboard',   desc: 'Rankings and scores for each batch',           formats: ['CSV', 'Excel'], icon: FiAward },
+  { id: 2, title: 'Student Performance', desc: 'Individual student progress and scores',        formats: ['CSV', 'Excel'], icon: FiUsers },
+  { id: 3, title: 'Submission Records',  desc: 'All submissions with status and timings',       formats: ['CSV'],          icon: FiCode },
+  { id: 4, title: 'College Performance', desc: 'Aggregate performance by college',              formats: ['CSV', 'Excel'], icon: FiHome },
+  { id: 5, title: 'Batch Summary',       desc: 'Batch details, tracks, and student counts',     formats: ['CSV', 'Excel'], icon: FiBookOpen },
+  { id: 6, title: 'Question Usage',      desc: 'Question bank usage across tracks and batches', formats: ['CSV'],          icon: FiFileText },
 ];
 
 const recentExports = [
@@ -38,8 +39,8 @@ const recentExports = [
 ];
 
 const formatStyle = {
-  CSV:   { bg: 'bg-emerald-500/10 border-emerald-500/20', text: 'text-emerald-600 dark:text-emerald-400' },
-  Excel: { bg: 'bg-blue-500/10 border-blue-500/20',       text: 'text-[#3C83F6] dark:text-blue-400' },
+  CSV:   { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
+  Excel: { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
 };
 
 export default function Reports() {
@@ -47,9 +48,9 @@ export default function Reports() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloading, setDownloading] = useState(null);
   const searchInputRef = useRef(null);
@@ -115,69 +116,40 @@ export default function Reports() {
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1400px] mx-auto space-y-8">
+        <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-[1400px] mx-auto space-y-5 sm:space-y-6">
 
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
               <div>
                 <h1 className="admin-page-title">Reports</h1>
 
               </div>
-              <div className="flex items-center gap-6">
-                <button onClick={() => setIsSearchOpen(true)} className="relative hidden md:flex items-center w-64 bg-white/20 dark:bg-black/20 border border-black/5 dark:border-white/5 py-2 pl-10 pr-12 rounded-lg backdrop-blur-md hover:bg-white/30 dark:hover:bg-black/30 transition-colors text-left group">
-                  <FiSearch className="absolute left-3 w-4 h-4 text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors" />
-                  <span className="text-sm text-black/40 dark:text-white/40 group-hover:text-black/60 dark:group-hover:text-white/60 transition-colors">Search...</span>
-                  <div className="absolute right-3 flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded"><span>⌘</span><span>K</span></div>
-                </button>
-                <button className='relative text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors'><FiBell className='w-5 h-5' /><span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' /></button>
-                <div className="relative">
-                  <button onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20">
-                    {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-                  </button>
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">{user?.firstName?.charAt(0)?.toUpperCase() || 'A'}</div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{user?.firstName || user?.email || 'Admin User'}</h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'admin@techlearn.com'}</p>
-                              <div className="mt-1"><span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">Administrator</span></div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button onClick={() => setProfileDropdownOpen(false)} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
-                            <div><div className="font-medium">Profile Settings</div><div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div></div>
-                          </button>
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                          <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg></div>
-                            <div><div className="font-medium">Log Out</div><div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out of your account</div></div>
-                          </button>
-                        </div>
-                        <div className="px-4 py-2 bg-black/[0.025] dark:bg-white/[0.025] border-t border-black/5 dark:border-white/5">
-                          <p className="text-[9px] text-black/40 dark:text-white/40 text-center">TechLearn Admin Panel v2.0</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
+              <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            <section className="pt-2 sm:pt-1">
+              <div className="rounded-2xl bg-white/72 dark:bg-[#0f1f43]/72 border border-black/10 dark:border-white/10 p-4 sm:p-0 sm:rounded-none sm:bg-transparent sm:dark:bg-transparent sm:border-0">
+                <h2 className="text-[1.35rem] sm:text-xl leading-none font-semibold tracking-tight text-[#1b2b42] dark:text-white">Reports</h2>
+                <p className="mt-2 sm:mt-1 text-[13px] sm:text-xs leading-relaxed text-[#5f7590] dark:text-white/60">Export platform data for analysis and record-keeping</p>
+              </div>
+            </section>
+
             {/* Report Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-3.5">
               {reportTypes.map(report => (
-                <div key={report.id} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors group">
-                  <div>
-                    <h3 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{report.title}</h3>
-                    <p className="text-[10px] text-black/40 dark:text-white/40 mt-1.5">{report.desc}</p>
+                <article key={report.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 sm:p-4 min-h-0 sm:min-h-[132px] shadow-sm transition-colors flex flex-col">
+                  <div className="flex items-start gap-3.5 sm:gap-3 min-h-0 sm:min-h-[68px]">
+                    <div className="h-11 w-11 sm:h-10 sm:w-10 rounded-xl sm:rounded-lg bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
+                      <report.icon className="w-[18px] h-[18px] sm:w-4 sm:h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-[1.08rem] sm:text-base leading-tight font-semibold text-[#1a2a41] dark:text-white">{report.title}</h3>
+                      <p className="mt-1.5 sm:mt-1 text-[13px] sm:text-[11px] leading-relaxed sm:leading-snug text-[#67809a] dark:text-white/60">{report.desc}</p>
+                    </div>
                   </div>
-                  <div className="mt-5 pt-4 border-t border-black/5 dark:border-white/5 flex items-center gap-2">
+
+                  <div className="mt-3 sm:mt-auto pt-0.5 sm:pt-3 flex items-center gap-2.5 sm:gap-2 flex-wrap">
                     {report.formats.map(fmt => {
                       const key = `${report.id}-${fmt}`;
                       const isLoading = downloading === key;
@@ -186,7 +158,7 @@ export default function Reports() {
                         <button
                           key={fmt}
                           onClick={() => handleDownload(key)}
-                          className={`flex items-center gap-1.5 admin-micro-label px-3 py-1.5 rounded-lg border font-medium transition-all ${fs.bg} ${fs.text} hover:opacity-80 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
+                          className={`inline-flex items-center gap-1.5 px-3 sm:px-2.5 h-8 sm:h-7 rounded-full text-xs sm:text-[11px] font-semibold transition-all ${fs.bg} ${fs.text} hover:brightness-95 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           <FiDownload className={`w-3 h-3 ${isLoading ? 'animate-bounce' : ''}`} />
                           {isLoading ? 'Exporting...' : fmt}
@@ -194,38 +166,34 @@ export default function Reports() {
                       );
                     })}
                   </div>
-                </div>
+                </article>
               ))}
             </div>
 
             {/* Recent Exports */}
-            <div>
-              <h2 className="admin-section-heading mb-4">Recent Exports</h2>
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-xl overflow-hidden">
+            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
+              <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
+              <div className="mt-3 overflow-visible sm:overflow-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0">
                 {recentExports.map((exp, i) => {
                   const fs = formatStyle[exp.format];
                   return (
-                    <div key={exp.id} className={`flex items-center justify-between px-6 py-4 group hover:bg-white/30 dark:hover:bg-white/5 transition-colors ${i < recentExports.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/40 dark:text-white/40">
-                          <FiClock className="w-3.5 h-3.5" />
+                    <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExports.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#5f7590] dark:text-white/70">
+                          <FiClock className="w-3 h-3" />
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{exp.title}</p>
-                          <p className="text-[10px] text-black/40 dark:text-white/40 mt-0.5">{exp.date}</p>
-                        </div>
+                        <p className="truncate text-base sm:text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-md border font-medium ${fs.bg} ${fs.text}`}>{exp.format}</span>
-                        <button onClick={() => handleDownload(`re-${exp.id}`)} className="opacity-0 group-hover:opacity-100 transition-opacity p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-blue-400">
-                          <FiDownload className="w-4 h-4" />
-                        </button>
+
+                      <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-2.5 pl-8 sm:pl-0">
+                        <span className={`inline-flex items-center justify-center min-w-[52px] h-6 px-2 rounded-full text-[10px] font-semibold ${fs.bg} ${fs.text}`}>{exp.format}</span>
+                        <span className="text-xs sm:text-[11px] font-medium text-[#7087a0] dark:text-white/60">{exp.date}</span>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </section>
 
           </div>
         </main>
@@ -233,3 +201,6 @@ export default function Reports() {
     </>
   );
 }
+
+
+

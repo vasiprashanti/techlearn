@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { 
@@ -53,8 +53,16 @@ const settingsItem = {
   icon: <FiSettings className="w-4 h-4" />,
 };
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+export const OPEN_ADMIN_SIDEBAR_EVENT = 'admin-sidebar:open-mobile';
+
+const Sidebar = ({ showMobileMenuButton = true }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(() =>
+    menuGroups.reduce((acc, group) => {
+      acc[group.title] = false;
+      return acc;
+    }, {})
+  );
   const { user } = useAuth();
 
   // Ref for the desktop scrollable nav
@@ -68,25 +76,44 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const handleOpenMobileSidebar = () => setMobileMenuOpen(true);
+    window.addEventListener(OPEN_ADMIN_SIDEBAR_EVENT, handleOpenMobileSidebar);
+    return () => window.removeEventListener(OPEN_ADMIN_SIDEBAR_EVENT, handleOpenMobileSidebar);
+  }, []);
+
   const handleDesktopScroll = () => {
     if (desktopNavRef.current) {
       localStorage.setItem(SCROLL_KEY, desktopNavRef.current.scrollTop);
     }
   };
 
+  const toggleSection = (title) => {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
+
+  const getNavItemClasses = (isActive, compact = false) =>
+    `flex items-center ${compact ? "justify-center" : "gap-3"} px-3.5 py-1.5 rounded-2xl text-[12px] tracking-normal transition-all duration-200 ease-out border
+    ${
+      isActive
+        ? "bg-[#daf0fa] dark:bg-[#001233] text-[#17345f] dark:text-white border-black/10 dark:border-white/15 font-semibold"
+        : "text-white/70 dark:text-white/70 border-transparent hover:text-white dark:hover:text-white hover:bg-white/[0.06] dark:hover:bg-white/[0.08] font-medium"
+    }`;
+
   const renderLogo = (compact = false) => (
     <div
-      className={`relative shrink-0 rounded-full border border-white/70 dark:border-white/25 shadow-sm flex items-center justify-center
+      className={`relative shrink-0 flex items-center justify-center overflow-hidden
         ${compact ? "w-7 h-7" : "w-10 h-10"}
-        bg-[#0a346b] dark:bg-[#d9e8ff]`}
+      `}
     >
-      <span
-        className={`font-semibold tracking-tight leading-none select-none
-          ${compact ? "text-sm" : "text-lg"}
-          text-white dark:text-[#123766]`}
-      >
-        tls
-      </span>
+      <img
+        src="/logoo2.png"
+        alt="TLS logo"
+        className="w-full h-full object-contain"
+      />
     </div>
   );
 
@@ -96,17 +123,17 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     const email = user?.email || "admin@trace.io";
 
     return (
-      <div className={`border-t border-white/10 ${compact ? "p-2.5" : "p-3"}`}>
+      <div className={`border-t border-white/10 dark:border-white/10 ${compact ? "p-2.5" : "p-3"}`}>
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-[#3C83F6] text-white flex items-center justify-center text-base font-semibold tracking-tight shrink-0">
             {initial}
           </div>
           {!compact && (
             <div className="min-w-0">
-              <p className="text-xl font-semibold text-white truncate leading-tight">
+              <p className="text-xl font-semibold text-white dark:text-white/90 truncate leading-tight">
                 {displayName}
               </p>
-              <p className="text-[11px] text-white/55 truncate mt-0.5">
+              <p className="text-[11px] text-white/55 dark:text-white/60 truncate mt-0.5">
                 {email}
               </p>
             </div>
@@ -117,56 +144,63 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
   };
 
   const renderNavLinks = (compact = false, onClickAction = () => {}) => (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-4 pb-7">
       {menuGroups.map((group, idx) => (
-        <div key={idx} className={compact ? "space-y-2" : "space-y-3"}>
+        <div key={idx} className={compact ? "space-y-2" : "space-y-1.5"}>
           {!compact && (
-            <div className="flex items-center justify-between px-4">
-              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/35">
+            <button
+              type="button"
+              onClick={() => toggleSection(group.title)}
+              className="w-full flex items-center justify-between px-1 py-1 bg-transparent border-0 hover:text-white transition-colors"
+              aria-expanded={!collapsedSections[group.title]}
+              aria-label={`${collapsedSections[group.title] ? 'Expand' : 'Collapse'} ${group.title} section`}
+            >
+              <h4 className="text-[10px] uppercase tracking-[0.14em] font-semibold text-white/45 dark:text-white/50">
                 {group.title}
               </h4>
-              <FiChevronDown className="w-3.5 h-3.5 text-white/30" />
-            </div>
+              <FiChevronDown
+                className={`w-3.5 h-3.5 text-white/40 dark:text-white/45 transition-transform duration-200 ${collapsedSections[group.title] ? '-rotate-90' : 'rotate-0'}`}
+              />
+            </button>
           )}
-          <div className="space-y-1">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.id}
-                to={`/${item.id}`}
-                onClick={onClickAction}
-                className={({ isActive }) =>
-                  `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-wide transition-all duration-300 ease-out border
-                  ${
-                    isActive
-                      ? "bg-[#3C83F6] text-white border-white/70 dark:border-white/20 font-semibold shadow-[0_0_0_2px_rgba(255,255,255,0.9)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.22)]"
-                      : "text-white/55 border-transparent hover:text-white hover:bg-white/5 font-medium"
-                  }`
-                }
-                title={compact ? item.title : undefined}
+          <AnimatePresence initial={false}>
+            {compact || !collapsedSections[group.title] ? (
+              <Motion.div
+                key={`${group.title}-items`}
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="overflow-hidden"
               >
-                {item.icon}
-                {!compact && <span>{item.title}</span>}
-              </NavLink>
-            ))}
-          </div>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.id}
+                      to={`/${item.id}`}
+                      onClick={onClickAction}
+                      className={({ isActive }) => getNavItemClasses(isActive, compact)}
+                      title={compact ? item.title : undefined}
+                    >
+                      {item.icon}
+                      {!compact && <span>{item.title}</span>}
+                    </NavLink>
+                  ))}
+                </div>
+              </Motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       ))}
     </div>
   );
 
   const renderSettingsSection = (compact = false, onClickAction = () => {}) => (
-    <div className="-mx-4 px-4 pt-4 pb-4 border-t border-white/10">
+    <div className="-mx-4 px-4 pt-4 pb-4 border-t border-white/10 dark:border-white/10">
       <NavLink
         to={`/${settingsItem.id}`}
         onClick={onClickAction}
-        className={({ isActive }) =>
-          `flex items-center ${compact ? "justify-center" : "gap-3"} px-4 py-2.5 rounded-2xl text-sm tracking-wide transition-all duration-300 ease-out border
-          ${
-            isActive
-              ? "bg-[#3C83F6] text-white border-white/70 dark:border-white/20 font-semibold shadow-[0_0_0_2px_rgba(255,255,255,0.9)] dark:shadow-[0_0_0_2px_rgba(255,255,255,0.22)]"
-              : "text-white/55 border-transparent hover:text-white hover:bg-white/5 font-medium"
-          }`
-        }
+        className={({ isActive }) => getNavItemClasses(isActive, compact)}
         title={compact ? settingsItem.title : undefined}
       >
         {settingsItem.icon}
@@ -179,56 +213,47 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     <>
       {/* Desktop Sidebar */}
       <div
-        className={`hidden lg:flex flex-col fixed left-0 top-0 z-40 h-screen overflow-hidden pt-0 border-r transition-all duration-300
-          ${isCollapsed ? "w-20" : "w-64"}
+        className={`hidden lg:flex flex-col fixed left-0 top-0 z-40 h-screen overflow-hidden pt-0 border-r w-64
           bg-gradient-to-b from-[#0a1a44] via-[#0a173c] to-[#091333]
-          dark:from-[#08163a] dark:via-[#071231] dark:to-[#060f2a]
-          border-white/10`}
+          dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
+          border-white/10 dark:border-white/10`}
       >
-        <div className={`relative h-16 flex items-center ${isCollapsed ? "justify-center" : "justify-between"} px-4 border-b border-white/10`}>
+        <div className="relative h-14 flex items-center justify-between px-4 border-b border-white/10 dark:border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            {renderLogo(isCollapsed)}
+            {renderLogo(false)}
           </div>
-
-          <button
-            onClick={() => onToggle?.(!isCollapsed)}
-            className={`w-9 h-9 rounded-2xl items-center justify-center transition-colors shadow-sm
-              ${isCollapsed
-                ? "absolute right-[-18px] top-1/2 -translate-y-1/2 bg-white/90 text-[#18386d] border border-white/80 hover:bg-white"
-                : "flex text-white/80 hover:text-white hover:bg-white/10"
-              }`}
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <FiChevronLeft className={`w-4 h-4 ${isCollapsed ? "rotate-180" : ""}`} />
-          </button>
         </div>
         <div
           ref={desktopNavRef}
           onScroll={handleDesktopScroll}
-          className="flex-1 overflow-y-auto px-4 pt-6 scrollbar-hide"
+          className="flex-1 overflow-y-auto px-4 pt-3 scrollbar-hide"
         >
-          {renderNavLinks(isCollapsed)}
-          {renderSettingsSection(isCollapsed)}
+          {renderNavLinks(false)}
+          {renderSettingsSection(false)}
         </div>
-        {renderUserPanel(isCollapsed)}
+        {renderUserPanel(false)}
       </div>
 
       {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-6 left-6 z-50 p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10"
-      >
-        <FiMenu className="w-5 h-5" />
-      </button>
+      {showMobileMenuButton && (
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          aria-label="Open sidebar"
+          className="lg:hidden fixed left-3 top-2.5 z-50 w-9 h-9 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white border border-slate-900/12 dark:border-white/20 bg-transparent hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.08] active:scale-95 transition-all duration-200"
+        >
+          <FiMenu className="w-4.5 h-4.5" />
+        </button>
+      )}
 
       {/* Mobile close button */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <button
             onClick={() => setMobileMenuOpen(false)}
-            className="lg:hidden fixed top-6 right-6 z-[60] p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10"
+            aria-label="Close sidebar"
+            className="lg:hidden fixed top-4 right-4 z-[60] w-10 h-10 inline-flex items-center justify-center rounded-xl text-[#17345f] dark:text-white bg-white/90 dark:bg-[#0f1f43]/95 backdrop-blur-xl border border-black/10 dark:border-white/20 shadow-[0_10px_22px_rgba(15,34,64,0.18)] dark:shadow-[0_10px_22px_rgba(0,0,0,0.35)] hover:scale-[1.02] active:scale-95 transition-all duration-200"
           >
-            <FiX className="w-5 h-5" />
+            <FiX className="w-[18px] h-[18px]" />
           </button>
         )}
       </AnimatePresence>
@@ -237,41 +262,41 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
               className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             />
-            <motion.div
+            <Motion.div
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
               className="lg:hidden fixed left-0 top-0 bottom-0 w-72 z-50 shadow-2xl border-r
                 bg-gradient-to-b from-[#0a1a44] via-[#0a173c] to-[#091333]
-                dark:from-[#08163a] dark:via-[#071231] dark:to-[#060f2a]
-                border-white/10"
+                dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]
+                border-white/10 dark:border-white/10"
             >
               <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 dark:border-white/10">
                   {renderLogo()}
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="w-8 h-8 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-center"
+                    className="w-8 h-8 rounded-lg text-white/80 dark:text-white/80 hover:text-white dark:hover:text-white hover:bg-white/10 dark:hover:bg-white/10 transition-colors flex items-center justify-center"
                     aria-label="Close sidebar"
                   >
                     <FiChevronLeft className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4 pt-6 scrollbar-hide">
+                <div className="flex-1 overflow-y-auto px-4 pt-3 scrollbar-hide">
                   {renderNavLinks(false, () => setMobileMenuOpen(false))}
                   {renderSettingsSection(false, () => setMobileMenuOpen(false))}
                 </div>
                 {renderUserPanel(false)}
               </div>
-            </motion.div>
+            </Motion.div>
           </>
         )}
       </AnimatePresence>
