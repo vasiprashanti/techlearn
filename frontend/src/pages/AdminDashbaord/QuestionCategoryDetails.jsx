@@ -79,6 +79,7 @@ export default function QuestionCategoryDetails() {
   const { categorySlug } = useParams();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('All levels');
@@ -622,9 +623,10 @@ export default function QuestionCategoryDetails() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#cfe3ef] via-[#c2dae8] to-[#cfe3ef]'}`} />
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
+      <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
         <div className="max-w-[1600px] mx-auto space-y-6">
-          <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
             <div>
               <h1 className="admin-page-title">Question Bank</h1>
             </div>
@@ -633,19 +635,19 @@ export default function QuestionCategoryDetails() {
 
           <div className="space-y-4">
             <div className="flex flex-col gap-4">
+              <button
+                onClick={() => navigate('/question-bank')}
+                className="inline-flex items-center gap-2 text-[#5f7592] dark:text-slate-300 hover:text-[#3c83f6] dark:hover:text-blue-300 text-sm font-medium self-start"
+                aria-label="Back to question categories"
+              >
+                <FiArrowLeft className="w-4 h-4" />
+                Back to Question Bank
+              </button>
+
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => navigate('/question-bank')}
-                    className="h-10 w-10 rounded-full border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-100 flex items-center justify-center hover:bg-white dark:hover:bg-white/20 transition-colors"
-                    aria-label="Back to question categories"
-                  >
-                    <FiArrowLeft className="w-4 h-4" />
-                  </button>
-                  <div>
-                    <h2 className="text-xl leading-tight md:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{category.title}</h2>
-                    <p className="text-xs leading-tight md:text-sm font-light text-slate-600 dark:text-slate-300">{questions.length} questions</p>
-                  </div>
+                <div>
+                  <h2 className="text-xl leading-tight md:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{category.title}</h2>
+                  <p className="text-xs leading-tight md:text-sm font-light text-slate-600 dark:text-slate-300">{questions.length} questions</p>
                 </div>
 
                 <button
@@ -751,3 +753,6 @@ export default function QuestionCategoryDetails() {
     </div>
   );
 }
+
+
+

@@ -67,6 +67,7 @@ export default function TrackTemplate() {
   const { theme } = useTheme();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -490,6 +491,7 @@ export default function TrackTemplate() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
             pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
@@ -499,7 +501,7 @@ export default function TrackTemplate() {
           <div className="max-w-[1600px] mx-auto space-y-8">
 
             {/* Header — same as AdminDashboard */}
-            <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+            <header className={`sticky top-0 z-40 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
               <div className="flex-1" />
               <AdminHeaderControls user={user} logout={logout} />
             </header>

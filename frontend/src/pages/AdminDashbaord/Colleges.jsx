@@ -329,12 +329,12 @@ const Colleges = () => {
 
         <main
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
-          className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
         >
           <div className="max-w-[1600px] mx-auto space-y-6 sm:space-y-8">
 
             {/* Header */}
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-colors duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/78 dark:bg-[#001233]/76' : 'bg-[#daf0fa]/92 dark:bg-[#001233]/90'}`}>
+            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/78 dark:bg-[#001233]/76' : 'bg-[#daf0fa]/92 dark:bg-[#001233]/90'}`}>
               <div>
                 <h1 className="admin-page-title">Colleges</h1>
 
@@ -347,17 +347,17 @@ const Colleges = () => {
               <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
                 {/* Controls Row: Search (left, wide), Dropdown (middle), Add (right) */}
                 <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2.5">
-                  <div className="flex flex-row w-full gap-2.5">
-                    <div className="relative flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row w-full gap-2.5">
+                    <div className="relative w-full sm:flex-1 min-w-0">
                       <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
                       <input
                         value={collegeSearchTerm}
                         onChange={(e) => setCollegeSearchTerm(e.target.value)}
                         placeholder="Search colleges..."
-                        className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                        className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                       />
                     </div>
-                    <div className="relative w-[160px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
+                    <div className="relative w-full sm:w-[160px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
@@ -372,7 +372,7 @@ const Colleges = () => {
                     <div className="flex-1 hidden sm:block" />
                     <button
                       onClick={openCreate}
-                      className="h-10 sm:h-9 px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors ml-auto"
+                      className="h-10 sm:h-9 w-full sm:w-auto px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors ml-0 sm:ml-auto"
                       style={{ minWidth: 0 }}
                     >
                       <FiPlus className="w-3.5 h-3.5" />
@@ -499,3 +499,5 @@ const Colleges = () => {
 };
 
 export default Colleges;
+
+

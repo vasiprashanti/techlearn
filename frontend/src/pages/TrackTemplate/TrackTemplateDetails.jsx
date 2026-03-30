@@ -85,6 +85,7 @@ export default function TrackTemplateDetails() {
 
   const [mounted, setMounted] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [assignedQuestions, setAssignedQuestions] = useState([]);
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
@@ -244,9 +245,12 @@ export default function TrackTemplateDetails() {
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden`}>
+      <main
+        onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden`}
+      >
         <div className="max-w-[1600px] mx-auto space-y-5">
-          <header className="sticky top-0 z-30 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 bg-white/95 dark:bg-white/95 backdrop-blur-xl border-b border-black/5 dark:border-black/5 flex items-center justify-between">
+          <header className={`sticky top-0 z-40 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-white/90 dark:bg-[#0f274f]/90" : "bg-white/95 dark:bg-[#0f274f]/95"}`}>
             <div className="flex-1" />
             <AdminHeaderControls user={user} logout={logout} />
           </header>
@@ -344,3 +348,4 @@ export default function TrackTemplateDetails() {
     </div>
   );
 }
+

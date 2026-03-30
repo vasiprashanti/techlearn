@@ -24,6 +24,7 @@ export default function QuestionBank() {
   const navigate = useNavigate();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const isDarkMode = theme === 'dark';
@@ -42,10 +43,11 @@ export default function QuestionBank() {
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main
-        className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
       >
         <div className="max-w-[1600px] mx-auto space-y-6">
-          <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
             <div>
               <h1 className="admin-page-title">Question Bank</h1>
             </div>
@@ -55,7 +57,7 @@ export default function QuestionBank() {
           <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <article className="bg-white/95 dark:bg-[#0a1d45] border border-black/10 dark:border-white/10 rounded-xl px-5 py-4 min-h-[96px]">
               <div>
-                <p className="text-xl leading-none text-black/65 dark:text-white/65">Total Questions</p>
+                <p className="text-sm md:text-base leading-none text-black/65 dark:text-white/65">Total Questions</p>
                 <p className="mt-2.5 text-4xl font-semibold tracking-tight leading-none text-black dark:text-white">
                   {questionCategories.reduce((sum, category) => sum + category.total, 0)}
                 </p>
@@ -64,7 +66,7 @@ export default function QuestionBank() {
 
             <article className="bg-white/95 dark:bg-[#0a1d45] border border-black/10 dark:border-white/10 rounded-xl px-5 py-4 min-h-[96px]">
               <div>
-                <p className="text-xl leading-none text-black/65 dark:text-white/65">Total Categories</p>
+                <p className="text-sm md:text-base leading-none text-black/65 dark:text-white/65">Total Categories</p>
                 <p className="mt-2.5 text-4xl font-semibold tracking-tight leading-none text-black dark:text-white">{questionCategories.length}</p>
               </div>
             </article>
@@ -118,3 +120,6 @@ export default function QuestionBank() {
     </div>
   );
 }
+
+
+

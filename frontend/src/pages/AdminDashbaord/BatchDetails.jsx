@@ -231,6 +231,7 @@ const BatchDetails = () => {
   const isDarkMode = theme === 'dark';
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -284,14 +285,15 @@ const BatchDetails = () => {
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main
-        className={`flex-1 min-h-[100dvh] transition-all duration-700 ease-in-out z-10 ${
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${
           sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
         } pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${
           mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <header className="sticky top-0 z-30 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 bg-[#daf0fa]/88 dark:bg-[#001233]/84 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between">
+          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
             <div className="flex-1" />
             <AdminHeaderControls user={user} logout={logout} />
           </header>
@@ -403,3 +405,6 @@ const BatchDetails = () => {
 };
 
 export default BatchDetails;
+
+
+
