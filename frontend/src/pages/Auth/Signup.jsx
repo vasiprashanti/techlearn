@@ -225,8 +225,8 @@ export default function Signup() {
 
           <p className={`text-center mt-4 text-xs ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
             Already have an account?{' '}
-            <Link to="/" className={`font-medium hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
-              Go to home
+            <Link to="/login" className={`font-medium hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+              Sign in
             </Link>
           </p>
         </form>

@@ -23,11 +23,11 @@ const handleResponse = async (response) => {
       error
     });
 
-    // Handle 401 Unauthorized - clear token and redirect to signup
+    // Handle 401 Unauthorized - clear token and redirect to login
     if (response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('authToken'); // Also clear backup token
-      window.location.href = '/signup';
+      window.location.href = '/login';
     }
 
     throw new Error(error.message || `HTTP error! status: ${response.status}`);
