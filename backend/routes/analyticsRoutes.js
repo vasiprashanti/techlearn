@@ -1,10 +1,14 @@
 import express from "express";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import {
-  getScoreTrend,
-  getCompletionRate,
-  getTrackComparison,
-  getSubmissionVolume,
+    getScoreTrend,
+    getCompletionRate,
+    getTrackComparison,
+    getSubmissionVolume,
+    getLeaderboard,
+    getDayWiseScore,
+    getWeeklyMatrix,
+    exportBatchReportCSV
 } from "../controllers/analyticsController.js";
 
 const analyticsRouter = express.Router();
@@ -23,5 +27,17 @@ analyticsRouter.get("/track-comparison", protect, isAdmin, getTrackComparison);
 
 // GET /api/admin/analytics/submission-volume
 analyticsRouter.get("/submission-volume", protect, isAdmin, getSubmissionVolume);
+
+// GET /api/admin/analytics/leaderboard/:batchId
+analyticsRouter.get("/leaderboard/:batchId", protect, isAdmin, getLeaderboard);
+
+// GET /api/admin/analytics/score/:batchId/:studentId
+analyticsRouter.get("/score/:batchId/:studentId", protect, isAdmin, getDayWiseScore);
+
+// GET /api/admin/analytics/matrix/:batchId/:studentId
+analyticsRouter.get("/matrix/:batchId/:studentId", protect, isAdmin, getWeeklyMatrix);
+
+// GET /api/admin/analytics/export/:batchId
+analyticsRouter.get("/export/:batchId", protect, isAdmin, exportBatchReportCSV);
 
 export default analyticsRouter;
