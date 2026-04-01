@@ -1,11 +1,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from './AuthContext';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
+  const { user: authUser, token: authToken, isAuthenticated } = useAuth();
+
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,6 +23,20 @@ export const UserProvider = ({ children }) => {
   const [activities, setActivities] = useState({});
   const [isReady, setIsReady] = useState(false);
 
+  const normalizeUser = (rawUser) => {
+    if (!rawUser || typeof rawUser !== 'object') return null;
+
+    const firstName = rawUser.firstName || rawUser.name?.split(' ')[0] || 'User';
+    const lastName = rawUser.lastName || rawUser.name?.split(' ').slice(1).join(' ') || '';
+
+    return {
+      ...rawUser,
+      firstName,
+      lastName,
+      email: rawUser.email || '',
+    };
+  };
+
   // Load user data from localStorage and validate structure
   const loadUserFromStorage = () => {
     const userDataStr = localStorage.getItem('userData');
@@ -27,18 +44,10 @@ export const UserProvider = ({ children }) => {
 
     try {
       const localUser = JSON.parse(userDataStr);
-      if (!localUser || typeof localUser !== 'object') return false;
+      const normalized = normalizeUser(localUser);
+      if (!normalized) return false;
 
-      // Ensure required fields exist
-      const firstName = localUser.firstName || localUser.name?.split(' ')[0] || 'User';
-      const lastName = localUser.lastName || localUser.name?.split(' ').slice(1).join(' ') || '';
-
-      setUser({
-        ...localUser,
-        firstName,
-        lastName,
-        email: localUser.email || '',
-      });
+      setUser(normalized);
       return true;
     } catch (e) {
       console.error('Failed to parse userData:', e);
@@ -56,12 +65,15 @@ export const UserProvider = ({ children }) => {
   };
 
   // Fetch user + dashboard data from API
-  const fetchUserData = async () => {
+  const fetchUserData = async (overrideToken) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const token = localStorage.getItem('token');
+      const token = overrideToken || localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-  const { data } = await axios.get(`${BASE_URL}/dashboard`, {
+      const { data } = await axios.get(`${BASE_URL}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -103,16 +115,39 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     const initializeUser = async () => {
       const hasLocalUser = loadUserFromStorage();
-      if (localStorage.getItem('token')) {
-        await fetchUserData(); // Sync with backend
-      } else if (!hasLocalUser) {
-        setUser({ firstName: 'Guest', lastName: '', email: '' });
+      const existingToken = localStorage.getItem('token');
+
+      if (existingToken) {
+        await fetchUserData(existingToken); // Sync with backend
+      } else {
+        if (!hasLocalUser) {
+          setUser({ firstName: 'Guest', lastName: '', email: '' });
+        }
+        // Important: if we don't fetch, we must stop the loading state.
+        setIsLoading(false);
       }
       setIsReady(true);
     };
 
     initializeUser();
   }, []);
+
+  // When auth state changes (e.g. user logs in from a modal while already on /dashboard),
+  // sync the UserContext immediately so the dashboard doesn't stay stuck in a loading state.
+  useEffect(() => {
+    if (!isAuthenticated || !authToken) return;
+
+    const normalized = normalizeUser(authUser);
+    if (normalized) {
+      setUser(normalized);
+      localStorage.setItem('userData', JSON.stringify(normalized));
+    } else {
+      // Fallback if AuthContext hasn't populated user yet
+      loadUserFromStorage();
+    }
+
+    fetchUserData(authToken);
+  }, [isAuthenticated, authToken, authUser]);
 
   return (
     <UserContext.Provider

@@ -46,8 +46,11 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
-    if (devOrigins.includes(origin)) return callback(null, true);
+    if (process.env.NODE_ENV !== "production") {
+      const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
+      if (devOrigins.includes(origin)) return callback(null, true);
+      if (/^http:\/\/localhost:\d+$/.test(origin)) return callback(null, true);
+    }
 
     if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)
       return callback(null, true);
@@ -174,7 +177,7 @@ export default app;
 
 // Local Development Server (only runs when not in Vercel)
 if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);

@@ -1,7 +1,14 @@
 // API Service Layer for TechLearn Solutions
 // This handles all communication with the backend
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const fallbackHost = 'http://localhost:5000';
+
+const normalizedApiUrl = (rawApiUrl || '').trim().replace(/\/+$/, '');
+const API_HOST = normalizedApiUrl
+  ? normalizedApiUrl.replace(/\/api$/, '')
+  : fallbackHost;
+const API_BASE = `${API_HOST}/api`;
 
 
 
@@ -456,7 +463,7 @@ export const apiStatus = {
   // Check if backend is running
   checkHealth: async () => {
     try {
-      const healthUrl = `${API_BASE.replace('/api', '')}/`;
+      const healthUrl = `${API_HOST}/health`;
       console.log('🏥 Health check URL:', healthUrl);
 
       const response = await fetch(healthUrl, {
@@ -470,7 +477,9 @@ export const apiStatus = {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response
+          .json()
+          .catch(() => ({ message: 'OK (non-JSON response)' }));
         console.log('🏥 Health check data:', data);
       }
 

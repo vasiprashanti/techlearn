@@ -13,6 +13,11 @@ const Sidebar = () => {
     { id: "projects", title: "Current Projects" },
     { id: "mcq", title: "MCQ" },
     { id: "coding", title: "Coding Round" },
+    { id: "learn/interview-questions", title: "Interview Questions" },
+    { id: "learn/interview-questions/sql", title: "SQL Questions" },
+    { id: "learn/interview-questions/dsa", title: "DSA Questions" },
+    { id: "learn/interview-questions/core-cs", title: "Core CS Questions" },
+    { id: "learn/interview-questions/company", title: "Company Questions" },
   ];
 
   return (

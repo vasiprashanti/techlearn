@@ -237,6 +237,12 @@ const Courses = () => {
             >
               Courses
             </h2>
+            <button
+              onClick={() => navigate('/learn/interview-questions')}
+              className="ml-auto rounded-full border border-blue-200 bg-white/70 px-4 py-2 text-sm font-medium text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-white"
+            >
+              Interview Questions
+            </button>
           </div>
           <p className="text-lg text-blue-600 dark:text-blue-400 font-medium mb-12">
             Discover our comprehensive learning programs

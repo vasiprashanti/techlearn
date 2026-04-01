@@ -236,3 +236,30 @@ export const questionBankQuestions = Object.fromEntries(
 
 export const getQuestionCategoryBySlug = (slug) =>
   questionCategories.find((category) => category.slug === slug);
+
+export const interviewQuestionsCatalog = [
+  { id: 'iq-1', title: 'Two Sum', subtitle: 'Arrays', difficulty: 'Easy', topic: 'DSA' },
+  { id: 'iq-2', title: 'Reverse Linked List', subtitle: 'Linked List', difficulty: 'Easy', topic: 'DSA' },
+  { id: 'iq-3', title: 'Binary Tree Inorder Traversal', subtitle: 'Trees', difficulty: 'Easy', topic: 'DSA' },
+  { id: 'iq-4', title: 'Merge Sort Implementation', subtitle: 'Sorting', difficulty: 'Medium', topic: 'DSA' },
+  { id: 'iq-5', title: 'Longest Palindromic Substring', subtitle: 'Strings', difficulty: 'Medium', topic: 'DSA' },
+  { id: 'iq-6', title: 'LRU Cache', subtitle: 'Design', difficulty: 'Hard', topic: 'DSA' },
+  { id: 'iq-7', title: 'SELECT with JOINs', subtitle: 'Joins', difficulty: 'Easy', topic: 'SQL' },
+  { id: 'iq-8', title: 'Subquery Optimization', subtitle: 'Subqueries', difficulty: 'Medium', topic: 'SQL' },
+  { id: 'iq-9', title: 'Window Functions', subtitle: 'Advanced', difficulty: 'Hard', topic: 'SQL' },
+  { id: 'iq-10', title: 'GROUP BY with HAVING', subtitle: 'Aggregation', difficulty: 'Easy', topic: 'SQL' },
+  { id: 'iq-11', title: 'Normalization Forms', subtitle: 'Design', difficulty: 'Medium', topic: 'SQL' },
+  { id: 'iq-12', title: 'OS Process Scheduling', subtitle: 'OS', difficulty: 'Medium', topic: 'Core CS' },
+  { id: 'iq-13', title: 'TCP vs UDP', subtitle: 'Networking', difficulty: 'Easy', topic: 'Core CS' },
+  { id: 'iq-14', title: 'Virtual Memory Paging', subtitle: 'OS', difficulty: 'Hard', topic: 'Core CS' },
+  { id: 'iq-15', title: 'DBMS ACID Properties', subtitle: 'DBMS', difficulty: 'Easy', topic: 'Core CS' },
+  { id: 'iq-16', title: 'OOP Concepts', subtitle: 'OOP', difficulty: 'Easy', topic: 'Core CS' },
+  { id: 'iq-17', title: 'Google: Median of Two Sorted Arrays', subtitle: 'Google', difficulty: 'Hard', topic: 'Company' },
+  { id: 'iq-18', title: 'Amazon: Design LRU Cache', subtitle: 'Amazon', difficulty: 'Hard', topic: 'Company' },
+  { id: 'iq-19', title: 'Microsoft: Rotate Array', subtitle: 'Microsoft', difficulty: 'Medium', topic: 'Company' },
+  { id: 'iq-20', title: 'Meta: Valid Parentheses', subtitle: 'Meta', difficulty: 'Easy', topic: 'Company' },
+  { id: 'iq-21', title: 'Graph BFS Traversal', subtitle: 'Graphs', difficulty: 'Medium', topic: 'DSA' },
+  { id: 'iq-22', title: 'Dynamic Programming - Knapsack', subtitle: 'DP', difficulty: 'Hard', topic: 'DSA' },
+  { id: 'iq-23', title: 'Indexed Views in SQL', subtitle: 'Advanced', difficulty: 'Hard', topic: 'SQL' },
+  { id: 'iq-24', title: 'Deadlock Detection', subtitle: 'OS', difficulty: 'Hard', topic: 'Core CS' },
+];

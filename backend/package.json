@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "build": "echo 'No build step required for Node.js backend'"
+    "build": "echo 'No build step required for Node.js backend'",
+    "seed:users": "node scripts/seedUsers.js"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +32,7 @@
     "firebase-admin": "^13.4.0",
     "fontkit": "^2.0.4",
     "google-auth-library": "^10.1.0",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "marked": "^16.0.0",
     "mongodb": "^6.17.0",

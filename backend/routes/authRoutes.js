@@ -13,6 +13,19 @@ const router = express.Router();
 const client = new OAuth2Client();
 const SALT_ROUNDS = 10;
 
+function isValidEmailForAuth(identifier) {
+  const formatted = String(identifier || "").trim().toLowerCase();
+  if (!formatted) return false;
+
+  // Production keeps the original strict rule.
+  if (process.env.NODE_ENV === "production") {
+    return /^[\w.-]+@(gmail|outlook|yahoo)\.com$/.test(formatted);
+  }
+
+  // Development: allow a broader pattern so legacy test IDs like `admintls@123` work.
+  return /^[\w.-]+@[\w.-]+$/.test(formatted);
+}
+
 /* -------- JWT helper -------- */
 function generateToken(id) {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
@@ -27,9 +40,8 @@ router.post("/register", async function register(req, res) {
       return res.status(400).json({ message: "Please fill all fields" });
     }
 
-    const formattedEmail = email.trim().toLowerCase();
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
-    if (!emailRegex.test(formattedEmail)) {
+    const formattedEmail = String(email || "").trim().toLowerCase();
+    if (!isValidEmailForAuth(formattedEmail)) {
       return res
         .status(400)
         .json({ message: "Please enter a valid email account" });
@@ -72,7 +84,6 @@ router.post("/register", async function register(req, res) {
 router.post("/login", async function login(req, res) {
   try {
     const { email, password } = req.body;
-    const formattedEmail = email.trim().toLowerCase();
 
     if (!email || !password) {
       return res
@@ -80,8 +91,8 @@ router.post("/login", async function login(req, res) {
         .json({ message: "Please provide email and password" });
     }
 
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
-    if (!emailRegex.test(formattedEmail)) {
+    const formattedEmail = String(email || "").trim().toLowerCase();
+    if (!isValidEmailForAuth(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
@@ -160,6 +171,12 @@ router.post("/google", async function googleLogin(req, res) {
 /* ========== FIREBASE AUTH ========== */
 router.post("/firebase", async (req, res) => {
   const { idToken } = req.body;
+  if (!admin.apps || admin.apps.length === 0) {
+    return res.status(503).json({
+      message:
+        "Firebase authentication is not configured on the server. Please set FIREBASE_* environment variables.",
+    });
+  }
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const { email, name } = decodedToken;

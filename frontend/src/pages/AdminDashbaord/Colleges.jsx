@@ -80,7 +80,13 @@ const Colleges = () => {
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const rawApiUrl = import.meta.env.VITE_API_URL;
+  const fallbackHost = 'http://localhost:5000';
+  const normalizedApiUrl = (rawApiUrl || '').trim().replace(/\/+$/, '');
+  const API_HOST = normalizedApiUrl
+    ? normalizedApiUrl.replace(/\/api$/, '')
+    : fallbackHost;
+  const BASE_URL = `${API_HOST}/api`;
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {

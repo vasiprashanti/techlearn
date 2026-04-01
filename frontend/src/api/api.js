@@ -1,8 +1,17 @@
 // src/services/api/api.js
 import axios from 'axios';
 
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const normalizedBaseUrl = rawApiUrl
+  ? rawApiUrl.replace(/\/$/, '')
+  : 'http://localhost:5000/api';
+
+const apiBaseUrl = normalizedBaseUrl.endsWith('/api')
+  ? normalizedBaseUrl
+  : `${normalizedBaseUrl}/api`;
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  baseURL: apiBaseUrl,
 });
 
 // Add a request interceptor to include the token

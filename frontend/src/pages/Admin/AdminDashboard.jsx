@@ -52,7 +52,7 @@ const AdminDashboard = () => {
   // Payment approval function
   const approvePayment = async (paymentId) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/payments/${paymentId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/payments/${paymentId}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,

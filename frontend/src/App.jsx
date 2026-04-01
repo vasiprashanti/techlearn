@@ -48,6 +48,11 @@ import CourseDetails from './pages/Learn/CourseDetails'
 import CourseQuiz from './pages/Learn/CourseQuiz'
 import CourseTopics from './pages/Learn/CourseTopics'
 import LiveBatchDetails from './pages/Learn/LiveBatchDetails'
+import InterviewQuestions from './pages/Learn/AllInterviewQuestions'
+import SqlQuestions from './pages/Learn/SqlQuestions'
+import DsaQuestions from './pages/Learn/DsaQuestions'
+import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
+import CompanyQuestions from './pages/Learn/CompanyQuestions'
 
 // Exercise components
 import Exercises from './pages/Learn/Exercises'
@@ -666,6 +671,11 @@ function LayoutWrapper() {
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
           <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />
           <Route path="/learn/batches/:batchId" element={<LiveBatchDetails />} />
+          <Route path="/learn/interview-questions" element={<InterviewQuestions />} />
+          <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
+          <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
+          <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
+          <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
           <Route path="/learn/exercises" element={<Exercises />} />
           <Route path="/learn/exercises/:courseId" element={<ExercisesList />} />
           <Route path="/learn/exercises/:courseId/:exerciseId" element={<ExerciseDetail />} />

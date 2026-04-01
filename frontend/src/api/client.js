@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+const rawApiUrl = import.meta.env.VITE_API_URL;
+const normalizedBaseUrl = rawApiUrl
+  ? rawApiUrl.replace(/\/$/, '')
+  : 'http://localhost:5000';
+
+const apiHostUrl = normalizedBaseUrl.endsWith('/api')
+  ? normalizedBaseUrl.slice(0, -4)
+  : normalizedBaseUrl;
+
 const API = axios.create({
-  baseURL: import.meta.env.REACT_APP_API_URL || 'http://localhost:3001',
+  baseURL: apiHostUrl,
 });
 
 // Auto-inject JWT token

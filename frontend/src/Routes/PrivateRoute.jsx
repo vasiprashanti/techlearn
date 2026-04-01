@@ -1,18 +1,21 @@
 import { Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthModalContext } from '../context/AuthModalContext';
+import { useAuth } from '../context/AuthContext';
 
 const PrivateRoute = () => {
-  const token = localStorage.getItem('token');
+  const { isAuthenticated, isLoading, token } = useAuth();
   const { openLogin } = useAuthModalContext();
 
   useEffect(() => {
-    if (!token) {
+    if (!isLoading && !isAuthenticated) {
       openLogin();
     }
-  }, [token, openLogin]);
+  }, [isLoading, isAuthenticated, openLogin]);
 
-  return token ? <Outlet /> : null;
+  if (isLoading) return null;
+
+  return isAuthenticated && token ? <Outlet /> : null;
 };
 
 export default PrivateRoute;

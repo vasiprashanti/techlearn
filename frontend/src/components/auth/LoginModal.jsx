@@ -68,7 +68,10 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       if (response.ok && data.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userData", JSON.stringify(data.user));
-        localStorage.setItem("isAdmin", data.user?.isAdmin ? "true" : "false");
+        localStorage.setItem(
+          "isAdmin",
+          data.user?.role === "admin" ? "true" : "false",
+        );
 
         // Navigate based on user role
         navigateBasedOnRole(data.user);
@@ -86,23 +89,11 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
     e.preventDefault();
     setError("");
 
-    // Hardcoded admin credentials check
-    if (
-      formData.email === "admintls@123" &&
-      formData.password === "admintls123"
-    ) {
-      localStorage.setItem("token", "mock-admin-token");
-      localStorage.setItem("isAdmin", "true");
-      navigate("/admin");
-      onClose();
-      return;
-    }
-
     try {
       const result = await login(formData);
       if (result.success) {
         // Set admin status based on user data
-        const isAdmin = result.data?.user?.isAdmin || false;
+        const isAdmin = result.data?.user?.role === "admin";
         localStorage.setItem("isAdmin", isAdmin ? "true" : "false");
 
         // Navigate based on user role
@@ -267,7 +258,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                     Email
                   </label>
                   <input
-                    type="email"
+                    type="text"
                     className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="username@gmail.com"
                     value={formData.email}

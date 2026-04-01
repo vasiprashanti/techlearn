@@ -1,21 +1,28 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 
 export default function AdminPrivateRoute() {
-  const userData = localStorage.getItem('userData');
-  const token = localStorage.getItem('token');
+  const { user, token, isAuthenticated, isLoading } = useAuth();
   const { openLogin } = useAuthModalContext();
 
-  // Parse userData only if it exists
-  const user = userData ? JSON.parse(userData) : null;
+  const effectiveUser = user;
+  const hasAuth = Boolean(isAuthenticated && token);
 
-  if (!user || !token) {
-    openLogin();
-    return null;
-  }
+  // If we're not authenticated (after restore completes), show the login modal.
+  // Use an effect to avoid state updates during render.
+  useEffect(() => {
+    if (!isLoading && !hasAuth) {
+      openLogin();
+    }
+  }, [isLoading, hasAuth, openLogin]);
 
-  if (user.role !== 'admin') {
+  if (isLoading) return null;
+
+  if (!hasAuth) return null;
+
+  if (!effectiveUser || effectiveUser.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

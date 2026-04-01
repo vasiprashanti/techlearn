@@ -50,7 +50,13 @@ const CodingCompiler = ({ user, contestData }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
 
-  const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000"; // Fallback URL
+  const rawApiUrl = import.meta.env.VITE_API_URL;
+  const fallbackHost = "http://localhost:5000";
+  const normalizedApiUrl = (rawApiUrl || "").trim().replace(/\/+$/, "");
+  const API_HOST = normalizedApiUrl
+    ? normalizedApiUrl.replace(/\/api$/, "")
+    : fallbackHost;
+  const API_BASE = `${API_HOST}/api`;
 
   // problems state - now using passed data instead of fetching
   const [problems, setProblems] = useState([]);
@@ -114,7 +120,7 @@ const CodingCompiler = ({ user, contestData }) => {
   try {
     console.log("Auto-submitting round with link ID:", linkId);
 
-    const response = await fetch(`${BASE_URL}/college-coding/${linkId}/auto-submit`, {
+    const response = await fetch(`${API_BASE}/college-coding/${linkId}/auto-submit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -206,7 +212,7 @@ const CodingCompiler = ({ user, contestData }) => {
       return;
     }
 
-    if (!BASE_URL) {
+    if (!API_BASE) {
       setOutput("⚠️ Error: API URL not configured.");
       return;
     }
@@ -227,10 +233,10 @@ const CodingCompiler = ({ user, contestData }) => {
       };
 
       console.log("Run payload:", payload);
-      console.log("API URL:", `${BASE_URL}/college-coding/${linkId}/run`);
+      console.log("API URL:", `${API_BASE}/college-coding/${linkId}/run`);
 
       const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/run`,
+        `${API_BASE}/college-coding/${linkId}/run`,
         payload,
         {
           timeout: 30000,
@@ -349,7 +355,7 @@ const CodingCompiler = ({ user, contestData }) => {
       };
 
       const response = await axios.post(
-        `${BASE_URL}/college-coding/${linkId}/submit`,
+        `${API_BASE}/college-coding/${linkId}/submit`,
         payload,
         {
           timeout: 30000, // Same as handleRun
@@ -420,7 +426,7 @@ const CodingCompiler = ({ user, contestData }) => {
   try {
     console.log("Ending round manually with link ID:", linkId);
 
-    const response = await fetch(`${BASE_URL}/college-coding/${linkId}/end`, {
+    const response = await fetch(`${API_BASE}/college-coding/${linkId}/end`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -544,7 +550,7 @@ const CodingCompiler = ({ user, contestData }) => {
               <p>Contest Data Keys: {Object.keys(contestData).join(", ")}</p>
               <p>Problems Array Length: {problems.length}</p>
               <p>Link ID: {linkId || "Not available"}</p>
-              <p>Base URL: {BASE_URL}</p>
+              <p>API Base: {API_BASE}</p>
             </div>
           )}
         </div>
