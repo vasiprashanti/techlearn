@@ -4,6 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyAuditLogs, emptyAuditSummary } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit3, FiTrash2 } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -21,17 +23,6 @@ const searchRoutes = [
   { id: 'notifications',      title: 'Notifications',      category: 'Operations'   },
   { id: 'audit-logs',         title: 'Audit Logs',         category: 'Operations'   },
   { id: 'reports',            title: 'Reports',            category: 'Operations'   },
-];
-
-const logs = [
-  { id: 1, action: 'Created batch',          detail: 'CS-2024A',      actor: 'Admin User', type: 'Batch',    ts: '2025-03-08 14:32', verb: 'Created' },
-  { id: 2, action: 'Updated track template', detail: 'DSA Track',     actor: 'Admin User', type: 'Track',    ts: '2025-03-08 13:15', verb: 'Updated' },
-  { id: 3, action: 'Deleted question',       detail: 'Old Two Sum',   actor: 'Admin User', type: 'Question', ts: '2025-03-08 11:45', verb: 'Deleted' },
-  { id: 4, action: 'Added student',          detail: 'John Doe',      actor: 'Admin User', type: 'Student',  ts: '2025-03-07 16:20', verb: 'Created' },
-  { id: 5, action: 'Updated college',        detail: 'MIT',           actor: 'Admin User', type: 'College',  ts: '2025-03-07 10:10', verb: 'Updated' },
-  { id: 6, action: 'Created track template', detail: 'SQL Track v2',  actor: 'Admin User', type: 'Track',    ts: '2025-03-06 09:30', verb: 'Created' },
-  { id: 7, action: 'Deleted batch',          detail: 'TEST-001',      actor: 'Admin User', type: 'Batch',    ts: '2025-03-05 17:00', verb: 'Deleted' },
-  { id: 8, action: 'Updated question',       detail: 'Binary Search', actor: 'Admin User', type: 'Question', ts: '2025-03-05 14:22', verb: 'Updated' },
 ];
 
 const verbConfig = {
@@ -59,10 +50,33 @@ export default function AuditLogs() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+  const [logEntries, setLogEntries] = useState(emptyAuditLogs);
+  const [summary, setSummary] = useState(emptyAuditSummary);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getAuditLogs(tableSearch)
+      .then((remoteData) => {
+        if (!cancelled) {
+          setLogEntries(preferRemoteData(remoteData?.logs, emptyAuditLogs));
+          setSummary(preferRemoteData(remoteData?.summary, emptyAuditSummary));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLogEntries(emptyAuditLogs);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tableSearch]);
 
   useEffect(() => {
     const down = (e) => {
@@ -85,13 +99,10 @@ export default function AuditLogs() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const filteredLogs = logs.filter(l => {
+  const filteredLogs = logEntries.filter(l => {
     const q = tableSearch.toLowerCase();
     return !q || l.action.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q) || l.type.toLowerCase().includes(q);
   });
-
-  const today = logs.filter(l => l.ts.startsWith('2025-03-08')).length;
-  const deletions = logs.filter(l => l.verb === 'Deleted').length;
 
   return (
     <>
@@ -158,9 +169,9 @@ export default function AuditLogs() {
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { label: 'Total Actions', value: logs.length },
-                { label: 'Today',         value: today       },
-                { label: 'Deletions',     value: deletions   },
+                { label: 'Total Actions', value: summary.totalActions },
+                { label: 'Today',         value: summary.today },
+                { label: 'Deletions',     value: summary.deletions },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-xl px-5 py-4">
                   <p className="text-3xl leading-none font-semibold tracking-tight text-[#1e2f45] dark:text-white">{value}</p>

@@ -15,7 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { getQuestionCategoryBySlug, questionBankQuestions } from '../../data/adminQuestionBankData';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
 
 const difficultyPillClass = (difficulty) => {
   if (difficulty === 'Easy') return 'bg-[#16a34a] text-white';
@@ -29,6 +29,19 @@ const statusPillClass = (status) =>
     : 'bg-[#dbe7ff] text-[#3c83f6]';
 
 const createTestCase = () => ({ input: '', output: '', explanation: '' });
+
+const dynamicCategoryFallback = (slug) => ({
+  id: slug,
+  slug,
+  title: slug
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' '),
+  subtitle: 'Custom question category',
+  total: 0,
+  active: 0,
+  icon: 'chart',
+});
 
 const createQuestionForm = (track = '') => ({
   title: '',
@@ -95,24 +108,23 @@ export default function QuestionCategoryDetails() {
   });
   const [viewQuestion, setViewQuestion] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [remoteCategory, setRemoteCategory] = useState(null);
 
   const isDarkMode = theme === 'dark';
-  const category = getQuestionCategoryBySlug(categorySlug);
+  const category = remoteCategory || dynamicCategoryFallback(categorySlug);
 
-  const seedQuestions = useMemo(() => {
-    if (!category) return [];
-    return questionBankQuestions[category.slug] || [];
-  }, [category]);
+  const seedQuestions = useMemo(() => [], []);
 
   const trackOptions = useMemo(
-    () => [
+    () => Array.from(new Set([
       'Data Structures & Algorithms',
       'Web Development',
       'Python Programming',
       'Database Management',
       'Machine Learning',
-    ],
-    []
+      category?.title,
+    ].filter(Boolean))),
+    [category?.title]
   );
 
   useEffect(() => {
@@ -120,8 +132,47 @@ export default function QuestionCategoryDetails() {
   }, []);
 
   useEffect(() => {
-    setQuestions(seedQuestions);
-  }, [seedQuestions]);
+    let cancelled = false;
+
+    adminAPI
+      .getQuestionCategories()
+      .then((categories) => {
+        if (!cancelled) {
+          const match = categories.find((item) => item.slug === categorySlug);
+          setRemoteCategory(match || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRemoteCategory(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categorySlug]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getQuestions({ categorySlug })
+      .then((remoteQuestions) => {
+        if (!cancelled) {
+          setQuestions(preferRemoteData(remoteQuestions, seedQuestions));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setQuestions(seedQuestions);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categorySlug, seedQuestions]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
@@ -190,7 +241,7 @@ export default function QuestionCategoryDetails() {
     setQuestionForm((prev) => ({ ...prev, [section]: [...prev[section], createTestCase()] }));
   };
 
-  const saveQuestion = () => {
+  const saveQuestion = async () => {
     if (!questionForm.title.trim() || !questionForm.trackType || !questionForm.problemDescription.trim()) {
       return;
     }
@@ -220,47 +271,73 @@ export default function QuestionCategoryDetails() {
       editorial: questionForm.editorial,
     };
 
-    if (editingQuestionId) {
-      setQuestions((prev) =>
-        prev.map((question) => (question.id === editingQuestionId ? { ...question, ...payload } : question))
-      );
-    } else {
-      setQuestions((prev) => [
-        {
-          id: `q-${Date.now()}`,
-          ...payload,
-        },
-        ...prev,
-      ]);
+    const backendPayload = {
+      title: payload.title,
+      difficulty: payload.difficulty,
+      categorySlug,
+      categoryTitle: category?.title,
+      trackType: payload.track,
+      tags: payload.tags,
+      description: payload.description,
+      inputFormat: payload.inputFormat,
+      outputFormat: payload.outputFormat,
+      visibleTestCases: payload.visibleTestCases,
+      hiddenTestCases: payload.hiddenTestCases,
+      timeLimit: payload.timeLimit,
+      memoryLimit: payload.memoryLimit,
+      referenceLanguage: payload.referenceLanguage,
+      solutionCode: payload.solutionCode,
+      editorial: payload.editorial,
+      status: payload.status,
+    };
+
+    try {
+      if (editingQuestionId && !String(editingQuestionId).startsWith('q-')) {
+        await adminAPI.updateQuestion(editingQuestionId, backendPayload);
+        const refreshed = await adminAPI.getQuestions({ categorySlug });
+        setQuestions(preferRemoteData(refreshed, questions));
+      } else if (!editingQuestionId) {
+        await adminAPI.createQuestion(backendPayload);
+        const refreshed = await adminAPI.getQuestions({ categorySlug });
+        setQuestions(preferRemoteData(refreshed, questions));
+      } else {
+        setQuestions((prev) =>
+          prev.map((question) => (question.id === editingQuestionId ? { ...question, ...payload } : question))
+        );
+      }
+    } catch {
+      if (editingQuestionId) {
+        setQuestions((prev) =>
+          prev.map((question) => (question.id === editingQuestionId ? { ...question, ...payload } : question))
+        );
+      } else {
+        setQuestions((prev) => [
+          {
+            id: `q-${Date.now()}`,
+            ...payload,
+          },
+          ...prev,
+        ]);
+      }
     }
 
     closeQuestionModal();
   };
 
-  const confirmDeleteQuestion = () => {
+  const confirmDeleteQuestion = async () => {
     if (!deleteTarget) return;
+    try {
+      if (!String(deleteTarget.id).startsWith('q-')) {
+        await adminAPI.deleteQuestion(deleteTarget.id);
+      }
+    } catch {
+      // Keep local fallback behavior.
+    }
     setQuestions((prev) => prev.filter((question) => question.id !== deleteTarget.id));
     setDeleteTarget(null);
   };
 
   if (!mounted) return <LoadingScreen />;
-
-  if (!category) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#cbe0ec] dark:bg-[#001233] px-6">
-        <div className="max-w-md w-full rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#06183d] p-8 text-center">
-          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Category not found</h2>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">The requested question category does not exist.</p>
-          <button
-            onClick={() => navigate('/question-bank')}
-            className="mt-6 inline-flex items-center justify-center rounded-2xl px-5 py-2.5 text-sm font-semibold text-white bg-[#3c83f6] hover:bg-[#2563eb] transition-colors"
-          >
-            Back to Question Bank
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -686,7 +763,55 @@ export default function QuestionCategoryDetails() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-black/10 dark:border-white/10 overflow-hidden bg-white/95 dark:bg-[#0a1d45]">
+              <div className="space-y-3 lg:hidden">
+                {filteredQuestions.map((question) => (
+                  <article key={question.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-slate-900 dark:text-white break-words">{question.title || 'Untitled Question'}</h3>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 break-words">{question.track || 'General'}</p>
+                      </div>
+                      <span className={`shrink-0 inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
+                        {question.difficulty}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-300">Created</p>
+                        <p className="mt-1 text-slate-800 dark:text-slate-100">{question.created}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500 dark:text-slate-300">Status</p>
+                        <p className="mt-1">
+                          <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(question.status)}`}>
+                            {question.status}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-end gap-3 text-slate-800 dark:text-slate-100">
+                      <button onClick={() => setViewQuestion(question)} className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors" aria-label="View question">
+                        <FiEye className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => openEditQuestion(question)} className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors" aria-label="Edit question">
+                        <FiEdit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => setDeleteTarget(question)} className="p-2 rounded-lg hover:text-rose-500 hover:bg-rose-500/10 transition-colors" aria-label="Delete question">
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {filteredQuestions.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-300">
+                    No questions found for the selected filters.
+                  </div>
+                )}
+              </div>
+
+              <div className="hidden lg:block rounded-xl border border-black/10 dark:border-white/10 overflow-hidden bg-white/95 dark:bg-[#0a1d45]">
                 <div className="relative">
                   <div className="overflow-x-scroll pb-2" style={{ scrollbarGutter: 'stable both-edges' }}>
                     <table className="w-full min-w-[980px]">

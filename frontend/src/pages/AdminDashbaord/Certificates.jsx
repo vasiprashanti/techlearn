@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyCertificatesState } from '../../data/adminEmptyStates';
 import { FiSearch, FiTrash2, FiPlus } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -22,26 +24,6 @@ const searchRoutes = [
   { id: 'notifications', title: 'Notifications', category: 'Operations' },
   { id: 'audit-logs', title: 'Audit Logs', category: 'Operations' },
   { id: 'reports', title: 'Reports', category: 'Operations' },
-];
-
-const issuedCerts = [
-  { id: 'CERT-001', student: 'Alex Johnson', course: 'React Fundamentals', score: 92, date: '2024-12-15' },
-  { id: 'CERT-002', student: 'Sarah Williams', course: 'Python for Data Science', score: 88, date: '2024-12-18' },
-  { id: 'CERT-003', student: 'Mike Chen', course: 'SQL Mastery', score: 95, date: '2024-12-20' },
-  { id: 'CERT-004', student: 'Emily Davis', course: 'React Fundamentals', score: 85, date: '2025-01-05' },
-  { id: 'CERT-005', student: 'James Wilson', course: 'Node.js Backend', score: 78, date: '2025-01-10' },
-];
-
-const finalTests = [
-  { id: 'TEST-001', title: 'React Final Assessment', course: 'React Fundamentals', passing: 80, attempts: 14 },
-  { id: 'TEST-002', title: 'Python Final Exam', course: 'Python for Data Science', passing: 75, attempts: 9 },
-  { id: 'TEST-003', title: 'SQL Mastery Test', course: 'SQL Mastery', passing: 85, attempts: 6 },
-];
-
-const templates = [
-  { id: 'TPL-001', name: 'Standard Certificate', courses: 5, lastUpdated: '2024-11-01' },
-  { id: 'TPL-002', name: 'Honours Certificate', courses: 2, lastUpdated: '2024-11-15' },
-  { id: 'TPL-003', name: 'Completion Badge', courses: 8, lastUpdated: '2024-12-01' },
 ];
 
 const scorePillClass = (score) =>
@@ -62,12 +44,11 @@ export default function Certificates() {
   const [, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Issued Certificates');
-  const [revokedIds, setRevokedIds] = useState([]);
+  const [certificateEntries, setCertificateEntries] = useState(emptyCertificatesState.issuedCertificates);
+  const [finalTestEntries, setFinalTestEntries] = useState(emptyCertificatesState.finalTests);
+  const [templateEntries, setTemplateEntries] = useState(emptyCertificatesState.templates);
   const [revokeTarget, setRevokeTarget] = useState(null);
-  const [testQuestions, setTestQuestions] = useState([
-    { id: 'tq-1', question: 'What is a React component?', answer: 'A reusable piece of UI' },
-    { id: 'tq-2', question: 'What is JSX?', answer: 'JavaScript XML syntax extension' },
-  ]);
+  const [testQuestions, setTestQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
   const [passingPercentage, setPassingPercentage] = useState('70');
@@ -76,6 +57,30 @@ export default function Certificates() {
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getCertificates()
+      .then((remoteCertificates) => {
+        if (!cancelled) {
+          setCertificateEntries(preferRemoteData(remoteCertificates?.issuedCertificates, emptyCertificatesState.issuedCertificates));
+          setFinalTestEntries(preferRemoteData(remoteCertificates?.finalTests, emptyCertificatesState.finalTests));
+          setTemplateEntries(preferRemoteData(remoteCertificates?.templates, emptyCertificatesState.templates));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCertificateEntries(emptyCertificatesState.issuedCertificates);
+          setFinalTestEntries(emptyCertificatesState.finalTests);
+          setTemplateEntries(emptyCertificatesState.templates);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -98,9 +103,24 @@ export default function Certificates() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const confirmRevoke = () => {
+  const confirmRevoke = async () => {
     if (!revokeTarget) return;
-    setRevokedIds((prev) => (prev.includes(revokeTarget.id) ? prev : [...prev, revokeTarget.id]));
+    try {
+      if (revokeTarget.status === 'Revoked') {
+        await adminAPI.restoreCertificate(revokeTarget.id);
+      } else {
+        await adminAPI.revokeCertificate(revokeTarget.id);
+      }
+    } catch {
+      // Keep local fallback.
+    }
+    setCertificateEntries((prev) =>
+      prev.map((certificate) =>
+        certificate.id === revokeTarget.id
+          ? { ...certificate, status: certificate.status === 'Revoked' ? 'Active' : 'Revoked' }
+          : certificate
+      )
+    );
     setRevokeTarget(null);
   };
 
@@ -252,10 +272,10 @@ export default function Certificates() {
                       ))}
                     </div>
 
-                    {issuedCerts.map((cert, i) => {
-                      const revoked = revokedIds.includes(cert.id);
+                    {certificateEntries.map((cert, i) => {
+                      const revoked = cert.status === 'Revoked';
                       return (
-                        <div key={cert.id} className={`grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-2.5 ${i < issuedCerts.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
+                        <div key={cert.id} className={`grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-2.5 ${i < certificateEntries.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
                           <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.student}</span>
                           <span className="text-sm md:text-base font-medium text-[#0f1f3d] dark:text-white">{cert.course}</span>
                           <span className={`justify-self-start inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${scorePillClass(cert.score)}`}>
@@ -265,11 +285,7 @@ export default function Certificates() {
                           <span className="text-xs md:text-sm font-mono text-[#0f1f3d] dark:text-white">{cert.id}</span>
                           <button
                             onClick={() => {
-                              if (revoked) {
-                                setRevokedIds((prev) => prev.filter((id) => id !== cert.id));
-                              } else {
-                                setRevokeTarget(cert);
-                              }
+                              setRevokeTarget(cert);
                             }}
                             className={`text-sm md:text-base font-semibold ${revoked ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'} hover:opacity-80`}
                           >
@@ -362,21 +378,26 @@ export default function Certificates() {
 
             {activeTab === 'Templates' && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  { key: 'Classic', title: 'Classic Template' },
-                  { key: 'Modern', title: 'Modern Template' },
-                  { key: 'Minimal', title: 'Minimal Template' },
-                ].map((tpl) => (
-                  <article key={tpl.key} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
-                    <div className="h-28 rounded-xl bg-[#e2e8ef] dark:bg-[#17345f] flex items-center justify-center">
-                      <span className="text-3xl font-semibold text-[#b4bfcc] dark:text-slate-400">{tpl.key}</span>
+                {templateEntries.map((tpl) => (
+                  <article key={tpl.id || tpl.name} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4 min-w-0">
+                    <div className="h-28 rounded-xl bg-[#e2e8ef] dark:bg-[#17345f] flex items-center justify-center px-4 text-center">
+                      <span className="line-clamp-2 text-2xl font-semibold text-[#b4bfcc] dark:text-slate-400 break-words">
+                        {tpl.name || 'Template'}
+                      </span>
                     </div>
-                    <div className="mt-4 text-center">
-                      <h4 className="text-xl font-medium text-[#0f1f3d] dark:text-white">{tpl.title}</h4>
-                      <p className="mt-1.5 text-sm text-[#5f7592] dark:text-slate-300">Certificate design template</p>
+                    <div className="mt-4 text-center min-w-0">
+                      <h4 className="text-xl font-medium text-[#0f1f3d] dark:text-white break-words">{tpl.name || 'Untitled Template'}</h4>
+                      <p className="mt-1.5 text-sm text-[#5f7592] dark:text-slate-300 break-words">
+                        {tpl.courses ? `${tpl.courses} linked course${tpl.courses === 1 ? '' : 's'}` : 'Certificate design template'}
+                      </p>
                     </div>
                   </article>
                 ))}
+                {templateEntries.length === 0 && (
+                  <div className="md:col-span-3 rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-12 text-center text-sm text-[#5f7592] dark:text-slate-300">
+                    Certificate templates will appear here once they are created in the backend.
+                  </div>
+                )}
               </div>
             )}
 

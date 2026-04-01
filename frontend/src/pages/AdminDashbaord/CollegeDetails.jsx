@@ -4,25 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { FiArrowLeft, FiUsers, FiActivity, FiLayers, FiTrendingUp, FiBarChart2, FiArrowUpRight } from 'react-icons/fi';
-
-const fallbackCollegeMap = {
-  'MIT-001': {
-    id: 'MIT-001',
-    name: 'MIT',
-    city: 'Cambridge, MA',
-    status: 'Active',
-    totalStudents: 4,
-    activeStudents: 3,
-    activeBatches: 2,
-    avgScore: 86,
-    submissionRate: 75,
-    batches: [
-      { name: 'CS-2024A', students: 2, avgScore: 89, status: 'Active' },
-      { name: 'CS-2024B', students: 2, avgScore: 84, status: 'Active' },
-    ],
-  },
-};
 
 const statusPillClass = (status) =>
   status === 'Active'
@@ -40,42 +23,32 @@ const CollegeDetails = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [collegeDetail, setCollegeDetail] = useState(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const college = useMemo(() => {
+    if (collegeDetail) {
+      return collegeDetail;
+    }
+
     const stateCollege = location.state?.college;
     if (stateCollege?.id === collegeId) {
       return {
         ...stateCollege,
-        city: stateCollege.city || 'Cambridge, MA',
-        activeBatches: stateCollege.totalStudents > 0 ? 2 : 0,
-        submissionRate: stateCollege.totalStudents > 0
-          ? Math.round((stateCollege.activeStudents / stateCollege.totalStudents) * 100)
-          : 0,
-        batches: [
-          {
-            name: 'CS-2024A',
-            students: Math.max(1, Math.floor((stateCollege.totalStudents || 2) / 2)),
-            avgScore: Math.min(100, (stateCollege.avgScore || 82) + 3),
-            status: stateCollege.status || 'Active',
-          },
-          {
-            name: 'CS-2024B',
-            students: Math.max(1, (stateCollege.totalStudents || 2) - Math.max(1, Math.floor((stateCollege.totalStudents || 2) / 2))),
-            avgScore: Math.max(0, (stateCollege.avgScore || 82) - 2),
-            status: stateCollege.status || 'Active',
-          },
-        ],
+        city: stateCollege.city || '',
+        activeBatches: stateCollege.activeBatches || 0,
+        submissionRate: stateCollege.submissionRate || 0,
+        batches: Array.isArray(stateCollege.batches) ? stateCollege.batches : [],
       };
     }
 
-    return fallbackCollegeMap[collegeId] || {
+    return {
       id: collegeId,
       name: collegeId?.split('-')[0] || 'College',
-      city: 'Unknown City',
+      city: '',
       status: 'Active',
       totalStudents: 0,
       activeStudents: 0,
@@ -84,7 +57,28 @@ const CollegeDetails = () => {
       submissionRate: 0,
       batches: [],
     };
-  }, [location.state, collegeId]);
+  }, [collegeDetail, location.state, collegeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getCollege(collegeId)
+      .then((remoteCollege) => {
+        if (!cancelled) {
+          setCollegeDetail(preferRemoteData(remoteCollege, null));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCollegeDetail(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [collegeId]);
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>

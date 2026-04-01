@@ -4,7 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiBell, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyBatches } from '../../data/adminEmptyStates';
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard",          title: "Dashboard",          category: "Overview"     },
@@ -23,18 +25,7 @@ const searchRoutes = [
   { id: "reports",            title: "Reports",            category: "Operations"   },
 ];
 
-const batchesData = [
-  { id: "CS-2024A",  college: "MIT",                 track: "Data Structures & Algorithms", status: "Active",    start: "Jun 1, 2024",  end: "Dec 1, 2024",  students: 2 },
-  { id: "CS-2024B",  college: "MIT",                 track: "Web Development",              status: "Active",    start: "Jul 15, 2024", end: "Jan 15, 2025", students: 2 },
-  { id: "DS-2024A",  college: "Stanford University", track: "Python Programming",           status: "Active",    start: "Jun 15, 2024", end: "Dec 15, 2024", students: 3 },
-  { id: "WD-2024A",  college: "IIT Delhi",           track: "Web Development",              status: "Active",    start: "Aug 1, 2024",  end: "Feb 1, 2025",  students: 1 },
-  { id: "WD-2024B",  college: "IIT Delhi",           track: "Database Management",          status: "Upcoming",  start: "Sep 1, 2024",  end: "Mar 1, 2025",  students: 1 },
-  { id: "ML-2024A",  college: "Harvard University",  track: "Machine Learning",             status: "Completed", start: "Jun 1, 2024",  end: "Nov 30, 2024", students: 2 },
-  { id: "DSA-2024C", college: "IIT Delhi",           track: "Data Structures & Algorithms", status: "Active",    start: "Oct 1, 2024",  end: "Apr 1, 2025",  students: 1 },
-];
-
-const colleges = ["All Colleges", "MIT", "Stanford University", "IIT Delhi", "Harvard University", "IIT Bombay"];
-const collegeOptions = colleges.filter((c) => c !== 'All Colleges');
+const colleges = ["All Colleges"];
 
 const formatDisplayDate = (dateValue) => {
   if (!dateValue) return 'TBD';
@@ -93,7 +84,7 @@ const Batches = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [batches, setBatches] = useState(batchesData);
+  const [batches, setBatches] = useState(emptyBatches);
   const [mounted, setMounted]           = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -118,6 +109,30 @@ const Batches = () => {
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getBatches()
+      .then((remoteBatches) => {
+        if (!cancelled) {
+          const normalized = preferRemoteData(remoteBatches, emptyBatches).map((batch) => ({
+            ...batch,
+            id: batch.id || batch.name,
+          }));
+          setBatches(normalized);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBatches(emptyBatches);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
       if (e.key === 'Escape') setIsSearchOpen(false);
@@ -134,6 +149,7 @@ const Batches = () => {
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const collegeOptions = Array.from(new Set(batches.map((batch) => batch.college).filter(Boolean)));
   const filteredBatches = batches.filter(b => {
     const searchText = batchSearchTerm.trim().toLowerCase();
     const matchCollege = collegeFilter === 'All Colleges' || b.college === collegeFilter;
@@ -419,7 +435,7 @@ const Batches = () => {
                   onChange={(e) => setCollegeFilter(e.target.value)}
                   className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 px-3.5 pr-9 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
                 >
-                  {colleges.map((college) => <option key={college} value={college}>{college}</option>)}
+                  {['All Colleges', ...collegeOptions].map((college) => <option key={college} value={college}>{college}</option>)}
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>

@@ -4,7 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiUpload, FiBell, FiChevronDown, FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyStudents } from '../../data/adminEmptyStates';
+import { FiSearch, FiPlus, FiUpload, FiChevronDown, FiEye, FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard",          title: "Dashboard",          category: "Overview"     },
@@ -21,21 +23,6 @@ const searchRoutes = [
   { id: "notifications",      title: "Notifications",      category: "Operations"   },
   { id: "audit-logs",         title: "Audit Logs",         category: "Operations"   },
   { id: "reports",            title: "Reports",            category: "Operations"   },
-];
-
-const initialStudentsData = [
-  { name: "Alex Johnson",   email: "alex@mit.edu",        college: "MIT",                 batch: "CS-2024A",  track: "Data Structures & Algorithms", score: 92, streak: 15, status: "Active"   },
-  { name: "Sarah Williams", email: "sarah@stanford.edu",  college: "Stanford University", batch: "DS-2024A",  track: "Python Programming",           score: 88, streak: 12, status: "Active"   },
-  { name: "Mike Chen",      email: "mike@mit.edu",        college: "MIT",                 batch: "CS-2024B",  track: "Web Development",              score: 95, streak: 22, status: "Active"   },
-  { name: "Emily Davis",    email: "emily@iitd.ac.in",    college: "IIT Delhi",           batch: "WD-2024A",  track: "Web Development",              score: 79, streak: 8,  status: "Active"   },
-  { name: "James Wilson",   email: "james@stanford.edu",  college: "Stanford University", batch: "DS-2024A",  track: "Python Programming",           score: 67, streak: 3,  status: "Inactive" },
-  { name: "Lisa Anderson",  email: "lisa@mit.edu",        college: "MIT",                 batch: "CS-2024A",  track: "Data Structures & Algorithms", score: 85, streak: 10, status: "Active"   },
-  { name: "David Kim",      email: "david@iitd.ac.in",    college: "IIT Delhi",           batch: "WD-2024B",  track: "Database Management",          score: 91, streak: 18, status: "Active"   },
-  { name: "Rachel Green",   email: "rachel@stanford.edu", college: "Stanford University", batch: "DS-2024A",  track: "Python Programming",           score: 94, streak: 20, status: "Active"   },
-  { name: "Tom Brown",      email: "tom@mit.edu",         college: "MIT",                 batch: "CS-2024B",  track: "Web Development",              score: 72, streak: 5,  status: "Inactive" },
-  { name: "Priya Patel",    email: "priya@iitd.ac.in",    college: "IIT Delhi",           batch: "DSA-2024C", track: "Data Structures & Algorithms", score: 89, streak: 14, status: "Active"   },
-  { name: "Kevin Zhang",    email: "kevin@harvard.edu",   college: "Harvard University",  batch: "ML-2024A",  track: "Machine Learning",             score: 96, streak: 25, status: "Active"   },
-  { name: "Anna Martinez",  email: "anna@harvard.edu",    college: "Harvard University",  batch: "ML-2024A",  track: "Machine Learning",             score: 82, streak: 9,  status: "Active"   },
 ];
 
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
@@ -81,7 +68,7 @@ const Students = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [students, setStudents] = useState(initialStudentsData);
+  const [students, setStudents] = useState(emptyStudents);
   const [mounted, setMounted]           = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -107,6 +94,26 @@ const Students = () => {
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getStudents()
+      .then((remoteStudents) => {
+        if (!cancelled) {
+          setStudents(preferRemoteData(remoteStudents, emptyStudents));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStudents(emptyStudents);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
@@ -537,8 +544,89 @@ const Students = () => {
               </button>
             </div>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
+            {/* Mobile Cards */}
+            <div className="grid grid-cols-1 gap-3 lg:hidden">
+              {filteredStudents.map((student) => (
+                <article key={getStudentKey(student)} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-semibold text-black/85 dark:text-white break-words">{student.name}</h3>
+                      <p className="mt-1 text-sm text-black/55 dark:text-white/60 break-all">{student.email}</p>
+                    </div>
+                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border inline-flex items-center ${
+                      student.status === 'Active'
+                        ? 'border-emerald-500/20 text-white bg-emerald-500'
+                        : 'border-rose-400/20 text-white bg-rose-500'
+                    }`}>
+                      {student.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="text-black/45 dark:text-white/45">College</p>
+                      <p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.college}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-black/45 dark:text-white/45">Batch</p>
+                      <p className="mt-1">
+                        <span className="inline-flex max-w-full items-center rounded-full border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 px-2 py-0.5 text-xs font-semibold text-black/75 dark:text-white/75 break-all">
+                          {student.batch}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="col-span-2 min-w-0">
+                      <p className="text-black/45 dark:text-white/45">Track</p>
+                      <p className="mt-1 font-medium text-black/75 dark:text-white/70 break-words">{student.track}</p>
+                    </div>
+                    <div>
+                      <p className="text-black/45 dark:text-white/45">Score</p>
+                      <p className="mt-1">
+                        <span className={`text-sm leading-none font-semibold rounded-full px-2.5 py-1 inline-flex items-center ${student.score >= 90 ? 'text-white bg-emerald-500' : student.score >= 75 ? 'text-white bg-[#3C83F6]' : 'text-white bg-amber-500'}`}>
+                          {student.score}%
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-black/45 dark:text-white/45">Streak</p>
+                      <p className="mt-1 font-medium text-black/85 dark:text-white/85">{student.streak} days</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setSelectedStudent(student)}
+                      className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:hover:bg-white/10 transition-colors"
+                      aria-label={`View ${student.name}`}
+                    >
+                      <FiEye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openEditStudent(student)}
+                      className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:hover:bg-white/10 transition-colors"
+                      aria-label={`Edit ${student.name}`}
+                    >
+                      <FiEdit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteStudent(student)}
+                      className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                      aria-label={`Delete ${student.name}`}
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </article>
+              ))}
+              {filteredStudents.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                  No students match your current filters.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
               <table className="w-full min-w-[1320px] table-fixed">
                 <colgroup>
                   <col className="w-[15%]" />

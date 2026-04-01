@@ -42,6 +42,4 @@ const batchSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-batchSchema.index({ collegeId: 1 });
-
 export default mongoose.model("Batch", batchSchema);

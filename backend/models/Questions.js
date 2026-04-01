@@ -1,28 +1,102 @@
 import mongoose from "mongoose";
 
+const testCaseSchema = new mongoose.Schema(
+  {
+    input: { type: String, default: "" },
+    output: { type: String, default: "" },
+    explanation: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const questionSchema = new mongoose.Schema(
   {
-    title: String,
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
 
-    description: String,
+    description: {
+      type: String,
+      default: "",
+    },
 
     difficulty: {
       type: String,
       enum: ["Easy", "Medium", "Hard"],
+      default: "Easy",
     },
 
     trackType: {
       type: String,
-      enum: ["Core", "DSA", "SQL"],
+      default: "Core",
+      trim: true,
     },
 
-    visibleTestCases: Array,
+    categorySlug: {
+      type: String,
+      trim: true,
+      default: "",
+      index: true,
+    },
 
-    hiddenTestCases: Array,
+    categoryTitle: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    tags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+
+    inputFormat: {
+      type: String,
+      default: "",
+    },
+
+    outputFormat: {
+      type: String,
+      default: "",
+    },
+
+    visibleTestCases: [testCaseSchema],
+
+    hiddenTestCases: [testCaseSchema],
 
     timeLimit: Number,
 
     memoryLimit: Number,
+
+    status: {
+      type: String,
+      enum: ["Active", "Draft", "Archived"],
+      default: "Active",
+    },
+
+    solvedCount: {
+      type: Number,
+      default: 0,
+    },
+
+    referenceLanguage: {
+      type: String,
+      default: "C++",
+    },
+
+    solutionCode: {
+      type: String,
+      default: "",
+    },
+
+    editorial: {
+      type: String,
+      default: "",
+    },
 
     version: {
       type: Number,
@@ -36,5 +110,8 @@ const questionSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+questionSchema.index({ categorySlug: 1, status: 1 });
+questionSchema.index({ trackType: 1 });
 
 export default mongoose.model("Question", questionSchema);

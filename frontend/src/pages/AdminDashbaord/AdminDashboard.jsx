@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 // Context & Data
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
-import { adminStats } from "../../data/adminDashboardMock";
+import { emptyDashboardOverview } from "../../data/adminEmptyStates";
+import { adminAPI, preferRemoteData } from "../../services/adminApi";
 
 // Components
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin// <-- FIXED: Now using the exact Dashboard Sidebar
@@ -12,7 +13,7 @@ import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderCont
 import LoadingScreen from "../../components/Loader/Loader3D"; 
 
 // Icons
-import { FiSearch, FiBell, FiClock, FiTrendingUp, FiAward } from "react-icons/fi";
+import { FiSearch, FiClock, FiTrendingUp, FiAward } from "react-icons/fi";
 
 // --- Dashboard Logic (Search Routes) ---
 const searchRoutes = [
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dashboardData, setDashboardData] = useState(emptyDashboardOverview);
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === "dark";
@@ -60,6 +62,27 @@ export default function AdminDashboard() {
   // --- Dashboard Effects ---
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getDashboardOverview()
+      .then((remoteData) => {
+        if (!cancelled) {
+          setDashboardData(preferRemoteData(remoteData, emptyDashboardOverview));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDashboardData(emptyDashboardOverview);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -199,7 +222,7 @@ export default function AdminDashboard() {
             </header>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {adminStats.kpis.map((kpi, i) => (
+              {dashboardData.kpis.map((kpi, i) => (
                 <div
                   key={i}
                   className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-5 flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-xl"
@@ -233,7 +256,7 @@ export default function AdminDashboard() {
                     <div className="h-full w-[1px] bg-black/5 dark:bg-white/5"></div>
                   </div>
 
-                  {adminStats.collegeRanking.map((college, i) => (
+                  {dashboardData.collegeRanking.map((college, i) => (
                     <div key={i} className="flex items-center w-full z-10">
                       <div className="w-[180px] text-xs font-medium text-black/70 dark:text-white/70 pr-4 leading-tight whitespace-normal break-words">
                         {college.name}
@@ -258,6 +281,11 @@ export default function AdminDashboard() {
                     <span>75</span>
                     <span>100</span>
                   </div>
+                  {dashboardData.collegeRanking.length === 0 && (
+                    <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                      College rankings will appear here once colleges and submissions are available.
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -266,13 +294,13 @@ export default function AdminDashboard() {
                   Top Performing Students
                 </h3>
                 <div className="flex-1 flex flex-col justify-between">
-                  {adminStats.topStudents.map((student) => (
+                  {dashboardData.topStudents.map((student, index) => (
                     <div
-                      key={student.rank}
+                      key={student.rank || student.name || index}
                       className="flex items-center gap-4 group py-1"
                     >
                       <div className="w-4 text-sm font-medium text-black/30 dark:text-white/30 text-right shrink-0">
-                        {student.rank}
+                        {student.rank || index + 1}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors cursor-pointer truncate">
@@ -287,6 +315,11 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   ))}
+                  {dashboardData.topStudents.length === 0 && (
+                    <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 text-center text-sm text-black/40 dark:text-white/40">
+                      Top student rankings will appear once learner activity is recorded.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -299,10 +332,10 @@ export default function AdminDashboard() {
                     Recent Student Activity
                   </h3>
                   <div className="flex-1 overflow-y-auto pr-1">
-                    {adminStats.recentActivity.map((activity, i) => (
+                    {dashboardData.recentActivity.map((activity, i) => (
                       <div
-                        key={i}
-                        className={`py-3 ${i !== adminStats.recentActivity.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
+                        key={`${activity.name}-${i}`}
+                        className={`py-3 ${i !== dashboardData.recentActivity.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
@@ -319,6 +352,11 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                    {dashboardData.recentActivity.length === 0 && (
+                      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 text-center text-sm text-black/40 dark:text-white/40">
+                        Recent student activity will show up here when live usage begins.
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -328,10 +366,10 @@ export default function AdminDashboard() {
                     Most Solved Questions
                   </h3>
                   <div className="flex-1 overflow-y-auto pr-1">
-                    {adminStats.mostSolved.map((question, i) => (
+                    {dashboardData.mostSolved.map((question, i) => (
                       <div
-                        key={i}
-                        className={`py-3 ${i !== adminStats.mostSolved.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
+                        key={`${question.title}-${i}`}
+                        className={`py-3 ${i !== dashboardData.mostSolved.length - 1 ? "border-b border-black/10 dark:border-white/10" : ""}`}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0">
@@ -355,6 +393,11 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                    {dashboardData.mostSolved.length === 0 && (
+                      <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 text-center text-sm text-black/40 dark:text-white/40">
+                        Solved-question trends will appear after students start submitting solutions.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -366,7 +409,7 @@ export default function AdminDashboard() {
                 </h3>
                 <div className="flex-1 overflow-y-auto pr-1">
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {adminStats.batches.map((batch, i) => (
+                    {dashboardData.batches.map((batch, i) => (
                       <div
                         key={i}
                         className="p-4 border border-black/8 dark:border-white/10 bg-white dark:bg-[#0f1f43] hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-lg cursor-pointer group"
@@ -399,6 +442,11 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                    {dashboardData.batches.length === 0 && (
+                      <div className="md:col-span-2 xl:col-span-3 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                        Active and upcoming batches will appear once batches are created.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

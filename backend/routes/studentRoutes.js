@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { bulkUploadStudents, individualUploadStudent } from "../controllers/studentController.js";
+import { protect, isAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -18,10 +19,9 @@ const upload = multer({
 });
 
 // Admin Route: Bulk upload students
-// TODO: Add authenticateAdmin middleware once authentication is implemented according to TRD Section 3
-router.post("/bulk-upload", upload.single("file"), bulkUploadStudents);
+router.post("/bulk-upload", protect, isAdmin, upload.single("file"), bulkUploadStudents);
 
 // Admin Route: Upload individual student
-router.post("/upload", individualUploadStudent);
+router.post("/upload", protect, isAdmin, individualUploadStudent);
 
 export default router;

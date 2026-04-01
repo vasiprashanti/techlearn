@@ -4,6 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptySubmissionState } from '../../data/adminEmptyStates';
 import { FiSearch, FiMonitor, FiCheckCircle, FiClock, FiPlayCircle, FiXCircle, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -23,17 +25,6 @@ const searchRoutes = [
   { id: 'reports',            title: 'Reports',            category: 'Operations'   },
 ];
 
-const submissions = [
-  { id: 1, student: 'Alex Johnson',   batch: 'CS-2024A',  question: 'Two Sum',                lang: 'Python',     status: 'Accepted',     exec: '120ms',  when: '2 min ago'  },
-  { id: 2, student: 'Sarah Williams', batch: 'DS-2024A',  question: 'DataFrame Manipulation', lang: 'Python',     status: 'Wrong Answer', exec: '340ms',  when: '5 min ago'  },
-  { id: 3, student: 'Mike Chen',      batch: 'CS-2024B',  question: 'React Component Design', lang: 'JavaScript', status: 'Running',      exec: '-',      when: 'Just now'   },
-  { id: 4, student: 'Priya Patel',    batch: 'DSA-2024C', question: 'Binary Tree Traversal',  lang: 'C++',        status: 'TLE',          exec: '2000ms', when: '8 min ago'  },
-  { id: 5, student: 'Kevin Zhang',    batch: 'ML-2024A',  question: 'Linear Regression',      lang: 'Python',     status: 'Accepted',     exec: '890ms',  when: '12 min ago' },
-  { id: 6, student: 'Lisa Anderson',  batch: 'CS-2024A',  question: 'Maximum Subarray Sum',   lang: 'Java',       status: 'Accepted',     exec: '95ms',   when: '15 min ago' },
-  { id: 7, student: 'David Kim',      batch: 'WD-2024B',  question: 'SQL Join Operations',    lang: 'SQL',        status: 'Wrong Answer', exec: '45ms',   when: '20 min ago' },
-  { id: 8, student: 'Tom Brown',      batch: 'CS-2024B',  question: 'Reverse Linked List',    lang: 'Python',     status: 'Accepted',     exec: '110ms',  when: '25 min ago' },
-];
-
 const statusConfig = {
   'Accepted':     { Icon: FiCheckCircle, label: 'text-emerald-500 dark:text-emerald-400' },
   'Wrong Answer': { Icon: FiXCircle,     label: 'text-rose-500 dark:text-rose-400' },
@@ -51,6 +42,8 @@ export default function SubmissionMonitor() {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [submissionEntries, setSubmissionEntries] = useState(emptySubmissionState.submissions);
+  const [submissionKpis, setSubmissionKpis] = useState(emptySubmissionState.kpis);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
@@ -58,6 +51,27 @@ export default function SubmissionMonitor() {
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getSubmissions()
+      .then((remoteData) => {
+        if (!cancelled) {
+          setSubmissionEntries(preferRemoteData(remoteData?.submissions, emptySubmissionState.submissions));
+          setSubmissionKpis(preferRemoteData(remoteData?.kpis, emptySubmissionState.kpis));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSubmissionEntries(emptySubmissionState.submissions);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     const down = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
@@ -77,12 +91,10 @@ export default function SubmissionMonitor() {
   );
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const filteredSubs = submissions.filter(s => {
+  const filteredSubs = submissionEntries.filter(s => {
     const q = tableSearch.toLowerCase();
     return !q || s.student.toLowerCase().includes(q) || s.question.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q);
   });
-
-  const accepted = submissions.filter(s => s.status === 'Accepted').length;
 
   return (
     <>
@@ -177,10 +189,10 @@ export default function SubmissionMonitor() {
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {[
-                { label: 'Total Today',   value: submissions.length, icon: FiMonitor },
-                { label: 'Accepted',      value: accepted,           icon: FiCheckCircle },
-                { label: 'Success Rate',  value: `${Math.round((accepted / submissions.length) * 100)}%`, icon: FiCheckCircle },
-                { label: 'Avg Exec Time', value: '320ms',            icon: FiClock },
+                { label: 'Total Today',   value: submissionKpis.totalToday, icon: FiMonitor },
+                { label: 'Accepted',      value: submissionKpis.accepted, icon: FiCheckCircle },
+                { label: 'Success Rate',  value: `${submissionKpis.successRate}%`, icon: FiCheckCircle },
+                { label: 'Avg Exec Time', value: submissionKpis.avgExecutionTime, icon: FiClock },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
                   <div className="flex items-center gap-3">
@@ -197,7 +209,7 @@ export default function SubmissionMonitor() {
             </div>
 
             {/* Toolbar */}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="relative w-full md:max-w-[520px]">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/35 pointer-events-none" />
                 <input type="text" placeholder="Search by student or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
@@ -205,15 +217,67 @@ export default function SubmissionMonitor() {
               </div>
               <button
                 onClick={() => setTableSearch('')}
-                className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-[#5e748d] dark:text-white/70 hover:bg-[#f0f5fb] dark:hover:bg-white/[0.04] transition-colors"
+                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-[#5e748d] dark:text-white/70 hover:bg-[#f0f5fb] dark:hover:bg-white/[0.04] transition-colors"
               >
                 <FiRefreshCw className="w-3.5 h-3.5" />
                 Refresh
               </button>
             </div>
 
-            {/* Table */}
-            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+            {/* Mobile Cards */}
+            <div className="grid grid-cols-1 gap-3 lg:hidden">
+              {filteredSubs.map((s) => {
+                const sc = statusConfig[s.status];
+                const StatusIcon = sc.Icon;
+                return (
+                  <article
+                    key={s.id}
+                    onClick={() => setSelectedSubmission(s)}
+                    className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm transition-colors cursor-pointer hover:bg-black/[0.015] dark:hover:bg-white/[0.03]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold text-[#1d3149] dark:text-white/90 break-words">{s.student}</h3>
+                        <p className="mt-1 text-sm text-[#6a8097] dark:text-white/60 break-words">{s.batch}</p>
+                      </div>
+                      <span className={`inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold ${sc.label}`}>
+                        <StatusIcon className="w-3.5 h-3.5" />
+                        {s.status}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <p className="text-xs text-[#6a8097] dark:text-white/55">Question</p>
+                        <p className="mt-1 text-sm text-[#2d3e54] dark:text-white/75 break-words">{s.question}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-[#6a8097] dark:text-white/55">Language</p>
+                          <p className="mt-1"><span className={langPill}>{s.lang}</span></p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-[#6a8097] dark:text-white/55">Exec Time</p>
+                          <p className={`mt-1 text-sm font-semibold tabular-nums ${s.exec === '-' ? 'text-black/25 dark:text-white/25' : 'text-[#6a8097] dark:text-white/60'}`}>{s.exec}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[#6a8097] dark:text-white/55">When</p>
+                        <p className="mt-1 text-xs text-[#6a8097] dark:text-white/55">{s.when}</p>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+              {filteredSubs.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/30 dark:text-white/30">
+                  No submissions match your filters.
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-scroll">
               <table className="w-full min-w-[1120px] table-auto">
                 <colgroup>
