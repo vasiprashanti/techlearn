@@ -1,28 +1,39 @@
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
-import {
-  BookOpen, CheckCircle, ChevronLeft, ChevronRight,
-  X, AlertCircle
-} from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
-import useInViewport from "../../hooks/useInViewport";
 import { courseAPI } from "../../services/api";
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import Sidebar from '../../components/Dashboard/Sidebar';
 
 const CourseTopics = () => {
+  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+  const isDarkMode = theme === 'dark';
+
   const { courseId } = useParams();
   const navigate = useNavigate();
+  
+  // Layout State
+  const [appSidebarCollapsed, setAppSidebarCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
+  
+  const userInitial = user?.firstName?.charAt(0)?.toUpperCase() || 'S';
+  const userName = user?.firstName ? user.firstName : 'Student';
+
   const [selectedTopic, setSelectedTopic] = useState(0);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [titleRef, isTitleInViewport] = useInViewport();
+  
+  // Ref for the scrollable container
+  const scrollContainerRef = useRef(null);
 
   const [backendCourse, setBackendCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -37,237 +48,37 @@ const CourseTopics = () => {
         setBackendCourse(courseData);
         setError(null);
       } catch (err) {
-        console.error('Error fetching course for topics:', err);
         setError(err.message);
         setBackendCourse(null);
       } finally {
         setLoading(false);
       }
     };
-
-    if (courseId) {
-      fetchCourse();
-    }
+    if (courseId) fetchCourse();
   }, [courseId]);
-
-  const courseTopicsData = {
-    "python": {
-      title: "Python Programming",
-      description: "Master Python fundamentals with hands-on coding exercises",
-      topics: [
-        {
-          id: "variables",
-          title: "Variables & Data Types",
-          description: "Learn about Python variables, data types, and basic operations",
-          exercises: 5,
-          maxXP: 50,
-          completed: false,
-          content: {
-            theory: "Variables are containers for storing data values. In Python, you don't need to declare variables explicitly - they are created automatically when you assign a value to them.\n\nPython has several built-in data types:\n• Integers (int): Whole numbers like 42, -17, 0\n• Floats (float): Decimal numbers like 3.14, -2.5\n• Strings (str): Text like \"Hello\", 'Python'\n• Booleans (bool): True or False values\n\nVariable Assignment Examples:\nYou can assign values to variables using the equals sign (=). Python automatically determines the data type based on the value you assign.\n\nNaming Rules:\n• Variable names must start with a letter or underscore\n• Can contain letters, numbers, and underscores\n• Case-sensitive (age and Age are different)\n• Cannot use Python keywords like 'if', 'for', 'while'\n\nType Checking:\nYou can check the type of any variable using the type() function. This is useful for debugging and understanding your data.\n\nDynamic Typing:\nPython is dynamically typed, meaning you can change the type of a variable by assigning it a new value of a different type.\n\nCommon Operations:\nYou can perform various operations on variables depending on their type. For example, you can add numbers, concatenate strings, and perform logical operations on booleans.\n\nBest Practices:\n• Use descriptive variable names\n• Follow naming conventions (snake_case)\n• Initialize variables before using them\n• Be mindful of variable scope\n• Use meaningful names that describe the data\n\nString Operations:\nStrings in Python are immutable, meaning they cannot be changed after creation. However, you can create new strings based on existing ones using various string methods.\n\nNumeric Operations:\nPython supports various numeric operations including addition, subtraction, multiplication, division, and more. You can also use mathematical functions from the math module.\n\nBoolean Logic:\nBoolean values are essential for control flow in programming. They represent True or False states and are used in conditional statements and loops.",
-            codeExample: `# Creating variables
-name = "Alice"        # String
-age = 25             # Integer  
-height = 5.6         # Float
-is_student = True    # Boolean
-
-# You can check the type of a variable
-print(type(name))        # <class 'str'>
-print(type(age))         # <class 'int'>
-print(type(height))      # <class 'float'>
-print(type(is_student))  # <class 'bool'>`,
-            keyPoints: [
-              "Variables are created when you assign a value",
-              "Python is dynamically typed - no need to declare types",
-              "Use descriptive variable names for better code readability",
-              "Variable names are case-sensitive",
-              "Cannot start with numbers or contain spaces"
-            ]
-          }
-        },
-        {
-          id: "functions",
-          title: "Functions",
-          description: "Create reusable code blocks with functions",
-          exercises: 4,
-          maxXP: 40,
-          completed: false,
-          content: {
-            theory: "Functions are reusable blocks of code that perform specific tasks. They help organize code, avoid repetition, and make programs more modular and easier to maintain.\n\nFunction Definition:\nFunctions are defined using the 'def' keyword followed by the function name and parameters in parentheses. The code block within every function starts with a colon (:) and is indented.\n\nParameters and Arguments:\nParameters are variables listed inside the parentheses in the function definition. Arguments are the values passed to the function when it is called.\n\nReturn Statement:\nFunctions can return values using the 'return' statement. If no return statement is used, the function returns None by default.\n\nFunction Benefits:\n• Code reusability\n• Better organization\n• Easier testing and debugging\n• Modular programming approach\n\nFunction Scope:\nVariables defined inside a function have local scope, meaning they are only accessible within that function. Variables defined outside functions have global scope.\n\nDefault Parameters:\nYou can provide default values for function parameters. If no argument is provided for a parameter with a default value, the default is used.\n\nKeyword Arguments:\nYou can call functions using keyword arguments, which allows you to specify arguments by parameter name rather than position.\n\nVariable-Length Arguments:\nPython allows functions to accept a variable number of arguments using *args for positional arguments and **kwargs for keyword arguments.\n\nDocstrings:\nIt's good practice to include docstrings in your functions to document what they do, their parameters, and return values.",
-            codeExample: `# Defining a function
-def greet(name):
-    return f"Hello, {name}!"
-
-# Calling the function
-message = greet("Alice")
-print(message)  # Output: Hello, Alice!
-
-# Function with multiple parameters
-def calculate_area(length, width):
-    area = length * width
-    return area
-
-result = calculate_area(5, 3)
-print(f"Area: {result}")  # Output: Area: 15`,
-            keyPoints: [
-              "Use 'def' keyword to define functions",
-              "Functions can accept parameters and return values",
-              "Good function names describe what they do",
-              "Functions promote code reusability",
-              "Use docstrings to document your functions"
-            ]
-          }
-        },
-        {
-          id: "loops",
-          title: "Loops & Iterations",
-          description: "Master for loops, while loops, and iteration patterns",
-          exercises: 6,
-          maxXP: 60,
-          completed: false,
-          content: {
-            theory: "Loops allow you to repeat code multiple times. Python has two main types of loops: 'for' loops for iterating over sequences, and 'while' loops for repeating until a condition is false.\n\nFor Loops:\nFor loops iterate over a sequence (like a list, tuple, string, or range). They are ideal when you know how many times you want to execute a block of code.\n\nWhile Loops:\nWhile loops repeat as long as a certain condition is true. They are useful when you don't know in advance how many iterations you need.\n\nLoop Control:\n• break: Exit the loop immediately\n• continue: Skip the rest of the current iteration\n• else: Execute code when loop completes normally\n\nRange Function:\nThe range() function generates a sequence of numbers, commonly used with for loops. It can take one, two, or three arguments: start, stop, and step.\n\nNested Loops:\nYou can place loops inside other loops to create nested structures. This is useful for working with multi-dimensional data structures.\n\nList Comprehensions:\nPython provides a concise way to create lists using list comprehensions, which combine loops and conditional logic in a single line.\n\nIteration Patterns:\nCommon patterns include iterating over indices, iterating over items, and iterating over both indices and items using enumerate().\n\nLoop Performance:\nWhile loops can be less efficient than for loops in some cases. It's important to choose the right loop type for your specific use case.\n\nInfinite Loops:\nBe careful to avoid infinite loops by ensuring that the loop condition will eventually become false or that you have a proper exit mechanism.",
-            codeExample: `# For loop example
-fruits = ["apple", "banana", "orange"]
-for fruit in fruits:
-    print(f"I like {fruit}")
-
-# While loop example
-count = 0
-while count < 5:
-    print(f"Count: {count}")
-    count += 1
-
-# Range function with for loop
-for i in range(1, 6):
-    print(f"Number: {i}")`,
-            keyPoints: [
-              "For loops iterate over sequences (lists, strings, etc.)",
-              "While loops continue until condition becomes False",
-              "Use range() to generate number sequences",
-              "Break and continue statements control loop flow",
-              "Avoid infinite loops by ensuring conditions change"
-            ]
-          }
-        },
-        {
-          id: "classes",
-          title: "Classes & Objects",
-          description: "Object-oriented programming with classes and objects",
-          exercises: 5,
-          maxXP: 50,
-          completed: false,
-          content: {
-            theory: "Classes are blueprints for creating objects. They encapsulate data (attributes) and functions (methods) that work on that data. This is the foundation of object-oriented programming.\n\nClass Definition:\nClasses are defined using the 'class' keyword followed by the class name. By convention, class names use CamelCase.\n\nThe __init__ Method:\nThis special method is called when a new object is created. It's used to initialize the object's attributes.\n\nSelf Parameter:\nThe 'self' parameter refers to the current instance of the class. It must be the first parameter in all instance methods.\n\nObject Creation:\nTo create an object, call the class like a function. This automatically calls the __init__ method.\n\nOOP Benefits:\n• Code organization and reusability\n• Data encapsulation\n• Inheritance and polymorphism\n• Easier maintenance and debugging\n\nInstance vs Class Attributes:\nInstance attributes are specific to each object, while class attributes are shared among all instances of a class.\n\nMethod Types:\nPython classes can have instance methods, class methods, and static methods, each serving different purposes.\n\nInheritance:\nClasses can inherit from other classes, allowing you to create specialized versions while reusing common functionality.\n\nEncapsulation:\nPython uses naming conventions to indicate private attributes and methods, though true privacy is not enforced.\n\nPolymorphism:\nDifferent classes can implement the same method names, allowing objects to be used interchangeably in certain contexts.",
-            codeExample: `# Defining a class
-class Person:
-    def __init__(self, name, age):
-        self.name = name
-        self.age = age
-    
-    def introduce(self):
-        return f"Hi, I'm {self.name} and I'm {self.age} years old"
-    
-    def have_birthday(self):
-        self.age += 1
-
-# Creating objects
-person1 = Person("Alice", 25)
-person2 = Person("Bob", 30)
-
-print(person1.introduce())  # Hi, I'm Alice and I'm 25 years old
-person1.have_birthday()
-print(f"Alice is now {person1.age}")  # Alice is now 26`,
-            keyPoints: [
-              "Classes define the structure and behavior of objects",
-              "__init__ method initializes new objects",
-              "self refers to the current instance",
-              "Methods are functions defined inside classes",
-              "Objects are instances of classes"
-            ]
-          }
-        }
-      ]
-    },
-    "data-science": {
-      title: "Data Science",
-      description: "Master data analysis and visualization techniques",
-      topics: [
-        {
-          id: "pandas-basics",
-          title: "Pandas Fundamentals",
-          description: "Learn data manipulation with Pandas DataFrames",
-          exercises: 4,
-          maxXP: 40,
-          completed: false,
-          content: {
-            theory: "Pandas is the most important library for data manipulation in Python. It provides DataFrames - powerful data structures for handling structured data.",
-            codeExample: `import pandas as pd
-
-# Creating a DataFrame
-data = {
-    'name': ['Alice', 'Bob', 'Charlie'],
-    'age': [25, 30, 35],
-    'city': ['New York', 'London', 'Tokyo']
-}
-df = pd.DataFrame(data)
-
-# Basic operations
-print(df.head())        # Show first 5 rows
-print(df.info())        # Data types and info
-print(df.describe())    # Statistical summary`,
-            keyPoints: [
-              "DataFrames are like Excel spreadsheets in Python",
-              "Use .head() and .tail() to preview data",
-              "Filter data with boolean indexing",
-              "Group data with .groupby()",
-              "Handle missing data with .fillna() and .dropna()"
-            ]
-          }
-        }
-      ]
-    }
-  };
 
   const currentCourse = (() => {
     if (backendCourse && backendCourse.topics) {
       return {
         title: backendCourse.title,
-        description: `Master ${backendCourse.title} fundamentals with hands-on coding exercises`,
+        description: `Master ${backendCourse.title} fundamentals.`,
         topics: backendCourse.topics.map((topic, index) => {
           const topicId = topic._id || topic.topicId || topic.id || `topic_${index}`;
-
-          const cleanTitle = (() => {
-            let title = topic.title || '';
-            title = title.replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1');
-            title = title.replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
-            return title;
-          })();
+          const cleanTitle = (topic.title || '').replace(/^CORE\s+(\w+)\s+NOTES\s*[-–]\s*\d+$/i, '$1').replace(/^\d+\.\s*/, '').replace(/\s*[-–]\s*\d+$/, '');
 
           return {
             id: topicId,
             title: cleanTitle,
-            description: `Learn about ${cleanTitle} concepts and applications`,
-            exercises: 5,
-            maxXP: 50,
+            description: `Learn about ${cleanTitle} concepts and applications.`,
             completed: false,
             hasNotes: !!topic.notesId,
             notesContent: topic.notes,
-            content: {
-              theory: topic.notes || `Learn the fundamentals of ${cleanTitle}. This topic covers essential concepts and practical applications.`,
-              codeExample: `// Example code for ${cleanTitle}\nconsole.log("Learning ${cleanTitle}");`,
-              keyPoints: [
-                `Understand ${cleanTitle} basics`,
-                "Apply concepts in practical scenarios",
-                "Master key techniques",
-                "Build real-world applications"
-              ]
-            }
+            content: { theory: topic.notes || `Theory content for ${cleanTitle}.` }
           };
         })
       };
     }
-
-    return courseTopicsData[courseId];
+    return null;
   })();
 
   const currentTopic = currentCourse?.topics[selectedTopic];
@@ -275,418 +86,298 @@ print(df.describe())    # Statistical summary`,
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  // Auto-scroll instantly to the top when navigating between topics
+  useEffect(() => { 
+    if (scrollContainerRef.current) {
+      // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
+      scrollContainerRef.current.scrollTop = 0;
+    }
   }, [selectedTopic]);
 
-  if (loading) {
-    return (
-      <LoadingScreen
-        showMessage={false}
-        size={48}
-        duration={800}
-      />
-    );
-  }
+  if (loading) return <><ScrollProgress /><LoadingScreen showMessage={false} size={48} duration={800} /></>;
 
-  if (error) {
+  if (error || !currentCourse) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Error Loading Course</h1>
-          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-              setTimeout(() => navigate('/learn/courses'), 100);
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-          >
-            Back to Courses
-          </button>
+      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+        <div className="flex-1 flex items-center justify-center relative z-10">
+          <div className="text-center bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-12 rounded-3xl shadow-sm">
+            <h1 className="text-xl font-medium tracking-tight text-black dark:text-white mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
+            <button onClick={() => navigate('/learn/courses')} className="text-[10px] uppercase tracking-widest font-semibold text-[#3C83F6] hover:underline">
+              Back to Course Details
+            </button>
+          </div>
         </div>
       </div>
     );
   }
-
-  if (!currentCourse) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Course Not Found</h1>
-          <button
-            onClick={() => {
-              window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-              setTimeout(() => navigate('/learn/courses'), 100);
-            }}
-            className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-          >
-            Back to Courses
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const handleToggleSidebar = () => {
-    setSidebarCollapsed(prev => !prev);
-  };
-
-  const goToPreviousTopic = () => {
-    if (!isFirstTopic) {
-      setSelectedTopic(prev => prev - 1);
-    }
-  };
-
-  const goToNextTopic = () => {
-    if (!isLastTopic) {
-      setSelectedTopic(prev => prev + 1);
-    } else {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-      setTimeout(() => navigate(`/learn/exercises/${courseId}`), 100);
-    }
-  };
 
   const cleanHeadingText = (children) => {
-    if (typeof children === 'string') {
-      return children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '');
-    }
-    if (Array.isArray(children)) {
-      return children.map(child =>
-        typeof child === 'string'
-          ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '')
-          : child
-      );
-    }
+    if (typeof children === 'string') return children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '');
+    if (Array.isArray(children)) return children.map(child => typeof child === 'string' ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '') : child);
     return children;
   };
 
+  // Re-mapped Markdown Hierarchy: Markdown H1s and H2s are gracefully styled so they don't fight the Page Title
   const markdownComponents = {
-    h1: () => null,
-    h2: () => null,
-    h3: ({children}) => (
-      <h3 className="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-3 mt-6">
-        {cleanHeadingText(children)}
-      </h3>
+    h1: ({children}) => <h2 className="text-2xl md:text-3xl font-medium text-black dark:text-white mt-12 mb-6 tracking-tight">{cleanHeadingText(children)}</h2>,
+    h2: ({children}) => <h3 className="text-xl md:text-2xl font-medium text-black dark:text-white mt-10 mb-4 tracking-tight">{cleanHeadingText(children)}</h3>,
+    h3: ({children}) => <h4 className="text-lg font-medium text-black/90 dark:text-white/90 mt-8 mb-4">{cleanHeadingText(children)}</h4>,
+    h4: ({children}) => <h5 className="text-[13px] font-bold text-black/60 dark:text-white/60 mt-6 mb-3 uppercase tracking-widest">{cleanHeadingText(children)}</h5>,
+    p: ({children}) => <p className="text-black/75 dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light">{children}</p>,
+    strong: ({children}) => <strong className="font-medium text-black dark:text-white">{children}</strong>,
+    a: ({children, href}) => <a href={href} className="text-[#3C83F6] hover:underline decoration-2 underline-offset-4 transition-all">{children}</a>,
+    blockquote: ({children}) => (
+      <blockquote className="my-8 pl-6 py-2 border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl">
+        <div className="text-black/60 dark:text-white/60 italic text-lg">{children}</div>
+      </blockquote>
     ),
-    h4: ({children}) => (
-      <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-4">
-        {cleanHeadingText(children)}
-      </h4>
-    ),
-    h5: ({children}) => (
-      <h5 className="text-base font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">
-        {cleanHeadingText(children)}
-      </h5>
-    ),
-    h6: ({children}) => (
-      <h6 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2 mt-3">
-        {cleanHeadingText(children)}
-      </h6>
+    ul: ({children}) => <ul className="flex flex-col gap-3 my-8">{children}</ul>,
+    ol: ({children}) => <ol className="list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-black/75 dark:text-white/75 text-base md:text-lg font-light">{children}</ol>,
+    li: ({children}) => (
+      <li className="flex items-start gap-4 text-base md:text-lg text-black/75 dark:text-white/75 font-light">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#3C83F6] dark:bg-white/50 mt-[0.6rem] shrink-0 shadow-sm" />
+        <span className="flex-1">{children}</span>
+      </li>
     ),
     code: ({inline, className, children, ...props}) => {
-      if (inline) {
-        return <code className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded text-sm font-mono" {...props}>{children}</code>;
-      }
+      if (inline) return <code className="bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-blue-200 px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-[#3C83F6]/20 dark:border-white/10" {...props}>{children}</code>;
       return <code className={className} {...props}>{children}</code>;
     },
-    pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-    p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
-    ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-    ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-    li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-    blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-    strong: ({children}) => <strong className="font-semibold text-gray-900 dark:text-gray-100">{children}</strong>,
-    table: ({children}) => (
-      <div className="overflow-x-auto -mx-2 sm:mx-0 my-4">
-        <table className="min-w-full">{children}</table>
+    pre: ({children}) => (
+      <div className="my-10 relative group">
+        <div className="absolute -inset-1 bg-gradient-to-r from-[#3C83F6]/20 to-[#2563eb]/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition duration-500"></div>
+        <pre className="relative bg-[#0a1128] dark:bg-black/80 border border-black/10 dark:border-white/10 rounded-2xl p-6 md:p-8 overflow-x-auto text-[13px] leading-relaxed font-mono text-slate-300 shadow-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {children}
+        </pre>
       </div>
-    )
+    ),
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
+      
+      {/* Unified Background */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
-      <div className="flex min-h-screen">
-        {/* Desktop Sidebar */}
-        <motion.div
-          initial={false}
-          animate={{
-            width: sidebarCollapsed ? "80px" : "320px",
-            transition: { duration: 0.3, ease: "easeInOut" }
-          }}
-          className="hidden lg:flex flex-col bg-transparent backdrop-blur-xl sticky top-0 h-screen z-40 overflow-hidden sidebar-container"
-        >
-          <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24 relative z-50">
-            <div className="flex items-center justify-between relative z-50">
-              <AnimatePresence mode="wait">
-                {!sidebarCollapsed && (
-                  <motion.h3
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
-                    className="font-poppins font-semibold text-2xl motion-div text-blue-900 dark:text-white/80"
-                  >
-                    Course Topics
-                  </motion.h3>
-                )}
-              </AnimatePresence>
+      {/* Main App Sidebar */}
+      <Sidebar onToggle={setAppSidebarCollapsed} isCollapsed={appSidebarCollapsed} />
 
-              <button
-                type="button"
-                onClick={handleToggleSidebar}
-                onMouseDown={(e) => e.preventDefault()}
-                className="p-2 rounded-xl bg-transparent hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex-shrink-0 cursor-pointer z-[60] relative active:scale-95"
-                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      <main className={`flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 ${appSidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} h-screen overflow-hidden`}>
+        
+        {/* Top Header */}
+        <header className="flex-shrink-0 flex items-center justify-between pt-8 pb-4 px-6 md:px-12 border-b border-black/5 dark:border-white/5">
+          <div className="flex flex-col items-start gap-3">
+            <button 
+                onClick={() => navigate(`/learn/courses/${courseId}`)} 
+                className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-black/50 hover:text-black dark:text-white/50 dark:hover:text-white transition-colors group"
               >
-                {sidebarCollapsed ? (
-                  <ChevronRight className="w-5 h-5 text-blue-900" />
-                ) : (
-                  <ChevronLeft className="w-5 h-5 text-blue-900" />
-                )}
+                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span>Back to Course</span>
+            </button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-medium tracking-tight text-[#3C83F6] dark:text-white">
+                Course Player.
+              </h1>
+              <p className="text-[10px] tracking-widest uppercase text-black/40 dark:text-white/40 mt-1 line-clamp-1 font-semibold">
+                {currentCourse.title}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 sm:gap-6 relative z-50">
+            <button 
+              onClick={() => setIsSyllabusOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+            >
+              <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Syllabus</span>
+            </button>
+
+            <button onClick={toggleTheme} className="hidden sm:block text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors font-semibold">
+              {isDarkMode ? "Light" : "Dark"}
+            </button>
+
+            <div className="relative">
+              <button 
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} 
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
+              >
+                {userInitial}
               </button>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 scrollbar-hide">
-            <div className="space-y-3">
-              {currentCourse.topics.map((topic, index) => (
-                <motion.button
-                  key={topic.id}
-                  onClick={() => setSelectedTopic(index)}
-                  whileHover={{ scale: sidebarCollapsed ? 1.05 : 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`group relative w-full text-left rounded-xl transition-all duration-300 overflow-hidden ${
-                    selectedTopic === index
-                      ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300 shadow-lg'
-                      : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50 hover:shadow-md'
-                  } ${sidebarCollapsed ? 'p-3 mx-1' : 'p-4'}`}
-                >
-                  <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-                    {topic.completed ? (
-                      <div className={`${sidebarCollapsed ? 'w-10 h-8' : 'w-8 h-8'} rounded-lg flex items-center justify-center bg-green-500 shadow-sm ${sidebarCollapsed ? 'border border-white/10 dark:border-gray-500/20' : ''}`}>
-                        <CheckCircle className={`${sidebarCollapsed ? 'w-4 h-4' : 'w-4 h-4'} text-white`} />
-                      </div>
-                    ) : (
-                      <span className={`${sidebarCollapsed ? 'text-sm' : 'text-xs'} font-bold text-gray-700 dark:text-gray-300`}>
-                        {index + 1}
-                      </span>
-                    )}
-
-                    <AnimatePresence mode="wait">
-                      {!sidebarCollapsed && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          transition={{ duration: 0.2 }}
-                          className="flex-1 min-w-0 motion-div"
-                        >
-                          <h4 className="font-medium brand-heading-primary truncate">
-                            {topic.title}
-                          </h4>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {sidebarCollapsed && (
-                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 dark:bg-gray-800 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 max-w-xs truncate">
-                      {topic.title}
-                    </div>
-                  )}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Mobile Sidebar Overlay */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setMobileMenuOpen(false)}
-                className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
-              />
-              <motion.div
-                initial={{ x: "-100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "-100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 flex flex-col"
-              >
-                <div className="p-4 border-b border-white/10 dark:border-gray-700/20 pt-24">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-poppins text-lg font-semibold text-blue-900 dark:text-white/80">
-                      Course Topics
-                    </h3>
-                    <button
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="p-2 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 transition-all duration-200"
-                    >
-                      <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-4">
-                  <div className="space-y-3">
-                    {currentCourse.topics.map((topic, index) => (
-                      <button
-                        key={topic.id}
-                        onClick={() => {
-                          setSelectedTopic(index);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
-                          selectedTopic === index
-                            ? 'bg-blue-500/20 border-2 border-blue-500/50 text-blue-700 dark:text-blue-300'
-                            : 'bg-white/40 dark:bg-gray-800/40 border border-gray-200/50 dark:border-gray-600/50 hover:bg-white/60 dark:hover:bg-gray-700/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            topic.completed ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}>
-                            {topic.completed ? (
-                              <CheckCircle className="w-4 h-4 text-white" />
-                            ) : (
-                              <span className="text-xs font-bold text-blue-950 dark:text-gray-300">
-                                {index + 1}
-                              </span>
-                            )}
-                          </div>
-                          <h4 className="font-medium text-blue-800 dark:text-white/60">{topic.title}</h4>
+              {profileDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
+                          {userInitial}
                         </div>
-                        <p className="text-sm text-blue-500 dark:text-white/60 ml-11">
-                          {topic.description}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-black dark:text-white truncate">
+                            {userName}
+                          </h3>
+                          <p className="text-xs text-black/60 dark:text-white/60 truncate">
+                            {user?.email || 'student@techlearn.com'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="py-2">
+                      <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
+                        <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        </div>
+                        <div>
+                          <div className="font-medium">My Profile</div>
+                          <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
+                        </div>
                       </button>
-                    ))}
+                      <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10"></div>
+                      <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
+                        <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        </div>
+                        <div>
+                          <div className="font-medium">Log Out</div>
+                          <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
+                        </div>
+                      </button>
+                    </div>
                   </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Syllabus Drawer */}
+        <AnimatePresence>
+          {isSyllabusOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+                onClick={() => setIsSyllabusOpen(false)} 
+                className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40" 
+              />
+              <motion.div 
+                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl"
+              >
+                <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus Drawer</span>
+                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Modules Total</span>
+                  </div>
+                  <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                    <X className="w-4 h-4 text-black/60 dark:text-white/60" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {currentCourse.topics.map((topic, index) => (
+                     <button 
+                      key={topic.id} 
+                      onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }} 
+                      className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-300 ${selectedTopic === index ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white border border-black/5 dark:border-white/5 shadow-sm' : 'text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                     >
+                       <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-medium transition-colors ${selectedTopic === index ? 'bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black shadow-md' : 'bg-white dark:bg-black/50 border border-black/10 dark:border-white/10'}`}>
+                         {index + 1}
+                       </div>
+                       <span className="text-sm font-medium line-clamp-2 pr-4 leading-relaxed">{topic.title}</span>
+                     </button>
+                  ))}
                 </div>
               </motion.div>
             </>
           )}
         </AnimatePresence>
 
-        {/* Main Content */}
-        <div className="flex-1 relative min-w-0">
-          <div className="relative z-10 pt-24 pb-12">
-            <div className={`container mx-auto max-w-6xl transition-all duration-300 ${
-              sidebarCollapsed ? 'px-6' : 'px-6 lg:px-8'
-            }`}>
+        {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
+        <div 
+          ref={scrollContainerRef} 
+          className="flex-1 overflow-y-auto px-4 md:px-8 py-10 relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          <div className="max-w-[800px] mx-auto pb-20">
 
-              <div className="bg-white/40 dark:bg-gray-900/20 backdrop-blur-sm rounded-2xl p-8 mb-2 mt-2">
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
+            {/* Reading Container Card */}
+            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-3xl border border-black/5 dark:border-white/5 rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
+              
+              {/* Premium Heading Section */}
+              <div className="mb-8 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#3C83F6]/10 dark:bg-white/5 rounded-full mb-6 border border-[#3C83F6]/20 dark:border-white/10">
+                  <div className="w-2 h-2 rounded-full bg-[#3C83F6] dark:bg-white animate-pulse"></div>
+                  <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-bold">
+                    Module {selectedTopic + 1}
+                  </span>
+                </div>
+                
+                {/* Swapped out useInViewport for a Framer Motion component tied to a key.
+                  This forces React to completely unmount and re-animate the title whenever the selectedTopic changes.
+                */}
+                <motion.h1 
+                  key={selectedTopic}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="text-3xl md:text-4xl lg:text-5xl font-medium text-black dark:text-white tracking-tight leading-[1.2]"
                 >
-                  <div className="flex flex-col gap-0">
-                    <div className="flex-1">
-                      <div className="lg:hidden flex items-center gap-3 mb-4">
-                        <button
-                          onClick={() => setMobileMenuOpen(true)}
-                          className="p-2 bg-blue-500/20 hover:bg-blue-500/30 backdrop-blur-sm rounded-lg border border-blue-400/30 shadow-sm transition-all duration-200 hover:scale-105"
-                        >
-                          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        </button>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Course Topics</span>
-                      </div>
-
-                      <h1
-                        ref={titleRef}
-                        className={`Marquee-title-no-border ${isTitleInViewport ? 'in-viewport' : ''} mb-4 text-center lg:text-left`}
-                      >
-                        {currentTopic?.title}
-                      </h1>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                >
-                  <div className="max-w-none px-[5px] lg:px-8 lg:py-1">
-                    {currentTopic?.hasNotes && currentTopic?.notesContent ? (
-                      <div className="markdown-content">
-                        <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
-                            components={markdownComponents}
-                          >
-                            {currentTopic.notesContent}
-                          </ReactMarkdown>
-                        </div>
-                      </div>
-                    ) : currentTopic?.hasNotes ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                          <AlertCircle className="w-8 h-8 text-blue-500 mx-auto mb-4" />
-                          <p className="text-gray-600 dark:text-gray-400 mb-2">Detailed notes are available for this topic!</p>
-                          <p className="text-sm text-gray-500 dark:text-gray-500">Notes feature is being integrated. Coming soon...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line lg:bg-white/80 lg:dark:bg-gray-800/80 lg:backdrop-blur-sm lg:rounded-xl lg:p-6 lg:border lg:border-gray-200/50 lg:dark:border-gray-700/50">
-                        {currentTopic?.content.theory}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Topic Navigation */}
-                  <div className="flex items-center justify-between gap-4 mt-10 mx-[5px] lg:mx-8 pt-6 border-t border-gray-200/30 dark:border-gray-700/30">
-                    {!isFirstTopic ? (
-                      <button
-                        onClick={goToPreviousTopic}
-                        className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium transition-all duration-200 bg-white/60 dark:bg-gray-800/60 border border-gray-200/50 dark:border-gray-600/50 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10 dark:hover:bg-blue-500/10 hover:border-blue-400/50 hover:shadow-md active:scale-[0.98]"
-                      >
-                        <ChevronLeft className="w-5 h-5" />
-                        <span className="hidden sm:inline">Previous</span>
-                      </button>
-                    ) : (
-                      <div></div>
-                    )}
-
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400 select-none">
-                      {selectedTopic + 1} / {totalTopics}
-                    </span>
-
-                    {!isLastTopic ? (
-                      <button
-                        onClick={goToNextTopic}
-                        className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium bg-[#00113b] hover:bg-[#001a52] dark:bg-blue-600 dark:hover:bg-blue-700 text-white shadow-md hover:shadow-lg transition-all duration-200 active:scale-[0.98]"
-                      >
-                        <span className="hidden sm:inline">Next</span>
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                    ) : (
-                      <div></div>
-                    )}
-                  </div>
-                </motion.div>
+                  {currentTopic?.title}
+                </motion.h1>
               </div>
+
+              {/* Dynamic Content - Added CSS rules to strictly strip top margin from the very first Markdown element */}
+              {currentTopic?.hasNotes && currentTopic?.notesContent ? (
+                <div className="w-full [&>*:first-child]:mt-0 [&>*:first-child>*:first-child]:mt-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
+                    {currentTopic.notesContent}
+                  </ReactMarkdown>
+                </div>
+              ) : currentTopic?.hasNotes ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+                  <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-black/5 to-black/10 dark:from-white/5 dark:to-white/10 flex items-center justify-center mb-6 shadow-inner border border-white/20 dark:border-white/5">
+                    <AlertCircle className="w-8 h-8 text-black/30 dark:text-white/30" />
+                  </div>
+                  <h3 className="text-lg font-medium text-black dark:text-white mb-2">Notes are being compiled</h3>
+                  <p className="text-sm text-black/50 dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
+                </div>
+              ) : (
+                <div className="text-black/75 dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
+                  {currentTopic?.content.theory}
+                </div>
+              )}
             </div>
+
+            {/* Premium Navigation Footer */}
+            <div className="flex items-center justify-between mt-8 bg-white/70 dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 p-4 rounded-[1.5rem] shadow-sm">
+              {!isFirstTopic ? (
+                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
+                  <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
+                </button>
+              ) : <div className="w-24" />}
+
+              <span className="text-[10px] uppercase tracking-widest font-bold text-black/40 dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
+                {selectedTopic + 1} / {totalTopics}
+              </span>
+
+              {!isLastTopic ? (
+                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                  <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="flex items-center gap-2 px-8 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                  Complete <CheckCircle className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
-// Deployment trigger
 
 export default CourseTopics;

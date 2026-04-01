@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { FiUser, FiMail, FiCalendar, FiLock, FiCamera } from "react-icons/fi";
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { 
+  User, Mail, CalendarDays, Lock, Camera, 
+  X, CheckCircle, Shield 
+} from "lucide-react";
 import { useUser } from "../../context/UserContext";
+import { useTheme } from "../../context/ThemeContext";
 import Sidebar from "./Sidebar";
+import ScrollProgress from "../../components/ScrollProgress";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
@@ -16,7 +23,17 @@ const getInitialAvatar = () => {
 };
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const { user, isLoading, updateUser } = useUser();
+  
+  // Layout State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  
+  const isDarkMode = theme === 'dark';
+  
+  // Avatar State
   const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState(null);
@@ -65,215 +82,341 @@ const Profile = () => {
       // Update localStorage with new photoUrl
       const updatedUser = { ...storedUser, photoUrl: avatarUrl };
       localStorage.setItem("userData", JSON.stringify(updatedUser));
+      
+      // If your context has an updateUser method, you might call it here:
+      // if (updateUser) updateUser(updatedUser);
+      
     } catch (error) {
       console.error("Error updating avatar:", error);
     }
   };
 
-  const renderAvatarChoices = () => (
-    <div className="flex flex-wrap justify-center gap-6 mt-4">
-      {Array.from({ length: AVATAR_COUNT }, (_, i) => {
-        const avatarUrl = `${AVATAR_PATH}/avatar${i + 1}.png`;
-        const isSelected = avatarUrl === (pendingAvatar || selectedAvatar);
-
-        return (
-          <button
-            type="button"
-            key={i}
-            onClick={() => setPendingAvatar(avatarUrl)}
-            className={`rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-150 ${
-              isSelected
-                ? "ring-4 ring-blue-500 shadow-lg scale-110"
-                : "hover:ring-2 hover:ring-blue-300 hover:scale-105"
-            }`}
-            style={{ padding: 0, background: "none" }}
-            aria-label={`Select avatar ${i + 1}`}
-          >
-            <img
-              src={avatarUrl}
-              alt={`Avatar ${i + 1}`}
-              className="w-24 h-24 rounded-full object-cover select-none"
-              draggable={false}
-            />
-          </button>
-        );
-      })}
-    </div>
-  );
+  // Get userData from localStorage for display
+  const userData = JSON.parse(localStorage.getItem("userData")) || {};
+  const displayUser = user || userData;
+  
+  const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
+  const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
+      <div className={`flex min-h-screen w-full font-sans antialiased items-center justify-center ${isDarkMode ? "dark" : "light"}`}>
+         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+         <div className="w-12 h-12 border-t-2 border-[#3C83F6] dark:border-white rounded-full animate-spin"></div>
       </div>
     );
   }
 
-  // Get userData from localStorage for display
-  const userData = JSON.parse(localStorage.getItem("userData")) || {};
-  const displayUser = user || userData;
-
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 max-w-6xl mx-auto px-4 pt-32 pb-12">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left Column - Profile Info */}
-          <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-8">
-              Profile Information
-            </h1>
+    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+      <ScrollProgress />
+      
+      {/* Unified Background */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
-            {/* Basic Info */}
-            <div className="mb-10">
-              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
-                Basic Info
-              </h2>
+      {/* Main Sidebar */}
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-              <div className="space-y-6">
-                <div className="flex items-center">
-                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Name
-                    </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                      {displayUser?.firstName || "First"}{" "}
-                      {displayUser?.lastName || "Last"}
-                    </p>
-                  </div>
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          
+          {/* Top Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+                My Profile.
+              </h1>
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+                Manage your personal information
+              </p>
+            </motion.div>
+
+            <div className="flex items-center gap-6 self-end md:self-auto relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors font-semibold">
+                {isDarkMode ? "Light" : "Dark"}
+              </button>
+
+              <div className="relative">
+                <button 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} 
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20 overflow-hidden"
+                >
+                  {selectedAvatar !== `${AVATAR_PATH}/avatar1.png` ? (
+                    <img src={selectedAvatar} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    userInitial
+                  )}
+                </button>
+                {profileDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md overflow-hidden">
+                             {selectedAvatar !== `${AVATAR_PATH}/avatar1.png` ? (
+                                <img src={selectedAvatar} alt="Profile" className="w-full h-full object-cover" />
+                              ) : (
+                                userInitial
+                              )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-black dark:text-white truncate">
+                              {userName}
+                            </h3>
+                            <p className="text-xs text-black/60 dark:text-white/60 truncate">
+                              {displayUser?.email || 'student@techlearn.com'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        <button onClick={() => { setProfileDropdownOpen(false); /* Add logout logic */ }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                          </div>
+                          <div>
+                            <div className="font-medium">Log Out</div>
+                            <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content Grid */}
+          <div className="flex flex-col lg:flex-row gap-8">
+            
+            {/* Left Column - Form/Info Section */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+              className="flex-1 space-y-8"
+            >
+              {/* Basic Info Card */}
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm">
+                <div className="flex items-center gap-3 mb-10">
+                  <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 font-semibold">
+                    Basic Info
+                  </h2>
+                  <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
                 </div>
 
-                <div className="flex items-center">
-                  <FiCalendar className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Date of Birth
+                <div className="grid sm:grid-cols-2 gap-10">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Full Name</p>
+                    </div>
+                    <p className="text-lg font-medium text-black dark:text-white pl-7">
+                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
                     </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                  </div>
+
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CalendarDays className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Date of Birth</p>
+                    </div>
+                    <p className="text-lg font-medium text-black dark:text-white pl-7">
                       {displayUser?.dateOfBirth || "Not specified"}
                     </p>
                   </div>
-                </div>
 
-                <div className="flex items-center">
-                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Gender
-                    </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Gender</p>
+                    </div>
+                    <p className="text-lg font-medium text-black dark:text-white pl-7 capitalize">
                       {displayUser?.gender || "Not specified"}
                     </p>
                   </div>
-                </div>
 
-                <div className="flex items-center">
-                  <FiMail className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Email
-                    </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Mail className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Email Address</p>
+                    </div>
+                    <p className="text-lg font-medium text-black dark:text-white pl-7">
                       {displayUser?.email || "No email provided"}
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Account Info */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-6 pb-2 border-b border-gray-200 dark:border-gray-700">
-                Account Info
-              </h2>
+              {/* Account Info Card */}
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm">
+                <div className="flex items-center gap-3 mb-10">
+                  <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 font-semibold">
+                    Account Security
+                  </h2>
+                  <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
+                </div>
 
-              <div className="space-y-6">
-                <div className="flex items-center">
-                  <FiUser className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Username
-                    </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
+                <div className="grid sm:grid-cols-2 gap-10">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Shield className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Username</p>
+                    </div>
+                    <p className="text-lg font-medium text-black dark:text-white pl-7">
                       {displayUser?.username || "Not specified"}
                     </p>
                   </div>
-                </div>
 
-                <div className="flex items-center">
-                  <FiLock className="text-gray-500 dark:text-gray-400 mr-4 text-xl" />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Password
-                    </p>
-                    <p className="text-lg font-medium text-gray-800 dark:text-gray-200">
-                      ••••••••
-                    </p>
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Lock className="w-4 h-4 text-[#3C83F6] dark:text-white" />
+                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Password</p>
+                    </div>
+                    <div className="flex items-center pl-7 gap-2">
+                      <p className="text-lg font-medium text-black dark:text-white tracking-[0.2em]">
+                        ••••••••
+                      </p>
+                      <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 bg-black/5 dark:bg-white/5 rounded-full text-black/40 dark:text-white/40 font-bold ml-2">Secure</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </motion.div>
 
-          {/* Right Column - Profile Picture and Avatar Picker */}
-          <div className="w-full lg:w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 flex flex-col items-center">
-            <div className="relative mb-6 flex flex-col items-center">
-              <img
-                src={selectedAvatar}
-                alt="Avatar"
-                className="w-48 h-48 rounded-full object-cover ring-4 ring-blue-500 shadow-xl mb-2"
-              />
-              <button
-                onClick={() => setIsSelectingAvatar(!isSelectingAvatar)}
-                className="absolute bottom-6 right-6 md:right-3 bg-blue-600 dark:bg-blue-700 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all"
-                title="Change Avatar"
-              >
-                <FiCamera className="text-2xl" />
-              </button>
-            </div>
+            {/* Right Column - Avatar Profile display */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
+              className="w-full lg:w-96 flex flex-col"
+            >
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm flex flex-col items-center relative overflow-hidden flex-1">
+                
+                {/* Decorative background blur */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#3C83F6]/10 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-1">
-              {displayUser?.firstName || "User"} {displayUser?.lastName}
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              {displayUser?.email || "No email provided"}
-            </p>
-
-            {/* Avatar Selection Overlay */}
-            {isSelectingAvatar && (
-              <div className="fixed inset-0 z-30 flex items-center justify-center bg-black bg-opacity-30">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl p-8 shadow-2xl w-full max-w-xl flex flex-col items-center relative">
+                <div className="relative mb-8 mt-4 group">
+                  <div className="w-48 h-48 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
+                      <img
+                        src={selectedAvatar}
+                        alt="Avatar"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    </div>
+                  </div>
+                  
                   <button
-                    onClick={() => setIsSelectingAvatar(false)}
-                    className="absolute top-3 right-4 text-gray-400 hover:text-red-500 text-2xl"
-                    aria-label="Close"
+                    onClick={() => setIsSelectingAvatar(true)}
+                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
+                    title="Change Avatar"
                   >
-                    &times;
+                    <Camera className="w-5 h-5" />
                   </button>
-                  <h3 className="text-lg font-bold mb-1 text-gray-800 dark:text-white">
-                    Select an Avatar
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-4 text-sm">
-                    Choose the image that best represents you:
-                  </p>
-                  {renderAvatarChoices()}
+                </div>
 
-                  {/* Save Button */}
-                  {pendingAvatar && pendingAvatar !== selectedAvatar && (
-                    <button
-                      onClick={() => handleAvatarSelect(pendingAvatar)}
-                      className="mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-lg transition-all"
-                    >
-                      Save Avatar
-                    </button>
-                  )}
+                <h2 className="text-2xl font-medium text-black dark:text-white mb-1 tracking-tight text-center relative z-10">
+                  {userName}
+                </h2>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full mt-2 relative z-10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                  <span className="text-[9px] uppercase tracking-widest text-black/60 dark:text-white/60 font-bold">
+                    Student Account
+                  </span>
                 </div>
               </div>
-            )}
+            </motion.div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Avatar Selection Modal (Glassmorphism UI) */}
+      <AnimatePresence>
+        {isSelectingAvatar && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsSelectingAvatar(false)}
+              className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[2rem] p-8 md:p-10 shadow-2xl w-full max-w-2xl mx-4 relative z-10"
+            >
+              <button
+                onClick={() => setIsSelectingAvatar(false)}
+                className="absolute top-6 right-6 w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors text-black/50 dark:text-white/50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              
+              <div className="text-center mb-8 mt-2">
+                <h3 className="text-2xl font-medium text-black dark:text-white tracking-tight mb-2">
+                  Choose Your Avatar
+                </h3>
+                <p className="text-[11px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">
+                  Select a profile identity
+                </p>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-6 mb-10">
+                {Array.from({ length: AVATAR_COUNT }, (_, i) => {
+                  const avatarUrl = `${AVATAR_PATH}/avatar${i + 1}.png`;
+                  const isSelected = avatarUrl === (pendingAvatar || selectedAvatar);
+
+                  return (
+                    <button
+                      type="button"
+                      key={i}
+                      onClick={() => setPendingAvatar(avatarUrl)}
+                      className={`relative rounded-full focus:outline-none transition-all duration-300 ${
+                        isSelected
+                          ? "scale-110 shadow-xl"
+                          : "hover:scale-105 hover:shadow-md opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      <div className={`p-1 rounded-full ${isSelected ? 'bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400' : 'bg-transparent'}`}>
+                        <img
+                          src={avatarUrl}
+                          alt={`Avatar ${i + 1}`}
+                          className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover bg-white dark:bg-black/50"
+                          draggable={false}
+                        />
+                      </div>
+                      {isSelected && (
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#3C83F6] dark:bg-white rounded-full flex items-center justify-center border-2 border-white dark:border-[#0a1128] shadow-sm">
+                          <CheckCircle className="w-3.5 h-3.5 text-white dark:text-black" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-center gap-4 border-t border-black/5 dark:border-white/5 pt-8">
+                <button
+                  onClick={() => setIsSelectingAvatar(false)}
+                  className="px-8 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleAvatarSelect(pendingAvatar || selectedAvatar)}
+                  disabled={!pendingAvatar || pendingAvatar === selectedAvatar}
+                  className="px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

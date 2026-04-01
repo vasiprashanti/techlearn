@@ -1,38 +1,61 @@
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
-import { Clock, Calendar, MessageCircle, Dot, ArrowRight } from "lucide-react";
+import { Clock, Calendar, ArrowRight, Code } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
-import CourseCard from "../../components/CourseCard";
-
-import useInViewport from "../../hooks/useInViewport";
-import { courseAPI, dataAdapters, apiStatus } from "../../services/api";
+import { courseAPI, dataAdapters } from "../../services/api";
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import Sidebar from '../../components/Dashboard/Sidebar';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "../../components/ui/carousel";
 
-const Courses = () => {
+export default function Courses() {
+  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [coursesHeadingRef, isCoursesHeadingInViewport] = useInViewport();
-  const [liveBatchesHeadingRef, isLiveBatchesHeadingInViewport] = useInViewport();
+  
+  // Layout State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  
   const liveBatchesSectionRef = useRef(null);
+  
+  const isDarkMode = theme === 'dark';
+  const userInitial = user?.firstName?.charAt(0)?.toUpperCase() || 'S';
+  const userName = user?.firstName ? user.firstName : 'Student';
 
-  // State for courses data
+  // Data State
   const [coursesData, setCoursesData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Fallback mock data
+  const mockCoursesData = [
+    { id: "java", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available" },
+    { id: "python", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available" },
+    { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available" },
+    { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available" }
+  ];
+
+  // Live Batches data
+  const liveBatches = [
+    { id: "python-programming", title: "Python Programming", instructor: "Prashanti Vasi", duration: "2 weeks", schedule: "Mon-Sat", time: "11:30 AM - 12:30 PM", startDate: "In Progress", level: "Beginner" },
+    { id: "dsa-with-java", title: "DSA with Java", instructor: "Prashanti Vasi", duration: "3 weeks", schedule: "Mon-Sat", time: "10:00 AM - 11:00 AM", startDate: "In Progress", level: "Intermediate" },
+    { id: "dsa-with-python", title: "DSA with Python", instructor: "Prashanti Vasi", duration: "3 weeks", schedule: "Mon-Sat", time: "10:00 AM - 11:00 AM", startDate: "In Progress", level: "Intermediate" },
+    { id: "web-development", title: "Web Development", instructor: "Jyotsna", duration: "3 weeks", schedule: "Mon-Sat", time: "6:00 PM - 7:00 PM", startDate: "In Progress", level: "Beginner" },
+    { id: "java-core", title: "Java (Core)", instructor: "Prashanti Vasi", duration: "TBD", schedule: "Mon-Sat", time: "(Not listed)", startDate: "In Progress", level: "Intermediate" }
+  ];
 
   // Fetch courses from backend
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-
         console.log('🚀 Fetching courses directly...');
         const backendCourses = await courseAPI.getAllCourses();
         console.log('✅ Backend courses received:', backendCourses);
@@ -52,7 +75,7 @@ const Courses = () => {
     };
 
     fetchCourses();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle scroll restoration when returning from batch details
   useEffect(() => {
@@ -76,124 +99,7 @@ const Courses = () => {
     }
   }, [loading]);
 
-  // Fallback mock data (in case backend is not available)
-  const mockCoursesData = [
-    {
-      id: "java",
-      title: "Java Programming",
-      description: "Master Java programming and object-oriented concepts",
-      gradient: "from-blue-500 via-cyan-400 to-teal-400",
-      icon: "☕",
-      image: "/java.png",
-      status: "available",
-      price: "Free",
-      certificationPrice: 1499,
-      certificationDiscountedPrice: 999,
-      xpDiscount: 500,
-      requiredXP: 1000
-    },
-    {
-      id: "python",
-      title: "Python Programming",
-      description: "Learn Python programming from basics to advanced concepts",
-      gradient: "from-blue-500 via-cyan-400 to-teal-400",
-      icon: "🐍",
-      image: "/python.png",
-      status: "available",
-      price: "Free",
-      certificationPrice: 1499,
-      certificationDiscountedPrice: 999,
-      xpDiscount: 500,
-      requiredXP: 1000
-    },
-    {
-      id: "dsa",
-      title: "Data Structures & Algorithms",
-      description: "Master DSA concepts for coding interviews and problem solving",
-      gradient: "from-blue-500 via-cyan-400 to-teal-400",
-      icon: "🧠",
-      image: "/dsa.png",
-      status: "coming_soon",
-      price: "Coming Soon"
-    },
-    {
-      id: "mysql",
-      title: "MySQL Database",
-      description: "Learn database design, queries, and management with MySQL",
-      gradient: "from-blue-500 via-cyan-400 to-teal-400",
-      icon: "🗄️",
-      image: "/mysql.png",
-      status: "coming_soon",
-      price: "Coming Soon"
-    }
-  ];
-
-  // Live Batches data
-  const liveBatches = [
-    {
-      id: "python-programming",
-      title: "Python Programming",
-      instructor: "Prashanti Vasi",
-      duration: "2 weeks",
-      schedule: "Mon-Sat",
-      time: "11:30 AM - 12:30 PM",
-      startDate: "In Progress",
-      price: "₹4000",
-      description: "Master Python fundamentals with live interactive classes. Learn programming concepts and build practical skills.",
-      level: "Beginner"
-    },
-    {
-      id: "dsa-with-java",
-      title: "DSA with Java",
-      instructor: "Prashanti Vasi",
-      duration: "3 weeks",
-      schedule: "Mon-Sat",
-      time: "10:00 AM - 11:00 AM",
-      startDate: "In Progress",
-      price: "₹6000",
-      description: "Deep dive into Data Structures and Algorithms using Java. Build problem-solving skills with real-world projects.",
-      level: "Intermediate"
-    },
-    {
-      id: "dsa-with-python",
-      title: "DSA with Python",
-      instructor: "Prashanti Vasi",
-      duration: "3 weeks",
-      schedule: "Mon-Sat",
-      time: "10:00 AM - 11:00 AM",
-      startDate: "In Progress",
-      price: "₹6000",
-      description: "Master Data Structures and Algorithms with Python. Learn efficient coding patterns and optimization techniques.",
-      level: "Intermediate"
-    },
-    {
-      id: "web-development",
-      title: "Web Development",
-      instructor: "Jyotsna",
-      duration: "3 weeks",
-      schedule: "Mon-Sat",
-      time: "6:00 PM - 7:00 PM",
-      startDate: "In Progress",
-      price: "₹4000",
-      description: "Learn modern web development from scratch. Build responsive websites and web applications.",
-      level: "Beginner"
-    },
-    {
-      id: "java-core",
-      title: "Java (Core)",
-      instructor: "Prashanti Vasi",
-      duration: "TBD",
-      schedule: "Mon-Sat",
-      time: "(Not listed)",
-      startDate: "In Progress",
-      price: "₹6000",
-      description: "Master Java programming fundamentals. Learn object-oriented programming and build robust applications.",
-      level: "Intermediate"
-    }
-  ];
-
   const handleCourseClick = (courseId) => {
-    // Allow navigation to all course details pages
     navigate(`/learn/courses/${courseId}`);
   };
 
@@ -203,106 +109,155 @@ const Courses = () => {
     window.open(whatsappUrl, '_blank');
   };
 
-  // Loading state
   if (loading) {
     return (
       <>
         <ScrollProgress />
-        <LoadingScreen
-          showMessage={false}
-          size={48}
-          duration={800}
-        />
+        <LoadingScreen showMessage={false} size={48} duration={800} />
       </>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#daf0fa] dark:bg-[#020b23]">
+    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
+      
+      {/* Unified Background */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
-      {/* Header Section */}
-      <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-      <div className="relative z-10 pt-24 pb-16">
-        <div className="container px-8 mx-auto max-w-7xl">
-          {/* Courses Heading - Match Live Batches structure */}
-          <div className="flex items-center gap-3 mb-12">
-            <h2
-              ref={coursesHeadingRef}
-              className={`font-poppins text-5xl font-medium brand-heading-primary ${isCoursesHeadingInViewport ? 'in-viewport' : ''} uppercase tracking-wider`}
-            >
-              Courses
-            </h2>
-          </div>
-          <p className="text-lg text-blue-600 dark:text-blue-400 font-medium mb-12">
-            Discover our comprehensive learning programs
-          </p>
+      {/* Sidebar */}
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-          {/* Course Cards Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mb-20"
-          >
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+                Courses.
+              </h1>
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+                Discover our comprehensive learning programs
+              </p>
+            </motion.div>
 
+            {/* Right Side Header Controls */}
+            <div className="flex items-center gap-6 self-end md:self-auto relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors">
+                {isDarkMode ? "Light" : "Dark"}
+              </button>
 
-            {/* Error State */}
+              <div className="relative">
+                <button 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} 
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
+                >
+                  {userInitial}
+                </button>
+                {profileDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
+                            {userInitial}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-black dark:text-white truncate">
+                              {userName}
+                            </h3>
+                            <p className="text-xs text-black/60 dark:text-white/60 truncate">
+                              {user?.email || 'student@techlearn.com'}
+                            </p>
+                            <div className="mt-1">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">
+                                Student
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                          </div>
+                          <div>
+                            <div className="font-medium">My Profile</div>
+                            <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
+                          </div>
+                        </button>
+                        <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10"></div>
+                        <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                          </div>
+                          <div>
+                            <div className="font-medium">Log Out</div>
+                            <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {/* Top Course Cards Section */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="mb-16 mt-6">
             {error && !loading && (
-              <div className="text-center py-8">
-                <p className="text-red-600 dark:text-red-400 mb-4">
-                  Failed to load courses: {error}
-                </p>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Showing fallback data instead.
-                </p>
+              <div className="text-left py-4 mb-6">
+                <p className="text-sm text-red-500 dark:text-red-400">Failed to load courses: {error}. Showing fallback data.</p>
               </div>
             )}
 
-            {/* Courses Grid */}
             {!loading && (
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {coursesData.map((course, index) => (
-                  <CourseCard
+                  <motion.div
                     key={course.id}
-                    course={course}
-                    index={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
                     onClick={() => handleCourseClick(course.id)}
-                  />
+                    className="group p-8 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 border border-black/5 dark:border-white/5 transition-all duration-500 rounded-2xl cursor-pointer flex flex-col justify-between min-h-[240px] relative overflow-hidden"
+                  >
+                    {/* Subtle hover gradient decoration */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#3C83F6]/5 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+
+                    <div className="relative z-10 flex items-start justify-between mb-6">
+                      <div className="p-3 rounded-xl bg-white/50 dark:bg-black/50 border border-black/5 dark:border-white/5 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                        <Code className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+                      </div>
+                    </div>
+                    
+                    <div className="relative z-10 mt-auto">
+                      <h3 className="text-xl font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors mb-3">
+                        {course.title}
+                      </h3>
+                      <p className="text-sm text-black/50 dark:text-white/50 leading-relaxed line-clamp-2 font-light">
+                        {course.description}
+                      </p>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
             )}
 
-            {/* View All Courses Button */}
-            <div className="flex justify-center mt-12 mb-8 md:mb-0">
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.6 }}
-                whileHover={{
-                  x: 2,
-                  transition: { duration: 0.2, ease: "easeOut" }
-                }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/learn/courses/all')}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white border-none px-4 py-2 text-base rounded-lg cursor-pointer inline-flex items-center gap-2 transition-all duration-300 font-sans"
+            <div className="flex justify-start mt-8">
+              <button 
+                onClick={() => navigate('/learn/courses/all')} 
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] group"
               >
                 <span>View All Courses</span>
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                >
-                  <ArrowRight className="w-5 h-5" />
-                </motion.div>
-              </motion.button>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
             </div>
           </motion.div>
-
-
 
           {/* Live Batches Section */}
           <motion.div
@@ -310,151 +265,79 @@ const Courses = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="pb-16 pt-8 md:pt-0"
           >
-            <div className="mb-12">
-              <div className="flex items-center gap-3 mb-3">
-                <h2
-                  ref={liveBatchesHeadingRef}
-                  className={`font-poppins text-3xl font-medium brand-heading-primary ${isLiveBatchesHeadingInViewport ? 'in-viewport' : ''} uppercase tracking-wider`}
-                >
-                  LIVE BATCHES
+            <div className="mb-8">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 font-semibold">
+                  Live Batches
                 </h2>
-                <span className="relative">
-                  <Dot
-                    className="w-7 h-7 text-red-500"
-                    style={{ filter: "drop-shadow(0 0 6px #f00)" }}
-                  />
-                  <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 bg-red-500 rounded-full opacity-80 animate-pulse"></span>
+                <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-black/40 dark:bg-white/40 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-black/50 dark:bg-white/50"></span>
                 </span>
               </div>
-              <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-              Accelerate your learning with expert-led classes.
-              </p>
             </div>
 
-            {/* Netflix-style carousel for cards */}
             <div className="relative px-2 mb-8">
               <Carousel
-                opts={{
-                  align: "start",
-                  loop: true,
-                  dragFree: true,
-                  slidesToScroll: 1
-                }}
+                opts={{ align: "start", loop: true, dragFree: true, slidesToScroll: 1 }}
                 className="w-full max-w-full"
               >
-                <CarouselContent className="py-2">
+                <CarouselContent className="-ml-2 py-4">
                   {liveBatches.map((batch, index) => (
                     <CarouselItem
                       key={batch.id}
-                      className="md:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-2"
+                      className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                     >
-                      <LiveBatchCard
-                        batch={batch}
-                        index={index}
-                        onWhatsAppClick={() => handleWhatsAppClick(batch.title)}
-                        onGetStarted={() => handleWhatsAppClick(batch.title)}
-                      />
+                      <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 flex flex-col h-full hover:bg-white/60 dark:hover:bg-black/60 transition-all duration-300 rounded-2xl group min-h-[240px]">
+                        
+                        <div className="flex justify-between items-center mb-6">
+                          <span className="text-[9px] uppercase tracking-widest px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-black/60 dark:text-white/60 font-medium">
+                            {batch.level}
+                          </span>
+                          <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 group-hover:text-black dark:group-hover:text-white transition-colors">
+                            By {batch.instructor}
+                          </span>
+                        </div>
+                        
+                        <h3 className="text-xl font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors mb-6">
+                          {batch.title}
+                        </h3>
+                        
+                        <div className="grid grid-cols-2 gap-y-5 gap-x-4 mb-8 border-t border-black/5 dark:border-white/5 pt-5">
+                          <div className="flex items-start gap-2.5">
+                            <Clock className="w-4 h-4 text-black/40 dark:text-white/40 mt-0.5" />
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-black dark:text-white">{batch.time}</span>
+                              <span className="text-[10px] text-black/50 dark:text-white/50 mt-0.5">{batch.duration}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2.5">
+                            <Calendar className="w-4 h-4 text-black/40 dark:text-white/40 mt-0.5" />
+                            <div className="flex flex-col">
+                              <span className="text-xs font-semibold text-black dark:text-white">{batch.schedule}</span>
+                              <span className="text-[10px] text-black/50 dark:text-white/50 mt-0.5">Recurring</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={() => handleWhatsAppClick(batch.title)}
+                          className="mt-auto w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]"
+                        >
+                          Enroll Now <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="z-20 -left-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-300" />
-                <CarouselNext className="z-20 -right-5 bg-white/90 dark:bg-gray-800/90 backdrop-blur border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-purple-600 hover:text-white hover:border-purple-600 transition-all duration-300" />
               </Carousel>
             </div>
           </motion.div>
+
         </div>
-      </div>
-      </motion.div>
+      </main>
     </div>
   );
-};
-
-
-
-// Live Batch Card Component
-const LiveBatchCard = ({ batch, index, onWhatsAppClick, onGetStarted }) => {
-  const getLevelColor = (level) => {
-    switch (level.toLowerCase()) {
-      case "beginner": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-      case "intermediate": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-      case "advanced": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.1,
-        type: "spring",
-        stiffness: 100
-      }}
-      className="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-8 shadow-lg border border-gray-200/50 dark:border-gray-600/50 cursor-pointer h-full flex flex-col"
-    >
-      {/* Header - Fixed height section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getLevelColor(batch.level)}`}>
-            {batch.level}
-          </span>
-        </div>
-        <div className="h-14 flex items-start">
-          <h3 className="font-poppins font-medium text-lg text-gray-900 dark:text-white transition-colors duration-300 line-clamp-2">
-            {batch.title}
-          </h3>
-        </div>
-      </div>
-
-      {/* Instructor - Fixed height section */}
-      <div className="h-6 mb-6 flex items-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          with <span className="text-blue-600 dark:text-blue-400 font-medium">{batch.instructor}</span>
-        </p>
-      </div>
-
-      {/* Schedule Info - Fixed height section */}
-      <div className="h-24 mb-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span>{batch.duration}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Calendar className="w-4 h-4 flex-shrink-0" />
-            <span>Schedule: {batch.schedule}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Clock className="w-4 h-4 flex-shrink-0" />
-            <span>Time: {batch.time}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <Calendar className="w-4 h-4 flex-shrink-0" />
-            <span>Starts: {batch.startDate}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Description - Flexible section */}
-      <div className="flex-grow mb-6">
-        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
-          {batch.description}
-        </p>
-      </div>
-
-      {/* Get Started Button - Fixed height */}
-      <button
-        onClick={onGetStarted}
-        className="w-full h-12 bg-blue-800 hover:bg-blue-900 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg"
-      >
-        Get Started
-      </button>
-    </motion.div>
-  );
-};
-
-export default Courses;
+}
