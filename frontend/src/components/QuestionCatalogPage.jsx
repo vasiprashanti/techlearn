@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Building2,
-  Check,
-  ChevronDown,
-  Code2,
-  Cpu,
-  Database,
-  FileQuestion,
-  Filter,
-  Search,
-} from 'lucide-react';
+import { Check, ChevronDown, Filter, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
@@ -27,39 +17,6 @@ const topicPillClass = {
   'Core CS': 'bg-[#e5ebf2] text-[#4c5e78] border-[#d4dce7]',
   Company: 'bg-[#ffe9c9] text-[#c67a10] border-[#ffd89e]',
 };
-
-const categoryNavItems = [
-  {
-    key: 'all',
-    label: 'All Interview Questions',
-    href: '/learn/interview-questions',
-    icon: FileQuestion,
-  },
-  {
-    key: 'sql',
-    label: 'SQL Questions',
-    href: '/learn/interview-questions/sql',
-    icon: Database,
-  },
-  {
-    key: 'dsa',
-    label: 'DSA Questions',
-    href: '/learn/interview-questions/dsa',
-    icon: Code2,
-  },
-  {
-    key: 'core-cs',
-    label: 'Core CS Questions',
-    href: '/learn/interview-questions/core-cs',
-    icon: Cpu,
-  },
-  {
-    key: 'company',
-    label: 'Company-Based Questions',
-    href: '/learn/interview-questions/company',
-    icon: Building2,
-  },
-];
 
 function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
   return (
@@ -111,7 +68,6 @@ export default function QuestionCatalogPage({
   questions,
   lockedTopic = null,
   showTopicFilter = true,
-  activeCategory = 'all',
 }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
@@ -173,30 +129,6 @@ export default function QuestionCatalogPage({
     <div className="min-h-screen bg-transparent px-4 pb-10 pt-24 text-[#21364d] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <section className="p-1 sm:p-2">
-          <div className="mb-5">
-            <div className="inline-flex max-w-full flex-col gap-1 rounded-[22px] bg-[#b9def1]/65 p-2 shadow-[0_10px_28px_rgba(86,132,167,0.12)]">
-              {categoryNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.key === activeCategory;
-
-                return (
-                  <Link
-                    key={item.key}
-                    to={item.href}
-                    className={`flex items-center gap-3 rounded-full px-4 py-3 text-[15px] font-medium transition ${
-                      isActive
-                        ? 'bg-[#a7d3ec] text-[#0f6ed8] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]'
-                        : 'text-[#3d5873] hover:bg-[#c6e4f3]/75 hover:text-[#234a72]'
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="mb-5">
             <h1 className="text-2xl font-semibold tracking-tight text-[#18354f] sm:text-[2rem]">
               {pageTitle}

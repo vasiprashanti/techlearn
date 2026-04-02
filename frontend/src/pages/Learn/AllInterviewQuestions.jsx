@@ -7,7 +7,6 @@ export default function InterviewQuestions() {
       pageTitle="All Interview Questions"
       pageSubtitle="Practice and track your progress across topics."
       questions={interviewQuestionsCatalog}
-      activeCategory="all"
     />
   );
 }

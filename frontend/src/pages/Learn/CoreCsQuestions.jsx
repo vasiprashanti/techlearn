@@ -11,7 +11,6 @@ export default function CoreCsQuestions() {
       questions={coreCsQuestions}
       lockedTopic="Core CS"
       showTopicFilter={false}
-      activeCategory="core-cs"
     />
   );
 }

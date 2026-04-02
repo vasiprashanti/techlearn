@@ -11,7 +11,6 @@ export default function DsaQuestions() {
       questions={dsaQuestions}
       lockedTopic="DSA"
       showTopicFilter={false}
-      activeCategory="dsa"
     />
   );
 }

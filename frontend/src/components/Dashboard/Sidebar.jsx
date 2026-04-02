@@ -1,24 +1,36 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { FiX, FiMenu } from "react-icons/fi";
+import {
+  FiX,
+  FiMenu,
+  FiUser,
+  FiBookOpen,
+  FiEdit3,
+  FiBriefcase,
+  FiHelpCircle,
+  FiCode,
+  FiFileText,
+  FiDatabase,
+  FiCpu,
+} from "react-icons/fi";
+
+const menuItems = [
+  { id: "profile", title: "Profile", icon: FiUser },
+  { id: "learn/courses", title: "Enrolled Courses", icon: FiBookOpen },
+  { id: "learn/exercises", title: "My Exercises", icon: FiEdit3 },
+  { id: "projects", title: "Current Projects", icon: FiBriefcase },
+  { id: "mcq", title: "MCQ", icon: FiHelpCircle },
+  { id: "coding", title: "Coding Round", icon: FiCode },
+  { id: "learn/interview-questions", title: "All Interview Questions", icon: FiFileText },
+  { id: "learn/interview-questions/sql", title: "SQL Questions", icon: FiDatabase },
+  { id: "learn/interview-questions/dsa", title: "DSA Questions", icon: FiCode },
+  { id: "learn/interview-questions/core-cs", title: "Core CS Questions", icon: FiCpu },
+  { id: "learn/interview-questions/company", title: "Company Questions", icon: FiBriefcase },
+];
 
 const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const menuItems = [
-    { id: "profile", title: "Profile" },
-    { id: "learn/courses", title: "Enrolled Courses" },
-    { id: "learn/exercises", title: "My Exercises" },
-    { id: "projects", title: "Current Projects" },
-    { id: "mcq", title: "MCQ" },
-    { id: "coding", title: "Coding Round" },
-    { id: "learn/interview-questions", title: "Interview Questions" },
-    { id: "learn/interview-questions/sql", title: "SQL Questions" },
-    { id: "learn/interview-questions/dsa", title: "DSA Questions" },
-    { id: "learn/interview-questions/core-cs", title: "Core CS Questions" },
-    { id: "learn/interview-questions/company", title: "Company Questions" },
-  ];
 
   return (
     <>
@@ -26,7 +38,10 @@ const Sidebar = () => {
       <div className="hidden lg:flex flex-col bg-transparent dark:bg-transparent relative z-40 h-screen overflow-hidden w-72 shadow-sm pt-20">
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
           <div className="space-y-2">
-            {menuItems.map((item) => (
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+
+              return (
               <motion.div
                 key={item.id}
                 whileHover={{ scale: 1.01, x: 4 }}
@@ -36,7 +51,7 @@ const Sidebar = () => {
                 <NavLink
                   to={`/${item.id}`}
                   className={({ isActive }) =>
-                    `relative flex items-center px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
+                    `relative flex items-center gap-3 px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
                      hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                      after:h-[1px] after:bg-current after:transition-all after:duration-300 after:ease-in-out 
                     ${
@@ -46,10 +61,12 @@ const Sidebar = () => {
                     }`
                   }
                 >
+                  <Icon className="h-4 w-4 shrink-0" />
                   <span>{item.title}</span>
                 </NavLink>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -93,7 +110,10 @@ const Sidebar = () => {
             >
               <div className="flex-1 overflow-y-auto px-4 py-6">
                 <div className="space-y-2">
-                  {menuItems.map((item) => (
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+
+                    return (
                     <motion.div
                       key={item.id}
                       whileHover={{ scale: 1.01, x: 4 }}
@@ -104,7 +124,7 @@ const Sidebar = () => {
                         to={`/${item.id}`}
                         onClick={() => setMobileMenuOpen(false)}
                         className={({ isActive }) =>
-                          `relative flex items-center px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
+                          `relative flex items-center gap-3 px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
                           hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                           after:h-[1px] after:bg-current after:transition-all after:duration-300 after:ease-in-out 
                           ${
@@ -114,10 +134,12 @@ const Sidebar = () => {
                           }`
                         }
                       >
+                        <Icon className="h-4 w-4 shrink-0" />
                         <span>{item.title}</span>
                       </NavLink>
                     </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </motion.div>

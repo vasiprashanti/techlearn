@@ -11,7 +11,6 @@ export default function SqlQuestions() {
       questions={sqlQuestions}
       lockedTopic="SQL"
       showTopicFilter={false}
-      activeCategory="sql"
     />
   );
 }
