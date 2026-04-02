@@ -5,6 +5,7 @@ import { Code, Trophy, Lock, Star, ArrowRight, BookOpen, Zap, Target } from 'luc
 import { courseAPI } from '../../services/api';
 import useInViewport from '../../hooks/useInViewport';
 import LoadingScreen from '../../components/Loader/Loader3D';
+import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 
 const Exercises = () => {
   const navigate = useNavigate();
@@ -93,8 +94,8 @@ const Exercises = () => {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+    <UserSidebarLayout maxWidthClass="max-w-7xl" mainClassName="pb-16">
+      <div className="px-4 sm:px-6">
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -261,7 +262,7 @@ const Exercises = () => {
           </motion.div>
         )}
       </div>
-    </div>
+    </UserSidebarLayout>
   );
 };
 

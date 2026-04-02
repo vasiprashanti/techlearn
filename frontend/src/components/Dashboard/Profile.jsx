@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { FiUser, FiMail, FiCalendar, FiLock, FiCamera } from "react-icons/fi";
 import { useUser } from "../../context/UserContext";
-import Sidebar from "./Sidebar";
+import UserSidebarLayout from "./UserSidebarLayout";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
@@ -114,9 +114,8 @@ const Profile = () => {
   const displayUser = user || userData;
 
   return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 max-w-6xl mx-auto px-4 pt-32 pb-12">
+    <UserSidebarLayout maxWidthClass="max-w-6xl" mainClassName="pb-12">
+      <div className="px-4 pt-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Left Column - Profile Info */}
           <div className="flex-1 bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8">
@@ -274,7 +273,7 @@ const Profile = () => {
           </div>
         </div>
       </div>
-    </div>
+    </UserSidebarLayout>
   );
 };
 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../../components/Loader/Loader3D";
 import ProjectStatsCard from "../../components/Dashboard/ProjectStatsCard";
 import RecentProjectCard from "../../components/Dashboard/RecentProjectCard";
+import UserSidebarLayout from "../../components/Dashboard/UserSidebarLayout";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -87,10 +88,11 @@ const ProjectsDashboard = () => {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-20 md:px-8 pb-16" style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-      {/* Hero Section */}
-      <div className="block md:hidden" style={{ height: "120px" }} />
-      {/*<div className="pt-0 md:pt-0">
+    <UserSidebarLayout maxWidthClass="max-w-7xl" mainClassName="pb-16">
+      <div className="px-2 sm:px-4 md:px-8" style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
+        {/* Hero Section */}
+        <div className="block md:hidden" style={{ height: "120px" }} />
+        {/*<div className="pt-0 md:pt-0">
         <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between min-h-screen px-1 sm:px-4">
         
           <div className="flex-1">
@@ -127,7 +129,7 @@ const ProjectsDashboard = () => {
       </div> */}
 
       {/* Stats Overview Section */}
-      <section className="mb-16">
+        <section className="mb-16">
         <div style={{ marginBottom: "0.15rem" }}>
           <span
             className="
@@ -170,13 +172,13 @@ const ProjectsDashboard = () => {
             colorClass="bg-green-100 dark:bg-green-900"
           />
         </div>
-      </section>
+        </section>
 
       {/* ============================================== */}
       {/* RECENT PROJECTS SECTION - FULLY FUNCTIONAL */}
       {/* Uses the getRecentProjects() function defined above */}
       {/* ============================================== */}
-      <section className="mb-16">
+        <section className="mb-16">
         <div style={{ marginBottom: "0.15rem" }}>
           <span
             className="
@@ -205,8 +207,9 @@ const ProjectsDashboard = () => {
             />
           ))}
         </div>
-      </section>
-    </main>
+        </section>
+      </div>
+    </UserSidebarLayout>
   );
 };
 

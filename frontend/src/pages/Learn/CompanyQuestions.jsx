@@ -11,6 +11,7 @@ import {
   Rocket,
 } from 'lucide-react';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
+import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 
 const companyQuestions = interviewQuestionsCatalog.filter((question) => question.topic === 'Company');
 
@@ -199,8 +200,7 @@ export default function CompanyQuestions() {
 
   if (detailConfig) {
     return (
-      <div className="min-h-screen bg-[linear-gradient(180deg,#b6dcf2_0%,#c8e8fa_45%,#d8effc_100%)] px-4 pb-10 pt-20 text-[#18324b] sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
+      <UserSidebarLayout maxWidthClass="max-w-7xl">
           <section>
             <div className="mb-8 flex items-start gap-4">
               <button
@@ -288,14 +288,12 @@ export default function CompanyQuestions() {
               </div>
             </div>
           </section>
-        </div>
-      </div>
+      </UserSidebarLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#b6dcf2_0%,#c8e8fa_45%,#d8effc_100%)] px-4 pb-10 pt-24 text-[#18324b] sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
         <section>
           <div className="mb-8">
             <div className="flex items-center gap-3">
@@ -421,7 +419,6 @@ export default function CompanyQuestions() {
             </div>
           </div>
         </section>
-      </div>
-    </div>
+    </UserSidebarLayout>
   );
 }

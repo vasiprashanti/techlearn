@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Filter, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company'];
@@ -126,8 +126,7 @@ export default function QuestionCatalogPage({
   };
 
   return (
-    <div className="min-h-screen bg-transparent px-4 pb-10 pt-24 text-[#21364d] sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
         <section className="p-1 sm:p-2">
           <div className="mb-5">
             <h1 className="text-2xl font-semibold tracking-tight text-[#18354f] sm:text-[2rem]">
@@ -260,7 +259,6 @@ export default function QuestionCatalogPage({
             </div>
           </div>
         </section>
-      </div>
-    </div>
+    </UserSidebarLayout>
   );
 }

@@ -5,6 +5,7 @@ import { Clock, Calendar, MessageCircle, Dot, ArrowRight } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import CourseCard from "../../components/CourseCard";
+import UserSidebarLayout from "../../components/Dashboard/UserSidebarLayout";
 
 import useInViewport from "../../hooks/useInViewport";
 import { courseAPI, dataAdapters, apiStatus } from "../../services/api";
@@ -218,17 +219,18 @@ const Courses = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#daf0fa] dark:bg-[#020b23]">
-      <ScrollProgress />
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
+      <div className="relative overflow-hidden">
+        <ScrollProgress />
 
-      {/* Header Section */}
-      <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-      <div className="relative z-10 pt-24 pb-16">
-        <div className="container px-8 mx-auto max-w-7xl">
+        {/* Header Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <div className="relative z-10 pb-16">
+            <div className="px-2 sm:px-4 lg:px-2">
           {/* Courses Heading - Match Live Batches structure */}
           <div className="flex items-center gap-3 mb-12">
             <h2
@@ -370,10 +372,11 @@ const Courses = () => {
               </Carousel>
             </div>
           </motion.div>
-        </div>
+            </div>
+          </div>
+        </motion.div>
       </div>
-      </motion.div>
-    </div>
+    </UserSidebarLayout>
   );
 };
 

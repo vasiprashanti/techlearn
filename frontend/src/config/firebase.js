@@ -21,11 +21,8 @@ try {
     auth = getAuth(app);
     console.log('✅ Firebase initialized successfully');
   } else {
-    if (import.meta.env.DEV) {
-      console.log(
-        'ℹ️ Firebase not configured: Google OAuth disabled (email/password still works).',
-      );
-    }
+    // Firebase not configured. Google OAuth will be unavailable.
+    // Keep silent in dev to avoid noisy console logs.
   }
 } catch (error) {
   console.warn('⚠️ Firebase initialization failed:', error.message);
