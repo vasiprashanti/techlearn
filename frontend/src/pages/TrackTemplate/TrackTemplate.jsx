@@ -63,6 +63,7 @@ export default function TrackTemplate() {
   const [historyTrack, setHistoryTrack] = useState(null);
   const [trackQuestions, setTrackQuestions] = useState({});
   const [versionHistory, setVersionHistory] = useState({});
+  const [questionCategories, setQuestionCategories] = useState([]);
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
@@ -71,20 +72,25 @@ export default function TrackTemplate() {
   useEffect(() => {
     let cancelled = false;
 
-    adminAPI
-      .getTrackTemplates()
-      .then((remoteTracks) => {
+    Promise.all([adminAPI.getTrackTemplates(), adminAPI.getQuestionCategories()])
+      .then(([remoteTracks, remoteCategories]) => {
         if (!cancelled) {
-          const normalized = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
+          const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
             ...track,
             icon: track.icon || iconMapForTrack(track.iconKey || track.category),
           }));
-          setTracks(normalized);
+          const normalizedCategories = preferRemoteData(remoteCategories, [])
+            .map((category) => category.title)
+            .filter(Boolean);
+
+          setTracks(normalizedTracks);
+          setQuestionCategories(normalizedCategories);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setTracks(emptyTrackTemplates);
+          setQuestionCategories([]);
         }
       });
 
@@ -375,14 +381,17 @@ export default function TrackTemplate() {
                     className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
                   >
                     <option value="">Select category</option>
-                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-                    <option value="Database Management">Database Management</option>
-                    <option value="Web Development">Web Development</option>
-                    <option value="Python Programming">Python Programming</option>
-                    <option value="Machine Learning">Machine Learning</option>
+                    {questionCategories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
                 </div>
+                {questionCategories.length === 0 && (
+                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
+                    No categories available. Add a question category first.
+                  </p>
+                )}
               </div>
 
               <div>

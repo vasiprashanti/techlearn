@@ -225,17 +225,23 @@ const SystemHealth = () => {
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Recent Alerts</h3>
                 <div className="flex-1 flex flex-col gap-4">
-                  {systemHealthState.recentAlerts.map((alert, i) => (
-                    <div key={i} className="flex gap-5 items-start bg-white dark:bg-[#0f1f43] p-5 rounded-xl border border-black/10 dark:border-white/15 hover:bg-white dark:hover:bg-[#162a52] transition-colors">
-                      <div className="mt-0.5 text-amber-500 shrink-0">
-                        <FiAlertCircle className="w-5 h-5" />
+                  {systemHealthState.recentAlerts.length > 0 ? (
+                    systemHealthState.recentAlerts.map((alert, i) => (
+                      <div key={i} className="flex gap-5 items-start bg-white dark:bg-[#0f1f43] p-5 rounded-xl border border-black/10 dark:border-white/15 hover:bg-white dark:hover:bg-[#162a52] transition-colors">
+                        <div className="mt-0.5 text-amber-500 shrink-0">
+                          <FiAlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-black dark:text-white mb-1 leading-relaxed">{alert.msg}</p>
+                          <span className="admin-micro-label text-black/40 dark:text-white/40">{alert.time}</span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-black dark:text-white mb-1 leading-relaxed">{alert.msg}</p>
-                        <span className="admin-micro-label text-black/40 dark:text-white/40">{alert.time}</span>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full min-h-[220px] flex items-center justify-center rounded-xl border border-dashed border-black/15 dark:border-white/20 bg-black/[0.02] dark:bg-white/[0.02] px-6 text-center">
+                      <p className="text-sm text-black/50 dark:text-white/50">No active alerts in the last 24 hours.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

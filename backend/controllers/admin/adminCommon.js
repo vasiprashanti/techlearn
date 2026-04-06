@@ -132,27 +132,12 @@ export const slugifyCategory = (value) =>
 
 export const listKnownQuestionCategories = async () => {
   const storedCategories = await QuestionCategory.find({ status: "Active" }).sort({ createdAt: 1 }).lean();
-  const staticCategories = Object.entries(QUESTION_CATEGORY_META).map(([slug, meta]) => ({
-    slug,
-    ...meta,
+  return storedCategories.map((category) => ({
+    slug: category.slug,
+    title: category.title,
+    subtitle: category.subtitle || "",
+    icon: category.icon || "chart",
   }));
-
-  const merged = new Map();
-
-  for (const category of staticCategories) {
-    merged.set(category.slug, category);
-  }
-
-  for (const category of storedCategories) {
-    merged.set(category.slug, {
-      slug: category.slug,
-      title: category.title,
-      subtitle: category.subtitle || "",
-      icon: category.icon || "chart",
-    });
-  }
-
-  return Array.from(merged.values());
 };
 
 export const formatDateLabel = (value) => {
@@ -418,7 +403,7 @@ export const computeAdminMetrics = async () => {
     totalSubmissions,
     totalQuestions,
     totalTrackTemplates,
-    totalQuestionCategories: storedQuestionCategories || Object.keys(QUESTION_CATEGORY_META).length,
+    totalQuestionCategories: storedQuestionCategories || 0,
     totalCertificates,
     paymentsApproved,
     resourcesUploaded,

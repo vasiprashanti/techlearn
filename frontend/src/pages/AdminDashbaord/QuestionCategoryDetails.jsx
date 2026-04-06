@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   FiArrowLeft,
@@ -37,7 +37,7 @@ const dynamicCategoryFallback = (slug) => ({
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' '),
-  subtitle: 'Custom question category',
+  subtitle: 'Category details',
   total: 0,
   active: 0,
   icon: 'chart',
@@ -109,6 +109,9 @@ export default function QuestionCategoryDetails() {
   const [viewQuestion, setViewQuestion] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [remoteCategory, setRemoteCategory] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
 
   const isDarkMode = theme === 'dark';
   const category = remoteCategory || dynamicCategoryFallback(categorySlug);
@@ -153,26 +156,24 @@ export default function QuestionCategoryDetails() {
     };
   }, [categorySlug]);
 
+  const loadQuestions = useCallback(async () => {
+    const remoteQuestions = await adminAPI.getQuestions({ categorySlug });
+    setQuestions(preferRemoteData(remoteQuestions, seedQuestions));
+  }, [categorySlug, seedQuestions]);
+
   useEffect(() => {
     let cancelled = false;
 
-    adminAPI
-      .getQuestions({ categorySlug })
-      .then((remoteQuestions) => {
-        if (!cancelled) {
-          setQuestions(preferRemoteData(remoteQuestions, seedQuestions));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setQuestions(seedQuestions);
-        }
-      });
+    loadQuestions().catch(() => {
+      if (!cancelled) {
+        setQuestions(seedQuestions);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [categorySlug, seedQuestions]);
+  }, [loadQuestions, seedQuestions]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
@@ -191,6 +192,7 @@ export default function QuestionCategoryDetails() {
 
   const openAddQuestion = () => {
     setEditingQuestionId(null);
+    setFormError('');
     setQuestionForm(createQuestionForm(category?.title || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
     setIsQuestionFormOpen(true);
@@ -198,6 +200,7 @@ export default function QuestionCategoryDetails() {
 
   const openEditQuestion = (question) => {
     setEditingQuestionId(question.id);
+    setFormError('');
     setQuestionForm(formFromQuestion(question));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
     setIsQuestionFormOpen(true);
@@ -206,6 +209,7 @@ export default function QuestionCategoryDetails() {
   const closeQuestionModal = () => {
     setIsQuestionFormOpen(false);
     setEditingQuestionId(null);
+    setFormError('');
     setQuestionForm(createQuestionForm(category?.title || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
   };
@@ -243,18 +247,16 @@ export default function QuestionCategoryDetails() {
 
   const saveQuestion = async () => {
     if (!questionForm.title.trim() || !questionForm.trackType || !questionForm.problemDescription.trim()) {
+      setFormError('Title, track type, and problem description are required.');
       return;
     }
 
-    const payload = {
+    const backendPayload = {
       title: questionForm.title.trim(),
       difficulty: questionForm.difficulty,
-      track: questionForm.trackType,
-      created:
-        editingQuestionId
-          ? questions.find((question) => question.id === editingQuestionId)?.created || new Date().toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10),
-      status: 'Active',
+      categorySlug,
+      categoryTitle: category?.title,
+      trackType: questionForm.trackType,
       tags: questionForm.tags,
       description: questionForm.problemDescription.trim(),
       inputFormat: questionForm.inputFormat.trim(),
@@ -263,78 +265,42 @@ export default function QuestionCategoryDetails() {
       hiddenTestCases: questionForm.hiddenTestCases,
       timeLimit: questionForm.timeLimit,
       memoryLimit: questionForm.memoryLimit,
-      solved: editingQuestionId
-        ? questions.find((question) => question.id === editingQuestionId)?.solved || '0'
-        : '0',
       referenceLanguage: questionForm.referenceLanguage,
       solutionCode: questionForm.solutionCode,
       editorial: questionForm.editorial,
+      status: 'Active',
     };
 
-    const backendPayload = {
-      title: payload.title,
-      difficulty: payload.difficulty,
-      categorySlug,
-      categoryTitle: category?.title,
-      trackType: payload.track,
-      tags: payload.tags,
-      description: payload.description,
-      inputFormat: payload.inputFormat,
-      outputFormat: payload.outputFormat,
-      visibleTestCases: payload.visibleTestCases,
-      hiddenTestCases: payload.hiddenTestCases,
-      timeLimit: payload.timeLimit,
-      memoryLimit: payload.memoryLimit,
-      referenceLanguage: payload.referenceLanguage,
-      solutionCode: payload.solutionCode,
-      editorial: payload.editorial,
-      status: payload.status,
-    };
+    setFormError('');
+    setIsSavingQuestion(true);
 
     try {
-      if (editingQuestionId && !String(editingQuestionId).startsWith('q-')) {
-        await adminAPI.updateQuestion(editingQuestionId, backendPayload);
-        const refreshed = await adminAPI.getQuestions({ categorySlug });
-        setQuestions(preferRemoteData(refreshed, questions));
-      } else if (!editingQuestionId) {
-        await adminAPI.createQuestion(backendPayload);
-        const refreshed = await adminAPI.getQuestions({ categorySlug });
-        setQuestions(preferRemoteData(refreshed, questions));
-      } else {
-        setQuestions((prev) =>
-          prev.map((question) => (question.id === editingQuestionId ? { ...question, ...payload } : question))
-        );
-      }
-    } catch {
       if (editingQuestionId) {
-        setQuestions((prev) =>
-          prev.map((question) => (question.id === editingQuestionId ? { ...question, ...payload } : question))
-        );
+        await adminAPI.updateQuestion(editingQuestionId, backendPayload);
       } else {
-        setQuestions((prev) => [
-          {
-            id: `q-${Date.now()}`,
-            ...payload,
-          },
-          ...prev,
-        ]);
+        await adminAPI.createQuestion(backendPayload);
       }
+      await loadQuestions();
+      closeQuestionModal();
+    } catch (error) {
+      setFormError(error.message || 'Failed to save question.');
+    } finally {
+      setIsSavingQuestion(false);
     }
-
-    closeQuestionModal();
   };
 
   const confirmDeleteQuestion = async () => {
     if (!deleteTarget) return;
+    setIsDeletingQuestion(true);
     try {
-      if (!String(deleteTarget.id).startsWith('q-')) {
-        await adminAPI.deleteQuestion(deleteTarget.id);
-      }
-    } catch {
-      // Keep local fallback behavior.
+      await adminAPI.deleteQuestion(deleteTarget.id);
+      await loadQuestions();
+      setDeleteTarget(null);
+    } catch (error) {
+      setFormError(error.message || 'Failed to delete question.');
+    } finally {
+      setIsDeletingQuestion(false);
     }
-    setQuestions((prev) => prev.filter((question) => question.id !== deleteTarget.id));
-    setDeleteTarget(null);
   };
 
   if (!mounted) return <LoadingScreen />;
@@ -592,8 +558,9 @@ export default function QuestionCategoryDetails() {
 
               <div className="flex items-center justify-end gap-2.5 pt-1.5">
                 <button onClick={closeQuestionModal} className="h-9 w-[120px] rounded-xl border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">Cancel</button>
-                <button onClick={saveQuestion} className="h-9 w-[120px] rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] inline-flex items-center justify-center text-white text-sm font-semibold leading-none shadow-sm transition-colors">{editingQuestionId ? 'Save Changes' : 'Save'}</button>
+                <button onClick={saveQuestion} disabled={isSavingQuestion} className="h-9 w-[120px] rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-70 inline-flex items-center justify-center text-white text-sm font-semibold leading-none shadow-sm transition-colors">{isSavingQuestion ? 'Saving...' : editingQuestionId ? 'Save Changes' : 'Save'}</button>
               </div>
+              {formError && <p className="text-sm text-red-500">{formError}</p>}
             </div>
           </div>
         </div>
@@ -688,11 +655,13 @@ export default function QuestionCategoryDetails() {
               </button>
               <button
                 onClick={confirmDeleteQuestion}
-                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold"
+                disabled={isDeletingQuestion}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-70 text-white text-sm font-semibold"
               >
-                Delete
+                {isDeletingQuestion ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+            {formError && <p className="mt-3 text-sm text-red-500">{formError}</p>}
           </div>
         </div>
       )}
