@@ -238,10 +238,25 @@ export const deleteCollege = async (req, res) => {
     const { collegeId } = req.params;
     if (!assertObjectId(collegeId, "collegeId", res)) return;
 
-    const college = await College.findByIdAndDelete(collegeId);
+    const college = await College.findById(collegeId).lean();
     if (!college) {
       return res.status(404).json({ success: false, message: "College not found." });
     }
+
+    const [linkedBatches, linkedStudents] = await Promise.all([
+      Batch.countDocuments({ collegeId }),
+      Student.countDocuments({ collegeId }),
+    ]);
+
+    if (linkedBatches > 0 || linkedStudents > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Cannot delete college with linked batches or students.",
+        data: { linkedBatches, linkedStudents },
+      });
+    }
+
+    await College.findByIdAndDelete(collegeId);
 
     await writeAuditLog({
       verb: "Deleted",
@@ -307,20 +322,42 @@ export const createBatchAdmin = async (req, res) => {
     }
     if (!assertObjectId(collegeId, "collegeId", res)) return;
 
-    const batch = await Batch.create({
-      collegeId,
-      name: name.trim(),
-      startDate,
-      expiryDate,
-      releaseTime: releaseTime || "00:00",
-      status: status || BATCH_STATUS.DRAFT,
-    });
+    const session = await mongoose.startSession();
+    let batch;
+    try {
+      await session.withTransaction(async () => {
+        const [createdBatch] = await Batch.create(
+          [
+            {
+              collegeId,
+              name: name.trim(),
+              startDate,
+              expiryDate,
+              releaseTime: releaseTime || "00:00",
+              status: status || BATCH_STATUS.DRAFT,
+            },
+          ],
+          { session }
+        );
 
-    await Track.insertMany([
-      { batchId: batch._id, trackType: "Core", durationDays: 0, orderedQuestionIds: [] },
-      { batchId: batch._id, trackType: "DSA", durationDays: 0, orderedQuestionIds: [] },
-      { batchId: batch._id, trackType: "SQL", durationDays: 0, orderedQuestionIds: [] },
-    ]);
+        batch = createdBatch;
+
+        await Track.insertMany(
+          [
+            { batchId: batch._id, trackType: "Core", durationDays: 0, orderedQuestionIds: [] },
+            { batchId: batch._id, trackType: "DSA", durationDays: 0, orderedQuestionIds: [] },
+            { batchId: batch._id, trackType: "SQL", durationDays: 0, orderedQuestionIds: [] },
+          ],
+          { session }
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    if (!batch) {
+      return res.status(500).json({ success: false, message: "Failed to create batch." });
+    }
 
     await writeAuditLog({
       verb: "Created",
