@@ -18,6 +18,16 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+    problemRuns: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+    problemSubmitted: {
+      type: Map,
+      of: Boolean,
+      default: {},
+    },
     totalScore: {
       type: Number,
       required: true,

@@ -417,13 +417,23 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Test against hidden test cases
-    let hiddenTestsPassed = 0;
-    let hiddenTestsFailed = 0;
-    const totalHiddenTests = problem.hiddenTestCases.length;
+    // Enforce Max 1 Submission Limitation per problem
+    if (submission?.problemSubmitted && submission.problemSubmitted.get(problemIndex.toString())) {
+      return res.status(403).json({
+        success: false,
+        message: "You have already submitted a solution for this problem. Max 1 submission allowed.",
+        alreadySubmitted: true
+      });
+    }
 
-    for (let i = 0; i < problem.hiddenTestCases.length; i++) {
-      const testCase = problem.hiddenTestCases[i];
+    // Test against all test cases (visible + hidden)
+    let testsPassed = 0;
+    let testsFailed = 0;
+    const allTestCases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
+    const totalTests = allTestCases.length;
+
+    for (let i = 0; i < totalTests; i++) {
+      const testCase = allTestCases[i];
 
       try {
         const testResult = await testCodeWithJudge0(
@@ -435,33 +445,39 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
         const passed = testResult.success && testResult.outputMatches;
         if (passed) {
-          hiddenTestsPassed++;
+          testsPassed++;
         } else {
-          hiddenTestsFailed++;
+          testsFailed++;
         }
       } catch (error) {
-        hiddenTestsFailed++;
+        testsFailed++;
       }
     }
 
-    // Calculate score for this problem (0 if any test case fails, 100 if all pass)
-    const problemScore = hiddenTestsPassed === totalHiddenTests ? 100 : 0;
-    const isCorrect = hiddenTestsPassed === totalHiddenTests;
+    // Calculate proportional score for this problem
+    const problemScore = Math.round((testsPassed / totalTests) * 100);
+    const isCorrect = testsPassed === totalTests;
 
-    if (!submission) {
+if (!submission) {
       // Create new submission
       const problemScores = new Map();
       problemScores.set(problemIndex.toString(), problemScore);
+
+      const problemSubmitted = new Map();
+      problemSubmitted.set(problemIndex.toString(), true);
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
         studentEmail: studentEmail.toLowerCase(),
         problemScores,
+        problemSubmitted,
         totalScore: problemScore,
         lastSubmissionAt: new Date(),
       });
     } else {
       // Update existing submission
+      if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
+      submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
 
       // Recalculate total score
@@ -484,11 +500,11 @@ export const submitCodingRoundAnswers = async (req, res) => {
         problemScore,
         isCorrect,
         currentTotalScore: submission.totalScore,
-        failedTestCases: hiddenTestsFailed, // <-- Add this line
-        totalTestCases: totalHiddenTests, // <-- Optional: total count
+        failedTestCases: testsFailed, 
+        totalTestCases: totalTests, 
         feedback: isCorrect
           ? "Perfect! All test cases passed."
-          : `Some test cases failed. Failed: ${hiddenTestsFailed}/${totalHiddenTests}`,
+          : `Partial Correctness! Score: ${problemScore}. Failed: ${testsFailed}/${totalTests} test cases.`,
         submittedAt: new Date(),
       },
     });
@@ -728,7 +744,16 @@ export const runCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Process solutions - validate each solution against visible test cases only
+    let submission = existingSubmission;
+    if (!submission) {
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentEmail: studentEmail.toLowerCase(),
+        totalScore: 0,
+      });
+    }
+
+    // Process solutions - validate each solution lightly
     const runResults = [];
 
     for (const solution of solutions) {
@@ -761,57 +786,62 @@ export const runCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Test against visible test cases only
-      const visibleTestResults = [];
-      let visibleTestsPassed = 0;
-      const totalVisibleTests = problem.visibleTestCases.length;
-
-      for (const testCase of problem.visibleTestCases) {
-        try {
-          const result = await testCodeWithJudge0(
-            submittedCode,
-            languageId,
-            testCase.input,
-            testCase.expectedOutput
-          );
-
-          visibleTestResults.push({
-            input: testCase.input,
-            expectedOutput: testCase.expectedOutput,
-            actualOutput: result.actualOutput,
-            passed: result.passed,
-            error: result.error,
-            executionTime: result.executionTime,
-          });
-
-          if (result.passed) {
-            visibleTestsPassed++;
-          }
-        } catch (error) {
-          console.error(`Error testing visible test case:`, error);
-          visibleTestResults.push({
-            input: testCase.input,
-            expectedOutput: testCase.expectedOutput,
-            actualOutput: "",
-            passed: false,
-            error: "Execution error",
-            executionTime: null,
-          });
-        }
+      // Enforce 5 runs limit
+      const runsCount = submission.problemRuns ? (submission.problemRuns.get(problemIndex.toString()) || 0) : 0;
+      if (runsCount >= 5) {
+        runResults.push({
+          problemIndex,
+          language,
+          success: false,
+          compileSuccess: false,
+          feedback: "Max runs exhausted (5/5) for this problem. Please submit."
+        });
+        continue;
       }
 
-      runResults.push({
-        problemIndex,
-        language,
-        visibleTestsPassed,
-        totalVisibleTests,
-        visibleTestResults,
-        feedback:
-          visibleTestsPassed === totalVisibleTests
-            ? "All visible test cases passed! 🎉"
-            : `Passed ${visibleTestsPassed}/${totalVisibleTests} visible test cases.`,
-      });
+      // Increment runs
+      if (!submission.problemRuns) submission.problemRuns = new Map();
+      submission.problemRuns.set(problemIndex.toString(), runsCount + 1);
+
+      // Lightweight run using the first visible test case input
+      const simpleInput = problem.visibleTestCases?.length > 0 ? problem.visibleTestCases[0].input : "";
+      
+      try {
+        const result = await testCodeWithJudge0(
+          submittedCode,
+          languageId,
+          simpleInput,
+          "" // No expected output check needed
+        );
+
+        const compileSuccess = result.statusId === 3;
+
+        runResults.push({
+          problemIndex,
+          language,
+          runsLeft: 4 - runsCount, // 5 max minus what they just used
+          compileSuccess,
+          actualOutput: result.actualOutput,
+          error: result.error,
+          executionTime: result.executionTime,
+          feedback: compileSuccess 
+            ? "Code compiled successfully! You can now Submit." 
+            : `Execution Error: ${result.statusDescription}`
+        });
+      } catch (error) {
+        console.error(`Error during simple execution:`, error);
+        runResults.push({
+          problemIndex,
+          language,
+          compileSuccess: false,
+          actualOutput: "",
+          error: "Execution error",
+          feedback: "Server error occurred during execution."
+        });
+      }
     }
+
+    await submission.save();
 
     res.status(200).json({
       success: true,
