@@ -13,6 +13,7 @@ import {
   formatDateLabel,
   getCategoryTitle,
   listKnownQuestionCategories,
+  normalizeSubmissionStatus,
 } from "./adminCommon.js";
 
 const buildDashboardResponse = async () => {
@@ -290,6 +291,8 @@ export const listSubmissionsPage = async (req, res) => {
     const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit || "20", 10) || 20));
     const skip = (page - 1) * limit;
     const filter = {};
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     if (req.query.batchId) {
       filter.batchId = req.query.batchId;
@@ -298,7 +301,7 @@ export const listSubmissionsPage = async (req, res) => {
       filter.studentId = req.query.studentId;
     }
 
-    const [total, submissions] = await Promise.all([
+    const [total, submissions, totalToday, acceptedToday, averageExecution] = await Promise.all([
       Submission.countDocuments(filter),
       Submission.find(filter)
         .sort({ submittedAt: -1 })
@@ -308,20 +311,21 @@ export const listSubmissionsPage = async (req, res) => {
         .populate("batchId", "name")
         .populate("questionId", "title categoryTitle categorySlug trackType")
         .lean(),
-    ]);
-
-    const [accepted, averageExecution] = await Promise.all([
-      Submission.countDocuments({ status: "Passed" }),
-      Submission.aggregate([{ $group: { _id: null, avg: { $avg: "$executionTime" } } }]),
+      Submission.countDocuments({ ...filter, submittedAt: { $gte: todayStart } }),
+      Submission.countDocuments({ ...filter, submittedAt: { $gte: todayStart }, status: "Passed" }),
+      Submission.aggregate([
+        { $match: { ...filter, submittedAt: { $gte: todayStart } } },
+        { $group: { _id: null, avg: { $avg: "$executionTime" } } },
+      ]),
     ]);
 
     return res.status(200).json({
       success: true,
       data: {
         kpis: {
-          totalToday: submissions.length,
-          accepted,
-          successRate: total > 0 ? Number(((accepted / total) * 100).toFixed(0)) : 0,
+          totalToday,
+          accepted: acceptedToday,
+          successRate: totalToday > 0 ? Number(((acceptedToday / totalToday) * 100).toFixed(0)) : 0,
           avgExecutionTime: `${Number((averageExecution[0]?.avg || 0).toFixed(0))}ms`,
         },
         submissions: submissions.map((submission) => ({

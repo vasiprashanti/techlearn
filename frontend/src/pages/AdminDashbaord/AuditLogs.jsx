@@ -70,6 +70,7 @@ export default function AuditLogs() {
       .catch(() => {
         if (!cancelled) {
           setLogEntries(emptyAuditLogs);
+          setSummary(emptyAuditSummary);
         }
       });
 

@@ -50,7 +50,7 @@ export default function AdminHeaderControls({ user, logout }) {
         (student.name || '').toLowerCase().includes(query) ||
         (student.college || '').toLowerCase().includes(query)
     );
-  }, [query]);
+  }, [query, studentSearchData]);
 
   useEffect(() => {
     let cancelled = false;

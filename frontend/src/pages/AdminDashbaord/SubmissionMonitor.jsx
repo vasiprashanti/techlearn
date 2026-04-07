@@ -65,6 +65,7 @@ export default function SubmissionMonitor() {
       .catch(() => {
         if (!cancelled) {
           setSubmissionEntries(emptySubmissionState.submissions);
+          setSubmissionKpis(emptySubmissionState.kpis);
         }
       });
 
