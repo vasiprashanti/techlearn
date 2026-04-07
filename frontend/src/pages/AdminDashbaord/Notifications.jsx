@@ -4,8 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiBell, FiX, FiChevronDown, FiUsers, FiSend } from 'react-icons/fi';
-import { adminNotifications } from '../../data/adminNotificationsData';
+import { FiSearch, FiPlus, FiBell, FiX, FiChevronDown, FiUsers, FiSend, FiTrash2 } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyNotifications } from '../../data/adminEmptyStates';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -35,10 +36,31 @@ export default function Notifications() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCompose, setShowCompose] = useState(false);
   const [form, setForm] = useState({ title: '', body: '', target: 'All Students' });
+  const [notificationEntries, setNotificationEntries] = useState(emptyNotifications);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getNotifications()
+      .then((remoteNotifications) => {
+        if (!cancelled) {
+          setNotificationEntries(preferRemoteData(remoteNotifications, emptyNotifications));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotificationEntries(emptyNotifications);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -61,8 +83,45 @@ export default function Notifications() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const global = adminNotifications.filter((n) => n.isGlobal).length;
-  const targeted = adminNotifications.filter((n) => !n.isGlobal).length;
+  const global = notificationEntries.filter((n) => n.isGlobal).length;
+  const targeted = notificationEntries.filter((n) => !n.isGlobal).length;
+
+  const sendNotification = async () => {
+    if (!form.title.trim() || !form.body.trim()) return;
+
+    const nextNotification = {
+      id: `notif-${Date.now()}`,
+      title: form.title.trim(),
+      body: form.body.trim(),
+      target: form.target,
+      date: new Date().toISOString().slice(0, 10),
+      isGlobal: form.target === 'All Students',
+    };
+
+    try {
+      await adminAPI.createNotification(nextNotification);
+      const refreshed = await adminAPI.getNotifications();
+      setNotificationEntries(preferRemoteData(refreshed, [nextNotification, ...notificationEntries]));
+    } catch {
+      setNotificationEntries((prev) => [nextNotification, ...prev]);
+    }
+
+    setShowCompose(false);
+    setForm({ title: '', body: '', target: 'All Students' });
+  };
+
+  const deleteNotification = async (notificationId) => {
+    const confirmed = window.confirm('Delete this notification?');
+    if (!confirmed) return;
+
+    try {
+      await adminAPI.deleteNotification(notificationId);
+    } catch {
+      // Keep the UI responsive even if the delete endpoint fails.
+    }
+
+    setNotificationEntries((prev) => prev.filter((notification) => notification.id !== notificationId));
+  };
 
   return (
     <>
@@ -146,7 +205,7 @@ export default function Notifications() {
             </div>
 
             <div className="flex items-center justify-end mt-4">
-              <button onClick={() => setShowCompose(false)} className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
+              <button onClick={sendNotification} className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl bg-[#3C83F6] text-white text-xs font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
                 <FiSend className="w-3.5 h-3.5" />
                 Send
               </button>
@@ -185,7 +244,7 @@ export default function Notifications() {
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { label: 'Total Sent',    value: adminNotifications.length },
+                { label: 'Total Sent',    value: notificationEntries.length },
                 { label: 'Platform-wide', value: global },
                 { label: 'Targeted',      value: targeted },
               ].map(({ label, value }) => (
@@ -198,8 +257,8 @@ export default function Notifications() {
 
             {/* Notification Cards */}
             <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
-              {adminNotifications.map((n, index) => (
-                <div key={n.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-4 py-3.5 sm:py-3 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < adminNotifications.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
+              {notificationEntries.map((n, index) => (
+                <div key={n.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-4 py-3.5 sm:py-3 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < notificationEntries.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
                   <div className="min-w-0 flex items-start sm:items-center gap-3 sm:gap-2.5">
                     <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
                       <FiBell className="w-3.5 h-3.5 text-[#6d8198] dark:text-white/70" />
@@ -210,14 +269,28 @@ export default function Notifications() {
                     </div>
                   </div>
 
-                  <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:block sm:text-right">
-                    <span className="inline-flex items-center justify-center min-w-[92px] sm:min-w-[96px] h-7 px-2.5 rounded-full bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-xs font-semibold text-[#163156] dark:text-white/85">
-                      {n.target}
-                    </span>
-                    <p className="text-xs font-medium text-[#607893] dark:text-white/55 sm:mt-1">{n.date}</p>
+                  <div className="w-full sm:w-auto shrink-0 flex items-center justify-between gap-3 sm:justify-end sm:text-right">
+                    <div className="sm:text-right">
+                      <span className="inline-flex items-center justify-center min-w-[92px] sm:min-w-[96px] h-7 px-2.5 rounded-full bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-xs font-semibold text-[#163156] dark:text-white/85">
+                        {n.target}
+                      </span>
+                      <p className="text-xs font-medium text-[#607893] dark:text-white/55 sm:mt-1">{n.date}</p>
+                    </div>
+                    <button
+                      onClick={() => deleteNotification(n.id)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 dark:border-white/10 text-[#607893] dark:text-white/60 transition-colors hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
+                      aria-label={`Delete ${n.title}`}
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
+              {notificationEntries.length === 0 && (
+                <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">
+                  No notifications have been sent yet.
+                </div>
+              )}
             </div>
 
           </div>

@@ -4,6 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyReportsState } from '../../data/adminEmptyStates';
 import { FiSearch, FiDownload, FiClock, FiAward, FiUsers, FiCode, FiHome, FiBookOpen, FiFileText } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -32,12 +34,6 @@ const reportTypes = [
   { id: 6, title: 'Question Usage',      desc: 'Question bank usage across tracks and batches', formats: ['CSV'],          icon: FiFileText },
 ];
 
-const recentExports = [
-  { id: 1, title: 'Batch Leaderboard - CS-2024A', format: 'CSV',   date: 'Mar 8, 2025' },
-  { id: 2, title: 'Student Performance - All',    format: 'Excel', date: 'Mar 7, 2025' },
-  { id: 3, title: 'College Performance',          format: 'CSV',   date: 'Mar 5, 2025' },
-];
-
 const formatStyle = {
   CSV:   { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
   Excel: { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
@@ -53,10 +49,42 @@ export default function Reports() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloading, setDownloading] = useState(null);
+  const [reportEntries, setReportEntries] = useState(emptyReportsState.reportTypes);
+  const [recentExportEntries, setRecentExportEntries] = useState(emptyReportsState.recentExports);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getReports()
+      .then((remoteData) => {
+        if (!cancelled) {
+          const normalizedReports = preferRemoteData(remoteData?.reportTypes, reportTypes).map((report, index) => ({
+            ...reportTypes[index],
+            ...report,
+            id: report.id || report.key || reportTypes[index]?.id || index + 1,
+            title: report.title || reportTypes[index]?.title,
+            desc: report.desc || report.description || reportTypes[index]?.desc,
+            formats: report.formats || reportTypes[index]?.formats || ['CSV'],
+          }));
+          setReportEntries(normalizedReports);
+          setRecentExportEntries(preferRemoteData(remoteData?.recentExports, emptyReportsState.recentExports));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReportEntries(emptyReportsState.reportTypes);
+          setRecentExportEntries(emptyReportsState.recentExports);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -137,7 +165,7 @@ export default function Reports() {
 
             {/* Report Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-3.5">
-              {reportTypes.map(report => (
+              {reportEntries.map(report => (
                 <article key={report.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 sm:p-4 min-h-0 sm:min-h-[132px] shadow-sm transition-colors flex flex-col">
                   <div className="flex items-start gap-3.5 sm:gap-3 min-h-0 sm:min-h-[68px]">
                     <div className="h-11 w-11 sm:h-10 sm:w-10 rounded-xl sm:rounded-lg bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
@@ -174,10 +202,10 @@ export default function Reports() {
             <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
               <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
               <div className="mt-3 overflow-visible sm:overflow-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0">
-                {recentExports.map((exp, i) => {
+                {recentExportEntries.map((exp, i) => {
                   const fs = formatStyle[exp.format];
                   return (
-                    <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExports.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
+                    <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExportEntries.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="w-6 h-6 rounded-md bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#5f7590] dark:text-white/70">
                           <FiClock className="w-3 h-3" />

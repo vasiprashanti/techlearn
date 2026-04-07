@@ -1,54 +1,48 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
+import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiBell, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyBatches } from '../../data/adminEmptyStates';
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
 
 const searchRoutes = [
-  { id: "dashboard",          title: "Dashboard",          category: "Overview"     },
-  { id: "analytics",          title: "Analytics",          category: "Overview"     },
-  { id: "system-health",      title: "System Health",      category: "Overview"     },
-  { id: "colleges",           title: "Colleges",           category: "Organization" },
-  { id: "batches",            title: "Batches",            category: "Organization" },
-  { id: "students",           title: "Students",           category: "Organization" },
-  { id: "question-bank",      title: "Question Bank",      category: "Learning"     },
-  { id: "track-templates",    title: "Track Templates",    category: "Learning"     },
-  { id: "resources",          title: "Resources",          category: "Learning"     },
-  { id: "certificates",       title: "Certificates",       category: "Learning"     },
-  { id: "submission-monitor", title: "Submission Monitor", category: "Operations"   },
-  { id: "notifications",      title: "Notifications",      category: "Operations"   },
-  { id: "audit-logs",         title: "Audit Logs",         category: "Operations"   },
-  { id: "reports",            title: "Reports",            category: "Operations"   },
+  { id: "dashboard", title: "Dashboard", category: "Overview" },
+  { id: "analytics", title: "Analytics", category: "Overview" },
+  { id: "system-health", title: "System Health", category: "Overview" },
+  { id: "colleges", title: "Colleges", category: "Organization" },
+  { id: "batches", title: "Batches", category: "Organization" },
+  { id: "students", title: "Students", category: "Organization" },
+  { id: "question-bank", title: "Question Bank", category: "Learning" },
+  { id: "track-templates", title: "Track Templates", category: "Learning" },
+  { id: "resources", title: "Resources", category: "Learning" },
+  { id: "certificates", title: "Certificates", category: "Learning" },
+  { id: "submission-monitor", title: "Submission Monitor", category: "Operations" },
+  { id: "notifications", title: "Notifications", category: "Operations" },
+  { id: "audit-logs", title: "Audit Logs", category: "Operations" },
+  { id: "reports", title: "Reports", category: "Operations" },
 ];
-
-const batchesData = [
-  { id: "CS-2024A",  college: "MIT",                 track: "Data Structures & Algorithms", status: "Active",    start: "Jun 1, 2024",  end: "Dec 1, 2024",  students: 2 },
-  { id: "CS-2024B",  college: "MIT",                 track: "Web Development",              status: "Active",    start: "Jul 15, 2024", end: "Jan 15, 2025", students: 2 },
-  { id: "DS-2024A",  college: "Stanford University", track: "Python Programming",           status: "Active",    start: "Jun 15, 2024", end: "Dec 15, 2024", students: 3 },
-  { id: "WD-2024A",  college: "IIT Delhi",           track: "Web Development",              status: "Active",    start: "Aug 1, 2024",  end: "Feb 1, 2025",  students: 1 },
-  { id: "WD-2024B",  college: "IIT Delhi",           track: "Database Management",          status: "Upcoming",  start: "Sep 1, 2024",  end: "Mar 1, 2025",  students: 1 },
-  { id: "ML-2024A",  college: "Harvard University",  track: "Machine Learning",             status: "Completed", start: "Jun 1, 2024",  end: "Nov 30, 2024", students: 2 },
-  { id: "DSA-2024C", college: "IIT Delhi",           track: "Data Structures & Algorithms", status: "Active",    start: "Oct 1, 2024",  end: "Apr 1, 2025",  students: 1 },
-];
-
-const colleges = ["All Colleges", "MIT", "Stanford University", "IIT Delhi", "Harvard University", "IIT Bombay"];
-const collegeOptions = colleges.filter((c) => c !== 'All Colleges');
-
-const formatDisplayDate = (dateValue) => {
-  if (!dateValue) return 'TBD';
-  const date = new Date(`${dateValue}T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? 'TBD'
-    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
 
 const statusBadge = (status) => {
   if (status === 'Active') return 'bg-[#16a34a] text-white';
-  if (status === 'Upcoming') return 'bg-[#dbe7ff] text-[#3c83f6]';
+  if (status === 'Draft') return 'bg-[#dbe7ff] text-[#3c83f6]';
+  if (status === 'Expired') return 'bg-[#fee2e2] text-[#b91c1c]';
   return 'bg-[#e5e7eb] text-[#475569]';
 };
+
+const normalizeBatch = (batch) => ({
+  ...batch,
+  id: batch.id || batch._id || batch.name,
+  name: batch.name || batch.id || 'Untitled Batch',
+  college: batch.college || '',
+  track: batch.track || '',
+  status: batch.status || 'Draft',
+  start: batch.start || 'TBD',
+  end: batch.end || 'TBD',
+  students: Number(batch.students || 0),
+});
 
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
   if (!isOpen) return null;
@@ -59,9 +53,11 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
         <div className="flex items-center px-6 py-4 border-b border-black/5 dark:border-white/5">
           <FiSearch className="w-5 h-5 text-black/40 dark:text-white/40 mr-4 shrink-0" />
           <input
-            ref={searchInputRef} type="text"
+            ref={searchInputRef}
+            type="text"
             placeholder="Search pages, tracks, or settings..."
-            value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent border-none outline-none text-lg text-[#3C83F6] dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30"
           />
           <div className="flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded ml-4 shrink-0 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" onClick={onClose}>
@@ -69,18 +65,27 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
           </div>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-2">
-          {filteredRoutes.length === 0
-            ? <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">No results found for "{searchQuery}"</div>
-            : filteredRoutes.map(route => (
-              <button key={route.id} onClick={() => { onClose(); navigate(`/${route.id}`); }} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
+          {filteredRoutes.length === 0 ? (
+            <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">
+              No results found for "{searchQuery}"
+            </div>
+          ) : (
+            filteredRoutes.map((route) => (
+              <button
+                key={route.id}
+                onClick={() => {
+                  onClose();
+                  navigate(`/${route.id}`);
+                }}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left"
+              >
                 <div>
                   <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
-
                 </div>
                 <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">→</span>
               </button>
             ))
-          }
+          )}
         </div>
       </div>
     </div>
@@ -93,63 +98,102 @@ const Batches = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [batches, setBatches] = useState(batchesData);
-  const [mounted, setMounted]           = useState(false);
+  const [batches, setBatches] = useState(emptyBatches);
+  const [colleges, setColleges] = useState([]);
+  const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [pendingDeleteBatch, setPendingDeleteBatch] = useState(null);
   const [createError, setCreateError] = useState('');
+  const [isSavingBatch, setIsSavingBatch] = useState(false);
+  const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [batchSearchTerm, setBatchSearchTerm] = useState('');
   const [createBatchForm, setCreateBatchForm] = useState({
     batchName: '',
     college: '',
     startDate: '',
     endDate: '',
-    assignedTrack: '',
-    batchSize: '',
-    status: 'Active',
+    status: 'Draft',
   });
-  const [searchQuery, setSearchQuery]   = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [collegeFilter, setCollegeFilter] = useState('All Colleges');
-  const [statusFilter, setStatusFilter]   = useState('All Status');
+  const [statusFilter, setStatusFilter] = useState('All Status');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
+  const loadBatchPageData = useCallback(async () => {
+    const [remoteBatches, remoteColleges] = await Promise.all([
+      adminAPI.getBatches(),
+      adminAPI.getColleges(),
+    ]);
+
+    setBatches(preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch));
+    setColleges(
+      preferRemoteData(remoteColleges, []).map((college) => ({
+        id: college.id || college._id,
+        name: college.name || 'Untitled College',
+      }))
+    );
+  }, []);
+
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    loadBatchPageData().catch(() => {
+      if (!cancelled) {
+        setBatches(emptyBatches);
+        setColleges([]);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadBatchPageData]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
       if (e.key === 'Escape') setIsSearchOpen(false);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) searchInputRef.current.focus();
     else setSearchQuery('');
   }, [isSearchOpen]);
 
-  const filteredRoutes = searchRoutes.filter(r =>
-    r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.category.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRoutes = searchRoutes.filter((route) =>
+    route.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    route.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const filteredBatches = batches.filter(b => {
+
+  const collegeOptions = Array.from(new Set(colleges.map((college) => college.name).filter(Boolean)));
+  const filteredBatches = batches.filter((batch) => {
     const searchText = batchSearchTerm.trim().toLowerCase();
-    const matchCollege = collegeFilter === 'All Colleges' || b.college === collegeFilter;
-    const matchStatus  = statusFilter  === 'All Status'   || b.status  === statusFilter;
+    const matchCollege = collegeFilter === 'All Colleges' || batch.college === collegeFilter;
+    const matchStatus = statusFilter === 'All Status' || batch.status === statusFilter;
     const matchSearch =
       searchText.length === 0 ||
-      b.id.toLowerCase().includes(searchText) ||
-      b.college.toLowerCase().includes(searchText) ||
-      b.track.toLowerCase().includes(searchText);
+      String(batch.id || '').toLowerCase().includes(searchText) ||
+      String(batch.name || '').toLowerCase().includes(searchText) ||
+      String(batch.college || '').toLowerCase().includes(searchText) ||
+      String(batch.track || '').toLowerCase().includes(searchText);
     return matchCollege && matchStatus && matchSearch;
   });
 
   const counts = {
-    Active:    batches.filter(b => b.status === 'Active').length,
-    Upcoming:  batches.filter(b => b.status === 'Upcoming').length,
-    Completed: batches.filter(b => b.status === 'Completed').length,
+    Active: batches.filter((batch) => batch.status === 'Active').length,
+    Draft: batches.filter((batch) => batch.status === 'Draft').length,
+    Archived: batches.filter((batch) => batch.status === 'Archived').length,
   };
 
   const openCreateBatch = () => {
@@ -160,9 +204,7 @@ const Batches = () => {
       college: '',
       startDate: '',
       endDate: '',
-      assignedTrack: '',
-      batchSize: '',
-      status: 'Active',
+      status: 'Draft',
     });
     setIsCreateFormOpen(true);
   };
@@ -171,18 +213,16 @@ const Batches = () => {
     setEditingBatchId(batch.id);
     setCreateError('');
     setCreateBatchForm({
-      batchName: batch.id,
-      college: batch.college,
+      batchName: batch.name || '',
+      college: batch.college || '',
       startDate: '',
       endDate: '',
-      assignedTrack: batch.track,
-      batchSize: String(batch.students),
-      status: batch.status,
+      status: batch.status || 'Draft',
     });
     setIsCreateFormOpen(true);
   };
 
-  const createBatch = () => {
+  const createBatch = async () => {
     if (!createBatchForm.batchName.trim()) {
       setCreateError('Batch name is required');
       return;
@@ -191,52 +231,74 @@ const Batches = () => {
       setCreateError('College is required');
       return;
     }
-    if (!createBatchForm.assignedTrack.trim()) {
-      setCreateError('Assigned track is required');
+    if (!createBatchForm.startDate || !createBatchForm.endDate) {
+      setCreateError('Start date and end date are required');
       return;
     }
-    if (createBatchForm.startDate && createBatchForm.endDate && createBatchForm.startDate > createBatchForm.endDate) {
+    if (createBatchForm.startDate > createBatchForm.endDate) {
       setCreateError('End date must be after start date');
       return;
     }
 
-    const idPrefix = createBatchForm.batchName
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 10) || 'BATCH';
-
-    const newBatch = {
-      id: `${idPrefix}-${String(batches.length + 1).padStart(3, '0')}`,
-      college: createBatchForm.college,
-      track: createBatchForm.assignedTrack.trim(),
-      status: createBatchForm.status,
-      start: formatDisplayDate(createBatchForm.startDate),
-      end: formatDisplayDate(createBatchForm.endDate),
-      students: Number.parseInt(createBatchForm.batchSize || '0', 10) || 0,
-    };
-
-    if (editingBatchId) {
-      setBatches((prev) => prev.map((batch) => batch.id === editingBatchId ? { ...batch, ...newBatch, id: editingBatchId } : batch));
-    } else {
-      setBatches((prev) => [newBatch, ...prev]);
+    const selectedCollege = colleges.find((college) => college.name === createBatchForm.college);
+    if (!selectedCollege?.id) {
+      setCreateError('Please select a valid college');
+      return;
     }
-    setIsCreateFormOpen(false);
-    setEditingBatchId(null);
+
+    setCreateError('');
+    setIsSavingBatch(true);
+
+    try {
+      const payload = {
+        collegeId: selectedCollege.id,
+        name: createBatchForm.batchName.trim(),
+        startDate: createBatchForm.startDate,
+        expiryDate: createBatchForm.endDate,
+        status: createBatchForm.status,
+      };
+
+      if (editingBatchId) {
+        await adminAPI.updateBatch(editingBatchId, payload);
+      } else {
+        await adminAPI.createBatch(payload);
+      }
+
+      await loadBatchPageData();
+      setIsCreateFormOpen(false);
+      setEditingBatchId(null);
+    } catch (error) {
+      setCreateError(error.message || 'Failed to save batch');
+    } finally {
+      setIsSavingBatch(false);
+    }
   };
 
-  const deleteBatch = (batchId) => {
-    setBatches((prev) => prev.filter((batch) => batch.id !== batchId));
-    setPendingDeleteBatch(null);
+  const deleteBatch = async (batchId) => {
+    setCreateError('');
+    setIsDeletingBatch(true);
+
+    try {
+      await adminAPI.deleteBatch(batchId);
+      await loadBatchPageData();
+      setPendingDeleteBatch(null);
+    } catch (error) {
+      setCreateError(error.message || 'Failed to delete batch');
+    } finally {
+      setIsDeletingBatch(false);
+    }
   };
 
   return (
     <>
       <SearchModal
-        isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)}
-        searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-        searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate}
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchInputRef={searchInputRef}
+        filteredRoutes={filteredRoutes}
+        navigate={navigate}
       />
 
       {isCreateFormOpen && (
@@ -254,7 +316,7 @@ const Batches = () => {
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Name*</label>
                   <input
                     value={createBatchForm.batchName}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, batchName: e.target.value }))}
+                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, batchName: e.target.value }))}
                     placeholder="Enter batch name"
                     className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
                   />
@@ -264,7 +326,7 @@ const Batches = () => {
                   <div className="relative mt-1">
                     <select
                       value={createBatchForm.college}
-                      onChange={(e) => setCreateBatchForm((p) => ({ ...p, college: e.target.value }))}
+                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, college: e.target.value }))}
                       className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
                     >
                       <option value="">Select college</option>
@@ -279,43 +341,20 @@ const Batches = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
                   <input
                     type="date"
                     value={createBatchForm.startDate}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, startDate: e.target.value }))}
+                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, startDate: e.target.value }))}
                     className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
                   />
                 </div>
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">End Date</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
                   <input
                     type="date"
                     value={createBatchForm.endDate}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, endDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track*</label>
-                  <input
-                    value={createBatchForm.assignedTrack}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, assignedTrack: e.target.value }))}
-                    placeholder="E.g. Data Structures"
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
-                  />
-                </div>
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Size</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={createBatchForm.batchSize}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, batchSize: e.target.value }))}
-                    placeholder="Enter batch size"
+                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, endDate: e.target.value }))}
                     className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
                   />
                 </div>
@@ -326,12 +365,13 @@ const Batches = () => {
                 <div className="relative mt-1">
                   <select
                     value={createBatchForm.status}
-                    onChange={(e) => setCreateBatchForm((p) => ({ ...p, status: e.target.value }))}
+                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, status: e.target.value }))}
                     className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
                   >
+                    <option value="Draft">Draft</option>
                     <option value="Active">Active</option>
-                    <option value="Upcoming">Upcoming</option>
-                    <option value="Completed">Completed</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Archived">Archived</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
                 </div>
@@ -348,9 +388,10 @@ const Batches = () => {
                 </button>
                 <button
                   onClick={createBatch}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors"
+                  disabled={isSavingBatch}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
                 >
-                  {editingBatchId ? 'Save Changes' : 'Create Batch'}
+                  {isSavingBatch ? 'Saving...' : editingBatchId ? 'Save Changes' : 'Create Batch'}
                 </button>
               </div>
             </div>
@@ -364,7 +405,10 @@ const Batches = () => {
           <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
               <h3 className="text-base font-semibold text-black/80 dark:text-white">Delete Batch</h3>
-              <p className="text-sm text-black/50 dark:text-white/50 mt-1">Are you sure you want to delete {pendingDeleteBatch.id}?</p>
+              <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                Are you sure you want to delete {pendingDeleteBatch.name || pendingDeleteBatch.id}?
+              </p>
+              {createError && <p className="text-xs text-red-500 mt-2">{createError}</p>}
             </div>
             <div className="px-6 py-4 flex items-center justify-end gap-2.5">
               <button
@@ -375,9 +419,10 @@ const Batches = () => {
               </button>
               <button
                 onClick={() => deleteBatch(pendingDeleteBatch.id)}
-                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 transition-colors"
+                disabled={isDeletingBatch}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 transition-colors"
               >
-                Delete
+                {isDeletingBatch ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -389,19 +434,17 @@ const Batches = () => {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+        >
           <div className="max-w-[1600px] mx-auto space-y-8">
-
-            {/* Header */}
             <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
               <div>
                 <h1 className="admin-page-title">Batches</h1>
-
               </div>
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            {/* Top controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_170px_auto] gap-2.5 items-center">
               <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
@@ -419,7 +462,9 @@ const Batches = () => {
                   onChange={(e) => setCollegeFilter(e.target.value)}
                   className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 px-3.5 pr-9 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
                 >
-                  {colleges.map((college) => <option key={college} value={college}>{college}</option>)}
+                  {['All Colleges', ...collegeOptions].map((college) => (
+                    <option key={college} value={college}>{college}</option>
+                  ))}
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>
@@ -431,9 +476,10 @@ const Batches = () => {
                   className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 px-3.5 pr-9 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
                 >
                   <option value="All Status">All Status</option>
+                  <option value="Draft">Draft</option>
                   <option value="Active">Active</option>
-                  <option value="Upcoming">Upcoming</option>
-                  <option value="Completed">Completed</option>
+                  <option value="Expired">Expired</option>
+                  <option value="Archived">Archived</option>
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>
@@ -447,12 +493,11 @@ const Batches = () => {
               </button>
             </div>
 
-            {/* Stats row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { label: 'Active',    count: counts.Active,    color: 'text-emerald-500'                          },
-                { label: 'Upcoming',  count: counts.Upcoming,  color: 'text-indigo-500 dark:text-indigo-400'      },
-                { label: 'Completed', count: counts.Completed, color: 'text-black/35 dark:text-white/40'          },
+                { label: 'Active', count: counts.Active, color: 'text-emerald-500' },
+                { label: 'Draft', count: counts.Draft, color: 'text-indigo-500 dark:text-indigo-400' },
+                { label: 'Archived', count: counts.Archived, color: 'text-black/35 dark:text-white/40' },
               ].map(({ label, count, color }) => (
                 <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl px-6 py-5">
                   <p className="admin-micro-label text-black/40 dark:text-white/40">{label}</p>
@@ -461,31 +506,28 @@ const Batches = () => {
               ))}
             </div>
 
-            {/* Batch Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 sm:p-4 rounded-2xl flex flex-col gap-3 sm:gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
-
-                  {/* College + Status */}
+                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
                   <div className="flex items-start justify-between gap-2">
                     <p className="inline-flex items-center gap-1.5 text-xs font-medium text-black/55 dark:text-white/55 min-w-0">
                       <FiHome className="w-3.5 h-3.5" />
-                      <span className="break-words">{batch.college}</span>
+                      <span className="break-words">{batch.college || 'Unassigned college'}</span>
                     </p>
                     <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusBadge(batch.status)}`}>
                       {batch.status}
                     </span>
                   </div>
 
-                  {/* Batch title */}
                   <div className="space-y-0.5">
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none">{batch.id}</h3>
-                    <p className="text-[13px] sm:text-sm md:text-base text-black/55 dark:text-white/50 leading-relaxed sm:leading-snug line-clamp-2">{batch.track}</p>
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none break-words">{batch.name}</h3>
+                    <p className="text-[13px] sm:text-sm md:text-base text-black/55 dark:text-white/50 leading-relaxed sm:leading-snug line-clamp-2">
+                      {batch.track || 'Track assignment is not available yet.'}
+                    </p>
                   </div>
 
                   <div className="h-px bg-black/5 dark:bg-white/10" />
 
-                  {/* Start / End / Students */}
                   <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                     <div className="space-y-1.5 min-w-0">
                       <p className="text-[11px] text-black/45 dark:text-white/45">Start</p>
@@ -515,14 +557,14 @@ const Batches = () => {
                     <button
                       onClick={() => openEditBatch(batch)}
                       className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
-                      aria-label={`Edit ${batch.id}`}
+                      aria-label={`Edit ${batch.name}`}
                     >
                       <FiEdit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setPendingDeleteBatch(batch)}
                       className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
-                      aria-label={`Delete ${batch.id}`}
+                      aria-label={`Delete ${batch.name}`}
                     >
                       <FiTrash2 className="w-4 h-4" />
                     </button>
@@ -531,6 +573,11 @@ const Batches = () => {
               ))}
             </div>
 
+            {filteredBatches.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                No batches found for the selected filters.
+              </div>
+            )}
           </div>
         </main>
       </div>
@@ -539,6 +586,3 @@ const Batches = () => {
 };
 
 export default Batches;
-
-
-

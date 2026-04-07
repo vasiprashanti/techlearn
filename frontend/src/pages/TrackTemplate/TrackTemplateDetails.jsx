@@ -16,40 +16,7 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
-import { questionBankQuestions } from '../../data/adminQuestionBankData';
-
-const templateSeeds = [
-  {
-    id: 'trk_dsa_01',
-    name: 'DSA Track',
-    description: '30-day Data Structures & Algorithms curriculum',
-    totalDays: 30,
-    questionsAssigned: 4,
-    status: 'Active',
-    category: 'Data Structures & Algorithms',
-    iconKey: 'code',
-  },
-  {
-    id: 'trk_core_01',
-    name: 'Core Track',
-    description: '20-day Core CS fundamentals',
-    totalDays: 20,
-    questionsAssigned: 3,
-    status: 'Active',
-    category: 'Web Development',
-    iconKey: 'cpu',
-  },
-  {
-    id: 'trk_sql_01',
-    name: 'SQL Track',
-    description: '15-day SQL mastery',
-    totalDays: 15,
-    questionsAssigned: 1,
-    status: 'Active',
-    category: 'Database Management',
-    iconKey: 'database',
-  },
-];
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
 
 const iconMap = {
   code: FiCode,
@@ -88,6 +55,8 @@ export default function TrackTemplateDetails() {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [assignedQuestions, setAssignedQuestions] = useState([]);
+  const [availableQuestions, setAvailableQuestions] = useState([]);
+  const [trackDetail, setTrackDetail] = useState(null);
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
   const [addDayForm, setAddDayForm] = useState({
     dayNumber: '1',
@@ -99,22 +68,71 @@ export default function TrackTemplateDetails() {
   }, []);
 
   const track = useMemo(() => {
+    if (trackDetail) return trackDetail;
     if (location.state?.track) return location.state.track;
-    return templateSeeds.find((item) => item.id === templateId) || null;
-  }, [location.state, templateId]);
+    return null;
+  }, [trackDetail, location.state, templateId]);
 
   const categorySlug = track ? categorySlugMap[track.category] : null;
-  const dayWiseQuestions = categorySlug ? questionBankQuestions[categorySlug] || [] : [];
+  const dayWiseQuestions = availableQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
   const isDarkMode = theme === 'dark';
 
   useEffect(() => {
-    setAssignedQuestions(dayWiseQuestions);
+    const remoteAssigned = trackDetail?.assignedQuestions;
+    setAssignedQuestions(preferRemoteData(remoteAssigned, dayWiseQuestions));
     setAddDayForm({
-      dayNumber: String((dayWiseQuestions?.length || 0) + 1),
+      dayNumber: String((preferRemoteData(remoteAssigned, dayWiseQuestions)?.length || 0) + 1),
       questionId: '',
     });
-  }, [dayWiseQuestions]);
+  }, [dayWiseQuestions, trackDetail]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getTrackTemplate(templateId)
+      .then((remoteTemplate) => {
+        if (!cancelled) {
+          setTrackDetail(preferRemoteData(remoteTemplate, null));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTrackDetail(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [templateId]);
+
+  useEffect(() => {
+    if (!categorySlug) {
+      setAvailableQuestions([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    adminAPI
+      .getQuestions({ categorySlug })
+      .then((remoteQuestions) => {
+        if (!cancelled) {
+          setAvailableQuestions(preferRemoteData(remoteQuestions, []));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAvailableQuestions([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [categorySlug]);
 
   const openAddDayModal = () => {
     setAddDayForm({

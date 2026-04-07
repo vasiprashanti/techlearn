@@ -5,42 +5,11 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyTrackTemplates } from '../../data/adminEmptyStates';
 import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown } from 'react-icons/fi';
 
 // --- Mock Data ---
-const mockTracks = [
-  {
-    id: 'trk_dsa_01',
-    name: 'DSA Track',
-    description: '30-day Data Structures & Algorithms curriculum',
-    totalDays: 30,
-    questionsAssigned: 4,
-    status: 'Active',
-    icon: FiCode,
-    category: 'Data Structures & Algorithms',
-  },
-  {
-    id: 'trk_core_01',
-    name: 'Core Track',
-    description: '20-day Core CS fundamentals',
-    totalDays: 20,
-    questionsAssigned: 1,
-    status: 'Active',
-    icon: FiCpu,
-    category: 'Web Development',
-  },
-  {
-    id: 'trk_sql_01',
-    name: 'SQL Track',
-    description: '15-day SQL mastery',
-    totalDays: 15,
-    questionsAssigned: 1,
-    status: 'Active',
-    icon: FiDatabase,
-    category: 'Database Management',
-  },
-];
-
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
   { id: 'analytics', title: 'Analytics', category: 'Overview' },
@@ -61,6 +30,12 @@ const statusPillClass = (status) =>
     ? 'bg-[#16a34a] text-white'
     : 'bg-[#dbe7ff] text-[#3c83f6]';
 
+const iconMapForTrack = (iconKeyOrCategory) => {
+  if (iconKeyOrCategory === 'database' || iconKeyOrCategory === 'Database Management') return FiDatabase;
+  if (iconKeyOrCategory === 'cpu' || iconKeyOrCategory === 'Web Development') return FiCpu;
+  return FiCode;
+};
+
 export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -73,7 +48,7 @@ export default function TrackTemplate() {
   const [searchQuery, setSearchQuery] = useState('');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
-  const [tracks, setTracks] = useState(mockTracks);
+  const [tracks, setTracks] = useState(emptyTrackTemplates);
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -86,21 +61,43 @@ export default function TrackTemplate() {
   });
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [historyTrack, setHistoryTrack] = useState(null);
-  const [trackQuestions, setTrackQuestions] = useState({
-    trk_dsa_01: ['Two Sum', 'Binary Search', 'Merge Intervals', 'Tree Traversal'],
-    trk_core_01: ['OS Basics', 'Computer Networks Intro', 'DBMS Normalization'],
-    trk_sql_01: ['SELECT & WHERE', 'JOIN Mastery', 'Window Functions'],
-  });
-  const [versionHistory, setVersionHistory] = useState({
-    trk_dsa_01: ['v3 • Added Merge Intervals', 'v2 • Reordered Tree Traversal', 'v1 • Initial template'],
-    trk_core_01: ['v2 • Added DBMS Normalization', 'v1 • Initial template'],
-    trk_sql_01: ['v1 • Initial template'],
-  });
+  const [trackQuestions, setTrackQuestions] = useState({});
+  const [versionHistory, setVersionHistory] = useState({});
+  const [questionCategories, setQuestionCategories] = useState([]);
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([adminAPI.getTrackTemplates(), adminAPI.getQuestionCategories()])
+      .then(([remoteTracks, remoteCategories]) => {
+        if (!cancelled) {
+          const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
+            ...track,
+            icon: track.icon || iconMapForTrack(track.iconKey || track.category),
+          }));
+          const normalizedCategories = preferRemoteData(remoteCategories, [])
+            .map((category) => category.title)
+            .filter(Boolean);
+
+          setTracks(normalizedTracks);
+          setQuestionCategories(normalizedCategories);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTracks(emptyTrackTemplates);
+          setQuestionCategories([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -384,14 +381,17 @@ export default function TrackTemplate() {
                     className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
                   >
                     <option value="">Select category</option>
-                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-                    <option value="Database Management">Database Management</option>
-                    <option value="Web Development">Web Development</option>
-                    <option value="Python Programming">Python Programming</option>
-                    <option value="Machine Learning">Machine Learning</option>
+                    {questionCategories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
                 </div>
+                {questionCategories.length === 0 && (
+                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
+                    No categories available. Add a question category first.
+                  </p>
+                )}
               </div>
 
               <div>

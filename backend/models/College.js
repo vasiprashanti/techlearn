@@ -1,22 +1,5 @@
 import mongoose from "mongoose";
 
-const testSchema = new mongoose.Schema({
-  month: {
-    type: String,
-    required: true,
-  },
-  mcqRound: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "CollegeMcq",
-    required: true,
-  },
-  codingRound: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "CodingRound", // Placeholder for future implementation
-    required: false,
-  },
-});
-
 const collegeSchema = new mongoose.Schema(
   {
     name: {
@@ -27,6 +10,33 @@ const collegeSchema = new mongoose.Schema(
     },
     imageUrl: {
       type: String,
+      default: "",
+    },
+    code: {
+      type: String,
+      trim: true,
+      uppercase: true,
+      sparse: true,
+    },
+    city: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive"],
+      default: "Active",
+    },
+    contactPerson: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    contactEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
       default: "",
     },
   },

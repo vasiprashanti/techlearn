@@ -33,6 +33,8 @@ import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import submissionRoutes from "./routes/submissionRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import adminPortalRoutes from "./routes/adminPortalRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 
 dotenv.config();
@@ -112,6 +114,9 @@ app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
 app.use("/api/admin/batch", batchRoutes);
+app.use("/api/admin/students", studentRoutes);
+app.use("/api/admin", adminPortalRoutes);
+app.use("/api/admin", adminRouter);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
 app.use("/api/admin", adminRouter);

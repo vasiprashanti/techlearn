@@ -4,218 +4,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, FiCalendar, FiBookOpen } from 'react-icons/fi';
 
-const fallbackBatchMap = {
-  'CS-2024A': {
-    id: 'CS-2024A',
-    college: 'MIT',
-    status: 'Active',
-    start: 'Jun 1, 2024',
-    students: 2,
-    avgScore: 89,
-    avgStreakDays: 13,
-    tracks: [
-      {
-        name: 'DSA Track',
-        questionsAssigned: 4,
-        days: ['Two Sum', 'Reverse Linked List', 'Binary Tree Level Order Traversal', 'Maximum Subarray Sum'],
-      },
-      {
-        name: 'Core Track',
-        questionsAssigned: 1,
-        days: ['DataFrame Manipulation'],
-      },
-      {
-        name: 'SQL Track',
-        questionsAssigned: 1,
-        days: ['SQL Join Operations'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Alex Johnson', email: 'alex@mit.edu', score: 92, streak: '15 / 183' },
-      { name: 'Lisa Anderson', email: 'lisa@mit.edu', score: 85, streak: '10 / 183' },
-    ],
-  },
-  'CS-2024B': {
-    id: 'CS-2024B',
-    college: 'MIT',
-    status: 'Active',
-    start: 'Jul 15, 2024',
-    students: 2,
-    avgScore: 84,
-    avgStreakDays: 11,
-    tracks: [
-      {
-        name: 'Frontend Track',
-        questionsAssigned: 3,
-        days: ['HTML Semantic Layout', 'CSS Flex and Grid', 'Responsive Navbar Build'],
-      },
-      {
-        name: 'JavaScript Core',
-        questionsAssigned: 2,
-        days: ['Array Methods Practice', 'Async Fetch and Render'],
-      },
-      {
-        name: 'Project Track',
-        questionsAssigned: 1,
-        days: ['Landing Page Sprint'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Maya Lee', email: 'maya@mit.edu', score: 88, streak: '12 / 150' },
-      { name: 'Noah Miller', email: 'noah@mit.edu', score: 80, streak: '8 / 150' },
-    ],
-  },
-  'DS-2024A': {
-    id: 'DS-2024A',
-    college: 'Stanford University',
-    status: 'Active',
-    start: 'Jun 15, 2024',
-    students: 3,
-    avgScore: 83,
-    avgStreakDays: 10,
-    tracks: [
-      {
-        name: 'Python Foundations',
-        questionsAssigned: 3,
-        days: ['Loops and Conditions', 'Dictionaries and Sets', 'Functions and Scope'],
-      },
-      {
-        name: 'Data Handling',
-        questionsAssigned: 2,
-        days: ['Pandas Basics', 'Data Cleaning Tasks'],
-      },
-      {
-        name: 'Visualization Track',
-        questionsAssigned: 1,
-        days: ['Matplotlib Quick Charts'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Ethan Park', email: 'ethan@stanford.edu', score: 86, streak: '9 / 144' },
-      { name: 'Sophie Kim', email: 'sophie@stanford.edu', score: 82, streak: '7 / 144' },
-      { name: 'Arjun Nair', email: 'arjun@stanford.edu', score: 81, streak: '6 / 144' },
-    ],
-  },
-  'WD-2024A': {
-    id: 'WD-2024A',
-    college: 'IIT Delhi',
-    status: 'Active',
-    start: 'Aug 1, 2024',
-    students: 1,
-    avgScore: 79,
-    avgStreakDays: 8,
-    tracks: [
-      {
-        name: 'Web Basics',
-        questionsAssigned: 2,
-        days: ['Structure a Portfolio Page', 'CSS Components Styling'],
-      },
-      {
-        name: 'Backend Intro',
-        questionsAssigned: 1,
-        days: ['Express Route Setup'],
-      },
-      {
-        name: 'Deployment Track',
-        questionsAssigned: 1,
-        days: ['Deploy with Vercel'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Priya Singh', email: 'priya@iitd.ac.in', score: 79, streak: '6 / 120' },
-    ],
-  },
-  'WD-2024B': {
-    id: 'WD-2024B',
-    college: 'IIT Delhi',
-    status: 'Upcoming',
-    start: 'Sep 1, 2024',
-    students: 1,
-    avgScore: 0,
-    avgStreakDays: 0,
-    tracks: [
-      {
-        name: 'Database Track',
-        questionsAssigned: 2,
-        days: ['SQL Schema Design', 'Normalization Practice'],
-      },
-      {
-        name: 'API Track',
-        questionsAssigned: 1,
-        days: ['REST Endpoint Draft'],
-      },
-      {
-        name: 'Testing Track',
-        questionsAssigned: 1,
-        days: ['Write Integration Tests'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Rohan Verma', email: 'rohan@iitd.ac.in', score: 0, streak: '0 / 0' },
-    ],
-  },
-  'ML-2024A': {
-    id: 'ML-2024A',
-    college: 'Harvard University',
-    status: 'Completed',
-    start: 'Jun 1, 2024',
-    students: 2,
-    avgScore: 91,
-    avgStreakDays: 16,
-    tracks: [
-      {
-        name: 'ML Fundamentals',
-        questionsAssigned: 3,
-        days: ['Linear Regression', 'Logistic Classification', 'Model Evaluation'],
-      },
-      {
-        name: 'Feature Engineering',
-        questionsAssigned: 2,
-        days: ['Missing Value Strategy', 'Encoding Categorical Data'],
-      },
-      {
-        name: 'Capstone Track',
-        questionsAssigned: 1,
-        days: ['Mini Prediction System'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Emma Clark', email: 'emma@harvard.edu', score: 94, streak: '18 / 183' },
-      { name: 'Daniel Scott', email: 'daniel@harvard.edu', score: 88, streak: '14 / 183' },
-    ],
-  },
-  'DSA-2024C': {
-    id: 'DSA-2024C',
-    college: 'IIT Delhi',
-    status: 'Active',
-    start: 'Oct 1, 2024',
-    students: 1,
-    avgScore: 89,
-    avgStreakDays: 12,
-    tracks: [
-      {
-        name: 'DSA Sprint',
-        questionsAssigned: 4,
-        days: ['Stack and Queue Drills', 'Linked List Challenges', 'Graph Traversal Basics', 'Sliding Window Patterns'],
-      },
-      {
-        name: 'Contest Prep',
-        questionsAssigned: 1,
-        days: ['Timed Problem Set'],
-      },
-      {
-        name: 'Revision Track',
-        questionsAssigned: 1,
-        days: ['Daily Mixed Practice'],
-      },
-    ],
-    studentsTable: [
-      { name: 'Karan Mehta', email: 'karan@iitd.ac.in', score: 89, streak: '12 / 160' },
-    ],
-  },
-};
+const fallbackBatchMap = {};
 
 const scorePillClass = (score) =>
   score >= 80
@@ -233,17 +25,21 @@ const BatchDetails = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [batchDetail, setBatchDetail] = useState(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const batch = useMemo(() => {
+    if (batchDetail) {
+      return batchDetail;
+    }
+
     const stateBatch = location.state?.batch;
-    const fallbackBatch = fallbackBatchMap[batchId];
     const base = stateBatch?.id === batchId
-      ? { ...fallbackBatch, ...stateBatch }
-      : fallbackBatch || {
+      ? { ...stateBatch }
+      : {
       id: batchId,
       college: 'Unknown College',
       status: 'Active',
@@ -253,7 +49,7 @@ const BatchDetails = () => {
       avgStreakDays: 0,
       tracks: [],
       studentsTable: [],
-    };
+      };
 
     return {
       ...base,
@@ -268,7 +64,28 @@ const BatchDetails = () => {
         { name: 'No enrolled students', email: '-', score: 0, streak: '-' },
       ],
     };
-  }, [location.state, batchId]);
+  }, [batchDetail, location.state, batchId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getBatch(batchId)
+      .then((remoteBatch) => {
+        if (!cancelled) {
+          setBatchDetail(preferRemoteData(remoteBatch, null));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBatchDetail(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [batchId]);
 
   const activeToday = Math.max(0, Math.floor(batch.students * 0.8));
 

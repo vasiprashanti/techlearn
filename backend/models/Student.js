@@ -30,6 +30,12 @@ const studentSchema = new mongoose.Schema(
       type: String,
     },
 
+    primaryTrack: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
     status: {
       type: String,
       enum: ["Active", "Inactive", "Suspended"],
@@ -45,10 +51,18 @@ const studentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    testsTaken: {
+      type: Number,
+      default: 0,
+    },
+
+    lastActiveAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
-
-studentSchema.index({ batchId: 1 });
 
 export default mongoose.model("Student", studentSchema);

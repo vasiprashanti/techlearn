@@ -4,7 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import {  FiSearch, FiActivity, FiServer, FiDatabase, FiLock, FiAlertCircle , FiBell } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptySystemHealthState } from '../../data/adminEmptyStates';
+import {  FiSearch, FiActivity, FiServer, FiDatabase, FiLock, FiAlertCircle } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -23,27 +25,6 @@ const searchRoutes = [
   { id: "reports", title: "Reports", category: "Operations" }
 ];
 
-// --- NEW MOCK DATA ---
-const healthData = {
-  kpis: [
-    { label: "Uptime", value: "99.97%" },
-    { label: "Avg Execution Time", value: "1.2s" },
-    { label: "Queue Size", value: "3" },
-    { label: "Errors (24h)", value: "7" }
-  ],
-  services: [
-    { name: "Judge API", status: "Operational", ping: "45ms", icon: <FiActivity /> },
-    { name: "Database", status: "Operational", ping: "12ms", icon: <FiDatabase /> },
-    { name: "File Storage", status: "Operational", ping: "89ms", icon: <FiServer /> },
-    { name: "Auth Service", status: "Operational", ping: "23ms", icon: <FiLock /> }
-  ],
-  recentAlerts: [
-    { time: "2 min ago", msg: "Judge timeout on submission #4821", type: "warning" },
-    { time: "1 hr ago", msg: "Rate limit hit for batch CS-2024A", type: "warning" },
-    { time: "3 hr ago", msg: "Slow query detected on students table", type: "warning" }
-  ]
-};
-
 const SystemHealth = () => {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -51,6 +32,7 @@ const SystemHealth = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [systemHealthState, setSystemHealthState] = useState(emptySystemHealthState);
   
   // Search State
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -61,6 +43,27 @@ const SystemHealth = () => {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getSystemHealth()
+      .then((remoteData) => {
+        if (!cancelled) {
+          setSystemHealthState(preferRemoteData(remoteData, emptySystemHealthState));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSystemHealthState(emptySystemHealthState);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // CMD+K LISTENER
@@ -184,7 +187,7 @@ const SystemHealth = () => {
 
             {/* Top KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {healthData.kpis.map((kpi, i) => (
+              {systemHealthState.kpis.map((kpi, i) => (
                 <div key={i} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-6 flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors rounded-xl">
                   <span className="admin-micro-label text-black/50 dark:text-white/50 mb-4">{kpi.label}</span>
                   <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{kpi.value}</span>
@@ -198,7 +201,7 @@ const SystemHealth = () => {
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Service Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                  {healthData.services.map((service, i) => (
+                  {systemHealthState.services.map((service, i) => (
                     <div key={i} className="bg-white dark:bg-[#0f1f43] backdrop-blur-md border border-black/10 dark:border-white/15 p-6 rounded-xl flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors">
                       <div className="flex justify-between items-start mb-4">
                         <div className="text-black/40 dark:text-white/40 w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full">{service.icon}</div>
@@ -222,17 +225,23 @@ const SystemHealth = () => {
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Recent Alerts</h3>
                 <div className="flex-1 flex flex-col gap-4">
-                  {healthData.recentAlerts.map((alert, i) => (
-                    <div key={i} className="flex gap-5 items-start bg-white dark:bg-[#0f1f43] p-5 rounded-xl border border-black/10 dark:border-white/15 hover:bg-white dark:hover:bg-[#162a52] transition-colors">
-                      <div className="mt-0.5 text-amber-500 shrink-0">
-                        <FiAlertCircle className="w-5 h-5" />
+                  {systemHealthState.recentAlerts.length > 0 ? (
+                    systemHealthState.recentAlerts.map((alert, i) => (
+                      <div key={i} className="flex gap-5 items-start bg-white dark:bg-[#0f1f43] p-5 rounded-xl border border-black/10 dark:border-white/15 hover:bg-white dark:hover:bg-[#162a52] transition-colors">
+                        <div className="mt-0.5 text-amber-500 shrink-0">
+                          <FiAlertCircle className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-black dark:text-white mb-1 leading-relaxed">{alert.msg}</p>
+                          <span className="admin-micro-label text-black/40 dark:text-white/40">{alert.time}</span>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-black dark:text-white mb-1 leading-relaxed">{alert.msg}</p>
-                        <span className="admin-micro-label text-black/40 dark:text-white/40">{alert.time}</span>
-                      </div>
+                    ))
+                  ) : (
+                    <div className="h-full min-h-[220px] flex items-center justify-center rounded-xl border border-dashed border-black/15 dark:border-white/20 bg-black/[0.02] dark:bg-white/[0.02] px-6 text-center">
+                      <p className="text-sm text-black/50 dark:text-white/50">No active alerts in the last 24 hours.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

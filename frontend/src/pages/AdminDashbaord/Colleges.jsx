@@ -4,7 +4,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { FiSearch, FiPlus, FiBell, FiEdit2, FiTrash2, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyColleges } from '../../data/adminEmptyStates';
+import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -21,14 +23,6 @@ const searchRoutes = [
   { id: "notifications", title: "Notifications", category: "Operations" },
   { id: "audit-logs", title: "Audit Logs", category: "Operations" },
   { id: "reports", title: "Reports", category: "Operations" },
-];
-
-const collegesData = [
-  { id: "MIT-001", name: "MIT", code: "MIT", city: "Cambridge", contactPerson: "Ava Martin", contactEmail: "ava@mit.edu", avgScore: 86, activeStudents: 3, totalStudents: 4, status: "Active" },
-  { id: "STF-002", name: "Stanford University", code: "STF", city: "Stanford", contactPerson: "Liam Brooks", contactEmail: "liam@stanford.edu", avgScore: 83, activeStudents: 2, totalStudents: 3, status: "Active" },
-  { id: "IIT-003", name: "IIT Delhi", code: "IIT", city: "Delhi", contactPerson: "Riya Sharma", contactEmail: "riya@iitd.ac.in", avgScore: 86, activeStudents: 3, totalStudents: 3, status: "Active" },
-  { id: "HRV-004", name: "Harvard University", code: "HRV", city: "Cambridge", contactPerson: "Noah Reed", contactEmail: "noah@harvard.edu", avgScore: 89, activeStudents: 2, totalStudents: 2, status: "Active" },
-  { id: "IIB-005", name: "IIT Bombay", code: "IIB", city: "Mumbai", contactPerson: "Anaya Rao", contactEmail: "anaya@iitb.ac.in", avgScore: 0, activeStudents: 0, totalStudents: 0, status: "Inactive" },
 ];
 
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
@@ -66,7 +60,7 @@ const Colleges = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [colleges, setColleges] = useState(collegesData);
+  const [colleges, setColleges] = useState(emptyColleges);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -80,9 +74,28 @@ const Colleges = () => {
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
-  const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getColleges()
+      .then((remoteColleges) => {
+        if (!cancelled) {
+          setColleges(preferRemoteData(remoteColleges, emptyColleges));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setColleges(emptyColleges);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
@@ -170,28 +183,13 @@ const Colleges = () => {
 
     try {
       if (editingCollege) {
-        await fetch(`${BASE_URL}/college/${editingCollege.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        setColleges((prev) => prev.map((c) => c.id === editingCollege.id ? { ...c, ...payload } : c));
+        await adminAPI.updateCollege(editingCollege.id, payload);
+        const refreshed = await adminAPI.getColleges();
+        setColleges(preferRemoteData(refreshed, colleges));
       } else {
-        await fetch(`${BASE_URL}/college`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        setColleges((prev) => [
-          {
-            id: `${payload.code || payload.name.slice(0, 3).toUpperCase()}-${String(prev.length + 1).padStart(3, '0')}`,
-            ...payload,
-            avgScore: 0,
-            activeStudents: 0,
-            totalStudents: 0,
-          },
-          ...prev,
-        ]);
+        await adminAPI.createCollege(payload);
+        const refreshed = await adminAPI.getColleges();
+        setColleges(preferRemoteData(refreshed, colleges));
       }
       setIsFormOpen(false);
     } catch {
@@ -218,7 +216,10 @@ const Colleges = () => {
     const ok = window.confirm(`Delete ${college.name}?`);
     if (!ok) return;
     try {
-      await fetch(`${BASE_URL}/college/${college.id}`, { method: 'DELETE' });
+      await adminAPI.deleteCollege(college.id);
+      const refreshed = await adminAPI.getColleges();
+      setColleges(preferRemoteData(refreshed, colleges.filter((c) => c.id !== college.id)));
+      return;
     } catch {
       // Fallback to local deletion when endpoint shape differs.
     }

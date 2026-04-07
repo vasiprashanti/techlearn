@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { FiBell, FiSearch, FiX, FiSettings, FiLogOut } from 'react-icons/fi';
-import { adminNotifications } from '../../data/adminNotificationsData';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyNotifications } from '../../data/adminEmptyStates';
 
 const quickActions = [
   { label: 'Create college', path: '/colleges' },
@@ -20,20 +21,14 @@ const navigateItems = [
   { label: 'Go to analytics', path: '/analytics' },
 ];
 
-const studentSearchData = [
-  { name: 'Alex Johnson', college: 'MIT' },
-  { name: 'Sarah Williams', college: 'Stanford University' },
-  { name: 'Mike Chen', college: 'MIT' },
-  { name: 'Emily Davis', college: 'IIT Delhi' },
-  { name: 'Kevin Zhang', college: 'Harvard University' },
-];
-
 export default function AdminHeaderControls({ user, logout }) {
   const navigate = useNavigate();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [notificationEntries, setNotificationEntries] = useState(emptyNotifications);
+  const [studentSearchData, setStudentSearchData] = useState([]);
   const commandInputRef = useRef(null);
 
   const query = commandQuery.trim().toLowerCase();
@@ -52,10 +47,49 @@ export default function AdminHeaderControls({ user, logout }) {
     if (!query) return studentSearchData;
     return studentSearchData.filter(
       (student) =>
-        student.name.toLowerCase().includes(query) ||
-        student.college.toLowerCase().includes(query)
+        (student.name || '').toLowerCase().includes(query) ||
+        (student.college || '').toLowerCase().includes(query)
     );
-  }, [query]);
+  }, [query, studentSearchData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getNotifications()
+      .then((remoteNotifications) => {
+        if (!cancelled) {
+          setNotificationEntries(preferRemoteData(remoteNotifications, emptyNotifications));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNotificationEntries(emptyNotifications);
+        }
+      });
+
+    adminAPI
+      .getStudents()
+      .then((remoteStudents) => {
+        if (!cancelled) {
+          setStudentSearchData(
+            preferRemoteData(remoteStudents, []).slice(0, 8).map((student) => ({
+              name: student.name || 'Unnamed Student',
+              college: student.college || 'Unknown College',
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStudentSearchData([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (isCommandOpen) {
@@ -161,6 +195,11 @@ export default function AdminHeaderControls({ user, logout }) {
                   {student.name} - {student.college}
                 </button>
               ))}
+              {filteredStudentResults.length === 0 && (
+                <div className="px-3 py-2 rounded-xl text-sm text-black/45 dark:text-white/45 border border-dashed border-black/10 dark:border-white/10">
+                  No students available yet.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -194,7 +233,9 @@ export default function AdminHeaderControls({ user, logout }) {
             className="relative w-9 h-9 inline-flex items-center justify-center text-black/60 dark:text-white/65 hover:text-black dark:hover:text-white rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors"
           >
             <FiBell className="w-4 h-4" />
-            <span className="absolute top-[9px] right-[9px] w-1.5 h-1.5 rounded-full bg-red-500" />
+            {notificationEntries.length > 0 && (
+              <span className="absolute top-[9px] right-[9px] w-1.5 h-1.5 rounded-full bg-red-500" />
+            )}
           </button>
 
           {isNotificationsOpen && (
@@ -210,7 +251,7 @@ export default function AdminHeaderControls({ user, logout }) {
                 </button>
               </div>
               <div className="mt-2 space-y-1.5">
-                {adminNotifications.map((note) => (
+                {notificationEntries.map((note) => (
                   <div
                     key={note.id}
                     className="px-2 py-2 rounded-xl text-xs text-black/60 dark:text-white/60 bg-black/[0.03] dark:bg-white/[0.04]"
@@ -220,6 +261,11 @@ export default function AdminHeaderControls({ user, logout }) {
                     <p className="mt-1 text-[10px] text-black/45 dark:text-white/45">{note.date}</p>
                   </div>
                 ))}
+                {notificationEntries.length === 0 && (
+                  <div className="px-2 py-6 rounded-xl text-xs text-center text-black/45 dark:text-white/45 border border-dashed border-black/10 dark:border-white/10">
+                    No notifications yet.
+                  </div>
+                )}
               </div>
             </div>
           )}

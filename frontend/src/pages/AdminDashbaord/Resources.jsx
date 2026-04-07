@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/Loader/Loader3D';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyResources } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiChevronDown, FiX } from 'react-icons/fi';
 
 const searchRoutes = [
@@ -24,14 +26,6 @@ const searchRoutes = [
   { id: 'reports', title: 'Reports', category: 'Operations' },
 ];
 
-const resources = [
-  { id: 1, title: 'DSA Cheat Sheet', category: 'DSA', date: '2024-06-01', type: 'PDF', views: 342 },
-  { id: 2, title: 'SQL Practice Problems', category: 'SQL', date: '2024-06-15', type: 'Sheet', views: 218 },
-  { id: 3, title: 'System Design Basics', category: 'Core CS', date: '2024-07-01', type: 'Video', views: 567 },
-  { id: 4, title: 'Python Official Docs', category: 'Python', date: '2024-07-10', type: 'Link', views: 189 },
-  { id: 5, title: 'Binary Trees Explained', category: 'DSA', date: '2024-08-01', type: 'Video', views: 445 },
-];
-
 export default function Resources() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -43,7 +37,7 @@ export default function Resources() {
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
-  const [resourceEntries, setResourceEntries] = useState(resources);
+  const [resourceEntries, setResourceEntries] = useState(emptyResources);
   const [resourceForm, setResourceForm] = useState({
     title: '',
     type: '',
@@ -53,6 +47,32 @@ export default function Resources() {
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getResources()
+      .then((remoteResources) => {
+        if (!cancelled) {
+          const normalized = preferRemoteData(remoteResources, emptyResources).map((resource) => ({
+            ...resource,
+            id: resource.id || resource._id,
+            date: resource.date || resource.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
+            views: resource.views || 0,
+          }));
+          setResourceEntries(normalized);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setResourceEntries(emptyResources);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -100,7 +120,7 @@ export default function Resources() {
     setResourceForm({ title: '', type: '', category: '' });
   };
 
-  const addResource = () => {
+  const addResource = async () => {
     if (!resourceForm.title.trim() || !resourceForm.type || !resourceForm.category.trim()) return;
 
     const newResource = {
@@ -112,7 +132,23 @@ export default function Resources() {
       views: 0,
     };
 
-    setResourceEntries((prev) => [newResource, ...prev]);
+    try {
+      await adminAPI.createResource({
+        title: resourceForm.title.trim(),
+        category: resourceForm.category.trim(),
+        type: resourceForm.type,
+      });
+      const refreshed = await adminAPI.getResources();
+      const normalized = preferRemoteData(refreshed, [newResource, ...resourceEntries]).map((resource) => ({
+        ...resource,
+        id: resource.id || resource._id,
+        date: resource.date || resource.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
+        views: resource.views || 0,
+      }));
+      setResourceEntries(normalized);
+    } catch {
+      setResourceEntries((prev) => [newResource, ...prev]);
+    }
     closeAddResourceModal();
   };
 

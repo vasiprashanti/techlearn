@@ -4,9 +4,10 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import { emptyAnalyticsState } from '../../data/adminEmptyStates';
 import {
   FiSearch,
-  FiBell,
   FiCode,
   FiGitBranch,
   FiFileText,
@@ -36,63 +37,6 @@ const searchRoutes = [
   { id: "reports", title: "Reports", category: "Operations" }
 ];
 
-// --- MOCK DATA ---
-const analyticsData = {
-  platformOverview: [
-    { label: "Total Colleges", value: "5" },
-    { label: "Total Batches", value: "7" },
-    { label: "Total Students", value: "12" },
-    { label: "Active Students Today", value: "10" },
-    { label: "Total Questions", value: "10" },
-    { label: "Track Templates", value: "3" },
-    { label: "Total Courses", value: "5" },
-    { label: "Certificates Issued", value: "12" },
-  ],
-  studentEngagement: {
-    dailyActive: 10,
-    totalStudents: 12,
-    weeklyActive: 10,
-    inactive: 2,
-    avgStreak: 13.4,
-  },
-  learningPerformance: {
-    avgScore: 86,
-    submissionSuccess: 64,
-    avgSolveTime: 18,
-  },
-  batchPerformance: {
-    active: 5,
-    upcoming: 1,
-    completed: 1,
-    topBatches: [
-      { rank: 1, id: "CS-2024A",  college: "MIT",                students: 2, avg: 89 },
-      { rank: 2, id: "DSA-2024C", college: "IIT Delhi",          students: 1, avg: 89 },
-      { rank: 3, id: "CS-2024B",  college: "MIT",                students: 2, avg: 84 },
-      { rank: 4, id: "DS-2024A",  college: "Stanford University", students: 3, avg: 83 },
-      { rank: 5, id: "WD-2024A",  college: "IIT Delhi",          students: 1, avg: 79 },
-    ],
-  },
-  contentInsights: {
-    totalQuestions: 10,
-    usedInTracks: 6,
-    unusedQuestions: 4,
-    avgTrackLength: 22,
-    difficulty: [
-      { label: "Easy",   count: 3 },
-      { label: "Medium", count: 4 },
-      { label: "Hard",   count: 3 },
-    ],
-    trackTemplates: 3,
-  },
-  platformHealth: {
-    engagementRate: 83,
-    activeStudents: 10,
-    totalStudents: 12,
-    resourcesUploaded: 48,
-    resourcesViewed: 312,
-  },
-};
-
 const platformOverviewIconMap = {
   'Total Colleges': FiHome,
   'Total Batches': FiBookOpen,
@@ -113,11 +57,33 @@ const Analytics = () => {
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [analyticsState, setAnalyticsState] = useState(emptyAnalyticsState);
   const searchInputRef = useRef(null);
 
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getDashboardAnalytics()
+      .then((remoteData) => {
+        if (!cancelled) {
+          setAnalyticsState(preferRemoteData(remoteData, emptyAnalyticsState));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAnalyticsState(emptyAnalyticsState);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -149,7 +115,7 @@ const Analytics = () => {
     navigate(`/${id}`);
   };
 
-  const contentInsights = analyticsData.contentInsights;
+  const contentInsights = analyticsState.contentInsights;
   const maxDifficultyCount = Math.max(...contentInsights.difficulty.map((item) => item.count), 1);
 
   return (
@@ -241,7 +207,7 @@ const Analytics = () => {
             <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 rounded-xl p-4 md:p-5">
               <h2 className="admin-section-heading mb-3">Platform Overview</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
-                {analyticsData.platformOverview.map((kpi, i) => {
+                {analyticsState.platformOverview.map((kpi, i) => {
                   const Icon = platformOverviewIconMap[kpi.label] || FiBarChart2;
                   const isPrimaryMetric = i < 4;
 
@@ -283,16 +249,16 @@ const Analytics = () => {
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Daily Active Students</span>
                   <div className="flex items-end justify-center sm:justify-start gap-2 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
-                      {analyticsData.studentEngagement.dailyActive}
+                      {analyticsState.studentEngagement.dailyActive}
                     </span>
                     <span className="text-lg font-light text-black/30 dark:text-white/30 mb-1">
-                      / {analyticsData.studentEngagement.totalStudents}
+                      / {analyticsState.studentEngagement.totalStudents}
                     </span>
                   </div>
                   <div className="mt-3 w-full h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#3C83F6] dark:bg-white transition-all duration-1000 ease-out rounded-full"
-                      style={{ width: `${(analyticsData.studentEngagement.dailyActive / analyticsData.studentEngagement.totalStudents) * 100}%` }}
+                      style={{ width: `${analyticsState.studentEngagement.totalStudents ? (analyticsState.studentEngagement.dailyActive / analyticsState.studentEngagement.totalStudents) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -301,20 +267,20 @@ const Analytics = () => {
                   <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Weekly Active</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
-                      {analyticsData.studentEngagement.weeklyActive}
+                      {analyticsState.studentEngagement.weeklyActive}
                     </span>
                   </div>
                   <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Inactive 3+ days</span>
                     <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
-                      {analyticsData.studentEngagement.inactive}
+                      {analyticsState.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
                   </div>
                   <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Avg Streak</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
-                      {analyticsData.studentEngagement.avgStreak}
+                      {analyticsState.studentEngagement.avgStreak}
                     </span>
                     <span className="text-[9px] text-black/40 dark:text-white/40 mt-0.5">days</span>
                   </div>
@@ -331,13 +297,13 @@ const Analytics = () => {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-black/70 dark:text-white/70">Average Score</span>
                       <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
-                        {analyticsData.learningPerformance.avgScore}%
+                        {analyticsState.learningPerformance.avgScore}%
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#3C83F6] dark:bg-white transition-all duration-1000 ease-out"
-                        style={{ width: `${analyticsData.learningPerformance.avgScore}%` }}
+                        style={{ width: `${analyticsState.learningPerformance.avgScore}%` }}
                       />
                     </div>
                   </div>
@@ -347,13 +313,13 @@ const Analytics = () => {
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium text-black/70 dark:text-white/70">Submission Success Rate</span>
                       <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
-                        {analyticsData.learningPerformance.submissionSuccess}%
+                        {analyticsState.learningPerformance.submissionSuccess}%
                       </span>
                     </div>
                     <div className="w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#3C83F6] dark:bg-white transition-all duration-1000 ease-out"
-                        style={{ width: `${analyticsData.learningPerformance.submissionSuccess}%` }}
+                        style={{ width: `${analyticsState.learningPerformance.submissionSuccess}%` }}
                       />
                     </div>
                   </div>
@@ -363,7 +329,7 @@ const Analytics = () => {
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Average Solve Time</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
-                        {analyticsData.learningPerformance.avgSolveTime}
+                        {analyticsState.learningPerformance.avgSolveTime}
                       </span>
                       <span className="text-sm font-light text-black/40 dark:text-white/40">min</span>
                     </div>
@@ -389,19 +355,19 @@ const Analytics = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
                   <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-emerald-500">
-                      {analyticsData.batchPerformance.active}
+                      {analyticsState.batchPerformance.active}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Active</p>
                   </div>
                   <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-amber-500">
-                      {analyticsData.batchPerformance.upcoming}
+                      {analyticsState.batchPerformance.upcoming}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Upcoming</p>
                   </div>
                   <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-black/50 dark:text-white/50">
-                      {analyticsData.batchPerformance.completed}
+                      {analyticsState.batchPerformance.completed}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Completed</p>
                   </div>
@@ -411,7 +377,7 @@ const Analytics = () => {
                   Top Performing Batches
                 </h4>
                 <div className="flex-1 flex flex-col justify-between gap-3">
-                  {analyticsData.batchPerformance.topBatches.map((batch) => (
+                  {analyticsState.batchPerformance.topBatches.map((batch) => (
                     <div key={batch.rank} className="flex items-center gap-4 group py-1">
                       <div className="w-5 text-sm font-medium text-black/30 dark:text-white/30 text-right shrink-0">
                         #{batch.rank}
@@ -523,11 +489,11 @@ const Analytics = () => {
                 <div className="min-h-[150px] bg-white dark:bg-[#0f1f43] rounded-2xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Engagement Rate</span>
                   <div>
-                    <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.engagementRate}%</span>
+                    <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsState.platformHealth.engagementRate}%</span>
                     <div className="mt-3 w-full h-1.5 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-[#3C83F6] dark:bg-white transition-all duration-1000 rounded-full"
-                        style={{ width: `${analyticsData.platformHealth.engagementRate}%` }}
+                        style={{ width: `${analyticsState.platformHealth.engagementRate}%` }}
                       />
                     </div>
                   </div>
@@ -535,12 +501,12 @@ const Analytics = () => {
 
                 <div className="min-h-[150px] bg-white dark:bg-[#0f1f43] rounded-2xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Uploaded</span>
-                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.resourcesUploaded}</span>
+                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsState.platformHealth.resourcesUploaded}</span>
                 </div>
 
                 <div className="min-h-[150px] bg-white dark:bg-[#0f1f43] rounded-2xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Resources Viewed</span>
-                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsData.platformHealth.resourcesViewed}</span>
+                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white">{analyticsState.platformHealth.resourcesViewed}</span>
                 </div>
               </div>
             </div>
