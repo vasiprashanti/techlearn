@@ -103,6 +103,22 @@ export default function Settings() {
                   </div>
                   <Toggle checked={isDarkMode} onChange={toggleTheme} isDarkMode={isDarkMode} />
                 </div>
+
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <p className="text-base font-medium text-black/85 dark:text-white/90">Logout</p>
+                    <p className="text-sm text-black/55 dark:text-white/60 mt-1">
+                      Sign out from the current admin session
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
               </div>
             </div>
 
