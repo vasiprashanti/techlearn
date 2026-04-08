@@ -163,6 +163,14 @@ Respond ONLY with JSON, no markdown:
     closeModal(); showToast("College updated successfully.");
   };
 
+  const handleDelete = (id) => {
+   const confirmDelete = window.confirm("Are you sure you want to delete this college?");
+   if (!confirmDelete) return;
+
+   setCollegeList(prev => prev.filter(c => c.id !== id));
+   showToast("College deleted successfully.");
+  };
+
   const toggleStatus = (id) => {
     const col = collegeList.find(c => c.id === id);
     setCollegeList(p => p.map(c => c.id === id ? { ...c, status: c.status === "Active" ? "Disabled" : "Active" } : c));
@@ -496,6 +504,13 @@ Respond ONLY with JSON, no markdown:
                         <div className={`menu-item${c.status === "Active" ? " danger" : ""}`} onClick={() => toggleStatus(c.id)}>
                           <Ic.Power s={14} c={c.status === "Active" ? C.danger : C.success} />
                           {c.status === "Active" ? "Disable" : "Enable"}
+                        </div>
+                        <div
+                          className="menu-item danger"
+                          onClick={() => handleDelete(c.id)}
+                        >
+                        <Ic.XCircle s={14} c={C.danger} />
+                         Delete College
                         </div>
                       </div>
                     )}
