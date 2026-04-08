@@ -48,6 +48,7 @@ export default function Certificates() {
   const [finalTestEntries, setFinalTestEntries] = useState(emptyCertificatesState.finalTests);
   const [templateEntries, setTemplateEntries] = useState(emptyCertificatesState.templates);
   const [revokeTarget, setRevokeTarget] = useState(null);
+  const [revokeError, setRevokeError] = useState('');
   const [testQuestions, setTestQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
@@ -96,6 +97,12 @@ export default function Certificates() {
     else setSearchQuery('');
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    if (revokeTarget) {
+      setRevokeError('');
+    }
+  }, [revokeTarget]);
+
   const filteredRoutes = searchRoutes.filter(r =>
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -111,17 +118,18 @@ export default function Certificates() {
       } else {
         await adminAPI.revokeCertificate(revokeTarget.id);
       }
-    } catch {
-      // Keep local fallback.
+      setCertificateEntries((prev) =>
+        prev.map((certificate) =>
+          certificate.id === revokeTarget.id
+            ? { ...certificate, status: certificate.status === 'Revoked' ? 'Active' : 'Revoked' }
+            : certificate
+        )
+      );
+      setRevokeError('');
+      setRevokeTarget(null);
+    } catch (error) {
+      setRevokeError(error?.message || 'Failed to update certificate status.');
     }
-    setCertificateEntries((prev) =>
-      prev.map((certificate) =>
-        certificate.id === revokeTarget.id
-          ? { ...certificate, status: certificate.status === 'Revoked' ? 'Active' : 'Revoked' }
-          : certificate
-      )
-    );
-    setRevokeTarget(null);
   };
 
   const addTestQuestion = () => {
@@ -214,7 +222,10 @@ export default function Certificates() {
             </p>
             <div className="mt-5 flex items-center justify-end gap-3">
               <button
-                onClick={() => setRevokeTarget(null)}
+                onClick={() => {
+                  setRevokeError('');
+                  setRevokeTarget(null);
+                }}
                 className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-[#0f1f3d] dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
               >
                 Cancel
@@ -226,6 +237,7 @@ export default function Certificates() {
                 Delete
               </button>
             </div>
+            {revokeError && <p className="mt-3 text-xs text-red-500">{revokeError}</p>}
           </div>
         </div>
       )}

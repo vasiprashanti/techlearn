@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiSearch, FiX, FiSettings, FiLogOut } from 'react-icons/fi';
+import { FiBell, FiMoon, FiSearch, FiSun, FiX } from 'react-icons/fi';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyNotifications } from '../../data/adminEmptyStates';
+import { useTheme } from '../../context/ThemeContext';
 
 const quickActions = [
   { label: 'Create college', path: '/colleges' },
@@ -23,10 +24,10 @@ const navigateItems = [
 
 export default function AdminHeaderControls({ user, logout }) {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState('');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [notificationEntries, setNotificationEntries] = useState(emptyNotifications);
   const [studentSearchData, setStudentSearchData] = useState([]);
   const commandInputRef = useRef(null);
@@ -108,7 +109,6 @@ export default function AdminHeaderControls({ user, logout }) {
       if (event.key === 'Escape') {
         setIsCommandOpen(false);
         setIsNotificationsOpen(false);
-        setIsProfileOpen(false);
       }
     };
 
@@ -228,7 +228,6 @@ export default function AdminHeaderControls({ user, logout }) {
           <button
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
-              setIsProfileOpen(false);
             }}
             className="relative w-9 h-9 inline-flex items-center justify-center text-black/60 dark:text-white/65 hover:text-black dark:hover:text-white rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors"
           >
@@ -271,42 +270,14 @@ export default function AdminHeaderControls({ user, logout }) {
           )}
         </div>
 
-        <div className="relative shrink-0">
-          <button
-            onClick={() => {
-              setIsProfileOpen((prev) => !prev);
-              setIsNotificationsOpen(false);
-            }}
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-[13px] font-semibold tracking-wide shadow-md border border-white/30 dark:border-black/20"
-          >
-            {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'A'}
-          </button>
-
-          {isProfileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(13rem,calc(100vw-1.5rem))] sm:w-52 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-50">
-              <button
-                onClick={() => {
-                  setIsProfileOpen(false);
-                  navigate('/settings');
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 flex items-center gap-2"
-              >
-                <FiSettings className="w-4 h-4" />
-                Open Settings
-              </button>
-              <button
-                onClick={() => {
-                  setIsProfileOpen(false);
-                  if (typeof logout === 'function') logout();
-                }}
-                className="w-full text-left px-3 py-2 rounded-xl text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2"
-              >
-                <FiLogOut className="w-4 h-4" />
-                Logout
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={toggleTheme}
+          className="shrink-0 w-9 h-9 rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] inline-flex items-center justify-center text-black/60 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors"
+          aria-label="Toggle dark mode"
+          title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {theme === 'dark' ? <FiSun className="w-4 h-4" /> : <FiMoon className="w-4 h-4" />}
+        </button>
       </div>
     </>
   );

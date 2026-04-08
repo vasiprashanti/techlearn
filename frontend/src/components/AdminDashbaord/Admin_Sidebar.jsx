@@ -103,18 +103,22 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
         : "text-white/70 dark:text-white/70 border-transparent hover:text-white dark:hover:text-white hover:bg-white/[0.06] dark:hover:bg-white/[0.08] font-medium"
     }`;
 
-  const renderLogo = (compact = false) => (
-    <div
+  const renderLogo = (compact = false, onClickAction = () => {}) => (
+    <button
+      type="button"
+      onClick={onClickAction}
       className={`relative shrink-0 flex items-center justify-center overflow-hidden
         ${compact ? "w-7 h-7" : "w-10 h-10"}
       `}
+      aria-label="Refresh page"
+      title="Refresh page"
     >
       <img
         src="/logoo2.png"
         alt="TLS logo"
         className="w-full h-full object-contain"
       />
-    </div>
+    </button>
   );
 
   const renderUserPanel = (compact = false) => {
@@ -220,7 +224,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
       >
         <div className="relative h-14 flex items-center justify-between px-4 border-b border-white/10 dark:border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            {renderLogo(false)}
+            {renderLogo(false, () => window.location.reload())}
           </div>
         </div>
         <div
@@ -281,7 +285,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
             >
               <div className="h-full flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10 dark:border-white/10">
-                  {renderLogo()}
+                  {renderLogo(false, () => window.location.reload())}
                   <button
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-8 h-8 rounded-lg text-white/80 dark:text-white/80 hover:text-white dark:hover:text-white hover:bg-white/10 dark:hover:bg-white/10 transition-colors flex items-center justify-center"

@@ -1,4 +1,7 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const GET_RETRY_ATTEMPTS = 2;
+const GET_RETRY_DELAY_MS = 250;
+const requestCache = new Map();
 
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken');
 
@@ -40,23 +43,93 @@ const unwrapData = (payload) => {
   return payload;
 };
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetriableStatus = (status) => status >= 500 || status === 429;
+
+const normalizeMethod = (options = {}) => String(options.method || 'GET').toUpperCase();
+
+const invalidateCacheForPath = (path) => {
+  const basePath = path.split('?')[0];
+  const segments = basePath.split('/').filter(Boolean);
+
+  const prefixes = new Set([basePath]);
+  if (segments.length >= 2) {
+    prefixes.add(`/${segments[0]}/${segments[1]}`);
+  }
+
+  for (const key of requestCache.keys()) {
+    for (const prefix of prefixes) {
+      if (key === prefix || key.startsWith(`${prefix}?`) || key.startsWith(`${prefix}/`)) {
+        requestCache.delete(key);
+        break;
+      }
+    }
+  }
+};
+
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: buildHeaders(options.headers),
-    ...options,
-  });
+  const method = normalizeMethod(options);
+  const isGet = method === 'GET';
+  const maxAttempts = isGet ? GET_RETRY_ATTEMPTS : 1;
+  let lastError = null;
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || `Request failed with status ${response.status}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        headers: buildHeaders(options.headers),
+        ...options,
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        const errorMessage = errorPayload.message || `Request failed with status ${response.status}`;
+        const error = new Error(errorMessage);
+
+        if (isGet && isRetriableStatus(response.status) && attempt < maxAttempts) {
+          await delay(GET_RETRY_DELAY_MS);
+          continue;
+        }
+
+        if (isGet && isRetriableStatus(response.status) && requestCache.has(path)) {
+          return requestCache.get(path);
+        }
+
+        throw error;
+      }
+
+      if (response.status === 204) {
+        if (!isGet) invalidateCacheForPath(path);
+        return null;
+      }
+
+      const payload = await response.json().catch(() => null);
+      const unwrapped = unwrapData(payload);
+
+      if (isGet) {
+        requestCache.set(path, unwrapped);
+      } else {
+        invalidateCacheForPath(path);
+      }
+
+      return unwrapped;
+    } catch (error) {
+      lastError = error;
+
+      if (isGet && attempt < maxAttempts) {
+        await delay(GET_RETRY_DELAY_MS);
+        continue;
+      }
+
+      if (isGet && requestCache.has(path)) {
+        return requestCache.get(path);
+      }
+
+      throw error;
+    }
   }
 
-  if (response.status === 204) {
-    return null;
-  }
-
-  const payload = await response.json().catch(() => null);
-  return unwrapData(payload);
+  throw lastError || new Error('Request failed.');
 }
 
 export const adminAPI = {
