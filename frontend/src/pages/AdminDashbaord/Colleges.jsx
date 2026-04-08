@@ -70,6 +70,9 @@ const Colleges = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [saveError, setSaveError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [pendingDeleteCollege, setPendingDeleteCollege] = useState(null);
+  const [isDeletingCollege, setIsDeletingCollege] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const searchInputRef = useRef(null);
@@ -132,15 +135,33 @@ const Colleges = () => {
     const matchesSearch =
       query.length === 0 ||
       college.name.toLowerCase().includes(query) ||
-      college.id.toLowerCase().includes(query);
+      String(college.code || '').toLowerCase().includes(query) ||
+      String(college.id || '').toLowerCase().includes(query);
     return matchesStatus && matchesSearch;
   });
   const activeCount = colleges.filter(c => c.status === 'Active').length;
+
+  const normalizeCollege = (college) => ({
+    id: college?.id || college?._id || '',
+    name: college?.name || 'Untitled College',
+    code: college?.code || '',
+    city: college?.city || '',
+    status: college?.status || 'Active',
+    contactPerson: college?.contactPerson || '',
+    contactEmail: college?.contactEmail || '',
+    avgScore: Number(college?.avgScore || 0),
+    activeStudents: Number(college?.activeStudents || 0),
+    totalStudents: Number(college?.totalStudents || 0),
+    totalBatches: Number(college?.totalBatches || 0),
+    activeBatches: Number(college?.activeBatches || 0),
+    imageUrl: college?.imageUrl || '',
+  });
 
   const openCreate = () => {
     setEditingCollege(null);
     setFormState({ name: '', code: '', city: '', status: 'Active', contactPerson: '', contactEmail: '' });
     setSaveError('');
+    setDeleteError('');
     setIsFormOpen(true);
   };
 
@@ -148,7 +169,7 @@ const Colleges = () => {
     setEditingCollege(college);
     setFormState({
       name: college.name || '',
-      code: college.code || college.id.split('-')[0] || '',
+      code: college.code || '',
       city: college.city || '',
       status: college.status || 'Active',
       contactPerson: college.contactPerson || '',
@@ -183,47 +204,48 @@ const Colleges = () => {
 
     try {
       if (editingCollege) {
-        await adminAPI.updateCollege(editingCollege.id, payload);
-        const refreshed = await adminAPI.getColleges();
-        setColleges(preferRemoteData(refreshed, colleges));
+        const updated = await adminAPI.updateCollege(editingCollege.id, payload);
+
+        try {
+          const refreshed = await adminAPI.getColleges();
+          setColleges(preferRemoteData(refreshed, colleges));
+        } catch {
+          setColleges((prev) =>
+            prev.map((c) => (c.id === editingCollege.id ? { ...c, ...normalizeCollege(updated), ...payload } : c))
+          );
+        }
       } else {
-        await adminAPI.createCollege(payload);
-        const refreshed = await adminAPI.getColleges();
-        setColleges(preferRemoteData(refreshed, colleges));
+        const created = await adminAPI.createCollege(payload);
+        setColleges((prev) => [normalizeCollege(created), ...prev]);
+
+        try {
+          const refreshed = await adminAPI.getColleges();
+          setColleges(preferRemoteData(refreshed, colleges));
+        } catch {
+          // Keep created row in UI if refresh fails; it was already persisted by API.
+        }
       }
+
       setIsFormOpen(false);
-    } catch {
-      // Keep UI usable even if API endpoint differs.
-      if (editingCollege) {
-        setColleges((prev) => prev.map((c) => c.id === editingCollege.id ? { ...c, ...payload } : c));
-      } else {
-        setColleges((prev) => [
-          {
-            id: `${payload.code || payload.name.slice(0, 3).toUpperCase()}-${String(prev.length + 1).padStart(3, '0')}`,
-            ...payload,
-            avgScore: 0,
-            activeStudents: 0,
-            totalStudents: 0,
-          },
-          ...prev,
-        ]);
-      }
-      setIsFormOpen(false);
+      setSaveError('');
+    } catch (error) {
+      setSaveError(error?.message || 'Failed to save college. Please try again.');
     }
   };
 
   const deleteCollege = async (college) => {
-    const ok = window.confirm(`Delete ${college.name}?`);
-    if (!ok) return;
+    setDeleteError('');
+    setIsDeletingCollege(true);
     try {
       await adminAPI.deleteCollege(college.id);
       const refreshed = await adminAPI.getColleges();
       setColleges(preferRemoteData(refreshed, colleges.filter((c) => c.id !== college.id)));
-      return;
-    } catch {
-      // Fallback to local deletion when endpoint shape differs.
+      setPendingDeleteCollege(null);
+    } catch (error) {
+      setDeleteError(error?.message || 'Failed to delete college.');
+    } finally {
+      setIsDeletingCollege(false);
     }
-    setColleges((prev) => prev.filter((c) => c.id !== college.id));
   };
 
   return (
@@ -324,6 +346,36 @@ const Colleges = () => {
         </div>
       )}
 
+      {pendingDeleteCollege && (
+        <div className="fixed inset-0 z-[125] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setPendingDeleteCollege(null)} />
+          <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-base font-semibold text-black/80 dark:text-white">Delete College</h3>
+              <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                Are you sure you want to delete {pendingDeleteCollege.name}?
+              </p>
+              {deleteError && <p className="text-xs text-red-500 mt-2">{deleteError}</p>}
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setPendingDeleteCollege(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteCollege(pendingDeleteCollege)}
+                disabled={isDeletingCollege}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 transition-colors"
+              >
+                {isDeletingCollege ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -414,17 +466,17 @@ const Colleges = () => {
                   <div key={college.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-5 sm:p-4 rounded-2xl flex flex-col gap-4 sm:gap-3.5 h-full hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
 
                     <div className="flex items-start justify-between min-h-[40px] sm:min-h-[36px]">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white dark:text-white flex items-center justify-center text-base font-semibold border border-[#3C83F6]/20 dark:border-white/10 shadow-sm">
                           {college.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
                           <h3 className="text-[1.05rem] sm:text-base font-semibold text-black/90 dark:text-white break-words sm:truncate sm:max-w-[190px]">{college.name}</h3>
-                          <p className="text-sm text-black/50 dark:text-white/50 mt-0.5">{college.id}</p>
+                          <p className="text-sm text-black/50 dark:text-white/50 mt-0.5 truncate">{college.code || college.id}</p>
                         </div>
                       </div>
 
-                      <div className="relative">
+                      <div className="relative shrink-0 self-start">
                         <button
                           type="button"
                           className="college-actions-trigger w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
@@ -450,7 +502,8 @@ const Colleges = () => {
                             <button
                               onClick={() => {
                                 setOpenActionMenuId(null);
-                                deleteCollege(college);
+                                setDeleteError('');
+                                setPendingDeleteCollege(college);
                               }}
                               className="w-full text-left px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                             >

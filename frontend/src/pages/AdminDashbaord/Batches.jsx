@@ -4,6 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyBatches } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
@@ -304,7 +305,7 @@ const Batches = () => {
       {isCreateFormOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsCreateFormOpen(false)} />
-          <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-visible">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingBatchId ? 'Edit Batch' : 'Create Batch'}</h2>
               <button onClick={() => setIsCreateFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
@@ -342,21 +343,37 @@ const Batches = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
-                  <input
-                    type="date"
-                    value={createBatchForm.startDate}
-                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
-                  />
+                  <div className="mt-1">
+                    <ModernDatePicker
+                      value={createBatchForm.startDate}
+                      onChange={(nextDate) =>
+                        setCreateBatchForm((prev) => ({
+                          ...prev,
+                          startDate: nextDate,
+                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                        }))
+                      }
+                      placeholder="Select start date"
+                      ariaLabel="Start date"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
-                  <input
-                    type="date"
-                    value={createBatchForm.endDate}
-                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
-                  />
+                  <div className="mt-1">
+                    <ModernDatePicker
+                      value={createBatchForm.endDate}
+                      onChange={(nextDate) =>
+                        setCreateBatchForm((prev) => ({
+                          ...prev,
+                          endDate: nextDate,
+                        }))
+                      }
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
+                      placeholder="Select end date"
+                      ariaLabel="End date"
+                    />
+                  </div>
                 </div>
               </div>
 

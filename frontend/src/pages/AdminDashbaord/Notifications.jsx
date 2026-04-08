@@ -35,6 +35,7 @@ export default function Notifications() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCompose, setShowCompose] = useState(false);
+  const [composeError, setComposeError] = useState('');
   const [form, setForm] = useState({ title: '', body: '', target: 'All Students' });
   const [notificationEntries, setNotificationEntries] = useState(emptyNotifications);
   const searchInputRef = useRef(null);
@@ -87,7 +88,10 @@ export default function Notifications() {
   const targeted = notificationEntries.filter((n) => !n.isGlobal).length;
 
   const sendNotification = async () => {
-    if (!form.title.trim() || !form.body.trim()) return;
+    if (!form.title.trim() || !form.body.trim()) {
+      setComposeError('Title and message are required.');
+      return;
+    }
 
     const nextNotification = {
       id: `notif-${Date.now()}`,
@@ -99,15 +103,30 @@ export default function Notifications() {
     };
 
     try {
-      await adminAPI.createNotification(nextNotification);
-      const refreshed = await adminAPI.getNotifications();
-      setNotificationEntries(preferRemoteData(refreshed, [nextNotification, ...notificationEntries]));
-    } catch {
-      setNotificationEntries((prev) => [nextNotification, ...prev]);
-    }
+      const created = await adminAPI.createNotification(nextNotification);
 
-    setShowCompose(false);
-    setForm({ title: '', body: '', target: 'All Students' });
+      try {
+        const refreshed = await adminAPI.getNotifications();
+        setNotificationEntries(preferRemoteData(refreshed, [nextNotification, ...notificationEntries]));
+      } catch {
+        setNotificationEntries((prev) => [
+          {
+            ...nextNotification,
+            id: created?.id || created?._id || nextNotification.id,
+            date: created?.date || nextNotification.date,
+            target: created?.target || nextNotification.target,
+            isGlobal: created?.isGlobal ?? nextNotification.isGlobal,
+          },
+          ...prev,
+        ]);
+      }
+
+      setShowCompose(false);
+      setComposeError('');
+      setForm({ title: '', body: '', target: 'All Students' });
+    } catch (error) {
+      setComposeError(error?.message || 'Failed to send notification.');
+    }
   };
 
   const deleteNotification = async (notificationId) => {
@@ -116,11 +135,17 @@ export default function Notifications() {
 
     try {
       await adminAPI.deleteNotification(notificationId);
-    } catch {
-      // Keep the UI responsive even if the delete endpoint fails.
-    }
 
-    setNotificationEntries((prev) => prev.filter((notification) => notification.id !== notificationId));
+      try {
+        const refreshed = await adminAPI.getNotifications();
+        setNotificationEntries(preferRemoteData(refreshed, notificationEntries.filter((n) => n.id !== notificationId)));
+      } catch {
+        // Delete succeeded; keep local list in sync if refetch fails.
+        setNotificationEntries((prev) => prev.filter((notification) => notification.id !== notificationId));
+      }
+    } catch (error) {
+      window.alert(error?.message || 'Failed to delete notification.');
+    }
   };
 
   return (
@@ -202,6 +227,8 @@ export default function Notifications() {
                   <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#6d8198] dark:text-white/60" />
                 </div>
               </div>
+
+              {composeError && <p className="text-xs text-red-500">{composeError}</p>}
             </div>
 
             <div className="flex items-center justify-end mt-4">
@@ -235,7 +262,13 @@ export default function Notifications() {
                 <h2 className="text-xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Notifications</h2>
                 <p className="mt-1 text-xs text-[#5f7590] dark:text-white/60">Send announcements to students, batches, or colleges</p>
               </div>
-              <button onClick={() => setShowCompose(true)} className="w-full sm:w-auto shrink-0 min-w-0 sm:min-w-[200px] inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-2xl bg-[#3C83F6] text-white text-sm font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm">
+              <button
+                onClick={() => {
+                  setComposeError('');
+                  setShowCompose(true);
+                }}
+                className="w-full sm:w-auto shrink-0 min-w-0 sm:min-w-[200px] inline-flex items-center justify-center gap-1.5 px-4 h-10 rounded-2xl bg-[#3C83F6] text-white text-sm font-semibold hover:bg-[#2f73e0] transition-colors shadow-sm"
+              >
                 <FiPlus className="w-3.5 h-3.5" />
                 <span>New Notification</span>
               </button>

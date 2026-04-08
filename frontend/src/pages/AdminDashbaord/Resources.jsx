@@ -43,6 +43,7 @@ export default function Resources() {
     type: '',
     category: '',
   });
+  const [resourceFormError, setResourceFormError] = useState('');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
@@ -112,16 +113,28 @@ export default function Resources() {
 
   const openAddResourceModal = () => {
     setResourceForm({ title: '', type: '', category: '' });
+    setResourceFormError('');
     setIsAddResourceOpen(true);
   };
 
   const closeAddResourceModal = () => {
     setIsAddResourceOpen(false);
     setResourceForm({ title: '', type: '', category: '' });
+    setResourceFormError('');
   };
 
+  const normalizeResource = (resource) => ({
+    ...resource,
+    id: resource?.id || resource?._id,
+    date: resource?.date || resource?.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
+    views: resource?.views || 0,
+  });
+
   const addResource = async () => {
-    if (!resourceForm.title.trim() || !resourceForm.type || !resourceForm.category.trim()) return;
+    if (!resourceForm.title.trim() || !resourceForm.type || !resourceForm.category.trim()) {
+      setResourceFormError('Title, type, and category are required.');
+      return;
+    }
 
     const newResource = {
       id: Date.now(),
@@ -133,23 +146,25 @@ export default function Resources() {
     };
 
     try {
-      await adminAPI.createResource({
+      const created = await adminAPI.createResource({
         title: resourceForm.title.trim(),
         category: resourceForm.category.trim(),
         type: resourceForm.type,
       });
-      const refreshed = await adminAPI.getResources();
-      const normalized = preferRemoteData(refreshed, [newResource, ...resourceEntries]).map((resource) => ({
-        ...resource,
-        id: resource.id || resource._id,
-        date: resource.date || resource.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
-        views: resource.views || 0,
-      }));
-      setResourceEntries(normalized);
-    } catch {
-      setResourceEntries((prev) => [newResource, ...prev]);
+
+      try {
+        const refreshed = await adminAPI.getResources();
+        const normalized = preferRemoteData(refreshed, [newResource, ...resourceEntries]).map(normalizeResource);
+        setResourceEntries(normalized);
+      } catch {
+        // Create succeeded; keep UI in sync if refetch fails.
+        setResourceEntries((prev) => [normalizeResource(created || newResource), ...prev]);
+      }
+
+      closeAddResourceModal();
+    } catch (error) {
+      setResourceFormError(error?.message || 'Failed to add resource.');
     }
-    closeAddResourceModal();
   };
 
   return (
@@ -243,6 +258,8 @@ export default function Resources() {
                   Add
                 </button>
               </div>
+
+              {resourceFormError && <p className="text-xs text-red-500">{resourceFormError}</p>}
             </div>
           </div>
         </div>
