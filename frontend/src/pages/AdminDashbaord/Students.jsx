@@ -131,6 +131,8 @@ const Students = () => {
   const [collegeFilter, setCollegeFilter] = useState('All Colleges');
   const [trackFilter, setTrackFilter] = useState('All Tracks');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [bulkImportCollegeId, setBulkImportCollegeId] = useState('');
+  const [bulkImportBatchId, setBulkImportBatchId] = useState('');
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [bulkImportReport, setBulkImportReport] = useState(null);
   const searchInputRef = useRef(null);
@@ -195,6 +197,13 @@ const Students = () => {
     if (!selectedCollege) return batches;
     return batches.filter((batch) => batch.college === selectedCollege.name);
   }, [studentForm.collegeId, batches, colleges]);
+
+  const filteredBulkImportBatchOptions = useMemo(() => {
+    if (!bulkImportCollegeId) return [];
+    const selectedCollege = colleges.find((college) => college.id === bulkImportCollegeId);
+    if (!selectedCollege) return [];
+    return batches.filter((batch) => batch.college === selectedCollege.name);
+  }, [bulkImportCollegeId, batches, colleges]);
 
   const openAddStudent = () => {
     setEditingStudentId(null);
@@ -267,9 +276,9 @@ const Students = () => {
 
   const downloadBulkTemplate = () => {
     const templateCsv = [
-      'name,email,college,batch,track,status',
-      'Jane Doe,jane.doe@example.com,ABC College,Batch 2026,Frontend,Active',
-      'John Smith,john.smith@example.com,ABC College,Batch 2026,Backend,Inactive',
+      'name,email,registrationNumber,track,status',
+      'Jane Doe,jane.doe@example.com,REG2026001,Frontend,Active',
+      'John Smith,,REG2026002,Backend,Inactive',
     ].join('\n');
 
     const blob = new Blob([templateCsv], { type: 'text/csv;charset=utf-8;' });
@@ -326,6 +335,14 @@ const Students = () => {
 
   const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '');
 
+  const toEmailSlug = (value) =>
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '.')
+      .replace(/^\.+|\.+$/g, '')
+      .replace(/\.{2,}/g, '.');
+
   const handleBulkImportSelection = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -346,6 +363,10 @@ const Students = () => {
     setIsBulkImporting(true);
 
     try {
+      if (!bulkImportCollegeId || !bulkImportBatchId) {
+        throw new Error('Select college and batch before uploading CSV.');
+      }
+
       const rawText = await file.text();
       const parsedRows = parseCsvRows(rawText);
 
@@ -364,13 +385,6 @@ const Students = () => {
         return '';
       };
 
-      const collegeMap = new Map(
-        colleges.map((college) => [String(college.name || '').trim().toLowerCase(), college.id])
-      );
-      const batchMap = new Map(
-        batches.map((batch) => [String(batch.name || '').trim().toLowerCase(), batch.id])
-      );
-
       let successCount = 0;
       const failures = [];
 
@@ -380,34 +394,38 @@ const Students = () => {
 
         const name = getCell(row, 'name', 'studentname');
         const email = getCell(row, 'email', 'studentemail');
-        const collegeName = getCell(row, 'college', 'collegename');
-        const batchName = getCell(row, 'batch', 'batchname');
+        const registrationNumber = getCell(row, 'registrationnumber', 'registrationno', 'regno', 'rollno', 'rollnumber');
         const track = getCell(row, 'track', 'primarytrack');
         const status = getCell(row, 'status');
 
-        if (!name || !email || !collegeName || !batchName) {
-          failures.push(`Row ${displayRow}: missing required fields (name, email, college, batch).`);
+        const rowHasAnyIdentifier = Boolean(name || email || registrationNumber);
+        if (!rowHasAnyIdentifier) {
+          const isCompletelyBlank = row.every((cell) => !String(cell || '').trim());
+          if (isCompletelyBlank) continue;
+          failures.push(`Row ${displayRow}: provide at least one of name, email, or registration number.`);
           continue;
         }
 
-        const collegeId = collegeMap.get(collegeName.toLowerCase());
-        const batchId = batchMap.get(batchName.toLowerCase());
+        const resolvedName =
+          name ||
+          (email.includes('@') ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
+          (registrationNumber ? `Student ${registrationNumber}` : '');
 
-        if (!collegeId) {
-          failures.push(`Row ${displayRow}: college \"${collegeName}\" was not found.`);
+        if (!resolvedName) {
+          failures.push(`Row ${displayRow}: could not derive a valid name.`);
           continue;
         }
-        if (!batchId) {
-          failures.push(`Row ${displayRow}: batch \"${batchName}\" was not found.`);
-          continue;
-        }
+
+        const generatedEmailSeed = toEmailSlug(email || registrationNumber || resolvedName) || `student.${displayRow}`;
+        const resolvedEmail = email || `${generatedEmailSeed}.${displayRow}@import.techlearn.local`;
 
         try {
           await adminAPI.createStudent({
-            name,
-            email: email.toLowerCase(),
-            collegeId,
-            batchId,
+            name: resolvedName,
+            email: resolvedEmail.toLowerCase(),
+            rollNo: registrationNumber,
+            collegeId: bulkImportCollegeId,
+            batchId: bulkImportBatchId,
             primaryTrack: track || 'General Track',
             status: status || 'Active',
           });
@@ -586,6 +604,34 @@ const Students = () => {
               </div>
               <div className="relative w-full sm:w-auto">
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto"><option value="All">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Suspended">Suspended</option></select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+              </div>
+              <div className="relative w-full sm:w-auto">
+                <select
+                  value={bulkImportCollegeId}
+                  onChange={(e) => {
+                    setBulkImportCollegeId(e.target.value);
+                    setBulkImportBatchId('');
+                  }}
+                  className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto"
+                  title="Bulk import college"
+                >
+                  <option value="">Import college</option>
+                  {colleges.map((college) => <option key={college.id} value={college.id}>{college.name}</option>)}
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+              </div>
+              <div className="relative w-full sm:w-auto">
+                <select
+                  value={bulkImportBatchId}
+                  onChange={(e) => setBulkImportBatchId(e.target.value)}
+                  className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto"
+                  title="Bulk import batch"
+                  disabled={!bulkImportCollegeId}
+                >
+                  <option value="">Import batch</option>
+                  {filteredBulkImportBatchOptions.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}
+                </select>
                 <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
               </div>
               <button onClick={triggerBulkImport} disabled={isBulkImporting} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/60 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 text-sm font-medium whitespace-nowrap disabled:opacity-60"><FiUpload className="w-3.5 h-3.5" />{isBulkImporting ? 'Importing...' : 'Bulk Import'}</button>

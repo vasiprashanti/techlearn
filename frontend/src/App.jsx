@@ -38,6 +38,7 @@ import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
+import Leaderboard from './pages/Dashboard/Leaderboard'
 import UserCoding from './pages/Coding/UserCoding';
 
 // Learn components
@@ -603,10 +604,9 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  
+
   // NEW: Array containing all our sidebar dashboard routes
   const adminSidebarRoutes = [
-    '/dashboard', 
     '/analytics', 
     '/system-health', 
     '/colleges', 
@@ -631,13 +631,19 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
+  const isStudentSidebarRoute =
+    ['/dashboard', '/projects', '/leaderboard'].includes(location.pathname) ||
+    location.pathname.startsWith('/learn/courses') ||
+    location.pathname.startsWith('/learn/exercises');
+
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !isDashboardRoute;
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
-                     !isDashboardRoute;
+                     !isDashboardRoute &&
+                     !isStudentSidebarRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -651,6 +657,7 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
             <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
