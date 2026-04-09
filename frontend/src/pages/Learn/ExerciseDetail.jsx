@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
@@ -9,10 +9,8 @@ import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
 import {
   ArrowLeft, BookOpen, Code, Eye, Play, Trophy,
-  Clock, CheckCircle, Copy, RotateCcw, Send,
-  FileText, Terminal, Settings, Folder, ChevronRight,
-  ChevronDown, Circle, Square, Maximize2, Minimize2,
-  MoreHorizontal, Search, GitBranch, Bug, ChevronLeft
+  Clock, RotateCcw, Terminal, ChevronRight, ChevronLeft,
+  PanelLeftClose, PanelLeftOpen, Check
 } from 'lucide-react';
 import { exerciseAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -22,9 +20,14 @@ import LoadingScreen from '../../components/LoadingScreen';
 const ExerciseDetail = () => {
   const { courseId, exerciseId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { theme } = useTheme();
-  const codeEditorRef = useRef(null);
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const isDarkMode = theme === 'dark';
+  const userInitial = user?.firstName?.charAt(0)?.toUpperCase() || 'S';
+  const userName = user?.firstName ? user.firstName : 'Student';
 
   const [activeTab, setActiveTab] = useState('theory');
   const [exercise, setExercise] = useState(null);
@@ -35,14 +38,11 @@ const ExerciseDetail = () => {
   const [loading, setLoading] = useState(true);
 
   // IDE state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [terminalCollapsed, setTerminalCollapsed] = useState(false);
-  const [currentFile, setCurrentFile] = useState('main.js');
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
+  const [isProblemPanelOpen, setIsProblemPanelOpen] = useState(true);
 
-  // Resizer state (for desktop split)
-  const [leftWidth, setLeftWidth] = useState(380);
-  const resizerRef = useRef(null);
+  // Resizer state
+  const [leftWidth, setLeftWidth] = useState(550);
   const containerRef = useRef(null);
   const isDraggingRef = useRef(false);
 
@@ -51,13 +51,15 @@ const ExerciseDetail = () => {
       if (!isDraggingRef.current || !containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       let newLeftWidth = e.clientX - containerRect.left;
-      // Clamp min/max width
-      newLeftWidth = Math.max(220, Math.min(newLeftWidth, containerRect.width - 320));
+      newLeftWidth = Math.max(300, Math.min(newLeftWidth, containerRect.width - 400));
       setLeftWidth(newLeftWidth);
     };
     const handleMouseUp = () => {
-      isDraggingRef.current = false;
-      document.body.style.cursor = '';
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
     };
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -70,36 +72,22 @@ const ExerciseDetail = () => {
   const startDragging = (e) => {
     isDraggingRef.current = true;
     document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
     e.preventDefault();
   };
 
-  // Helper function to transform backend exercise data to frontend format
   const transformExerciseData = (backendExercise) => {
     const id = backendExercise._id || backendExercise.exerciseId;
-    const topicTitle = backendExercise.topicTitle || 'Exercise';
-  return {
-      id,
-      title: backendExercise.question,
-      topicTitle,
-      difficulty: 'Easy', // Default difficulty
-      estimatedTime: '15 min', // Default time
-      xp: 10, // Default XP
-      description: backendExercise.question,
-      theory: `# ${topicTitle}\n\n${backendExercise.question}`,
-      starterCode: `// ${backendExercise.question}\n// Write your code here\n\n`,
-      expectedOutput: backendExercise.expectedOutput || '',
-      exerciseAnswers: backendExercise.exerciseAnswers,
-      testCases: []
-    };
+    const topicTitle = backendExercise.topicTitle || 'Code Challenge';
     return {
       id,
       title: backendExercise.question,
       topicTitle,
-      difficulty: 'Easy', // Default difficulty
-      estimatedTime: '15 min', // Default time
-      xp: 10, // Default XP
-      description: backendExercise.question,
-      theory: `# ${topicTitle}\n\n${backendExercise.question}`,
+      difficulty: 'Easy', 
+      estimatedTime: '15 min', 
+      xp: 10, 
+      description: backendExercise.description || '',
+      theory: backendExercise.description || 'No additional description provided.',
       starterCode: `// ${backendExercise.question}\n// Write your code here\n\n`,
       expectedOutput: backendExercise.expectedOutput || '',
       exerciseAnswers: backendExercise.exerciseAnswers,
@@ -107,22 +95,13 @@ const ExerciseDetail = () => {
     };
   };
 
-  // Desktop tabs (combined compiler + preview)
-  const desktopTabs = [
-    { id: 'theory', label: 'Theory', icon: BookOpen },
-    { id: 'codePreview', label: 'Code & Preview', icon: Code }
-  ];
-
-  // Mobile tabs (separate tabs)
   const mobileTabs = [
-    { id: 'theory', label: 'Theory', icon: BookOpen },
-    { id: 'compiler', label: 'Compiler', icon: Code },
-    { id: 'preview', label: 'Live Preview', icon: Eye }
+    { id: 'theory', label: 'Problem', icon: BookOpen },
+    { id: 'compiler', label: 'Editor', icon: Code },
+    { id: 'preview', label: 'Output', icon: Terminal }
   ];
 
-  // Navigation functions for mobile slide
   const getCurrentTabIndex = () => {
-    // Handle codePreview state for mobile navigation
     const tabId = activeTab === 'codePreview' ? 'compiler' : activeTab;
     return mobileTabs.findIndex(tab => tab.id === tabId);
   };
@@ -139,36 +118,22 @@ const ExerciseDetail = () => {
     setActiveTab(mobileTabs[nextIndex].id);
   };
 
-  // Touch/swipe functionality for mobile
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
   };
-
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
+  const onTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      goToNextTab();
-    } else if (isRightSwipe) {
-      goToPreviousTab();
-    }
+    if (distance > minSwipeDistance) goToNextTab();
+    else if (distance < -minSwipeDistance) goToPreviousTab();
   };
 
-  // Update editor theme when app theme changes
   useEffect(() => {
     setEditorTheme(theme === 'dark' ? 'vs-dark' : 'light');
   }, [theme]);
@@ -176,19 +141,17 @@ const ExerciseDetail = () => {
   useEffect(() => {
     const fetchExercise = async () => {
       try {
-        // Fetch exercise from backend
         const backendExercise = await exerciseAPI.getExercise(courseId, exerciseId);
         const transformedExercise = transformExerciseData(backendExercise);
         setExercise(transformedExercise);
         setUserCode(transformedExercise.starterCode);
       } catch (error) {
         console.error('Error fetching exercise:', error);
-        // Fallback data
         const fallbackExercise = {
           id: exerciseId,
           title: 'Exercise Not Found',
           description: 'Unable to load exercise details.',
-          theory: '# Exercise Not Found\n\nPlease try again later.',
+          theory: 'Please try again later.',
           starterCode: '// Exercise not found\n',
           expectedOutput: '',
           difficulty: 'Easy',
@@ -201,123 +164,70 @@ const ExerciseDetail = () => {
         setLoading(false);
       }
     };
-
     fetchExercise();
   }, [courseId, exerciseId]);
 
-  // Disable copy-paste in code editor
-  const handleKeyDown = (e) => {
-    // Disable Ctrl+C, Ctrl+V, Ctrl+A
-    if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'a')) {
-      e.preventDefault();
-      return false;
-    }
-  };
-
-  const handleContextMenu = (e) => {
-    e.preventDefault();
-    return false;
-  };
-
   const detectLanguage = () => {
-    // Only allow 'python', 'java', or 'c' (Judge0/backend supported)
     const topic = exercise?.topicTitle?.toLowerCase() || '';
     const starter = exercise?.starterCode?.toLowerCase() || '';
     if (topic.includes('python') || starter.includes('python')) return 'python';
     if (topic.includes('java') || starter.includes('java')) return 'java';
-    // Only match 'c' if it is a standalone word (not part of 'python', etc.)
-    const isStandaloneC = (str) => {
-      return str.split(/\W+/).some(word => word === 'c');
-    };
+    const isStandaloneC = (str) => str.split(/\W+/).some(word => word === 'c');
     if ((isStandaloneC(topic) && !topic.includes('c++')) || (isStandaloneC(starter) && !starter.includes('c++'))) return 'c';
-    // Fallback to python if nothing matches
-    return 'python';
+    return 'javascript';
   };
 
   const runCode = async () => {
     if (!exercise?.id || exercise.id === 'undefined') {
-      setOutput('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
+      setOutput('Error: Invalid exercise ID.');
       return;
     }
     setIsRunning(true);
     setOutput('');
+    if(window.innerWidth < 768) setActiveTab('preview'); 
 
     try {
-      // Determine language based on topicTitle and starterCode
       const language = detectLanguage();
-
-      // Send code to backend for execution
-      const codeData = {
-        language,
-        code: userCode,
-        input: ''
-      };
-
-      // Always use exercise.id for API call
+      const codeData = { language, code: userCode, input: '' };
       const result = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
-      // Format output
       let formattedOutput = '';
       if (result.stdout) formattedOutput += result.stdout;
-      if (result.stderr) formattedOutput += `Error: ${result.stderr}`;
-      if (result.compile_output) formattedOutput += `Compiler output: ${result.compile_output}`;
+      if (result.stderr) formattedOutput += `\nError:\n${result.stderr}`;
+      if (result.compile_output) formattedOutput += `\nCompiler output:\n${result.compile_output}`;
 
-      setOutput(formattedOutput || 'Code executed successfully');
+      setOutput(formattedOutput.trim() || 'Process finished with exit code 0');
     } catch (error) {
-      console.error('Error running code:', error);
       setOutput(`Error: ${error.message || 'Failed to execute code'}`);
     } finally {
-      setTimeout(() => setIsRunning(false), 1000);
+      setIsRunning(false);
     }
   };
 
   const submitCode = async () => {
-    if (!exercise?.id || exercise.id === 'undefined') {
-      alert('Error: Invalid exercise ID. Please refresh the page or return to the exercise list.');
-      return;
-    }
+    if (!exercise?.id || exercise.id === 'undefined') return;
     setIsSubmitting(true);
-
     try {
-      // First, test the code by running it
       const language = detectLanguage();
-
-      const codeData = {
-        language,
-        code: userCode,
-        input: ''
-      };
-
-      // Always use exercise.id for API call
+      const codeData = { language, code: userCode, input: '' };
       const runResult = await exerciseAPI.submitCode(courseId, exercise.id, codeData);
 
-      // Check if code executed successfully
       if (runResult.stderr || runResult.compile_output) {
-        alert(`Code Error: ${runResult.stderr || runResult.compile_output}\nPlease fix your code before submitting.`);
+        alert(`Compilation Error. Please fix your code before submitting.`);
         setIsSubmitting(false);
         return;
       }
 
-      // Submit the exercise for XP
       const submitResult = await exerciseAPI.submitExercise(courseId, exercise.id);
-
-      // Dispatch events to update UI components
       window.dispatchEvent(new CustomEvent('exerciseCompleted', {
         detail: { courseId, exerciseId: exercise.id, xpEarned: submitResult.addedXP || 10 }
       }));
       window.dispatchEvent(new CustomEvent('xpUpdated'));
 
-      // Show success message
-      alert(`Exercise submitted successfully! +${submitResult.addedXP || 10} XP earned`);
-
-      // Navigate back to exercises list
-      setTimeout(() => {
-        navigate(`/learn/exercises/${courseId}`);
-      }, 1500);
-
+      navigate(`/learn/exercises/${courseId}`);
     } catch (error) {
       console.error('Error submitting exercise:', error);
-      alert(`Error: ${error.message || 'An error occurred while submitting. Please try again.'}`);
+      alert('An error occurred while submitting.');
     } finally {
       setIsSubmitting(false);
     }
@@ -328,29 +238,16 @@ const ExerciseDetail = () => {
     setOutput('');
   };
 
+  if (loading) return <LoadingScreen showMessage={false} size={48} duration={800} />;
 
-  if (loading) {
-    return (
-      <LoadingScreen
-        showMessage={false}
-        size={48}
-        duration={800}
-      />
-    );
-  }
-
-  // Show error if exercise id is missing or invalid
   if (!exercise?.id || exercise.id === 'undefined') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg text-center">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Invalid Exercise</h2>
-          <p className="mb-4">This exercise could not be loaded or has an invalid ID.<br/>Please return to the exercise list and try again.</p>
-          <button
-            onClick={() => navigate(`/learn/exercises/${courseId}`)}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            Back to Exercises
+      <div className={`flex min-h-screen items-center justify-center font-sans ${isDarkMode ? "dark bg-[#09090b]" : "bg-[#fafafa]"}`}>
+        <div className="bg-white dark:bg-[#18181b] p-8 rounded-xl border border-zinc-200 dark:border-zinc-800 text-center shadow-sm">
+          <h2 className="text-xl font-medium mb-2 text-red-500">Invalid Exercise</h2>
+          <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">This exercise could not be loaded.</p>
+          <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400">
+            Return to List
           </button>
         </div>
       </div>
@@ -358,635 +255,338 @@ const ExerciseDetail = () => {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      {/* Custom Scrollbar Styles and Resizer Styles */}
-      <style jsx>{`
-        /* ...existing code... */
+    <div className={`flex min-h-screen w-full font-sans antialiased selection:bg-blue-500/30 ${isDarkMode ? "dark bg-[#09090b] text-zinc-100" : "bg-[#fafafa] text-zinc-900"}`}>
+      
+      <style jsx global>{`
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; }
+        .prose li { margin-bottom: 0.5rem; }
+        
         .resizer-bar {
-          width: 8px;
+          width: 12px;
+          margin: 0 -4px;
           cursor: col-resize;
-          background: linear-gradient(to bottom, #e0e7ef 60%, #bceaff 100%);
-          border-radius: 4px;
-          transition: background 0.2s;
-          z-index: 10;
+          position: relative;
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        .resizer-bar:hover, .resizer-bar.active {
-          background: #3b82f6;
+        .resizer-bar::after {
+          content: '';
+          width: 2px;
+          height: 100%;
+          background-color: transparent;
+          transition: background-color 0.2s;
+        }
+        .resizer-bar:hover::after, .resizer-bar:active::after {
+          background-color: #3b82f6; 
         }
         @media (max-width: 1023px) {
-          .desktop-split {
-            flex-direction: column !important;
-          }
-          .resizer-bar {
-            display: none !important;
-          }
+          .resizer-bar { display: none !important; }
         }
       `}</style>
 
-      <div className="w-full px-4">
-        {/* Breadcrumbs */}
-        <nav className="flex items-center gap-2 mb-6 ml-4 text-sm text-gray-600 dark:text-gray-400">
-          <button
-          onClick={() => navigate('/learn')}
-          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
-          >
-          Learn
-          </button>
-          <span>/</span>
-          <button
-          onClick={() => navigate('/learn/exercises')}
-          className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300"
-          >
-            Exercises
+      {/* Main Container - Full width, no sidebar margins */}
+      <main className="flex-1 flex flex-col w-full min-w-0 transition-all duration-300 ease-in-out z-10 h-screen">
+        
+        {/* Top Header */}
+        <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 lg:px-6 bg-white dark:bg-[#09090b] border-b border-zinc-200 dark:border-zinc-800/80 z-20">
+          
+          <div className="flex items-center gap-4 min-w-0">
+            {/* Upgraded, prominent Back Button */}
+            <button 
+              onClick={() => navigate(`/learn/exercises/${courseId}`)} 
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:text-zinc-300 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 rounded-md transition-all shrink-0 border border-transparent dark:border-zinc-700/50"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Back to Exercises</span>
+              <span className="sm:hidden">Back</span>
             </button>
-            <span>/</span>
-            <span className="text-gray-900 dark:text-white font-medium">
-              {exercise.title || 'Course'}
+
+            <div className="h-5 w-px bg-zinc-300 dark:bg-zinc-700 hidden sm:block shrink-0"></div>
+            
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 shrink-0">
+                {detectLanguage()}
               </span>
-          </nav>
-
-        {/* Tab Navigation - Only for Mobile */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-6"
-        >
-          {/* Mobile Tab Navigation with Slide Controls */}
-          <div className="md:hidden">
-            {/* Current Tab Display with Navigation Arrows */}
-            <div className="flex items-center justify-between bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl border border-white/20 dark:border-gray-700/20 p-4">
-              <button
-                onClick={goToPreviousTab}
-                className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-3">
-                {(() => {
-                  // Handle codePreview state for mobile (fallback to compiler)
-                  const tabId = activeTab === 'codePreview' ? 'compiler' : activeTab;
-                  const currentTab = mobileTabs.find(tab => tab.id === tabId);
-                  if (!currentTab) return null;
-                  const Icon = currentTab.icon;
-                  return (
-                    <>
-                      <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {currentTab.label}
-                      </span>
-                    </>
-                  );
-                })()}
-              </div>
-
-              <button
-                onClick={goToNextTab}
-                className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Tab Indicator Dots */}
-            <div className="flex justify-center gap-2 mt-3">
-              {mobileTabs.map((tab, index) => {
-                // Handle codePreview state for active indicator
-                const isActive = activeTab === tab.id || (activeTab === 'codePreview' && tab.id === 'compiler');
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      isActive
-                        ? 'bg-blue-600 dark:bg-blue-400 w-6'
-                        : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-                    }`}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Swipe Hint */}
-            <div className="text-center mt-2">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Swipe left or right to navigate tabs
-              </p>
+              <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate hidden md:block">
+                {exercise.title}
+              </span>
             </div>
           </div>
-        </motion.div>
 
-        {/* Tab Content */}
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2 mr-2">
+              <button 
+                onClick={runCode} 
+                disabled={isRunning} 
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 dark:text-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-md transition-all disabled:opacity-50 border border-transparent dark:border-zinc-700/50"
+              >
+                {isRunning ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Play className="w-3 h-3" />}
+                Run
+              </button>
+              <button 
+                onClick={submitCode} 
+                disabled={isSubmitting || isRunning} 
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-all disabled:opacity-50 shadow-sm"
+              >
+                <Check className="w-3 h-3" />
+                Submit
+              </button>
+            </div>
 
-          {/* Desktop Layout */}
-          <div className="hidden md:block">
-            <div className="max-h-[1500px] flex gap-2 p-2">
-              
-              {/* Left Side - Theory area */}
-              <div className="flex-none w-[50%] h-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              {/* <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {exercise?.description}
-              </p> */}
-              
-                {/* Theory Content */}
-                <div className="h-[calc(100%-3.5rem)] overflow-auto p-4">
-                  
-                  <div className="prose prose-gray dark:prose-invert max-w-none text-black/80 dark:text-white/80 text-xl prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeHighlight]}
-                      components={{
-                        pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                        code: ({node, inline, className, children, ...props}) => {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          ) : (
-                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
-                              {children}
-                            </code>
-                          );
-                        },
-                        p: ({children}) => <p className="text-blue-900 dark:text-blue-400 leading-relaxed mb-4">{children}</p>,
-                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                        li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                        blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                      }}
+            <div className="h-5 w-px bg-zinc-300 dark:bg-zinc-700 hidden sm:block"></div>
+
+            <button onClick={toggleTheme} className="hidden sm:flex p-1.5 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors rounded-md">
+              {isDarkMode ? "Light" : "Dark"}
+            </button>
+
+            {/* Profile Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} 
+                className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-medium border border-blue-700 shadow-sm"
+              >
+                {userInitial}
+              </button>
+              <AnimatePresence>
+                {profileDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden"
                     >
-                      {exercise?.theory}
-                    </ReactMarkdown>
-
-                    <div className="flex items-center gap-4 mt-2 mb-6 px-1">
-                <span className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-sm">
-                  {exercise?.difficulty}
-                </span>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-sm">
-                  <Clock className="w-4 h-4" />
-                  <span>{exercise?.estimatedTime}</span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-sm">
-                  <Trophy className="w-4 h-4" />
-                  <span>{exercise?.xp} XP</span>
-                </div>
-              </div>
-                    {/* Show expected solution if present */}
-                    {exercise?.expectedOutput && (
-                      <div className="mt-6">
-                        <h2 className="text-black/60 dark:text-white/60 text-lg font-bold ml-1 mb-2">Expected Solution</h2>
-                        <div className="bg-blue-100 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-100 dark:border-black/40">
-                          <pre className="p-5 text-sm font-mono text-black/50 dark:text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
-                            {exercise.expectedOutput}
-                          </pre>
-                        </div>
+                      <div className="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
+                        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{userName}</div>
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email || 'student@techlearn.com'}</div>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Right Side - Code and Preview containers (50%) */}
-              <div className="flex-1 flex flex-col gap-2">
-                {/* Top Right - Code Editor (70% height) */}
-                <div className="flex-none h-[50%] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  {/* Code Editor Header */}
-                  <div className="bg-gradient-to-r [#daf0fa] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-blue-900 dark:text-white/80 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <Code className="w-4 h-4" />
-                      <span className="font-small">Code Editor</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={runCode}
-                        disabled={isRunning}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-900 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                      >
-                        {isRunning ? 'Running...' : 'Run Code'}
-                        <Play className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
+                      <div className="p-1">
+                        <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors">Profile settings</button>
+                        <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-colors">Log out</button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </header>
 
-                  {/* Monaco Editor */}
-                  <div className="h-[calc(100%-3.5rem)] relative overflow-hidden">
-                    <Editor
-                      height="100%"
-                      defaultLanguage="javascript"
-                      theme={editorTheme}
-                      value={userCode}
-                      onChange={(value) => setUserCode(value || '')}
-                      options={{
-                        fontSize: 14,
-                        fontFamily: 'Fira Code, Monaco, Consolas, monospace',
-                        minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                        tabSize: 2,
-                        insertSpaces: true,
-                        wordWrap: 'on',
-                        lineNumbers: 'on',
-                        overviewRulerLanes: 0,
-                        hideCursorInOverviewRuler: true,
-                        renderLineHighlight: 'all',
-                        selectOnLineNumbers: true,
-                        roundedSelection: false,
-                        readOnly: false,
-                        cursorStyle: 'line',
-                        contextmenu: false,
-                        copyWithSyntaxHighlighting: false,
-                        // Enable proper scrolling
-                        scrollbar: {
-                          vertical: 'visible',
-                          horizontal: 'visible',
-                          useShadows: false,
-                          verticalHasArrows: true,
-                          horizontalHasArrows: true,
-                          verticalScrollbarSize: 14,
-                          horizontalScrollbarSize: 14,
-                          alwaysConsumeMouseWheel: false
-                        },
-                        // Enable mouse wheel scrolling
-                        mouseWheelScrollSensitivity: 1,
-                        fastScrollSensitivity: 5,
-                        // Disable all IntelliSense and suggestions
-                        quickSuggestions: false,
-                        suggestOnTriggerCharacters: false,
-                        acceptSuggestionOnEnter: 'off',
-                        tabCompletion: 'off',
-                        wordBasedSuggestions: false,
-                        parameterHints: { enabled: false },
-                        autoClosingBrackets: 'never',
-                        autoClosingQuotes: 'never',
-                        autoSurround: 'never',
-                        snippetSuggestions: 'none',
-                        suggest: {
-                          showKeywords: false,
-                          showSnippets: false,
-                          showClasses: false,
-                          showFunctions: false,
-                          showVariables: false,
-                          showModules: false,
-                          showProperties: false,
-                          showEvents: false,
-                          showOperators: false,
-                          showUnits: false,
-                          showValues: false,
-                          showConstants: false,
-                          showEnums: false,
-                          showEnumMembers: false,
-                          showColors: false,
-                          showFiles: false,
-                          showReferences: false,
-                          showFolders: false,
-                          showTypeParameters: false,
-                          showIssues: false,
-                          showUsers: false,
-                          showWords: false
-                        },
-                        hover: { enabled: false },
-                        lightbulb: { enabled: false },
-                        find: {
-                          addExtraSpaceOnTop: false,
-                          autoFindInSelection: 'never',
-                          seedSearchStringFromSelection: 'never'
-                        }
-                      }}
-                      onMount={(editor, monaco) => {
-                        // Disable copy-paste and other shortcuts
-                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {});
-                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {});
-                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {});
-                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {});
-                        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {});
+        {/* IDE Workspace Container */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          
+          {/* Mobile Tab Navigation */}
+          <div className="md:hidden flex items-center border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] shrink-0">
+            {mobileTabs.map((tab) => {
+              const isActive = activeTab === tab.id || (activeTab === 'codePreview' && tab.id === 'compiler');
+              return (
+                <button 
+                  key={tab.id} 
+                  onClick={() => setActiveTab(tab.id)} 
+                  className={`flex-1 flex justify-center items-center gap-2 py-3 text-xs font-medium transition-colors border-b-2 ${isActive ? 'text-blue-600 border-blue-600 dark:text-blue-400 dark:border-blue-400' : 'text-zinc-500 border-transparent hover:text-zinc-900 dark:hover:text-zinc-300'}`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-                        // Disable all language features
-                        monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-                          noLib: true,
-                          allowNonTsExtensions: true
-                        });
-
-                        // Clear all language providers
-                        monaco.languages.registerCompletionItemProvider('javascript', {
-                          provideCompletionItems: () => ({ suggestions: [] })
-                        });
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Bottom Right - Live Preview (30% height) */}
-                <div className="flex-1 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  {/* Output Header */}
-                  <div className="bg-gradient-to-r [#daf0fa] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-blue-900 dark:text-white/80 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="w-4 h-4" />
-                      <span className="font-medium">Output</span>
+          {/* Desktop Layout (Split Pane) */}
+          <div className="hidden md:flex flex-1 w-full min-w-0 overflow-hidden bg-zinc-50 dark:bg-[#0E1117]" ref={containerRef}>
+            
+            {/* Left Side - Problem Panel */}
+            <AnimatePresence initial={false}>
+              {isProblemPanelOpen && (
+                <motion.div 
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: leftWidth, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                  className="flex-none bg-white dark:bg-[#0d1117] border-r border-zinc-200 dark:border-zinc-800/80 overflow-hidden flex flex-col z-10 shadow-sm"
+                >
+                  <div className="h-10 px-4 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-[#0d1117]">
+                    <div className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                      <BookOpen className="w-3.5 h-3.5" /> Description
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={resetCode}
-                        className="flex items-center gap-2 px-3 py-1.5 text-indigo-900 dark:text-white/80 hover:text-gray-200 transition-colors"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button 
+                      onClick={() => setIsProblemPanelOpen(false)}
+                      className="p-1.5 -mr-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      title="Collapse Panel"
+                    >
+                      <PanelLeftClose className="w-4 h-4" />
+                    </button>
                   </div>
 
-                  {/* Output Content */}
-                  <div className="h-[calc(100%-3.5rem)] overflow-hidden">
-                    <div className="h-full p-4 overflow-auto custom-scrollbar">
-                      {output ? (
-                        <>
-                          <div className="mb-4">
-                            <pre className="bg-gray-100 dark:bg-gray-900 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto">
-                              {output}
+                  <div className="flex-1 overflow-auto p-6 custom-scrollbar">
+                    <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 leading-tight">
+                      {exercise?.title}
+                    </h1>
+                    
+                    <div className="flex items-center gap-4 mb-6 pb-6 border-b border-zinc-100 dark:border-zinc-800/80">
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        {exercise?.difficulty}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <Clock className="w-3.5 h-3.5" /> {exercise?.estimatedTime}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <Trophy className="w-3.5 h-3.5" /> {exercise?.xp} XP
+                      </div>
+                    </div>
+
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:text-zinc-700 dark:prose-p:text-zinc-300 prose-headings:font-medium prose-headings:text-zinc-900 dark:prose-headings:text-zinc-100 prose-code:text-blue-600 dark:prose-code:text-blue-400 prose-code:bg-blue-50 dark:prose-code:bg-blue-500/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-pre:bg-zinc-100 dark:prose-pre:bg-[#161b22] prose-pre:border prose-pre:border-zinc-200 dark:prose-pre:border-zinc-800 prose-li:text-zinc-700 dark:prose-li:text-zinc-300">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                        {exercise?.theory}
+                      </ReactMarkdown>
+
+                      {exercise?.expectedOutput && (
+                        <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800/80">
+                          <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-3">Expected Output</h3>
+                          <div className="bg-zinc-100 dark:bg-[#161b22] rounded-md border border-zinc-200 dark:border-zinc-800 p-4">
+                            <pre className="text-sm font-mono text-zinc-800 dark:text-zinc-300 whitespace-pre-wrap m-0 bg-transparent p-0 border-0">
+                              {exercise.expectedOutput}
                             </pre>
                           </div>
-                          <div>
-                            <pre className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap overflow-auto border border-green-200 dark:border-green-700">
-                              {exercise?.expectedOutput}
-                            </pre>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center">
-                          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                            Output
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-400">
-                            Run your code to see the output here.
-                          </p>
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-          {/* Mobile Layout - Show different tabs based on activeTab */}
-          <div className="md:hidden">
-            {/* Theory Tab */}
-            {activeTab === 'theory' && (
-              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <h1 className="font-poppins text-2xl md:text-2xl font-medium brand-heading-primary p-4 mb-2 tracking-wider">
-                  {exercise?.title}
-                </h1>
-                <div className="flex items-center gap-4 mt-2 mb-6 px-4">
-                  <span className="px-3 py-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full text-sm font-medium">
-                    {exercise?.difficulty}
-                  </span>
-                  <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>{exercise?.estimatedTime}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                    <Trophy className="w-4 h-4" />
-                    <span>{exercise?.xp} XP</span>
-                  </div>
-                </div>
-                
-                <div className="h-[calc(100%-3.5rem)] overflow-auto p-4">
-                  <div className="prose prose-gray dark:prose-invert max-w-none prose-headings:text-blue-600 dark:prose-headings:text-blue-400 prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      rehypePlugins={[rehypeHighlight]}
-                      components={{
-                        pre: ({children}) => <pre className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto my-4">{children}</pre>,
-                        code: ({node, inline, className, children, ...props}) => {
-                          const match = /language-(\w+)/.exec(className || '');
-                          return !inline && match ? (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          ) : (
-                            <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm" {...props}>
-                              {children}
-                            </code>
-                          );
-                        },
-                        p: ({children}) => <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">{children}</p>,
-                        ul: ({children}) => <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ul>,
-                        ol: ({children}) => <ol className="list-decimal list-inside text-gray-700 dark:text-gray-300 space-y-2 mb-4">{children}</ol>,
-                        li: ({children}) => <li className="text-gray-700 dark:text-gray-300">{children}</li>,
-                        blockquote: ({children}) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">{children}</blockquote>,
-                      }}
-                    >
-                      {exercise?.theory}
-                    </ReactMarkdown>
-                    {exercise?.expectedOutput && (
-                      <div className="mt-6">
-                        <h2 className="text-blue-600 dark:text-blue-400 text-xl font-bold mb-2">Expected Solution</h2>
-                        <div className="bg-white/50 dark:bg-[#232b39] rounded-xl overflow-hidden shadow-lg border border-gray-700">
-                          <pre className="p-5 text-sm font-mono text-black/50 dark:text-gray-100 whitespace-pre-wrap overflow-auto" style={{background: 'none'}}>
-                            {exercise.expectedOutput}
-                          </pre>
-                        </div>
-                      </div>
+            {/* Resizer */}
+            {isProblemPanelOpen && <div className="resizer-bar shrink-0" onMouseDown={startDragging} />}
+            
+            {/* Right Side - Code and Output */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d1117] overflow-hidden">
+              
+              {/* Top - Code Editor */}
+              <div className="flex-[3] flex flex-col min-w-0 border-b border-zinc-200 dark:border-zinc-800/80 min-h-[300px]">
+                <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-[#0d1117] border-b border-zinc-100 dark:border-zinc-800/80">
+                  <div className="flex items-center gap-3">
+                    {!isProblemPanelOpen && (
+                      <button 
+                        onClick={() => setIsProblemPanelOpen(true)}
+                        className="p-1.5 -ml-2 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Expand Panel"
+                      >
+                        <PanelLeftOpen className="w-4 h-4" />
+                      </button>
                     )}
+                    <div className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                      <Code className="w-3.5 h-3.5" /> 
+                      main.{detectLanguage() === 'python' ? 'py' : detectLanguage() === 'java' ? 'java' : detectLanguage() === 'c' ? 'c' : 'js'}
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Compiler Tab - Premium Code Editor */}
-            {activeTab === 'compiler' && (
-              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {/* Code Editor Header */}
-                <div className="bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#beaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <Code className="w-4 h-4" />
-                    <span className="font-medium">Code Editor</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={runCode}
-                      disabled={isRunning}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white font-medium rounded-lg transition-all duration-300 disabled:opacity-50"
-                    >
-                      {isRunning ? 'Running...' : 'Run Code'}
-                      <Play className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button onClick={resetCode} className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300 flex items-center gap-1 transition-colors">
+                    <RotateCcw className="w-3 h-3" /> Reset
+                  </button>
                 </div>
 
-                {/* Monaco Editor */}
-                <div className="h-[calc(100%-7rem)] relative overflow-hidden">
+                <div className="flex-1 relative min-w-0">
                   <Editor
                     height="100%"
-                    defaultLanguage="javascript"
+                    defaultLanguage={detectLanguage()}
                     theme={editorTheme}
                     value={userCode}
                     onChange={(value) => setUserCode(value || '')}
                     options={{
                       fontSize: 14,
-                      fontFamily: 'Fira Code, Monaco, Consolas, monospace',
+                      fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
                       minimap: { enabled: false },
                       scrollBeyondLastLine: false,
                       automaticLayout: true,
-                      tabSize: 2,
-                      insertSpaces: true,
-                      wordWrap: 'on',
-                      lineNumbers: 'on',
-                      overviewRulerLanes: 0,
-                      hideCursorInOverviewRuler: true,
+                      padding: { top: 16 },
+                      lineHeight: 1.5,
                       renderLineHighlight: 'all',
-                      selectOnLineNumbers: true,
-                      roundedSelection: false,
-                      readOnly: false,
-                      cursorStyle: 'line',
-                      contextmenu: false,
-                      copyWithSyntaxHighlighting: false,
-                      // Enable proper scrolling
-                      scrollbar: {
-                        vertical: 'visible',
-                        horizontal: 'visible',
-                        useShadows: false,
-                        verticalHasArrows: true,
-                        horizontalHasArrows: true,
-                        verticalScrollbarSize: 14,
-                        horizontalScrollbarSize: 14,
-                        alwaysConsumeMouseWheel: false
-                      },
-                      // Enable mouse wheel scrolling
-                      mouseWheelScrollSensitivity: 1,
-                      fastScrollSensitivity: 5,
-                      // Disable all IntelliSense and suggestions
-                      quickSuggestions: false,
-                      suggestOnTriggerCharacters: false,
-                      acceptSuggestionOnEnter: 'off',
-                      tabCompletion: 'off',
-                      wordBasedSuggestions: false,
-                      parameterHints: { enabled: false },
-                      autoClosingBrackets: 'never',
-                      autoClosingQuotes: 'never',
-                      autoSurround: 'never',
-                      snippetSuggestions: 'none',
-                      suggest: {
-                        showKeywords: false,
-                        showSnippets: false,
-                        showClasses: false,
-                        showFunctions: false,
-                        showVariables: false,
-                        showModules: false,
-                        showProperties: false,
-                        showEvents: false,
-                        showOperators: false,
-                        showUnits: false,
-                        showValues: false,
-                        showConstants: false,
-                        showEnums: false,
-                        showEnumMembers: false,
-                        showColors: false,
-                        showFiles: false,
-                        showReferences: false,
-                        showFolders: false,
-                        showTypeParameters: false,
-                        showIssues: false,
-                        showUsers: false,
-                        showWords: false
-                      },
-                      hover: { enabled: false },
-                      lightbulb: { enabled: false },
-                      find: {
-                        addExtraSpaceOnTop: false,
-                        autoFindInSelection: 'never',
-                        seedSearchStringFromSelection: 'never'
-                      }
-                    }}
-                    onMount={(editor, monaco) => {
-                      // Disable copy-paste and other shortcuts
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {});
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {});
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA, () => {});
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {});
-                      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {});
-
-                      // Disable all language features
-                      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-                        noLib: true,
-                        allowNonTsExtensions: true
-                      });
-
-                      // Clear all language providers
-                      monaco.languages.registerCompletionItemProvider('javascript', {
-                        provideCompletionItems: () => ({ suggestions: [] })
-                      });
+                      hideCursorInOverviewRuler: true,
+                      overviewRulerBorder: false,
+                      scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 }
                     }}
                   />
                 </div>
+              </div>
 
-                {/* Action Buttons - Removed Submit and Run Code buttons */}
-                <div className="bg-gray-100 dark:bg-gray-700 px-4 py-3 flex gap-3">
-                  {/* Run Code button moved to header, Submit button removed as backend is not connected */}
+              {/* Bottom - Terminal */}
+              <div className="flex-[1.5] flex flex-col min-w-0 bg-zinc-50 dark:bg-[#0E1117] min-h-[150px]">
+                <div className="h-10 px-4 border-b border-zinc-200 dark:border-zinc-800/80 flex items-center bg-white dark:bg-[#0d1117] shrink-0">
+                  <div className="flex items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                    <Terminal className="w-3.5 h-3.5" /> Output
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed custom-scrollbar text-zinc-800 dark:text-zinc-300">
+                  {output ? (
+                    <div className="whitespace-pre-wrap">{output}</div>
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-600 select-none">
+                      Run your code to see results
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Mobile Layout Forms */}
+          <div className="md:hidden flex-1 flex flex-col min-w-0 bg-zinc-50 dark:bg-[#09090b] overflow-hidden">
+            {activeTab === 'theory' && (
+              <div className="flex-1 overflow-y-auto p-5 bg-white dark:bg-[#09090b]">
+                <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                  {exercise?.title}
+                </h2>
+                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{exercise?.difficulty}</span>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400"><Clock className="w-3.5 h-3.5" /> {exercise?.estimatedTime}</div>
+                  <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400"><Trophy className="w-3.5 h-3.5" /> {exercise?.xp} XP</div>
+                </div>
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>{exercise?.theory}</ReactMarkdown>
                 </div>
               </div>
             )}
 
-            {/* Live Preview Tab - Output Display */}
-            {activeTab === 'preview' && (
-              <div className="h-[700px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {/* Output Header */}
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 text-white px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4" />
-                    <span className="font-medium">Output</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={resetCode}
-                      className="flex items-center gap-2 px-3 py-1.5 text-white hover:text-gray-200 transition-colors"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
-                  </div>
+            {activeTab === 'compiler' && (
+              <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d1117]">
+                <div className="h-10 px-4 flex items-center justify-between shrink-0 bg-zinc-50 dark:bg-[#0d1117] border-b border-zinc-200 dark:border-zinc-800">
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 font-mono">main.{detectLanguage() === 'python' ? 'py' : 'js'}</span>
+                  <button onClick={resetCode} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"><RotateCcw className="w-3.5 h-3.5" /></button>
                 </div>
+                <div className="flex-1 relative py-2 min-w-0">
+                  <Editor
+                    height="100%"
+                    defaultLanguage={detectLanguage()}
+                    theme={editorTheme}
+                    value={userCode}
+                    onChange={(value) => setUserCode(value || '')}
+                    options={{ fontSize: 13, minimap: { enabled: false }, automaticLayout: true }}
+                  />
+                </div>
+              </div>
+            )}
 
-                {/* Terminal Output */}
-                <div className="h-[calc(100%-3.5rem)] bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm">
-                  <div className="p-4 h-full overflow-auto custom-scrollbar">
-                    {output ? (
-                      <>
-                        <div className="text-gray-900 dark:text-white whitespace-pre-wrap">
-                          {output}
-                        </div>
-                        {exercise?.expectedOutput && (
-                          <div className="mt-4 pt-2 border-t border-gray-300 dark:border-gray-700">
-                            <div className="text-yellow-600 dark:text-yellow-400">{exercise.expectedOutput}</div>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center">
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                          Output
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          Run your code to see the output here.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+            {activeTab === 'preview' && (
+              <div className="flex-1 flex flex-col min-w-0 bg-zinc-50 dark:bg-[#0E1117]">
+                <div className="h-10 px-4 flex items-center shrink-0 bg-white dark:bg-[#0d1117] border-b border-zinc-200 dark:border-zinc-800">
+                  <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Terminal</span>
+                </div>
+                <div className="flex-1 p-4 font-mono text-[13px] text-zinc-800 dark:text-zinc-300 overflow-auto whitespace-pre-wrap">
+                  {output || "No output yet."}
                 </div>
               </div>
             )}
           </div>
-        </motion.div>
-      </div>
+
+        </div>
+      </main>
     </div>
   );
 };
