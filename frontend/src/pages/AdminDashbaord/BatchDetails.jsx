@@ -41,6 +41,7 @@ const BatchDetails = () => {
       ? { ...stateBatch }
       : {
       id: batchId,
+      name: 'Batch',
       college: 'Unknown College',
       status: 'Active',
       start: 'TBD',
@@ -126,10 +127,10 @@ const BatchDetails = () => {
 
             <div className="flex flex-wrap items-center gap-5">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white flex items-center justify-center text-2xl font-semibold shadow-sm">
-                {batch.id?.charAt(0) || 'B'}
+                {batch.name?.charAt(0) || 'B'}
               </div>
               <div>
-                <h2 className="text-4xl font-semibold tracking-tight text-black/90 dark:text-white">{batch.id}</h2>
+                <h2 className="text-4xl font-semibold tracking-tight text-black/90 dark:text-white">{batch.name || batch.id}</h2>
                 <p className="mt-1 text-sm text-black/55 dark:text-white/55 flex flex-wrap items-center gap-3">
                   <span className="inline-flex items-center gap-1.5"><FiBriefcase className="w-3.5 h-3.5" />{batch.college}</span>
                   <span>•</span>

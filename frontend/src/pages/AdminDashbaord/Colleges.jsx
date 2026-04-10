@@ -77,6 +77,8 @@ const Colleges = () => {
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+  const collegeFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
@@ -267,7 +269,7 @@ const Colleges = () => {
                   <input
                     value={formState.name}
                     onChange={(e) => setFormState((p) => ({ ...p, name: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={collegeFormInputClass}
                     placeholder="Enter college name"
                   />
                 </div>
@@ -276,7 +278,7 @@ const Colleges = () => {
                   <input
                     value={formState.code}
                     onChange={(e) => setFormState((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={collegeFormInputClass}
                     placeholder="E.g. MIT"
                   />
                 </div>
@@ -288,18 +290,22 @@ const Colleges = () => {
                   <input
                     value={formState.city}
                     onChange={(e) => setFormState((p) => ({ ...p, city: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={collegeFormInputClass}
                     placeholder="Enter city"
                   />
                 </div>
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
-                  <div className="relative mt-1">
-                    <select value={formState.status} onChange={(e) => setFormState((p) => ({ ...p, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5">
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={formState.status}
+                      onChange={(e) => setFormState((p) => ({ ...p, status: e.target.value }))}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="Active">Active</option>
+                      <option className={dropdownOptionClass} value="Inactive">Inactive</option>
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
               </div>
@@ -310,7 +316,7 @@ const Colleges = () => {
                   <input
                     value={formState.contactPerson}
                     onChange={(e) => setFormState((p) => ({ ...p, contactPerson: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={collegeFormInputClass}
                     placeholder="Enter contact person"
                   />
                 </div>
@@ -320,7 +326,7 @@ const Colleges = () => {
                     type="email"
                     value={formState.contactEmail}
                     onChange={(e) => setFormState((p) => ({ ...p, contactEmail: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={collegeFormInputClass}
                     placeholder="Enter contact email"
                   />
                 </div>
@@ -410,17 +416,17 @@ const Colleges = () => {
                         className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                       />
                     </div>
-                    <div className="relative w-full sm:w-[160px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 shadow-[0_1px_8px_rgba(15,23,42,0.06)] dark:shadow-none hover:bg-white/85 dark:hover:bg-white/10 transition-colors">
+                    <div className="relative w-full sm:w-[172px] shrink-0 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="appearance-none w-full h-10 sm:h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-medium text-black/80 dark:text-white outline-none"
+                        className="appearance-none w-full h-10 sm:h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
                       >
-                        <option value="All">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                        <option className={dropdownOptionClass} value="All">All Status</option>
+                        <option className={dropdownOptionClass} value="Active">Active</option>
+                        <option className={dropdownOptionClass} value="Inactive">Inactive</option>
                       </select>
-                      <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                     </div>
                     <div className="flex-1 hidden sm:block" />
                     <button

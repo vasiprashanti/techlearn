@@ -2,29 +2,46 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { 
-  FiX, FiMenu, FiGrid, FiBook, 
-  FiAward, FiBriefcase, FiCheckSquare 
+  FiX,
+  FiMenu,
+  FiGrid,
+  FiList,
+  FiDatabase,
+  FiCode,
+  FiCpu,
+  FiBriefcase,
+  FiAward,
+  FiBook,
+  FiLayers,
+  FiMap,
+  FiFileText
 } from "react-icons/fi";
 
 const menuGroups = [
   {
-    title: "OVERVIEW",
+    title: "INTERVIEW PREP",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "projects", title: "My Projects", icon: <FiBriefcase className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "LEARNING",
-    items: [
-      { id: "learn/courses", title: "Enrolled Courses", icon: <FiBook className="w-4 h-4" /> },
-      { id: "learn/exercises", title: "My Exercises", icon: <FiCheckSquare className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "COMMUNITY",
-    items: [
+      { id: "interview/all-questions", title: "All Interview Questions", icon: <FiList className="w-4 h-4" /> },
+      { id: "interview/sql-questions", title: "SQL Questions", icon: <FiDatabase className="w-4 h-4" /> },
+      { id: "interview/dsa-questions", title: "DSA Questions", icon: <FiCode className="w-4 h-4" /> },
+      { id: "interview/core-cs-questions", title: "Core CS Questions", icon: <FiCpu className="w-4 h-4" /> },
+      { id: "interview/company-based-questions", title: "Company-Based Questions", icon: <FiBriefcase className="w-4 h-4" /> },
       { id: "leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
+    ]
+  },
+  {
+    title: "CORE PREP",
+    items: [
+      { id: "core-prep/languages", title: "Languages", icon: <FiBook className="w-4 h-4" /> },
+      { id: "core-prep/important-concepts", title: "Important concepts", icon: <FiLayers className="w-4 h-4" /> },
+    ]
+  },
+  {
+    title: "RESOURCES",
+    items: [
+      { id: "resources/roadmaps", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
+      { id: "resources/resume-templates", title: "Resume Templates", icon: <FiFileText className="w-4 h-4" /> },
     ]
   }
 ];

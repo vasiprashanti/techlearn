@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Question from "../../models/Questions.js";
 import QuestionCategory from "../../models/QuestionCategory.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
+import Batch from "../../models/Batch.js";
 import Resource from "../../models/Resource.js";
 import FinalTest from "../../models/FinalTest.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
@@ -335,7 +336,7 @@ export const deleteQuestionAdmin = async (req, res) => {
 
 export const listTrackTemplates = async (req, res) => {
   try {
-    const templates = await TrackTemplate.find().sort({ createdAt: -1 }).lean();
+    const templates = await TrackTemplate.find().populate("batchId", "name").sort({ createdAt: -1 }).lean();
     const data = templates.map((template) => ({
       id: template._id,
       name: template.name,
@@ -345,6 +346,10 @@ export const listTrackTemplates = async (req, res) => {
       status: template.status,
       category: template.category,
       iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
+      startDate: template.startDate,
+      endDate: template.endDate,
+      batchId: template.batchId?._id || template.batchId,
+      assignedBatch: template.batchId?.name || "",
     }));
 
     return res.status(200).json({ success: true, data });
@@ -356,15 +361,34 @@ export const listTrackTemplates = async (req, res) => {
 
 export const createTrackTemplate = async (req, res) => {
   try {
-    const { name, description, category, totalDays, status, iconKey } = req.body;
-    if (!name?.trim() || !category?.trim()) {
-      return res.status(400).json({ success: false, message: "Template name and category are required." });
+    const { name, description, category, totalDays, status, iconKey, startDate, endDate, batchId } = req.body;
+    if (!name?.trim() || !category?.trim() || !startDate || !endDate || !batchId) {
+      return res.status(400).json({ success: false, message: "Template name, category, startDate, endDate and batchId are required." });
+    }
+
+    if (!assertObjectId(batchId, "batchId", res)) return;
+
+    const batch = await Batch.findById(batchId).lean();
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Assigned batch not found." });
+    }
+
+    const parsedStartDate = new Date(startDate);
+    const parsedEndDate = new Date(endDate);
+    if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
+      return res.status(400).json({ success: false, message: "startDate and endDate must be valid dates." });
+    }
+    if (parsedEndDate < parsedStartDate) {
+      return res.status(400).json({ success: false, message: "endDate must be on or after startDate." });
     }
 
     const template = await TrackTemplate.create({
       name: name.trim(),
       description: description?.trim() || `${totalDays || 30}-day ${category} track template`,
       category: category.trim(),
+      startDate: parsedStartDate,
+      endDate: parsedEndDate,
+      batchId,
       totalDays: Number(totalDays || 30),
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
@@ -393,6 +417,7 @@ export const getTrackTemplateDetail = async (req, res) => {
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId)
+      .populate("batchId", "name")
       .populate("dayAssignments.questionId")
       .lean();
     if (!template) {
@@ -413,6 +438,10 @@ export const getTrackTemplateDetail = async (req, res) => {
         status: template.status,
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
+        startDate: template.startDate,
+        endDate: template.endDate,
+        batchId: template.batchId?._id || template.batchId,
+        assignedBatch: template.batchId?.name || "",
         versionHistory: template.versionHistory || [],
         assignedQuestions: (template.dayAssignments || [])
           .sort((a, b) => a.dayNumber - b.dayNumber)
@@ -453,8 +482,34 @@ export const updateTrackTemplate = async (req, res) => {
       template.category = req.body.category.trim();
       template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
     }
+    if (req.body.startDate) {
+      const parsedStartDate = new Date(req.body.startDate);
+      if (Number.isNaN(parsedStartDate.getTime())) {
+        return res.status(400).json({ success: false, message: "startDate must be a valid date." });
+      }
+      template.startDate = parsedStartDate;
+    }
+    if (req.body.endDate) {
+      const parsedEndDate = new Date(req.body.endDate);
+      if (Number.isNaN(parsedEndDate.getTime())) {
+        return res.status(400).json({ success: false, message: "endDate must be a valid date." });
+      }
+      template.endDate = parsedEndDate;
+    }
+    if (req.body.batchId) {
+      if (!assertObjectId(req.body.batchId, "batchId", res)) return;
+      const batch = await Batch.findById(req.body.batchId).lean();
+      if (!batch) {
+        return res.status(404).json({ success: false, message: "Assigned batch not found." });
+      }
+      template.batchId = req.body.batchId;
+    }
     if (req.body.totalDays) template.totalDays = Number(req.body.totalDays);
     if (req.body.status) template.status = req.body.status;
+
+    if (template.endDate && template.startDate && template.endDate < template.startDate) {
+      return res.status(400).json({ success: false, message: "endDate must be on or after startDate." });
+    }
 
     const nextVersion = (template.versionHistory?.length || 0) + 1;
     template.versionHistory = [

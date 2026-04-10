@@ -316,6 +316,31 @@
     border-color: rgba(255, 255, 255, 0.12) !important;
   }
 
+  /* Thin scrollbar for interview question catalog tables */
+  .question-catalog-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #89b5db #e7f0f7;
+  }
+
+  .question-catalog-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .question-catalog-scroll::-webkit-scrollbar-track {
+    background: #e7f0f7;
+    border-radius: 9999px;
+  }
+
+  .question-catalog-scroll::-webkit-scrollbar-thumb {
+    background: #89b5db;
+    border-radius: 9999px;
+  }
+
+  .question-catalog-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6ea1cd;
+  }
+
   .admin-page-title,
   .admin-dashboard-typography .admin-page-title {
     font-size: 1.125rem;

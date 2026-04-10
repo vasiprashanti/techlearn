@@ -122,6 +122,8 @@ const Batches = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+  const batchFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
     const [remoteBatches, remoteColleges] = await Promise.all([
@@ -319,23 +321,23 @@ const Batches = () => {
                     value={createBatchForm.batchName}
                     onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, batchName: e.target.value }))}
                     placeholder="Enter batch name"
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className={batchFormInputClass}
                   />
                 </div>
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">College*</label>
-                  <div className="relative mt-1">
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createBatchForm.college}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, college: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option value="">Select college</option>
+                      <option className={dropdownOptionClass} value="">Select college</option>
                       {collegeOptions.map((college) => (
-                        <option key={college} value={college}>{college}</option>
+                        <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
                       ))}
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
               </div>
@@ -379,18 +381,18 @@ const Batches = () => {
 
               <div>
                 <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
-                <div className="relative mt-1">
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
                     value={createBatchForm.status}
                     onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, status: e.target.value }))}
-                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5"
+                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                   >
-                    <option value="Draft">Draft</option>
-                    <option value="Active">Active</option>
-                    <option value="Expired">Expired</option>
-                    <option value="Archived">Archived</option>
+                    <option className={dropdownOptionClass} value="Draft">Draft</option>
+                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Expired">Expired</option>
+                    <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
               </div>
 
@@ -469,36 +471,40 @@ const Batches = () => {
                   value={batchSearchTerm}
                   onChange={(e) => setBatchSearchTerm(e.target.value)}
                   placeholder="Search batches..."
-                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 pl-10 pr-3 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
+                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-10 pr-3 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                 />
               </div>
 
               <div className="relative min-w-0">
-                <select
-                  value={collegeFilter}
-                  onChange={(e) => setCollegeFilter(e.target.value)}
-                  className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 px-3.5 pr-9 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
-                >
-                  {['All Colleges', ...collegeOptions].map((college) => (
-                    <option key={college} value={college}>{college}</option>
-                  ))}
-                </select>
-                <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={collegeFilter}
+                    onChange={(e) => setCollegeFilter(e.target.value)}
+                    className="appearance-none w-full h-10 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                  >
+                    {['All Colleges', ...collegeOptions].map((college) => (
+                      <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
 
               <div className="relative min-w-0">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/50 dark:bg-black/40 px-3.5 pr-9 text-sm text-black/70 dark:text-white/70 outline-none focus:border-black/20 dark:focus:border-white/20"
-                >
-                  <option value="All Status">All Status</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Active">Active</option>
-                  <option value="Expired">Expired</option>
-                  <option value="Archived">Archived</option>
-                </select>
-                <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="appearance-none w-full h-10 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="All Status">All Status</option>
+                    <option className={dropdownOptionClass} value="Draft">Draft</option>
+                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Expired">Expired</option>
+                    <option className={dropdownOptionClass} value="Archived">Archived</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
 
               <button
