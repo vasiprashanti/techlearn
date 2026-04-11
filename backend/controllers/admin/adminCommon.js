@@ -133,6 +133,7 @@ export const slugifyCategory = (value) =>
 export const listKnownQuestionCategories = async () => {
   const storedCategories = await QuestionCategory.find({ status: "Active" }).sort({ createdAt: 1 }).lean();
   return storedCategories.map((category) => ({
+    id: category._id,
     slug: category.slug,
     title: category.title,
     subtitle: category.subtitle || "",

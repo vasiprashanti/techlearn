@@ -54,13 +54,7 @@ const BatchDetails = () => {
 
     return {
       ...base,
-      tracks: base.tracks && base.tracks.length ? base.tracks : [
-        {
-          name: 'Core Track',
-          questionsAssigned: 0,
-          days: [],
-        },
-      ],
+      tracks: Array.isArray(base.tracks) ? base.tracks : [],
       studentsTable: base.studentsTable && base.studentsTable.length ? base.studentsTable : [
         { name: 'No enrolled students', email: '-', score: 0, streak: '-' },
       ],
@@ -162,26 +156,32 @@ const BatchDetails = () => {
 
             <div className="space-y-4">
               <h3 className="admin-section-heading">Attached Tracks</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {batch.tracks.map((track) => (
-                  <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3">
-                    <h4 className="text-base font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
-                    <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
-                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                      {track.days.length === 0 ? (
-                        <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
-                      ) : (
-                        track.days.map((dayItem, index) => (
-                          <div key={`${track.name}-${index}`} className="flex items-center gap-2 text-xs">
-                            <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] w-10 shrink-0">Day {index + 1}</span>
-                            <span className="text-black/80 dark:text-white/80 break-words">{dayItem}</span>
-                          </div>
-                        ))
-                      )}
+              {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {batch.tracks.map((track) => (
+                    <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-5 space-y-3">
+                      <h4 className="text-base font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
+                      <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                        {track.days.length === 0 ? (
+                          <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
+                        ) : (
+                          track.days.map((dayItem, index) => (
+                            <div key={`${track.name}-${index}`} className="flex items-center gap-2 text-xs">
+                              <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] w-10 shrink-0">Day {index + 1}</span>
+                              <span className="text-black/80 dark:text-white/80 break-words">{dayItem}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                  No tracks are attached to this batch yet.
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

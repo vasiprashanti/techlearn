@@ -28,6 +28,16 @@ const batchSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    assignedTrack: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    batchSize: {
+      type: Number,
+      min: 1,
+      default: null,
+    },
     releaseTime: {
       type: String, // e.g., "00:00", stored typically as string for daily time
       required: true,

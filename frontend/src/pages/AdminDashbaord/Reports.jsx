@@ -26,17 +26,18 @@ const searchRoutes = [
 ];
 
 const reportTypes = [
-  { id: 1, title: 'Batch Leaderboard',   desc: 'Rankings and scores for each batch',           formats: ['CSV', 'Excel'], icon: FiAward },
-  { id: 2, title: 'Student Performance', desc: 'Individual student progress and scores',        formats: ['CSV', 'Excel'], icon: FiUsers },
-  { id: 3, title: 'Submission Records',  desc: 'All submissions with status and timings',       formats: ['CSV'],          icon: FiCode },
-  { id: 4, title: 'College Performance', desc: 'Aggregate performance by college',              formats: ['CSV', 'Excel'], icon: FiHome },
-  { id: 5, title: 'Batch Summary',       desc: 'Batch details, tracks, and student counts',     formats: ['CSV', 'Excel'], icon: FiBookOpen },
-  { id: 6, title: 'Question Usage',      desc: 'Question bank usage across tracks and batches', formats: ['CSV'],          icon: FiFileText },
+  { id: 1, key: 'batch-leaderboard', title: 'Batch Leaderboard',   desc: 'Rankings and scores for each batch',           formats: ['CSV', 'Excel'], icon: FiAward },
+  { id: 2, key: 'student-performance', title: 'Student Performance', desc: 'Individual student progress and scores',        formats: ['CSV', 'Excel'], icon: FiUsers },
+  { id: 3, key: 'submission-records', title: 'Submission Records',  desc: 'All submissions with status and timings',       formats: ['CSV'],          icon: FiCode },
+  { id: 4, key: 'college-performance', title: 'College Performance', desc: 'Aggregate performance by college',              formats: ['CSV', 'Excel'], icon: FiHome },
+  { id: 5, key: 'batch-summary', title: 'Batch Summary',       desc: 'Batch details, tracks, and student counts',     formats: ['CSV', 'Excel'], icon: FiBookOpen },
+  { id: 6, key: 'question-usage', title: 'Question Usage',      desc: 'Question bank usage across tracks and batches', formats: ['CSV'],          icon: FiFileText },
 ];
 
 const formatStyle = {
   CSV:   { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
   Excel: { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
+  EXCEL: { bg: 'bg-[#dbe8f5] dark:bg-white/10 border border-black/6 dark:border-white/10', text: 'text-[#1e2f46] dark:text-white/85' },
 };
 
 export default function Reports() {
@@ -66,6 +67,7 @@ export default function Reports() {
             ...reportTypes[index],
             ...report,
             id: report.id || report.key || reportTypes[index]?.id || index + 1,
+            key: report.key || reportTypes[index]?.key,
             title: report.title || reportTypes[index]?.title,
             desc: report.desc || report.description || reportTypes[index]?.desc,
             formats: report.formats || reportTypes[index]?.formats || ['CSV'],
@@ -107,9 +109,54 @@ export default function Reports() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const handleDownload = (key) => {
+  const handleDownload = async (report, format) => {
+    const key = `${report.id}-${format}`;
     setDownloading(key);
-    setTimeout(() => setDownloading(null), 1500);
+
+    try {
+      if (!report?.key) {
+        throw new Error('Missing report key.');
+      }
+      const url = adminAPI.exportReportUrl(report.key, format);
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download report.');
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') || '';
+      const fileNameMatch = disposition.match(/filename="?([^\"]+)"?/i);
+      const fallbackExt = format.toUpperCase() === 'EXCEL' ? 'xls' : 'csv';
+      const fallbackName = `${report.key || 'report'}-${new Date().toISOString().slice(0, 10)}.${fallbackExt}`;
+      const fileName = fileNameMatch?.[1] || fallbackName;
+
+      const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      setRecentExportEntries((prev) => ([
+        {
+          id: `local-${Date.now()}`,
+          title: report.title,
+          format,
+          date: new Date().toISOString(),
+        },
+        ...prev,
+      ].slice(0, 10)));
+    } catch {
+      window.alert('Unable to export this report right now.');
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
@@ -181,11 +228,11 @@ export default function Reports() {
                     {report.formats.map(fmt => {
                       const key = `${report.id}-${fmt}`;
                       const isLoading = downloading === key;
-                      const fs = formatStyle[fmt];
+                      const fs = formatStyle[fmt] || formatStyle.CSV;
                       return (
                         <button
                           key={fmt}
-                          onClick={() => handleDownload(key)}
+                          onClick={() => handleDownload(report, fmt)}
                           className={`inline-flex items-center gap-1.5 px-3 sm:px-2.5 h-8 sm:h-7 rounded-full text-xs sm:text-[11px] font-semibold transition-all ${fs.bg} ${fs.text} hover:brightness-95 ${isLoading ? 'opacity-50 cursor-wait' : ''}`}
                         >
                           <FiDownload className={`w-3 h-3 ${isLoading ? 'animate-bounce' : ''}`} />
@@ -201,9 +248,9 @@ export default function Reports() {
             {/* Recent Exports */}
             <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
               <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
-              <div className="mt-3 overflow-visible sm:overflow-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0">
+              <div className="mt-3 max-h-[360px] overflow-y-auto overflow-x-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
                 {recentExportEntries.map((exp, i) => {
-                  const fs = formatStyle[exp.format];
+                  const fs = formatStyle[exp.format] || formatStyle.CSV;
                   return (
                     <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExportEntries.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
                       <div className="flex min-w-0 items-center gap-2">

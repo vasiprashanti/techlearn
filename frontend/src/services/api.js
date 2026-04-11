@@ -303,6 +303,24 @@ export const compilerAPI = {
   },
 };
 
+export const resourceAPI = {
+  getResources: async (category) => {
+    const suffix = category ? `?category=${encodeURIComponent(category)}` : '';
+    const response = await fetch(`${API_BASE}/resources${suffix}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  recordResourceView: async (resourceId) => {
+    const response = await fetch(`${API_BASE}/resources/${resourceId}/view`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
 
 
 // Data Adapters - Transform backend data to frontend format
@@ -498,6 +516,7 @@ export default {
   exerciseAPI,
   paymentAPI,
   compilerAPI,
+  resourceAPI,
   dataAdapters,
   apiStatus,
   API_ERRORS,

@@ -33,6 +33,7 @@ import {
   createQuestionAdmin,
   createResourceAdmin,
   createTrackTemplate,
+  deleteQuestionCategory,
   deleteQuestionAdmin,
   deleteResourceAdmin,
   deleteTrackTemplate,
@@ -50,6 +51,7 @@ import {
   restoreCertificateAdmin,
   revokeCertificateAdmin,
   updateQuestionAdmin,
+  updateQuestionCategory,
   updateResourceAdmin,
   updateTrackTemplate,
 } from "../controllers/admin/adminLearningController.js";
@@ -91,6 +93,8 @@ router.delete("/students/:studentId", deleteStudentAdmin);
 
 router.get("/questions/categories", listQuestionCategories);
 router.post("/questions/categories", createQuestionCategory);
+router.put("/questions/categories/:categoryId", updateQuestionCategory);
+router.delete("/questions/categories/:categoryId", deleteQuestionCategory);
 router.get("/questions", listQuestionsAdmin);
 router.post("/questions", createQuestionAdmin);
 router.get("/questions/:questionId", getQuestionDetailAdmin);

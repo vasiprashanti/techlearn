@@ -282,6 +282,9 @@ export const exportReport = async (req, res) => {
   try {
     const { type } = req.params;
     const format = String(req.query.format || "CSV").toUpperCase();
+    if (!["CSV", "EXCEL"].includes(format)) {
+      return res.status(400).json({ success: false, message: "Invalid report format." });
+    }
     const report = REPORT_TYPES.find((item) => item.key === type);
     if (!report) {
       return res.status(404).json({ success: false, message: "Report type not found." });
@@ -299,10 +302,12 @@ export const exportReport = async (req, res) => {
       metadata: { format },
     });
 
-    res.setHeader("Content-Type", "text/csv");
+    const extension = format === "EXCEL" ? "xls" : "csv";
+    const contentType = format === "EXCEL" ? "application/vnd.ms-excel" : "text/csv";
+    res.setHeader("Content-Type", contentType);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${type}-${new Date().toISOString().slice(0, 10)}.csv"`
+      `attachment; filename="${type}-${new Date().toISOString().slice(0, 10)}.${extension}"`
     );
     return res.status(200).send(csv);
   } catch (error) {
