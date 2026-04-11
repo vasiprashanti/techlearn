@@ -3,6 +3,8 @@ import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Submission from "../../models/Submission.js";
+import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
+import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
 import Track from "../../models/Track.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
@@ -244,18 +246,36 @@ export const deleteCollege = async (req, res) => {
       return res.status(404).json({ success: false, message: "College not found." });
     }
 
-    const [linkedBatches, linkedStudents] = await Promise.all([
-      Batch.countDocuments({ collegeId }),
-      Student.countDocuments({ collegeId }),
-    ]);
+    const batches = await Batch.find({ collegeId }).select("_id").lean();
+    const batchIds = batches.map((batch) => batch._id);
 
-    if (linkedBatches > 0 || linkedStudents > 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Cannot delete college with linked batches or students.",
-        data: { linkedBatches, linkedStudents },
-      });
-    }
+    const studentsToDelete = await Student.find({
+      $or: [{ collegeId }, ...(batchIds.length ? [{ batchId: { $in: batchIds } }] : [])],
+    })
+      .select("_id email")
+      .lean();
+
+    const studentIds = studentsToDelete.map((student) => student._id);
+    const studentEmails = studentsToDelete
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    await Promise.all([
+      Submission.deleteMany({
+        $or: [
+          ...(batchIds.length ? [{ batchId: { $in: batchIds } }] : []),
+          ...(studentIds.length ? [{ studentId: { $in: studentIds } }] : []),
+        ],
+      }),
+      studentEmails.length
+        ? StudentCodingSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentEmails.length
+        ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      Batch.deleteMany({ collegeId }),
+    ]);
 
     await College.findByIdAndDelete(collegeId);
 
@@ -301,6 +321,8 @@ export const listBatches = async (req, res) => {
       id: batch._id,
       name: batch.name,
       college: batch.collegeId?.name || "Unknown College",
+      assignedTrack: batch.assignedTrack || "",
+      batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
       status: batch.status,
       start: formatDateLabel(batch.startDate),
       end: formatDateLabel(batch.expiryDate),
@@ -317,7 +339,11 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, batchSize } = req.body;
+    const parsedBatchSize =
+      batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
+        ? null
+        : Number(batchSize);
     if (!collegeId || !name || !startDate || !expiryDate) {
       return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
     }
@@ -334,6 +360,8 @@ export const createBatchAdmin = async (req, res) => {
               name: name.trim(),
               startDate,
               expiryDate,
+              assignedTrack: assignedTrack?.trim() || "",
+              batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
             },
@@ -343,14 +371,26 @@ export const createBatchAdmin = async (req, res) => {
 
         batch = createdBatch;
 
-        await Track.insertMany(
-          [
-            { batchId: batch._id, trackType: "Core", durationDays: 0, orderedQuestionIds: [] },
-            { batchId: batch._id, trackType: "DSA", durationDays: 0, orderedQuestionIds: [] },
-            { batchId: batch._id, trackType: "SQL", durationDays: 0, orderedQuestionIds: [] },
-          ],
-          { session }
-        );
+        const normalizedTrackType = String(assignedTrack || "").trim().toUpperCase();
+        const allowedTrackType = {
+          CORE: "Core",
+          DSA: "DSA",
+          SQL: "SQL",
+        }[normalizedTrackType] || null;
+
+        if (allowedTrackType) {
+          await Track.create(
+            [
+              {
+                batchId: batch._id,
+                trackType: allowedTrackType,
+                durationDays: 0,
+                orderedQuestionIds: [],
+              },
+            ],
+            { session }
+          );
+        }
       });
     } finally {
       await session.endSession();
@@ -413,17 +453,30 @@ export const getBatchDetail = async (req, res) => {
         id: batch._id,
         name: batch.name,
         college: batch.collegeId?.name || "Unknown College",
+        assignedTrack: batch.assignedTrack || "",
+        batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
         students: students.length,
         avgScore,
         avgStreakDays: avgStreak,
-        tracks: tracks.map((track) => ({
-          id: track._id,
-          name: `${track.trackType} Track`,
-          questionsAssigned: track.orderedQuestionIds?.length || 0,
-          days: (track.orderedQuestionIds || []).map((question) => question.title),
-        })),
+        tracks: tracks.length > 0
+          ? tracks.map((track) => ({
+              id: track._id,
+              name: `${track.trackType} Track`,
+              questionsAssigned: track.orderedQuestionIds?.length || 0,
+              days: (track.orderedQuestionIds || []).map((question) => question.title),
+            }))
+          : batch.assignedTrack
+          ? [
+              {
+                id: `assigned-${batch._id}`,
+                name: String(batch.assignedTrack).trim(),
+                questionsAssigned: 0,
+                days: [],
+              },
+            ]
+          : [],
         studentsTable: students.map((student) => {
           const studentSubs = submissions.filter(
             (submission) => String(submission.studentId) === String(student._id)
@@ -458,10 +511,17 @@ export const updateBatchAdmin = async (req, res) => {
     const { batchId } = req.params;
     if (!assertObjectId(batchId, "batchId", res)) return;
 
+    const parsedBatchSize =
+      req.body.batchSize === undefined || req.body.batchSize === null || String(req.body.batchSize).trim() === ""
+        ? null
+        : Number(req.body.batchSize);
+
     const update = {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
+      assignedTrack: req.body.assignedTrack?.trim() || "",
+      batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
     };
@@ -502,7 +562,26 @@ export const deleteBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    await Track.deleteMany({ batchId });
+    const studentsToDelete = await Student.find({ batchId })
+      .select("_id email")
+      .lean();
+    const studentIds = studentsToDelete.map((student) => student._id);
+    const studentEmails = studentsToDelete
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    await Promise.all([
+      Submission.deleteMany({
+        $or: [{ batchId }, ...(studentIds.length ? [{ studentId: { $in: studentIds } }] : [])],
+      }),
+      studentEmails.length
+        ? StudentCodingSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentEmails.length
+        ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+    ]);
 
     await writeAuditLog({
       verb: "Deleted",
@@ -735,10 +814,20 @@ export const deleteStudentAdmin = async (req, res) => {
     const { studentId } = req.params;
     if (!assertObjectId(studentId, "studentId", res)) return;
 
-    const student = await Student.findByIdAndDelete(studentId);
+    const student = await Student.findById(studentId).lean();
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found." });
     }
+
+    const studentEmail = String(student.email || "").trim().toLowerCase();
+
+    await Promise.all([
+      Submission.deleteMany({ studentId }),
+      studentEmail ? StudentCodingSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+      studentEmail ? StudentMcqSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+    ]);
+
+    await Student.findByIdAndDelete(studentId);
 
     await writeAuditLog({
       verb: "Deleted",

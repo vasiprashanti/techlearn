@@ -276,7 +276,7 @@ export default function Certificates() {
 
             {activeTab === 'Issued Certificates' && (
               <div className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f]">
-                <div className="overflow-x-auto">
+                <div className="max-h-[520px] overflow-y-auto overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
                   <div className="min-w-[920px]">
                     <div className="grid grid-cols-[1.2fr_1.8fr_0.75fr_0.95fr_0.9fr_0.65fr] items-center px-5 py-3 border-b border-black/10 dark:border-white/10">
                       {['Student Name', 'Course', 'Score', 'Date', 'Certificate ID', 'Actions'].map(h => (
@@ -336,13 +336,13 @@ export default function Certificates() {
                     value={newQuestion}
                     onChange={(e) => setNewQuestion(e.target.value)}
                     placeholder="Question text"
-                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
                   />
                   <input
                     value={newAnswer}
                     onChange={(e) => setNewAnswer(e.target.value)}
                     placeholder="Correct answer"
-                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
                   />
                   <button
                     onClick={addTestQuestion}
@@ -363,7 +363,7 @@ export default function Certificates() {
                     max="100"
                     value={passingPercentage}
                     onChange={(e) => setPassingPercentage(e.target.value)}
-                    className="w-28 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] px-3 text-base text-[#0f1f3d] dark:text-white"
+                    className="w-28 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3 text-base text-[#0f1f3d] dark:text-white"
                   />
                 </div>
 

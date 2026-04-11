@@ -8,6 +8,14 @@ import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptySystemHealthState } from '../../data/adminEmptyStates';
 import {  FiSearch, FiActivity, FiServer, FiDatabase, FiLock, FiAlertCircle } from 'react-icons/fi';
 
+const getServiceIcon = (serviceName = '') => {
+  const normalized = String(serviceName).toLowerCase();
+  if (normalized.includes('judge') || normalized.includes('api')) return FiServer;
+  if (normalized.includes('database') || normalized.includes('db')) return FiDatabase;
+  if (normalized.includes('auth')) return FiLock;
+  return FiActivity;
+};
+
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
   { id: "analytics", title: "Analytics", category: "Overview" },
@@ -201,23 +209,27 @@ const SystemHealth = () => {
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col min-h-[400px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">Service Status</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                  {systemHealthState.services.map((service, i) => (
-                    <div key={i} className="bg-white dark:bg-[#0f1f43] backdrop-blur-md border border-black/10 dark:border-white/15 p-6 rounded-xl flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="text-black/40 dark:text-white/40 w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full">{service.icon}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                          <span className="admin-micro-label text-emerald-600 dark:text-emerald-400">
-                            {service.status}
-                          </span>
+                  {systemHealthState.services.map((service, i) => {
+                    const ServiceIcon = getServiceIcon(service?.name);
+
+                    return (
+                      <div key={i} className="bg-white dark:bg-[#0f1f43] backdrop-blur-md border border-black/10 dark:border-white/15 p-6 rounded-xl flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] transition-colors">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="text-black/40 dark:text-white/40 w-8 h-8 flex items-center justify-center bg-black/5 dark:bg-white/5 rounded-full"><ServiceIcon className="w-4 h-4" /></div>
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="admin-micro-label text-emerald-600 dark:text-emerald-400">
+                              {service?.status || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-black dark:text-white mb-1">{service?.name || 'Service'}</h4>
+                          <p className="text-[10px] font-medium text-black/40 dark:text-white/40">{service?.ping || '-'}</p>
                         </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-black dark:text-white mb-1">{service.name}</h4>
-                        <p className="text-[10px] font-medium text-black/40 dark:text-white/40">{service.ping}</p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

@@ -289,7 +289,7 @@ export default function Notifications() {
             </div>
 
             {/* Notification Cards */}
-            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm max-h-[520px] overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
               {notificationEntries.map((n, index) => (
                 <div key={n.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-4 py-3.5 sm:py-3 hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors ${index < notificationEntries.length - 1 ? 'border-b border-black/8 dark:border-white/10' : ''}`}>
                   <div className="min-w-0 flex items-start sm:items-center gap-3 sm:gap-2.5">

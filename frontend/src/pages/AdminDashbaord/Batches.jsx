@@ -38,7 +38,9 @@ const normalizeBatch = (batch) => ({
   id: batch.id || batch._id || batch.name,
   name: batch.name || batch.id || 'Untitled Batch',
   college: batch.college || '',
-  track: batch.track || '',
+  assignedTrack: batch.assignedTrack || '',
+  batchSize: typeof batch.batchSize === 'number' ? batch.batchSize : null,
+  track: batch.track || batch.assignedTrack || '',
   status: batch.status || 'Draft',
   start: batch.start || 'TBD',
   end: batch.end || 'TBD',
@@ -101,6 +103,7 @@ const Batches = () => {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [batches, setBatches] = useState(emptyBatches);
   const [colleges, setColleges] = useState([]);
+  const [trackOptions, setTrackOptions] = useState([]);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -114,7 +117,9 @@ const Batches = () => {
     batchName: '',
     college: '',
     startDate: '',
+    assignedTrack: '',
     endDate: '',
+    batchSize: '',
     status: 'Draft',
   });
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,9 +131,10 @@ const Batches = () => {
   const batchFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges] = await Promise.all([
+    const [remoteBatches, remoteColleges, remoteTrackTemplates] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
+      adminAPI.getTrackTemplates(),
     ]);
 
     setBatches(preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch));
@@ -137,6 +143,15 @@ const Batches = () => {
         id: college.id || college._id,
         name: college.name || 'Untitled College',
       }))
+    );
+    setTrackOptions(
+      Array.from(
+        new Set(
+          preferRemoteData(remoteTrackTemplates, [])
+            .map((template) => String(template?.name || '').trim())
+            .filter(Boolean)
+        )
+      )
     );
   }, []);
 
@@ -206,7 +221,9 @@ const Batches = () => {
       batchName: '',
       college: '',
       startDate: '',
+      assignedTrack: '',
       endDate: '',
+      batchSize: '',
       status: 'Draft',
     });
     setIsCreateFormOpen(true);
@@ -219,7 +236,9 @@ const Batches = () => {
       batchName: batch.name || '',
       college: batch.college || '',
       startDate: '',
+      assignedTrack: batch.assignedTrack || '',
       endDate: '',
+      batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
     });
     setIsCreateFormOpen(true);
@@ -242,6 +261,14 @@ const Batches = () => {
       setCreateError('End date must be after start date');
       return;
     }
+    if (trackOptions.length > 0 && !createBatchForm.assignedTrack) {
+      setCreateError('Assigned track is required');
+      return;
+    }
+    if (createBatchForm.batchSize && (!/^\d+$/.test(createBatchForm.batchSize) || Number(createBatchForm.batchSize) <= 0)) {
+      setCreateError('Batch size must be a positive number');
+      return;
+    }
 
     const selectedCollege = colleges.find((college) => college.name === createBatchForm.college);
     if (!selectedCollege?.id) {
@@ -258,6 +285,8 @@ const Batches = () => {
         name: createBatchForm.batchName.trim(),
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
+        assignedTrack: createBatchForm.assignedTrack,
+        batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
       };
 
@@ -376,6 +405,39 @@ const Batches = () => {
                       ariaLabel="End date"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createBatchForm.assignedTrack}
+                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
+                      disabled={trackOptions.length === 0}
+                    >
+                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Select track' : 'No tracks available'}</option>
+                      {trackOptions.map((trackName) => (
+                        <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Size</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={createBatchForm.batchSize}
+                    onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, batchSize: e.target.value.replace(/[^\d]/g, '') }))}
+                    className={batchFormInputClass}
+                    placeholder="Enter batch size"
+                  />
                 </div>
               </div>
 
@@ -545,7 +607,7 @@ const Batches = () => {
                   <div className="space-y-0.5">
                     <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none break-words">{batch.name}</h3>
                     <p className="text-[13px] sm:text-sm md:text-base text-black/55 dark:text-white/50 leading-relaxed sm:leading-snug line-clamp-2">
-                      {batch.track || 'Track assignment is not available yet.'}
+                      {batch.track || 'No tracks are assigned to this batch.'}
                     </p>
                   </div>
 
