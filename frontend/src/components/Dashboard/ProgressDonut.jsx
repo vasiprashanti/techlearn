@@ -1,3 +1,5 @@
+import { getPercentTone } from "../../lib/progressTone";
+
 const ProgressDonut = ({ 
   title = "Progress", 
   progress = 0, 
@@ -9,9 +11,10 @@ const ProgressDonut = ({
   const circumference = 2 * Math.PI * radius;
   const safeProgress = Math.min(100, Math.max(0, progress));
   const offset = circumference - (safeProgress / 100) * circumference;
+  const tone = getPercentTone(safeProgress);
 
   return (
-    <div className="bg-white/50 dark:bg-gray-800/50 p-6 flex flex-col items-center rounded-xl h-full min-h-[300px] text-light-text dark:text-dark-text shadow-md">
+    <div className="bg-white/55 dark:bg-gray-900/30 backdrop-blur-xl border border-white/25 dark:border-white/10 p-6 flex flex-col items-center rounded-xl h-full min-h-[18.75rem] text-light-text dark:text-dark-text shadow-md">
       <h3 className="text-xl font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text mb-4">
         {title}
       </h3>
@@ -47,14 +50,14 @@ const ProgressDonut = ({
                 strokeDasharray={circumference}
                 strokeDashoffset={offset}
                 transform="rotate(-90 100 100)"
-                className="stroke-emerald-500 transition-all duration-1000"
+                className={`${tone.stroke} transition-all duration-1000`}
                 fill="none"
                 strokeLinecap="round"
               />
             </svg>
             {/* Center percentage */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-4xl font-bold text-light-text dark:text-dark-text">
+              <span className={`text-4xl font-bold ${tone.text}`}>
                 {safeProgress}%
               </span>
             </div>

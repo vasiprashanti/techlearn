@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
-import XPBadge from './XPBadge';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -66,7 +66,7 @@ const Navbar = () => {
     >
       <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
         
-        {/* Logo and XP Badge */}
+        {/* Logo */}
         <div className="logo flex items-center gap-3">
           {!hideLogo && (
             <>
@@ -88,13 +88,6 @@ const Navbar = () => {
                   />
                 </div>
               </Link>
-
-              {/* XP Badge beside logo - Desktop */}
-              {!isDashboardPage && (
-                <div className="hidden md:block ml-4">
-                  <XPBadge />
-                </div>
-              )}
             </>
           )}
         </div>
@@ -186,7 +179,11 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
           </button>
         </nav>
 
@@ -303,13 +300,6 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* XP Badge - Mobile */}
-        {!isDashboardPage && (
-          <div className="py-2 w-full flex justify-start pl-4">
-            <XPBadge />
-          </div>
-        )}
-
         {/* Dark Mode Toggle - Mobile */}
         <div className="w-full flex justify-start">
           <button
@@ -318,7 +308,11 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
           </button>
         </div>
       </nav>

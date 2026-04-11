@@ -53,6 +53,8 @@ import SqlQuestions from './pages/Learn/SqlQuestions'
 import DsaQuestions from './pages/Learn/DsaQuestions'
 import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
 import CompanyQuestions from './pages/Learn/CompanyQuestions'
+import InterviewDsaQuestionDetail from './pages/Learn/InterviewDsaQuestionDetail'
+import InterviewSqlQuestionDetail from './pages/Learn/InterviewSqlQuestionDetail'
 
 // Exercise components
 import Exercises from './pages/Learn/Exercises'
@@ -673,7 +675,9 @@ function LayoutWrapper() {
           <Route path="/learn/batches/:batchId" element={<LiveBatchDetails />} />
           <Route path="/learn/interview-questions" element={<InterviewQuestions />} />
           <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
+          <Route path="/learn/interview-questions/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
           <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
+          <Route path="/learn/interview-questions/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
           <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
           <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
           <Route path="/learn/exercises" element={<Exercises />} />

@@ -1,3 +1,5 @@
+import { getPercentTone } from "../../lib/progressTone";
+
 const ProgressBar = ({
   title = "Progress",
   progress = 0,
@@ -7,9 +9,10 @@ const ProgressBar = ({
 }) => {
   // Ensure progress is between 0 and 100
   const safeProgress = Math.min(100, Math.max(0, progress));
+  const tone = getPercentTone(safeProgress);
 
   return (
-    <div className="bg-white/50 dark:bg-gray-800/50 p-6 flex flex-col rounded-xl h-44 text-light-text dark:text-dark-text shadow-md">
+    <div className="bg-white/55 dark:bg-gray-900/30 backdrop-blur-xl border border-white/25 dark:border-white/10 p-6 flex flex-col rounded-xl h-44 text-light-text dark:text-dark-text shadow-md">
       <h3 className="text-lg font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text mb-4">
         {title}
       </h3>
@@ -24,14 +27,14 @@ const ProgressBar = ({
           </div>
         ) : (
           <>
-            <div className="text-3xl font-bold text-center text-light-text dark:text-dark-text mb-4">
+            <div className={`text-3xl font-bold text-center mb-4 ${tone.text}`}>
               {safeProgress}%
             </div>
 
             <div className="space-y-2">
               <div className="w-full h-4 bg-blue-900/30 dark:bg-blue-800/40 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
+                  className={`h-full bg-gradient-to-r ${tone.gradient} rounded-full transition-all duration-500`}
                   style={{ width: `${safeProgress}%` }}
                 ></div>
               </div>

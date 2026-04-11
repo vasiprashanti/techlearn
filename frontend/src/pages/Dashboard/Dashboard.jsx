@@ -6,7 +6,6 @@ import Sidebar from '../../components/Dashboard/Sidebar';
 import UserGreeting from '../../components/Dashboard/UserGreeting';
 import ProgressDonut from '../../components/Dashboard/ProgressDonut';
 import Calendar from '../../components/Dashboard/Calendar';
-import XPDisplay from '../../components/Dashboard/XPDisplay';
 import RecentExercises from '../../components/Dashboard/RecentExercises';
 import ThemeToggle from '../../components/Dashboard/ThemeToggle';
 import ProgressBar from '../../components/Dashboard/ProgressBar';
@@ -153,11 +152,7 @@ const Dashboard = () => {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-1">
-                <XPDisplay points={progress.xp} />
-              </div>
-
-              <div className="lg:col-span-1 flex flex-col gap-7 items-stretch">
+              <div className="lg:col-span-2 flex flex-col gap-7 items-stretch">
                 <ProgressBar
                   title="Course Progress"
                   progress={progress.course.progressPercent}

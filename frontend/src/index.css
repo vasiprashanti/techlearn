@@ -12,6 +12,10 @@
   body {
     @apply text-gray-900 antialiased;
   }
+
+  .dark body {
+    @apply text-gray-100;
+  }
 }
 
 /* Custom component styles */
