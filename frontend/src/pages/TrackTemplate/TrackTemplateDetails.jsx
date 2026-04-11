@@ -43,6 +43,13 @@ const statusPillClass = (status) =>
     ? 'bg-[#16a34a] text-white'
     : 'bg-[#dbe7ff] text-[#3c83f6]';
 
+const formatDateLabel = (value) => {
+  if (!value) return 'Not set';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not set';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 export default function TrackTemplateDetails() {
   const navigate = useNavigate();
   const { templateId } = useParams();
@@ -294,6 +301,11 @@ export default function TrackTemplateDetails() {
                     <span className="mx-2">·</span>
                     {track.totalDays} days
                   </p>
+                  <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300">
+                    {formatDateLabel(track.startDate)} - {formatDateLabel(track.endDate)}
+                    <span className="mx-2">·</span>
+                    Batch: {track.assignedBatch || 'Not set'}
+                  </p>
                 </div>
               </div>
 
@@ -314,8 +326,8 @@ export default function TrackTemplateDetails() {
                 <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{Math.min(track.totalDays, dayWiseQuestions.length)}</p>
               </div>
               <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
-                <p className="text-sm text-[#5f7491] dark:text-slate-300">Available in Category</p>
-                <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{dayWiseQuestions.length}</p>
+                <p className="text-sm text-[#5f7491] dark:text-slate-300">Assigned Batch</p>
+                <p className="mt-1 text-2xl font-bold text-[#0b1b38] dark:text-white truncate">{track.assignedBatch || 'Not set'}</p>
               </div>
             </div>
 

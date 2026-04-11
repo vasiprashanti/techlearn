@@ -85,22 +85,22 @@ const StudentModal = ({ student, onClose }) => {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xl rounded-2xl border border-black/10 bg-[#e8edf4] p-4 text-slate-900 shadow-2xl">
+      <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#e8edf4] dark:bg-[#0a1737] p-4 text-slate-900 dark:text-slate-100 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
-          <h2 className="text-[22px] font-semibold break-words">{student.name}</h2>
-          <button onClick={onClose} className="text-xl leading-none text-slate-500 hover:text-slate-700" aria-label="Close student detail">×</button>
+          <h2 className="text-[22px] font-semibold break-words text-slate-900 dark:text-white">{student.name}</h2>
+          <button onClick={onClose} className="text-xl leading-none text-slate-500 dark:text-white/60 hover:text-slate-700 dark:hover:text-white" aria-label="Close student detail">×</button>
         </div>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
-          <div><span className="text-slate-500">Email:</span> <span className="font-medium break-all">{student.email || 'Not available'}</span></div>
-          <div><span className="text-slate-500">College:</span> <span className="font-semibold break-words">{student.college || 'Not available'}</span></div>
-          <div><span className="text-slate-500">Batch:</span> <span className="font-medium break-words">{student.batch || 'Not available'}</span></div>
-          <div><span className="text-slate-500">Track:</span> <span className="font-semibold break-words">{student.track || 'Not available'}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Email:</span> <span className="font-medium break-all text-slate-900 dark:text-white">{student.email || 'Not available'}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">College:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.college || 'Not available'}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Batch:</span> <span className="font-medium break-words text-slate-900 dark:text-white">{student.batch || 'Not available'}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Track:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.track || 'Not available'}</span></div>
           <div><span className="text-slate-500">Score:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.score}%</span></div>
-          <div><span className="text-slate-500">Streak:</span> <span className="font-medium">{student.streak} days</span></div>
-          <div><span className="text-slate-500">Tests Taken:</span> <span className="font-medium">{student.testsTaken ?? 'Not available'}</span></div>
-          <div><span className="text-slate-500">Last Active:</span> <span className="font-medium">{formatDateValue(student.lastActive)}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Streak:</span> <span className="font-medium text-slate-900 dark:text-white">{student.streak} days</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Tests Taken:</span> <span className="font-medium text-slate-900 dark:text-white">{student.testsTaken ?? 'Not available'}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Last Active:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.lastActive)}</span></div>
           <div><span className="text-slate-500">Status:</span> <span className={`inline-flex rounded-full text-white font-semibold px-2 py-0.5 text-[0.76em] ${student.status === 'Active' ? 'bg-emerald-600' : 'bg-rose-500'}`}>{student.status}</span></div>
-          <div><span className="text-slate-500">Joined:</span> <span className="font-medium">{formatDateValue(student.joined)}</span></div>
+          <div><span className="text-slate-500 dark:text-white/55">Joined:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.joined)}</span></div>
         </div>
       </div>
     </div>
@@ -128,14 +128,16 @@ const Students = () => {
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
-  const [collegeFilter, setCollegeFilter] = useState('All Colleges');
-  const [trackFilter, setTrackFilter] = useState('All Tracks');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [bulkImportCollegeId, setBulkImportCollegeId] = useState('');
+  const [bulkImportBatchId, setBulkImportBatchId] = useState('');
+  const [bulkImportTrack, setBulkImportTrack] = useState('');
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [bulkImportReport, setBulkImportReport] = useState(null);
   const searchInputRef = useRef(null);
   const bulkImportInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
+  const studentFormInputClass = 'w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadStudentsData = useCallback(async () => {
     const [remoteStudents, remoteColleges, remoteBatches] = await Promise.all([
@@ -180,14 +182,9 @@ const Students = () => {
     route.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     route.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const uniqueColleges = ['All Colleges', ...new Set(students.map((student) => student.college).filter(Boolean))];
-  const uniqueTracks = ['All Tracks', ...new Set(students.map((student) => student.track).filter(Boolean))];
   const filteredStudents = students.filter((student) => {
-    const matchesCollege = collegeFilter === 'All Colleges' || student.college === collegeFilter;
-    const matchesTrack = trackFilter === 'All Tracks' || student.track === trackFilter;
-    const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
     const matchesSearch = !tableSearch || student.name.toLowerCase().includes(tableSearch.toLowerCase()) || student.email.toLowerCase().includes(tableSearch.toLowerCase()) || student.batch.toLowerCase().includes(tableSearch.toLowerCase());
-    return matchesCollege && matchesTrack && matchesStatus && matchesSearch;
+    return matchesSearch;
   });
   const filteredBatchOptions = useMemo(() => {
     if (!studentForm.collegeId) return batches;
@@ -195,6 +192,41 @@ const Students = () => {
     if (!selectedCollege) return batches;
     return batches.filter((batch) => batch.college === selectedCollege.name);
   }, [studentForm.collegeId, batches, colleges]);
+
+  const filteredBulkImportBatchOptions = useMemo(() => {
+    if (!bulkImportCollegeId) return [];
+    const selectedCollege = colleges.find((college) => college.id === bulkImportCollegeId);
+    if (!selectedCollege) return [];
+    return batches.filter((batch) => batch.college === selectedCollege.name);
+  }, [bulkImportCollegeId, batches, colleges]);
+
+  const filteredBulkImportTrackOptions = useMemo(() => {
+    if (!bulkImportCollegeId || !bulkImportBatchId) return [];
+
+    const selectedBatch = filteredBulkImportBatchOptions.find((batch) => batch.id === bulkImportBatchId);
+    const selectedBatchName = selectedBatch?.name;
+
+    const tracksFromBatchStudents = selectedBatchName
+      ? Array.from(
+          new Set(
+            students
+              .filter((student) => student.batch === selectedBatchName)
+              .map((student) => String(student.track || '').trim())
+              .filter(Boolean)
+          )
+        )
+      : [];
+
+    if (tracksFromBatchStudents.length > 0) return tracksFromBatchStudents;
+
+    return Array.from(
+      new Set(
+        students
+          .map((student) => String(student.track || '').trim())
+          .filter(Boolean)
+      )
+    );
+  }, [bulkImportCollegeId, bulkImportBatchId, filteredBulkImportBatchOptions, students]);
 
   const openAddStudent = () => {
     setEditingStudentId(null);
@@ -267,9 +299,9 @@ const Students = () => {
 
   const downloadBulkTemplate = () => {
     const templateCsv = [
-      'name,email,college,batch,track,status',
-      'Jane Doe,jane.doe@example.com,ABC College,Batch 2026,Frontend,Active',
-      'John Smith,john.smith@example.com,ABC College,Batch 2026,Backend,Inactive',
+      'name,email,registrationNumber,track,status',
+      'Jane Doe,jane.doe@example.com,REG2026001,Frontend,Active',
+      'John Smith,,REG2026002,Backend,Inactive',
     ].join('\n');
 
     const blob = new Blob([templateCsv], { type: 'text/csv;charset=utf-8;' });
@@ -326,6 +358,14 @@ const Students = () => {
 
   const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '');
 
+  const toEmailSlug = (value) =>
+    String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '.')
+      .replace(/^\.+|\.+$/g, '')
+      .replace(/\.{2,}/g, '.');
+
   const handleBulkImportSelection = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -346,6 +386,10 @@ const Students = () => {
     setIsBulkImporting(true);
 
     try {
+      if (!bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack) {
+        throw new Error('Select college, batch, and track before uploading CSV.');
+      }
+
       const rawText = await file.text();
       const parsedRows = parseCsvRows(rawText);
 
@@ -364,13 +408,6 @@ const Students = () => {
         return '';
       };
 
-      const collegeMap = new Map(
-        colleges.map((college) => [String(college.name || '').trim().toLowerCase(), college.id])
-      );
-      const batchMap = new Map(
-        batches.map((batch) => [String(batch.name || '').trim().toLowerCase(), batch.id])
-      );
-
       let successCount = 0;
       const failures = [];
 
@@ -380,35 +417,39 @@ const Students = () => {
 
         const name = getCell(row, 'name', 'studentname');
         const email = getCell(row, 'email', 'studentemail');
-        const collegeName = getCell(row, 'college', 'collegename');
-        const batchName = getCell(row, 'batch', 'batchname');
+        const registrationNumber = getCell(row, 'registrationnumber', 'registrationno', 'regno', 'rollno', 'rollnumber');
         const track = getCell(row, 'track', 'primarytrack');
         const status = getCell(row, 'status');
 
-        if (!name || !email || !collegeName || !batchName) {
-          failures.push(`Row ${displayRow}: missing required fields (name, email, college, batch).`);
+        const rowHasAnyIdentifier = Boolean(name || email || registrationNumber);
+        if (!rowHasAnyIdentifier) {
+          const isCompletelyBlank = row.every((cell) => !String(cell || '').trim());
+          if (isCompletelyBlank) continue;
+          failures.push(`Row ${displayRow}: provide at least one of name, email, or registration number.`);
           continue;
         }
 
-        const collegeId = collegeMap.get(collegeName.toLowerCase());
-        const batchId = batchMap.get(batchName.toLowerCase());
+        const resolvedName =
+          name ||
+          (email.includes('@') ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
+          (registrationNumber ? `Student ${registrationNumber}` : '');
 
-        if (!collegeId) {
-          failures.push(`Row ${displayRow}: college \"${collegeName}\" was not found.`);
+        if (!resolvedName) {
+          failures.push(`Row ${displayRow}: could not derive a valid name.`);
           continue;
         }
-        if (!batchId) {
-          failures.push(`Row ${displayRow}: batch \"${batchName}\" was not found.`);
-          continue;
-        }
+
+        const generatedEmailSeed = toEmailSlug(email || registrationNumber || resolvedName) || `student.${displayRow}`;
+        const resolvedEmail = email || `${generatedEmailSeed}.${displayRow}@import.techlearn.local`;
 
         try {
           await adminAPI.createStudent({
-            name,
-            email: email.toLowerCase(),
-            collegeId,
-            batchId,
-            primaryTrack: track || 'General Track',
+            name: resolvedName,
+            email: resolvedEmail.toLowerCase(),
+            rollNo: registrationNumber,
+            collegeId: bulkImportCollegeId,
+            batchId: bulkImportBatchId,
+            primaryTrack: track || bulkImportTrack || 'General Track',
             status: status || 'Active',
           });
           successCount += 1;
@@ -521,34 +562,34 @@ const Students = () => {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input value={studentForm.name} onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Student name" className="w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5" />
-                <input type="email" value={studentForm.email} onChange={(e) => setStudentForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Student email" className="w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5" />
+                <input value={studentForm.name} onChange={(e) => setStudentForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Student name" className={studentFormInputClass} />
+                <input type="email" value={studentForm.email} onChange={(e) => setStudentForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="Student email" className={studentFormInputClass} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                  <select value={studentForm.collegeId} onChange={(e) => setStudentForm((prev) => ({ ...prev, collegeId: e.target.value, batchId: '' }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5">
-                    <option value="">Select college</option>
-                    {colleges.map((college) => <option key={college.id} value={college.id}>{college.name}</option>)}
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select value={studentForm.collegeId} onChange={(e) => setStudentForm((prev) => ({ ...prev, collegeId: e.target.value, batchId: '' }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                    <option className={dropdownOptionClass} value="">Select college</option>
+                    {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
-                <div className="relative">
-                  <select value={studentForm.batchId} onChange={(e) => setStudentForm((prev) => ({ ...prev, batchId: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5">
-                    <option value="">Select batch</option>
-                    {filteredBatchOptions.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select value={studentForm.batchId} onChange={(e) => setStudentForm((prev) => ({ ...prev, batchId: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                    <option className={dropdownOptionClass} value="">Select batch</option>
+                    {filteredBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input value={studentForm.track} onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))} placeholder="Primary track" className="w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5" />
-                <div className="relative">
-                  <select value={studentForm.status} onChange={(e) => setStudentForm((prev) => ({ ...prev, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Suspended">Suspended</option>
+                <input value={studentForm.track} onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))} placeholder="Primary track" className={studentFormInputClass} />
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select value={studentForm.status} onChange={(e) => setStudentForm((prev) => ({ ...prev, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Inactive">Inactive</option>
+                    <option className={dropdownOptionClass} value="Suspended">Suspended</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
               </div>
               {formError && <p className="text-xs text-red-500">{formError}</p>}
@@ -571,25 +612,65 @@ const Students = () => {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
-            <div className="flex flex-col sm:flex-row sm:flex-wrap xl:flex-nowrap items-stretch sm:items-center justify-end gap-2.5 mt-1">
-              <div className="relative w-full sm:min-w-[190px] xl:min-w-[210px] sm:w-auto">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/30" />
-                <input type="text" placeholder="Search students..." value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-black/20 dark:focus:border-white/20 text-black/70 dark:text-white/70 w-full" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(250px,320px)_150px_150px_150px_160px] gap-2.5 items-center mt-1 justify-end">
+              <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
+                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                <input type="text" placeholder="Search students..." value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full" />
               </div>
-              <div className="relative w-full sm:w-auto">
-                <select value={collegeFilter} onChange={(e) => setCollegeFilter(e.target.value)} className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto">{uniqueColleges.map((college) => <option key={college} value={college}>{college}</option>)}</select>
-                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+              <div className="relative min-w-0">
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
+                  <select
+                    value={bulkImportCollegeId}
+                    onChange={(e) => {
+                      setBulkImportCollegeId(e.target.value);
+                      setBulkImportBatchId('');
+                      setBulkImportTrack('');
+                    }}
+                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full"
+                    title="Bulk import college"
+                  >
+                    <option className={dropdownOptionClass} value="">Import college</option>
+                    {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
-              <div className="relative w-full sm:w-auto">
-                <select value={trackFilter} onChange={(e) => setTrackFilter(e.target.value)} className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto">{uniqueTracks.map((track) => <option key={track} value={track}>{track}</option>)}</select>
-                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+              <div className="relative min-w-0">
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
+                  <select
+                    value={bulkImportBatchId}
+                    onChange={(e) => {
+                      setBulkImportBatchId(e.target.value);
+                      setBulkImportTrack('');
+                    }}
+                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
+                    title="Bulk import batch"
+                    disabled={!bulkImportCollegeId}
+                  >
+                    <option className={dropdownOptionClass} value="">Import batch</option>
+                    {filteredBulkImportBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
-              <div className="relative w-full sm:w-auto">
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none h-10 text-sm pl-3.5 pr-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/40 w-full sm:w-auto"><option value="All">All</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Suspended">Suspended</option></select>
-                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+
+              <div className="relative min-w-0">
+                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
+                  <select
+                    value={bulkImportTrack}
+                    onChange={(e) => setBulkImportTrack(e.target.value)}
+                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
+                    title="Bulk import track"
+                    disabled={!bulkImportCollegeId || !bulkImportBatchId}
+                  >
+                    <option className={dropdownOptionClass} value="">Import track</option>
+                    {filteredBulkImportTrackOptions.map((track) => <option className={dropdownOptionClass} key={track} value={track}>{track}</option>)}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
-              <button onClick={triggerBulkImport} disabled={isBulkImporting} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-[#3C83F6]/20 text-[#3C83F6] dark:border-white/10 dark:text-white/60 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5 text-sm font-medium whitespace-nowrap disabled:opacity-60"><FiUpload className="w-3.5 h-3.5" />{isBulkImporting ? 'Importing...' : 'Bulk Import'}</button>
-              <button onClick={openAddStudent} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-medium whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
+
+              <button onClick={openAddStudent} className="w-full flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:hidden">
@@ -653,7 +734,10 @@ const Students = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-base font-medium text-black/45 dark:text-white/45">Showing {filteredStudents.length} of {students.length} students</p>
-              <button onClick={downloadBulkTemplate} className="self-start sm:self-auto sm:ml-auto w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-medium whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
+              <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <button onClick={triggerBulkImport} disabled={isBulkImporting || !bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap disabled:cursor-not-allowed"><FiUpload className="w-3.5 h-3.5" />{isBulkImporting ? 'Importing...' : 'Bulk Import'}</button>
+                <button onClick={downloadBulkTemplate} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
+              </div>
             </div>
           </div>
         </main>

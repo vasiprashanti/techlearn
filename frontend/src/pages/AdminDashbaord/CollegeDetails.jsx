@@ -38,6 +38,7 @@ const CollegeDetails = () => {
     if (stateCollege?.id === collegeId) {
       return {
         ...stateCollege,
+        code: stateCollege.code || '',
         city: stateCollege.city || '',
         activeBatches: stateCollege.activeBatches || 0,
         submissionRate: stateCollege.submissionRate || 0,
@@ -48,6 +49,7 @@ const CollegeDetails = () => {
     return {
       id: collegeId,
       name: collegeId?.split('-')[0] || 'College',
+      code: '',
       city: '',
       status: 'Active',
       totalStudents: 0,
@@ -121,7 +123,7 @@ const CollegeDetails = () => {
               </div>
               <div>
                 <h2 className="text-3xl font-semibold tracking-tight text-black/90 dark:text-white">{college.name}</h2>
-                <p className="mt-1 text-lg text-black/55 dark:text-white/55">{college.id} {college.city ? `· ${college.city}` : ''}</p>
+                <p className="mt-1 text-lg text-black/55 dark:text-white/55">{college.code || college.id} {college.city ? `· ${college.city}` : ''}</p>
               </div>
               <span className={`ml-auto inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(college.status)}`}>
                 {college.status}

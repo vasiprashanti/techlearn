@@ -33,11 +33,14 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import Languages from './pages/Dashboard/Languages'
+import Concepts from './pages/Dashboard/Concepts'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
 import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
 import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
+import Leaderboard from './pages/Dashboard/Leaderboard'
 import UserCoding from './pages/Coding/UserCoding';
 
 // Learn components
@@ -48,6 +51,11 @@ import CourseDetails from './pages/Learn/CourseDetails'
 import CourseQuiz from './pages/Learn/CourseQuiz'
 import CourseTopics from './pages/Learn/CourseTopics'
 import LiveBatchDetails from './pages/Learn/LiveBatchDetails'
+import AllInterviewQuestions from './pages/Learn/AllInterviewQuestions'
+import DsaQuestions from './pages/Learn/DsaQuestions'
+import SqlQuestions from './pages/Learn/SqlQuestions'
+import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
+import CompanyQuestions from './pages/Learn/CompanyQuestions'
 
 // Exercise components
 import Exercises from './pages/Learn/Exercises'
@@ -603,10 +611,9 @@ function FloatingCodeBackground() {
 
 function LayoutWrapper() {
   const location = useLocation();
-  
+
   // NEW: Array containing all our sidebar dashboard routes
   const adminSidebarRoutes = [
-    '/dashboard', 
     '/analytics', 
     '/system-health', 
     '/colleges', 
@@ -631,13 +638,22 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
+  const isStudentSidebarRoute =
+    ['/dashboard', '/projects', '/leaderboard'].includes(location.pathname) ||
+    location.pathname.startsWith('/interview/') ||
+    location.pathname.startsWith('/core-prep/languages') ||
+    location.pathname.startsWith('/core-prep/important-concepts') ||
+    location.pathname.startsWith('/learn/courses') ||
+    location.pathname.startsWith('/learn/exercises');
+
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !isDashboardRoute;
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
-                     !isDashboardRoute;
+                     !isDashboardRoute &&
+                     !isStudentSidebarRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -651,6 +667,14 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/interview/all-questions" element={<AllInterviewQuestions />} />
+            <Route path="/interview/dsa-questions" element={<DsaQuestions />} />
+            <Route path="/interview/sql-questions" element={<SqlQuestions />} />
+            <Route path="/interview/core-cs-questions" element={<CoreCsQuestions />} />
+            <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
+            <Route path="/core-prep/languages" element={<Languages />} />
+            <Route path="/core-prep/important-concepts" element={<Concepts />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
             <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />

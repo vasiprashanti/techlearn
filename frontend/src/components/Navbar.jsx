@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
@@ -9,17 +9,15 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { openLogin } = useAuthModalContext();
   const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
   
-  //hide navbar on coding pages
-  if (location.pathname === "/coding") {
-    return null;
-  }
-
-  const isDashboardPage = location.pathname === '/dashboard';
+  const shouldHideNavbar = location.pathname === "/coding";
 
   const hideLogoRoutes = [
     "/admin/courses",
@@ -48,6 +46,27 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  useEffect(() => {
+    if (!isUserMenuOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsUserMenuOpen(false);
+    };
+
+    window.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('keydown', handleEscape);
+    return () => {
+      window.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('keydown', handleEscape);
+    };
+  }, [isUserMenuOpen]);
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -57,6 +76,10 @@ const Navbar = () => {
   };
 
   const isDarkMode = theme === 'dark';
+
+  if (shouldHideNavbar) {
+    return null;
+  }
 
   return (
     <header
@@ -90,11 +113,9 @@ const Navbar = () => {
               </Link>
 
               {/* XP Badge beside logo - Desktop */}
-              {!isDashboardPage && (
-                <div className="hidden md:block ml-4">
-                  <XPBadge />
-                </div>
-              )}
+              <div className="hidden md:block ml-4">
+                <XPBadge />
+              </div>
             </>
           )}
         </div>
@@ -133,39 +154,57 @@ const Navbar = () => {
           </Link>
 
           {isAuthenticated ? (
-            <div className="relative group">
-              {/* User Greeting with Hover Indicator */}
-              <div
-                className={`flex items-center gap-2 px-3 py-2 rounded-t-lg cursor-pointer transition-all duration-300 
-                  ${
-                    isDarkMode
-                      ? 'text-[#e0e6f5] group-hover:text-white group-hover:bg-white/5'
-                      : 'text-[#00184f] group-hover:text-[#001a5c] group-hover:bg-black/5'
-                  }`}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out
+                  hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px]
+                  after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
+                  ${isUserMenuOpen ? 'after:w-full' : 'after:w-0'}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f] hover:text-[#001a5c]'}`}
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="true"
               >
-                <span className="text-[15px] font-extralight">
-                  Hi, {user?.firstName || user?.email || 'User'}
-                </span>
-              </div>
+                Hi, {user?.firstName || user?.email || 'User'}
+              </button>
 
-              {/* Compact Dropdown Menu */}
-              <div
-                className={`absolute top-full right-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible 
-                  transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0 z-50`}
-              >
-                <div
-                  className={`flex items-center gap-2 px-3 py-2 rounded-b-lg cursor-pointer transition-all duration-300 
-                    whitespace-nowrap w-24 
-                    ${
-                      isDarkMode
-                        ? 'text-[#e0e6f5] hover:text-white hover:bg-white/5'
-                        : 'text-[#00184f] hover:text-[#001a5c] hover:bg-black/5'
-                    }`}
-                  onClick={logout}
-                >
-                  <span className="text-[15px] font-extralight">Log Out</span>
+              {isUserMenuOpen && (
+                <div className={`absolute top-full right-0 mt-3 w-72 rounded-2xl border shadow-2xl backdrop-blur-xl overflow-hidden z-50 ${isDarkMode ? 'bg-[#001233]/95 border-white/12' : 'bg-[#daf0fa]/95 border-black/10'}`}>
+                  <div className={`p-4 border-b ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black/10 bg-white/40'}`}>
+                    <h3 className={`text-sm font-semibold truncate ${isDarkMode ? 'text-white' : 'text-[#0c2b5e]'}`}>
+                      {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.email || 'User')}
+                    </h3>
+                    <p className={`text-xs truncate mt-0.5 ${isDarkMode ? 'text-white/65' : 'text-[#17345f]/65'}`}>
+                      {user?.email || 'student@techlearn.com'}
+                    </p>
+                    <span className={`inline-flex mt-2 items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${isDarkMode ? 'bg-white/10 text-white border border-white/20' : 'bg-[#3C83F6]/10 text-[#3C83F6] border border-[#3C83F6]/20'}`}>
+                      Student
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 space-y-1.5">
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        navigate('/profile');
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-[#0c2b5e] hover:bg-white/50'}`}
+                    >
+                      Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        logout();
+                      }}
+                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             <button
@@ -304,11 +343,9 @@ const Navbar = () => {
         </div>
 
         {/* XP Badge - Mobile */}
-        {!isDashboardPage && (
-          <div className="py-2 w-full flex justify-start pl-4">
-            <XPBadge />
-          </div>
-        )}
+        <div className="py-2 w-full flex justify-start pl-4">
+          <XPBadge />
+        </div>
 
         {/* Dark Mode Toggle - Mobile */}
         <div className="w-full flex justify-start">

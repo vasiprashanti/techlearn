@@ -1,213 +1,146 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import LoadingScreen from "../../components/Loader/Loader3D";
-import ProjectStatsCard from "../../components/Dashboard/ProjectStatsCard";
-import RecentProjectCard from "../../components/Dashboard/RecentProjectCard";
+import React, { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import Sidebar from './Sidebar';
+import { FiLayout, FiLayers, FiStar, FiChevronRight, FiTerminal, FiDatabase, FiCheckSquare, FiPieChart, FiClock } from 'react-icons/fi';
 
-const BASE_URL = import.meta.env.VITE_API_URL;
+export default function Projects() {
+  const { theme } = useTheme();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const isDarkMode = theme === 'dark';
 
-const ProjectsDashboard = () => {
-  const [projectsData, setProjectsData] = useState({
-    miniProjects: [],
-    midProjects: [],
-    majorProjects: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const projectStats = [
+    { title: "Mini", subtitle: "Foundations", count: 3, icon: <FiLayout className="w-5 h-5" /> },
+    { title: "Mid", subtitle: "Architecture", count: 6, icon: <FiLayers className="w-5 h-5" /> },
+    { title: "Major", subtitle: "Showcase", count: 0, icon: <FiStar className="w-5 h-5" /> },
+  ];
 
-  // ==============================================
-  // BACKEND CONNECTION - FETCHING ALL PROJECTS
-  // Uses the endpoint you provided initially:
-  // ==============================================
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        // Get token from localStorage
-        const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-
-        const response = await fetch(
-          `${BASE_URL}/dashboard/projects`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch projects");
-        }
-
-        const data = await response.json();
-        setProjectsData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProjects();
-  }, []);
-
-  // ==============================================
-  // RECENT PROJECTS LOGIC 
-  // Uses the projectsData from backend to:
-  // 1. Take first 3 projects from each category
-  // 2. Combine and sort by creation date (newest first)
-  // 3. Return top 4 most recent projects
-  // ==============================================
-  const getRecentProjects = () => {
-    const recentMini = [...projectsData.miniProjects].slice(0, 3);
-    const recentMid = [...projectsData.midProjects].slice(0, 3);
-    const recentMajor = [...projectsData.majorProjects].slice(0, 3);
-    
-    return [...recentMini, ...recentMid, ...recentMajor]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 4);
-  };
-
-  if (loading) {
-    return <LoadingScreen showMessage={false} fullScreen={true} size={40} duration={800} />;
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-red-600 text-xl">Error: {error}</p>
-      </div>
-    );
-  }
+  const recentBuilds = [
+    {
+      title: "Simple Calculator App",
+      description: "Build a functional calculator with basic arithmetic operations using HTML, CSS, and JavaScript.",
+      updated: "2 days ago",
+      topic: "Logic",
+      icon: <FiTerminal className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+    },
+    {
+      title: "Click Counter App",
+      description: "Build a super-simple app that counts how many times the user clicks anywhere on the page.",
+      updated: "1 week ago",
+      topic: "State",
+      icon: <FiDatabase className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+    },
+    {
+      title: "Checklist App",
+      description: "Create a checklist web app where users can add, complete, and delete tasks.",
+      updated: "2 weeks ago",
+      topic: "CRUD",
+      icon: <FiCheckSquare className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+    },
+    {
+      title: "Data Visualization Dashboard",
+      description: "Interactive dashboard for data visualization and analysis.",
+      updated: "1 month ago",
+      topic: "Architecture",
+      icon: <FiPieChart className="w-5 h-5 text-[#3C83F6] dark:text-white" />
+    }
+  ];
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4 pt-20 md:px-8 pb-16" style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-      {/* Hero Section */}
-      <div className="block md:hidden" style={{ height: "120px" }} />
-      {/*<div className="pt-0 md:pt-0">
-        <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between min-h-screen px-1 sm:px-4">
-        
-          <div className="flex-1">
-            <h1
-              className="
-                brand-heading-primary hover-gradient-text
-                mb-2 md:mb-4 lowercase leading-none
-                font-medium italic
-                text-5xl sm:text-5xl md:text-7xl md:text-9xl
-              "
-              style={{ fontFamily: "'Poppins', sans-serif", lineHeight: 1 }}>
-              your
-            </h1>
-            <h1
-              className="
-                brand-heading-primary hover-gradient-text
-                mt-2 md:mt-4 uppercase leading-none
-                font-medium tracking-wide
-                text-6xl sm:text-6xl md:text-8xl md:text-[10rem]
-              "
-              style={{ fontFamily: "'Poppins', sans-serif", lineHeight: 1 }}>
-              PROJECTS
-            </h1>
-            <p
-              className="
-                mt-6 mb-3 sm:mb-6 text-base md:text-2xl lg:text-3xl
-                font-poppins text-gray-700 dark:text-gray-300 hover-gradient-text
-              "
-              style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-              Everything you need in one place
-            </p>
+    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+      {/* Unified Background */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
+
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          
+          {/* Header */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+                My Projects.
+              </h1>
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+                Portfolio Builder
+              </p>
+            </div>
+
+          </header>
+
+          {/* Project Stats Bento Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {projectStats.map((stat, i) => (
+              <div key={i} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-all duration-300 rounded-2xl min-h-[180px] group">
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 group-hover:text-black dark:group-hover:text-white transition-colors">
+                    {stat.title} Level
+                  </span>
+                  <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-black/40 dark:text-white/40 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors">
+                    {stat.icon}
+                  </div>
+                </div>
+                <div className="mt-6 flex flex-col">
+                  <span className="text-5xl font-light tracking-tighter text-[#3C83F6] dark:text-white mb-2">
+                    {stat.count}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">
+                    {stat.subtitle} Builds
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      </div> */}
 
-      {/* Stats Overview Section */}
-      <section className="mb-16">
-        <div style={{ marginBottom: "0.15rem" }}>
-          <span
-            className="
-              brand-heading-primary hover-gradient-text italic
-              text-3xl md:text-5xl font-semibold
-            "
-            style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-            project
-          </span>
-          <span
-            className="
-              brand-heading-primary hover-gradient-text ml-2
-              text-3xl md:text-5xl font-semibold
-            "
-            style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-            STATS
-          </span>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <ProjectStatsCard 
-            title="Mini Projects" 
-            count={projectsData.miniProjects.length} 
-            icon="📦"
-            description="Quick wins and small challenges"
-            colorClass="bg-blue-100 dark:bg-blue-900"
-          />
-          <ProjectStatsCard 
-            title="Mid Projects" 
-            count={projectsData.midProjects.length} 
-            icon="🏗️"
-            description="Intermediate level builds"
-            colorClass="bg-purple-100 dark:bg-purple-900"
-          />
-          <ProjectStatsCard 
-            title="Major Projects" 
-            count={projectsData.majorProjects.length} 
-            icon="🚀"
-            description="Showcase-worthy work"
-            colorClass="bg-green-100 dark:bg-green-900"
-          />
-        </div>
-      </section>
+          {/* Recent Builds List */}
+          <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-2xl flex flex-col">
+            <div className="flex items-center justify-between mb-8 shrink-0">
+              <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
+                Recent Builds
+              </h3>
+              <button className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline tracking-widest uppercase">
+                View Repository
+              </button>
+            </div>
 
-      {/* ============================================== */}
-      {/* RECENT PROJECTS SECTION - FULLY FUNCTIONAL */}
-      {/* Uses the getRecentProjects() function defined above */}
-      {/* ============================================== */}
-      <section className="mb-16">
-        <div style={{ marginBottom: "0.15rem" }}>
-          <span
-            className="
-              brand-heading-primary hover-gradient-text italic
-              text-3xl md:text-5xl font-semibold
-            "
-            style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-            recent
-          </span>
-          <span
-            className="
-              brand-heading-primary hover-gradient-text ml-2
-              text-3xl md:text-5xl font-semibold
-            "
-            style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
-            PROJECTS
-          </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {recentBuilds.map((project, i) => (
+                <div key={i} className="group p-8 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 border border-black/5 dark:border-white/5 transition-all duration-500 rounded-2xl cursor-pointer flex flex-col justify-between min-h-[240px] relative overflow-hidden">
+                  
+                  {/* Subtle hover gradient decoration */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#3C83F6]/5 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="p-3 rounded-xl bg-white/50 dark:bg-black/50 border border-black/5 dark:border-white/5 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                        {project.icon}
+                      </div>
+                      <span className="text-[9px] uppercase tracking-widest px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full text-black/60 dark:text-white/60 font-medium">
+                        {project.topic}
+                      </span>
+                    </div>
+                    <h4 className="text-xl font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors mb-3">
+                      {project.title}
+                    </h4>
+                    <p className="text-sm text-black/50 dark:text-white/50 leading-relaxed line-clamp-2 font-light">
+                      {project.description}
+                    </p>
+                  </div>
+                  
+                  <div className="relative z-10 flex items-center justify-between mt-8 pt-5 border-t border-black/5 dark:border-white/5">
+                    <span className="flex items-center gap-2 text-[10px] text-black/40 dark:text-white/40 uppercase tracking-widest">
+                      <FiClock className="w-3 h-3" /> {project.updated}
+                    </span>
+                    <FiChevronRight className="w-5 h-5 text-black/20 dark:text-white/20 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-all duration-300 group-hover:translate-x-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-          {getRecentProjects().map((project) => (
-            <RecentProjectCard 
-              key={project._id} 
-              project={project} 
-              onClick={() => navigate(`/projects/${project._id}`)}
-            />
-          ))}
-        </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
-};
-
-export default ProjectsDashboard;
+}

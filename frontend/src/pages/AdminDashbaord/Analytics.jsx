@@ -263,26 +263,28 @@ const Analytics = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                <div className="p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Weekly Active</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsState.studentEngagement.weeklyActive}
                     </span>
-                  </div>
-                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                    </div>
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Inactive 3+ days</span>
                     <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
                       {analyticsState.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
-                  </div>
-                  <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/[0.04] px-3 py-3 sm:w-auto sm:rounded-none sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                    </div>
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Avg Streak</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsState.studentEngagement.avgStreak}
                     </span>
                     <span className="text-[9px] text-black/40 dark:text-white/40 mt-0.5">days</span>
+                    </div>
                   </div>
                 </div>
               </div>

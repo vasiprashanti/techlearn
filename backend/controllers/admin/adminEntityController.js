@@ -170,6 +170,7 @@ export const getCollegeDetail = async (req, res) => {
       data: {
         id: college._id,
         name: college.name,
+        code: college.code || "",
         city: college.city || "",
         status: college.status || "Active",
         totalStudents: students.length,

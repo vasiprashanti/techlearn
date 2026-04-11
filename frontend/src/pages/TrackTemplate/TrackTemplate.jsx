@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
+import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
@@ -49,13 +50,18 @@ export default function TrackTemplate() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [tracks, setTracks] = useState(emptyTrackTemplates);
+  const [batches, setBatches] = useState([]);
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [templateFormError, setTemplateFormError] = useState('');
   const [createTemplateForm, setCreateTemplateForm] = useState({
     name: '',
     category: '',
     description: '',
+    startDate: '',
+    endDate: '',
+    batchId: '',
     totalDays: '30',
     status: 'Active',
   });
@@ -68,36 +74,70 @@ export default function TrackTemplate() {
 
   const isDarkMode = theme === 'dark';
 
+  const formatDateInput = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+  };
+
+  const formatDateLabel = (value) => {
+    if (!value) return 'Not set';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Not set';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const loadTrackTemplatePageData = useCallback(async () => {
+    const [remoteTracks, remoteCategories, remoteBatches] = await Promise.all([
+      adminAPI.getTrackTemplates(),
+      adminAPI.getQuestionCategories(),
+      adminAPI.getBatches(),
+    ]);
+
+    const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
+      ...track,
+      icon: track.icon || iconMapForTrack(track.iconKey || track.category),
+      startDate: track.startDate || '',
+      endDate: track.endDate || '',
+      batchId: track.batchId || '',
+      assignedBatch: track.assignedBatch || '',
+    }));
+    const normalizedCategories = preferRemoteData(remoteCategories, [])
+      .map((category) => category.title)
+      .filter(Boolean);
+    const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({
+      id: batch.id || batch._id,
+      name: batch.name || 'Untitled Batch',
+    }));
+
+    setTracks(normalizedTracks);
+    setQuestionCategories(normalizedCategories);
+    setBatches(normalizedBatches);
+  }, []);
+
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([adminAPI.getTrackTemplates(), adminAPI.getQuestionCategories()])
-      .then(([remoteTracks, remoteCategories]) => {
+    loadTrackTemplatePageData()
+      .then(() => {
         if (!cancelled) {
-          const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
-            ...track,
-            icon: track.icon || iconMapForTrack(track.iconKey || track.category),
-          }));
-          const normalizedCategories = preferRemoteData(remoteCategories, [])
-            .map((category) => category.title)
-            .filter(Boolean);
-
-          setTracks(normalizedTracks);
-          setQuestionCategories(normalizedCategories);
+          setTemplateFormError('');
         }
       })
       .catch(() => {
         if (!cancelled) {
           setTracks(emptyTrackTemplates);
           setQuestionCategories([]);
+          setBatches([]);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadTrackTemplatePageData]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -165,10 +205,14 @@ export default function TrackTemplate() {
   const closeCreateTemplateModal = () => {
     setIsCreateTemplateOpen(false);
     setEditingTemplateId(null);
+    setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
       category: '',
       description: '',
+      startDate: '',
+      endDate: '',
+      batchId: '',
       totalDays: '30',
       status: 'Active',
     });
@@ -176,10 +220,14 @@ export default function TrackTemplate() {
 
   const openCreateTemplateModal = () => {
     setEditingTemplateId(null);
+    setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
       category: '',
       description: '',
+      startDate: '',
+      endDate: '',
+      batchId: '',
       totalDays: '30',
       status: 'Active',
     });
@@ -192,56 +240,75 @@ export default function TrackTemplate() {
       name: track.name || '',
       category: track.category || '',
       description: track.description || '',
+      startDate: formatDateInput(track.startDate),
+      endDate: formatDateInput(track.endDate),
+      batchId: track.batchId || '',
       totalDays: String(track.totalDays || 1),
       status: track.status || 'Active',
     });
+    setTemplateFormError('');
     setIsCreateTemplateOpen(true);
   };
 
-  const submitTemplate = () => {
-    if (!createTemplateForm.name.trim() || !createTemplateForm.category) return;
+  const submitTemplate = async () => {
+    if (!createTemplateForm.name.trim() || !createTemplateForm.category) {
+      setTemplateFormError('Template name and category are required.');
+      return;
+    }
+    if (!createTemplateForm.startDate || !createTemplateForm.endDate) {
+      setTemplateFormError('Start date and end date are required.');
+      return;
+    }
+    if (!createTemplateForm.batchId) {
+      setTemplateFormError('Assigned batch is required.');
+      return;
+    }
+
+    const start = new Date(createTemplateForm.startDate);
+    const end = new Date(createTemplateForm.endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setTemplateFormError('Please provide valid start and end dates.');
+      return;
+    }
+    if (end < start) {
+      setTemplateFormError('End date must be on or after start date.');
+      return;
+    }
 
     const totalDays = Number(createTemplateForm.totalDays) > 0 ? Number(createTemplateForm.totalDays) : 1;
 
-    if (editingTemplateId) {
-      setTracks((prev) =>
-        prev.map((track) =>
-          track.id === editingTemplateId
-            ? {
-                ...track,
-                name: createTemplateForm.name.trim(),
-                category: createTemplateForm.category,
-                description:
-                  createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
-                totalDays,
-                status: createTemplateForm.status,
-              }
-            : track
-        )
-      );
-    } else {
-      const newId = `trk_${Date.now()}`;
-      const newTrack = {
-        id: newId,
-        name: createTemplateForm.name.trim(),
-        description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
-        totalDays,
-        questionsAssigned: 0,
-        status: createTemplateForm.status,
-        icon: FiCode,
-        category: createTemplateForm.category,
-      };
+    const payload = {
+      name: createTemplateForm.name.trim(),
+      category: createTemplateForm.category,
+      description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+      startDate: createTemplateForm.startDate,
+      endDate: createTemplateForm.endDate,
+      batchId: createTemplateForm.batchId,
+      totalDays,
+      status: createTemplateForm.status,
+    };
 
-      setTracks((prev) => [newTrack, ...prev]);
-      setTrackQuestions((prev) => ({ ...prev, [newId]: [] }));
-      setVersionHistory((prev) => ({ ...prev, [newId]: ['v1 • Initial template'] }));
+    try {
+      setTemplateFormError('');
+      if (editingTemplateId) {
+        await adminAPI.updateTrackTemplate(editingTemplateId, payload);
+      } else {
+        await adminAPI.createTrackTemplate(payload);
+      }
+      await loadTrackTemplatePageData();
+      closeCreateTemplateModal();
+    } catch (error) {
+      setTemplateFormError(error?.message || 'Failed to save template.');
     }
-
-    closeCreateTemplateModal();
   };
 
-  const deleteTemplate = (trackId) => {
-    setTracks((prev) => prev.filter((track) => track.id !== trackId));
+  const deleteTemplate = async (trackId) => {
+    try {
+      await adminAPI.deleteTrackTemplate(trackId);
+      await loadTrackTemplatePageData();
+    } catch {
+      setTemplateFormError('Failed to delete template.');
+    }
     setTrackQuestions((prev) => {
       const next = { ...prev };
       delete next[trackId];
@@ -356,19 +423,19 @@ export default function TrackTemplate() {
       {isCreateTemplateOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCreateTemplateModal} />
-          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
-              <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-5 space-y-3.5">
               <div>
                 <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
                 <input
                   value={createTemplateForm.name}
                   onChange={(e) => updateCreateTemplateField('name', e.target.value)}
                   placeholder="Enter template name"
-                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                  className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
                 />
               </div>
 
@@ -378,14 +445,14 @@ export default function TrackTemplate() {
                   <select
                     value={createTemplateForm.category}
                     onChange={(e) => updateCreateTemplateField('category', e.target.value)}
-                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                    className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
                   >
                     <option value="">Select category</option>
                     {questionCategories.map((category) => (
                       <option key={category} value={category}>{category}</option>
                     ))}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
                 </div>
                 {questionCategories.length === 0 && (
                   <p className="mt-2 text-xs text-black/45 dark:text-white/45">
@@ -401,8 +468,57 @@ export default function TrackTemplate() {
                   onChange={(e) => updateCreateTemplateField('description', e.target.value)}
                   rows={3}
                   placeholder="Describe this template"
-                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 py-2 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Start date*</label>
+                  <div className="mt-1">
+                    <ModernDatePicker
+                      value={createTemplateForm.startDate}
+                      onChange={(nextDate) =>
+                        setCreateTemplateForm((prev) => ({
+                          ...prev,
+                          startDate: nextDate,
+                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                        }))
+                      }
+                      placeholder="Select start date"
+                      ariaLabel="Track start date"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">End date*</label>
+                  <div className="mt-1">
+                    <ModernDatePicker
+                      value={createTemplateForm.endDate}
+                      onChange={(nextDate) => updateCreateTemplateField('endDate', nextDate)}
+                      placeholder="Select end date"
+                      ariaLabel="Track end date"
+                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : undefined}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Assigned batch*</label>
+                <div className="relative mt-1">
+                  <select
+                    value={createTemplateForm.batchId}
+                    onChange={(e) => updateCreateTemplateField('batchId', e.target.value)}
+                    className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
+                  >
+                    <option value="">Select batch</option>
+                    {batches.map((batch) => (
+                      <option key={batch.id} value={batch.id}>{batch.name}</option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -413,7 +529,7 @@ export default function TrackTemplate() {
                     min="1"
                     value={createTemplateForm.totalDays}
                     onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
-                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                    className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 text-sm text-black/80 dark:text-white"
                   />
                 </div>
 
@@ -423,26 +539,30 @@ export default function TrackTemplate() {
                     <select
                       value={createTemplateForm.status}
                       onChange={(e) => updateCreateTemplateField('status', e.target.value)}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 pr-12 text-sm"
+                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
                     >
                       <option value="Active">active</option>
                       <option value="Draft">draft</option>
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
                   </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              {templateFormError && (
+                <p className="text-xs text-red-500">{templateFormError}</p>
+              )}
+
+              <div className="pt-1 flex items-center justify-end gap-2.5">
                 <button
                   onClick={closeCreateTemplateModal}
-                  className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+                  className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={submitTemplate}
-                  className="h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                  className="h-9 px-4 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
                 >
                   {editingTemplateId ? 'Save Changes' : 'Create Template'}
                 </button>
@@ -581,6 +701,18 @@ export default function TrackTemplate() {
                         <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
                           <span className="text-xs text-[#64748b] dark:text-slate-300">Total Days</span>
                           <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Start Date</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{formatDateLabel(track.startDate)}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">End Date</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{formatDateLabel(track.endDate)}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
+                          <span className="text-xs text-[#64748b] dark:text-slate-300">Assigned Batch</span>
+                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white truncate">{track.assignedBatch || 'Not set'}</p>
                         </div>
                         <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
                           <span className="text-xs text-[#64748b] dark:text-slate-300">Questions Assigned</span>
