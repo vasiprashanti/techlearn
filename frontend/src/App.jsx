@@ -56,6 +56,8 @@ import DsaQuestions from './pages/Learn/DsaQuestions'
 import SqlQuestions from './pages/Learn/SqlQuestions'
 import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
 import CompanyQuestions from './pages/Learn/CompanyQuestions'
+import Roadmaps from './pages/Resources/Roadmaps'
+import ResumeTemplates from './pages/Resources/ResumeTemplates'
 
 // Exercise components
 import Exercises from './pages/Learn/Exercises'
@@ -643,6 +645,8 @@ function LayoutWrapper() {
     location.pathname.startsWith('/interview/') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
+    location.pathname.startsWith('/resources/roadmaps') ||
+    location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/courses') ||
     location.pathname.startsWith('/learn/exercises');
 
@@ -675,6 +679,8 @@ function LayoutWrapper() {
             <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
             <Route path="/core-prep/languages" element={<Languages />} />
             <Route path="/core-prep/important-concepts" element={<Concepts />} />
+            <Route path="/resources/roadmaps" element={<Roadmaps />} />
+            <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/track-templates" element={<TrackTemplate />} />
             <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
