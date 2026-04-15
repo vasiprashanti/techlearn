@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { 
-  FiX, FiMenu, FiGrid, FiBook, 
+  FiX, FiSidebar, FiGrid, FiBook, 
   FiAward, FiBriefcase, FiCheckSquare 
 } from "react-icons/fi";
 
@@ -82,30 +82,65 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
   return (
     <>
+      {/* MAGIC FIX: Protects your main header layout across all student pages on mobile */}
+      <style>{`
+        @media (max-width: 1024px) {
+          main header {
+            padding-left: 3.5rem !important;
+            transition: padding 0.3s ease-in-out;
+          }
+        }
+      `}</style>
+
+      {/* Desktop Sidebar */}
       <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-11 border-r border-black/5 dark:border-white/5">
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4 scrollbar-hide">
           {renderNavLinks()}
         </div>
       </div>
 
-      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-6 left-6 z-50 p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10">
-        <FiMenu className="w-5 h-5" />
+      {/* Mobile ChatGPT-style Toggle */}
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="lg:hidden fixed top-7 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+      >
+        <FiSidebar className="w-[22px] h-[22px]" />
       </button>
 
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden fixed top-6 right-6 z-[60] p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10">
-            <FiX className="w-5 h-5" />
-          </button>
-        )}
-      </AnimatePresence>
-
+      {/* Mobile drawer */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", damping: 30, stiffness: 200 }} className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 pt-11 shadow-2xl">
-              <div className="flex-1 overflow-y-auto px-4 h-full scrollbar-hide">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setMobileMenuOpen(false)} 
+              className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" 
+            />
+            
+            {/* Sidebar */}
+            <motion.div 
+              initial={{ x: "-100%" }} 
+              animate={{ x: 0 }} 
+              exit={{ x: "-100%" }} 
+              transition={{ type: "spring", damping: 30, stiffness: 200 }} 
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+            >
+              {/* Sidebar Header with Close Button */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
+                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Navigation Links */}
+              <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
             </motion.div>
