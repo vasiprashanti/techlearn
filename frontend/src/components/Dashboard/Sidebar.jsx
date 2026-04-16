@@ -40,8 +40,7 @@ const menuGroups = [
   {
     title: "RESOURCES",
     items: [
-      { id: "resources/courses", title: "Courses", icon: <FiMap className="w-4 h-4" /> },
-      { id: "resources/important-topics", title: "Important Topics", icon: <FiLayers className="w-4 h-4" /> },
+      { id: "resources/roadmaps", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
       { id: "resources/resume-templates", title: "Resume Templates", icon: <FiFileText className="w-4 h-4" /> },
     ]
   }
