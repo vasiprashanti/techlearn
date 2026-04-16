@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -45,7 +45,6 @@ import UserCoding from './pages/Coding/UserCoding';
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
-import Courses from './pages/Learn/Courses'
 import AllCourses from './pages/Learn/AllCourses'
 import CourseDetails from './pages/Learn/CourseDetails'
 import CourseQuiz from './pages/Learn/CourseQuiz'
@@ -367,7 +366,7 @@ const HomePage = () => {
 
           {/* Start for Free Button */}
           <button
-            onClick={() => navigate('/learn/courses')}
+            onClick={() => navigate('/learn')}
             className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
             style={{
               backgroundColor: '#ffffffac',
@@ -690,7 +689,7 @@ function LayoutWrapper() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
-          <Route path="/learn/courses" element={<Courses />} />
+          <Route path="/learn/courses" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/all" element={<AllCourses />} />
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />

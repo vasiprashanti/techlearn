@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/learn/courses", "destination": "/learn", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/" }
   ]
