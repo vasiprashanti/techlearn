@@ -33,6 +33,16 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import DailyChallenge from './pages/Dashboard/DailyChallenge'
+import Roadmap from './pages/Dashboard/Roadmap'
+import PracticeOverview from './pages/Dashboard/PracticeOverview'
+import Performance from './pages/Dashboard/Performance'
+import Leaderboard from './pages/Dashboard/Leaderboard'
+import FreeCourses from './pages/Dashboard/Resources/FreeCourses'
+import ImportantConcepts from './pages/Dashboard/Resources/ImportantConcepts'
+import FreeCertifications from './pages/Dashboard/Resources/FreeCertifications'
+import ResumeTemplates from './pages/Dashboard/Resources/ResumeTemplates'
+import UserSettings from './pages/Dashboard/Account/UserSettings'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
 import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
@@ -638,13 +648,16 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/track/') ||
                            location.pathname.startsWith('/admin');
 
-  const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
-                     !location.pathname.startsWith('/coding/') && 
-                     !isDashboardRoute;
+  const showNavbar =
+    !['/admin', '/admin/codingroundupload'].includes(location.pathname) &&
+    !location.pathname.startsWith('/mcq') &&
+    !location.pathname.startsWith('/coding/') &&
+    !isDashboardRoute;
 
-  const showFooter = !['/mcq'].includes(location.pathname) && 
-                     !location.pathname.startsWith('/coding/') && 
-                     !isDashboardRoute;
+  const showFooter =
+    !location.pathname.startsWith('/mcq') &&
+    !location.pathname.startsWith('/coding/') &&
+    !isDashboardRoute;
 
   return (
     <div className="relative z-10 flex flex-col min-h-screen">
@@ -658,6 +671,31 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/dashboard/roadmap" element={<Roadmap />} />
+            <Route path="/dashboard/practice" element={<PracticeOverview />} />
+            <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
+            <Route path="/dashboard/practice/sql" element={<SqlQuestions />} />
+            <Route path="/dashboard/practice/dsa" element={<DsaQuestions />} />
+            <Route path="/dashboard/practice/company-based" element={<CompanyQuestions />} />
+            <Route path="/dashboard/performance" element={<Performance />} />
+            <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
+            <Route path="/dashboard/resources/free-courses" element={<FreeCourses />} />
+            <Route
+              path="/dashboard/resources/important-concepts"
+              element={<ImportantConcepts />}
+            />
+            <Route
+              path="/dashboard/resources/free-certifications"
+              element={<FreeCertifications />}
+            />
+            <Route
+              path="/dashboard/resources/resume-templates"
+              element={<ResumeTemplates />}
+            />
+            <Route path="/dashboard/account/profile-analytics" element={<Profile />} />
+            <Route path="/dashboard/account/settings" element={<UserSettings />} />
+
             <Route path="/track-templates" element={<TrackTemplate />} />
             <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />

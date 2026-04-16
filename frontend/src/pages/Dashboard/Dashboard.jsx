@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import Navbar from '../../components/Navbar';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import Sidebar from '../../components/Dashboard/Sidebar';
@@ -128,8 +127,6 @@ const Dashboard = () => {
 
   return (
     <>
-      <Navbar />
-
       <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 ${
@@ -144,8 +141,8 @@ const Dashboard = () => {
         <main
           className={`flex-1 transition-all duration-300 ${
             sidebarCollapsed ? 'ml-[10px]' : 'ml-[10px]'
-          } pt-16 p-6 overflow-auto`}
-          >
+          } pt-24 p-6 overflow-auto`}
+        >
           <div className="max-w-[1800px] mx-auto">
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-6">
               <UserGreeting name={userName} />

@@ -130,7 +130,13 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
 
     try {
-      const response = await authAPI.login(credentials);
+      const normalizedCredentials = {
+        ...credentials,
+        email: String(credentials?.email || '').trim(),
+        password: String(credentials?.password || '').trim(),
+      };
+
+      const response = await authAPI.login(normalizedCredentials);
       // Store token and user data (use 'token' for compatibility with UserContext)
       localStorage.setItem('token', response.token);
       localStorage.setItem('userData', JSON.stringify(response.user));

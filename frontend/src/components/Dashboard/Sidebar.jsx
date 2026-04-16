@@ -1,91 +1,173 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
-  FiX,
-  FiMenu,
-  FiUser,
+  FiAward,
+  FiBarChart2,
+  FiBook,
   FiBookOpen,
-  FiEdit3,
-  FiBriefcase,
-  FiHelpCircle,
-  FiCode,
-  FiFileText,
-  FiDatabase,
   FiCpu,
+  FiDatabase,
+  FiFileText,
+  FiGrid,
+  FiHome,
+  FiMap,
+  FiMenu,
+  FiSettings,
+  FiUser,
+  FiX,
+  FiZap,
+  FiBriefcase,
 } from "react-icons/fi";
-
-const menuItems = [
-  { id: "profile", title: "Profile", icon: FiUser },
-  { id: "learn/courses", title: "Enrolled Courses", icon: FiBookOpen },
-  { id: "learn/exercises", title: "My Exercises", icon: FiEdit3 },
-  { id: "projects", title: "Current Projects", icon: FiBriefcase },
-  { id: "mcq", title: "MCQ", icon: FiHelpCircle },
-  { id: "coding", title: "Coding Round", icon: FiCode },
-  { id: "learn/interview-questions", title: "All Interview Questions", icon: FiFileText },
-  { id: "learn/interview-questions/sql", title: "SQL Questions", icon: FiDatabase },
-  { id: "learn/interview-questions/dsa", title: "DSA Questions", icon: FiCode },
-  { id: "learn/interview-questions/core-cs", title: "Core CS Questions", icon: FiCpu },
-  { id: "learn/interview-questions/company", title: "Company Questions", icon: FiBriefcase },
-];
 
 const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const sections = useMemo(
+    () => [
+      {
+        title: "MAIN",
+        items: [
+          { to: "/dashboard", label: "Dashboard", icon: FiHome, end: true },
+          { to: "/dashboard/daily-challenge", label: "Daily Challenge", icon: FiZap },
+          { to: "/dashboard/roadmap", label: "Roadmap", icon: FiMap },
+          { to: "/dashboard/practice", label: "Practice", icon: FiGrid },
+        ],
+      },
+      {
+        title: "PRACTICE",
+        items: [
+          { to: "/dashboard/practice/core-cs", label: "Core CS", icon: FiCpu },
+          { to: "/dashboard/practice/sql", label: "SQL Practice", icon: FiDatabase },
+          { to: "/dashboard/practice/dsa", label: "DSA Practice", icon: FiAward },
+          {
+            to: "/dashboard/practice/company-based",
+            label: "Company-Based Questions",
+            icon: FiBriefcase,
+          },
+        ],
+      },
+      {
+        title: "PERFORMANCE",
+        items: [
+          { to: "/dashboard/performance", label: "Performance", icon: FiBarChart2 },
+          { to: "/dashboard/leaderboard", label: "Leaderboard", icon: FiAward },
+        ],
+      },
+      {
+        title: "RESOURCES",
+        items: [
+          {
+            to: "/dashboard/resources/free-courses",
+            label: "Free Courses",
+            icon: FiBookOpen,
+          },
+          {
+            to: "/dashboard/resources/important-concepts",
+            label: "Important Concepts",
+            icon: FiBook,
+          },
+          {
+            to: "/dashboard/resources/free-certifications",
+            label: "Free Certifications",
+            icon: FiAward,
+          },
+          {
+            to: "/dashboard/resources/resume-templates",
+            label: "Resume Templates",
+            icon: FiFileText,
+          },
+        ],
+      },
+      {
+        title: "ACCOUNT",
+        items: [
+          {
+            to: "/dashboard/account/profile-analytics",
+            label: "Profile & Analytics",
+            icon: FiUser,
+          },
+          {
+            to: "/dashboard/account/settings",
+            label: "Settings",
+            icon: FiSettings,
+          },
+        ],
+      },
+    ],
+    [],
+  );
+
+  const NavItem = ({ item, onClick }) => {
+    const Icon = item.icon;
+
+    return (
+      <motion.div
+        whileHover={{ x: 4 }}
+        whileTap={{ scale: 0.99 }}
+        className="relative"
+      >
+        <NavLink
+          to={item.to}
+          end={item.end}
+          onClick={onClick}
+          className={({ isActive }) =>
+            `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] transition-colors
+            ${
+              isActive
+                ? "bg-blue-600/10 text-blue-700 dark:text-blue-200"
+                : "text-slate-700 hover:bg-white/40 hover:text-blue-700 dark:text-slate-200 dark:hover:bg-white/5 dark:hover:text-blue-200"
+            }`
+          }
+        >
+          <Icon className="h-4 w-4 shrink-0 opacity-90" />
+          <span className="font-medium">{item.label}</span>
+        </NavLink>
+      </motion.div>
+    );
+  };
+
+  const SidebarContent = ({ onItemClick }) => (
+    <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 pb-8 pt-6">
+      {sections.map((section) => (
+        <div key={section.title} className="mb-6">
+          <div className="px-2 text-[11px] font-semibold tracking-widest text-slate-500 dark:text-slate-400">
+            {section.title}
+          </div>
+          <div className="mt-2 space-y-1">
+            {section.items.map((item) => (
+              <NavItem key={item.to} item={item} onClick={onItemClick} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex flex-col bg-transparent dark:bg-transparent relative z-40 h-screen overflow-hidden w-72 shadow-sm pt-20">
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
-          <div className="space-y-2">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-
-              return (
-              <motion.div
-                key={item.id}
-                whileHover={{ scale: 1.01, x: 4 }}
-                whileTap={{ scale: 0.99 }}
-                className="relative"
-              >
-                <NavLink
-                  to={`/${item.id}`}
-                  className={({ isActive }) =>
-                    `relative flex items-center gap-3 px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
-                     hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
-                     after:h-[1px] after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-                    ${
-                      isActive
-                        ? "after:w-full text-blue-600 font-medium"
-                        : "after:w-0 text-gray-800 dark:text-gray-200 hover:text-blue-500"
-                    }`
-                  }
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span>{item.title}</span>
-                </NavLink>
-              </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <aside className="hidden lg:flex h-screen w-72 shrink-0 flex-col border-r border-white/20 bg-white/10 pt-20 backdrop-blur-xl dark:border-gray-700/20 dark:bg-black/10">
+        <SidebarContent />
+      </aside>
 
       {/* Mobile Menu Button */}
       <button
+        type="button"
         onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white/70 dark:bg-gray-800/70 shadow-md"
+        className="lg:hidden fixed top-4 left-4 z-50 rounded-lg bg-white/70 p-2 shadow-md backdrop-blur-xl dark:bg-gray-800/70"
       >
-        <FiMenu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+        <FiMenu className="h-5 w-5 text-gray-700 dark:text-gray-200" />
       </button>
 
       {/* Mobile Close Button */}
       {mobileMenuOpen && (
         <button
+          type="button"
           onClick={() => setMobileMenuOpen(false)}
-          className="lg:hidden fixed top-6 right-6 z-[60] p-2 rounded-lg bg-white/50 dark:bg-gray-800/50 hover:bg-white/70 dark:hover:bg-gray-700/50 transition-all duration-200"
+          className="lg:hidden fixed top-6 right-6 z-[60] rounded-lg bg-white/70 p-2 shadow-md backdrop-blur-xl dark:bg-gray-800/70"
         >
-          <FiX className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <FiX className="h-5 w-5 text-gray-700 dark:text-gray-200" />
         </button>
       )}
 
@@ -98,51 +180,18 @@ const Sidebar = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+              className="lg:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
             />
 
-            <motion.div
+            <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-gradient-to-b from-[#d2f0ff] to-[#b6e2f5] dark:from-[#1e293b] dark:to-[#0f172a] backdrop-blur-xl border-r border-white/20 dark:border-gray-700/20 z-50 shadow-2xl pt-20"
+              className="lg:hidden fixed left-0 top-0 bottom-0 z-50 w-80 border-r border-white/20 bg-white/85 pt-20 shadow-2xl backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-950/70"
             >
-              <div className="flex-1 overflow-y-auto px-4 py-6">
-                <div className="space-y-2">
-                  {menuItems.map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                    <motion.div
-                      key={item.id}
-                      whileHover={{ scale: 1.01, x: 4 }}
-                      whileTap={{ scale: 0.99 }}
-                      className="relative"
-                    >
-                      <NavLink
-                        to={`/${item.id}`}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={({ isActive }) =>
-                          `relative flex items-center gap-3 px-2 py-3 text-[17px] font-light transition-all duration-300 ease-in-out
-                          hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
-                          after:h-[1px] after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-                          ${
-                            isActive
-                              ? "after:w-full text-blue-600 font-medium"
-                              : "after:w-0 text-gray-800 dark:text-gray-200 hover:text-blue-500"
-                          }`
-                        }
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-                        <span>{item.title}</span>
-                      </NavLink>
-                    </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
+              <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
+            </motion.aside>
           </>
         )}
       </AnimatePresence>

@@ -7,7 +7,12 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const { user: authUser, token: authToken, isAuthenticated } = useAuth();
+  const {
+    user: authUser,
+    token: authToken,
+    isAuthenticated,
+    logout: authLogout,
+  } = useAuth();
 
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,7 +109,26 @@ export const UserProvider = ({ children }) => {
       });
 
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      const status = err?.response?.status;
+      const apiMessage =
+        err?.response?.data?.message || err?.response?.data?.error;
+
+      // If the token is missing/expired/invalid, clear session and treat as guest.
+      if (status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
+
+        if (typeof authLogout === 'function') {
+          authLogout();
+        } else {
+          setUser({ firstName: 'Guest', lastName: '', email: '' });
+        }
+
+        setError(null);
+        return;
+      }
+
+      setError(apiMessage || err.message);
       console.error('Fetch error:', err);
     } finally {
       setIsLoading(false);

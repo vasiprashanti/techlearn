@@ -85,13 +85,15 @@ router.post("/login", async function login(req, res) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    const formattedEmail = String(email || "").trim().toLowerCase();
+    const formattedPassword = String(password || "").trim();
+
+    if (!formattedEmail || !formattedPassword) {
       return res
         .status(400)
         .json({ message: "Please provide email and password" });
     }
 
-    const formattedEmail = String(email || "").trim().toLowerCase();
     if (!isValidEmailForAuth(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
@@ -105,7 +107,7 @@ router.post("/login", async function login(req, res) {
       return res.status(400).json({ message: "Please log in with Google" });
     }
 
-    const match = await bcrypt.compare(password, user.password);
+    const match = await bcrypt.compare(formattedPassword, user.password);
     if (!match) {
       return res.status(400).json({ message: "Invalid password" });
     }

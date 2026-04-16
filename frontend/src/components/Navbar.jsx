@@ -14,8 +14,8 @@ const Navbar = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
-  //hide navbar on coding pages
-  if (location.pathname === "/coding") {
+  // hide navbar on coding pages
+  if (location.pathname.startsWith('/coding')) {
     return null;
   }
 

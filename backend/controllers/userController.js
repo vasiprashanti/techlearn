@@ -1,5 +1,4 @@
 import User from "../models/User.js";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 // import sendMail from "../utils/mailer.js"; // Uncomment if using it
 
@@ -61,12 +60,11 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
     const newUser = new User({
       firstName: trimmedFirstName,
       lastName: trimmedLastName,
       email: trimmedEmail,
-      password: hashedPassword,
+      password,
       isClub: isClub || false, // Include from backend_web
     });
 
@@ -112,7 +110,7 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }

@@ -32,7 +32,7 @@ export default function InterviewSqlQuestionDetail() {
         <div className="rounded-2xl border border-white/20 bg-white/70 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
           <button
             type="button"
-            onClick={() => navigate('/learn/interview-questions/sql')}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -50,7 +50,7 @@ export default function InterviewSqlQuestionDetail() {
         <div className="rounded-2xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
           <button
             type="button"
-            onClick={() => navigate('/learn/interview-questions/sql')}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
           >
             <ArrowLeft className="h-4 w-4" />
