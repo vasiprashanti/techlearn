@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { 
   FiX,
   FiMenu,
@@ -51,6 +51,8 @@ const SCROLL_KEY = 'student-sidebar-scroll';
 const Sidebar = ({ isCollapsed, onToggle }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
+  const location = useLocation();
+  const isDashboardRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
 
   useEffect(() => {
     if (desktopNavRef.current) {
@@ -58,6 +60,18 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       if (saved) desktopNavRef.current.scrollTop = parseInt(saved, 10);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isDashboardRoute) {
+      document.body.classList.add('dashboard-sidebar-disabled');
+    } else {
+      document.body.classList.remove('dashboard-sidebar-disabled');
+    }
+
+    return () => {
+      document.body.classList.remove('dashboard-sidebar-disabled');
+    };
+  }, [isDashboardRoute]);
 
   const handleDesktopScroll = () => {
     if (desktopNavRef.current) {
@@ -96,6 +110,10 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       ))}
     </div>
   );
+
+  if (!isDashboardRoute) {
+    return null;
+  }
 
   return (
     <>

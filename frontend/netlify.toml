@@ -14,7 +14,13 @@
   # Backend API URL for production
   VITE_API_URL = "https://tls-learn-page.onrender.com/api"
 
-# Redirect rules for SPA (Single Page Application)
+# Redirect rules
+[[redirects]]
+  from = "/learn/courses"
+  to = "/learn"
+  status = 301
+
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"

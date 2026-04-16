@@ -133,16 +133,6 @@ const Navbar = () => {
             Learn
           </Link>
           <Link
-            to="/build"
-            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
-              after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/build') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
-          >
-            Build
-          </Link>
-          <Link
             to="/dashboard"
             className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
@@ -230,28 +220,16 @@ const Navbar = () => {
         </nav>
 
         {/* Mobile Menu Toggle */}
-        <div
-          className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 ${
-            isMenuOpen ? 'flex-col gap-[5px]' : 'gap-[5px]'
+        <button
+          type="button"
+          className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
+            isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
           }`}
           onClick={toggleMenu}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
         >
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-        </div>
+          <span className="text-2xl leading-none">{isMenuOpen ? '✕' : '☰'}</span>
+        </button>
       </nav>
 
       {/* Mobile Navigation Menu */}
@@ -276,17 +254,6 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
           >
             Learn
-          </Link>
-          <Link
-            to="/build"
-            onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
-              after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/build') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
-          >
-            Build
           </Link>
           <Link
             to="/dashboard"
