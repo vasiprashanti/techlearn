@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  User, Mail, CalendarDays, Lock, Camera, 
+  User, Mail, CalendarDays, Lock, Camera, ArrowLeft,
   X, CheckCircle, Shield 
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
@@ -21,6 +22,7 @@ const getInitialAvatar = () => {
 };
 
 const Profile = () => {
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const { user, isLoading } = useUser();
   
@@ -87,6 +89,7 @@ const Profile = () => {
   
   const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
   const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
+  const dashboardCardClass = "rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-12";
 
   if (isLoading) {
     return (
@@ -110,7 +113,15 @@ const Profile = () => {
           {/* Top Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </button>
+              <h1 className="mt-8 text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
                 My Profile.
               </h1>
               <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
@@ -129,51 +140,51 @@ const Profile = () => {
               className="flex-1 space-y-8"
             >
               {/* Basic Info Card */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm">
+              <div className={dashboardCardClass}>
                 <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 font-semibold">
+                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
                     Basic Info
                   </h2>
-                  <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
+                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-10">
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Full Name</p>
+                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Full Name</p>
                     </div>
-                    <p className="text-lg font-medium text-black dark:text-white pl-7">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
                       {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
                     </p>
                   </div>
 
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <CalendarDays className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Date of Birth</p>
+                      <CalendarDays className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Date of Birth</p>
                     </div>
-                    <p className="text-lg font-medium text-black dark:text-white pl-7">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
                       {displayUser?.dateOfBirth || "Not specified"}
                     </p>
                   </div>
 
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Gender</p>
+                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Gender</p>
                     </div>
-                    <p className="text-lg font-medium text-black dark:text-white pl-7 capitalize">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 capitalize">
                       {displayUser?.gender || "Not specified"}
                     </p>
                   </div>
 
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <Mail className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Email Address</p>
+                      <Mail className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
                     </div>
-                    <p className="text-lg font-medium text-black dark:text-white pl-7">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
                       {displayUser?.email || "No email provided"}
                     </p>
                   </div>
@@ -181,35 +192,35 @@ const Profile = () => {
               </div>
 
               {/* Account Info Card */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm">
+              <div className={dashboardCardClass}>
                 <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 font-semibold">
+                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
                     Account Security
                   </h2>
-                  <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
+                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-10">
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <Shield className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Username</p>
+                      <Shield className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Username</p>
                     </div>
-                    <p className="text-lg font-medium text-black dark:text-white pl-7">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
                       {displayUser?.username || "Not specified"}
                     </p>
                   </div>
 
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <Lock className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-                      <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">Password</p>
+                      <Lock className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Password</p>
                     </div>
                     <div className="flex items-center pl-7 gap-2">
-                      <p className="text-lg font-medium text-black dark:text-white tracking-[0.2em]">
+                      <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
                         ••••••••
                       </p>
-                      <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 bg-black/5 dark:bg-white/5 rounded-full text-black/40 dark:text-white/40 font-bold ml-2">Secure</span>
+                      <span className="ml-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
                     </div>
                   </div>
                 </div>
@@ -221,10 +232,10 @@ const Profile = () => {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
               className="w-full lg:w-96 flex flex-col"
             >
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 md:p-12 rounded-[2rem] shadow-sm flex flex-col items-center relative overflow-hidden flex-1">
+              <div className={`${dashboardCardClass} flex flex-1 flex-col items-center relative overflow-hidden`}>
                 
                 {/* Decorative background blur */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#3C83F6]/10 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
 
                 <div className="relative mb-8 mt-4 group">
                   <div className="w-48 h-48 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
@@ -246,12 +257,12 @@ const Profile = () => {
                   </button>
                 </div>
 
-                <h2 className="text-2xl font-medium text-black dark:text-white mb-1 tracking-tight text-center relative z-10">
+                <h2 className="relative z-10 mb-1 text-center text-2xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
                   {userName}
                 </h2>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full mt-2 relative z-10">
+                <div className="relative z-10 mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                  <span className="text-[9px] uppercase tracking-widest text-black/60 dark:text-white/60 font-bold">
+                  <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
                     Student Account
                   </span>
                 </div>

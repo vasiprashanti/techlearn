@@ -7,9 +7,8 @@ import {
   FolderOpen,
   LayoutGrid
 } from 'lucide-react';
-import Sidebar from '../../components/Dashboard/Sidebar';
 import ScrollProgress from '../../components/ScrollProgress';
-import { useTheme } from '../../context/ThemeContext';
+import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 
 const MANIFEST_PATH = '/resources/resume-templates/manifest.json';
 
@@ -25,9 +24,6 @@ const getTemplateFormat = (href, template) => {
 const hasValidLink = (href) => Boolean(href && href !== '#');
 
 const ResumeTemplates = () => {
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
-
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -76,42 +72,21 @@ const ResumeTemplates = () => {
   }, []);
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : 'light'}`}>
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
       <ScrollProgress />
-
-      <div
-        className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
-          isDarkMode
-            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
-            : 'bg-gradient-to-br from-[#daf0fa] via-[#c9edff] to-[#daf0fa]'
-        }`}
-      />
-
-      <Sidebar />
-
-      <main className="relative z-10 flex-1 overflow-y-auto px-5 pb-10 pt-24 lg:ml-64 lg:px-10">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
           <section className="rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-[0_24px_80px_-40px_rgba(37,99,235,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_24px_80px_-40px_rgba(15,23,42,0.9)] md:p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-sky-200/80 bg-sky-100/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
                   <LayoutGrid className="h-4 w-4" />
                   Resume Templates
                 </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-5xl">
+                <h1 className="brand-heading-primary font-poppins text-3xl font-semibold tracking-tight md:text-5xl">
                   Browse polished resume layouts.
                 </h1>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg">
+                <p className="mt-4 max-w-2xl text-base leading-8 text-[#4c6f9a] dark:text-[#7fb8e2] md:text-lg">
                   This grid is designed to feel like a document shelf: fast to scan, visually tidy, and still consistent with the existing TechLearn dashboard styling.
-                </p>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-slate-200/70 bg-white/85 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                  Manifest
-                </p>
-                <p className="mt-2 break-all text-sm text-slate-700 dark:text-slate-200">
-                  {MANIFEST_PATH}
                 </p>
               </div>
             </div>
@@ -147,7 +122,7 @@ const ResumeTemplates = () => {
                 return (
                   <article
                     key={template.id || href || title}
-                    className="group overflow-hidden rounded-[1.8rem] border border-white/60 bg-white/74 p-4 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.45)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_-40px_rgba(37,99,235,0.4)] dark:border-white/10 dark:bg-white/5"
+                    className="group flex h-full flex-col overflow-hidden rounded-[1.8rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:from-[#ecf8ff] hover:to-[#deefff] hover:shadow-[0_28px_80px_-40px_rgba(37,99,235,0.35)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80"
                   >
                     <a
                       href={isLinkValid ? href : undefined}
@@ -184,13 +159,13 @@ const ResumeTemplates = () => {
                       </div>
                     </a>
 
-                    <div className="px-1 pb-1 pt-4">
+                    <div className="flex flex-1 flex-col px-1 pb-1 pt-4">
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                        <div className="min-h-[4.4rem] flex-1">
+                          <h2 className="text-base font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                             {title}
                           </h2>
-                          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          <p className="mt-1 text-sm text-[#5f82ac] dark:text-[#81bde6]">
                             {category}
                           </p>
                         </div>
@@ -198,7 +173,7 @@ const ResumeTemplates = () => {
                           href={isLinkValid ? href : undefined}
                           target={isLinkValid ? '_blank' : undefined}
                           rel={isLinkValid ? 'noreferrer' : undefined}
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:border-sky-300 hover:text-sky-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-sky-300/30 dark:hover:text-sky-200"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#86c4ff]/45 bg-[#f5fbff] text-[#4c6f9a] transition hover:border-[#5da8f0] hover:text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#7fb8e2] dark:hover:border-[#8fd9ff]/60 dark:hover:text-[#a8e6ff]"
                           aria-label={`Open ${title}`}
                         >
                           <ArrowUpRight className="h-4 w-4" />
@@ -206,17 +181,17 @@ const ResumeTemplates = () => {
                       </div>
 
                       {template.description ? (
-                        <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        <p className="mt-3 min-h-[3.2rem] line-clamp-2 text-sm leading-6 text-[#3d618e] dark:text-[#7fb8e2]">
                           {template.description}
                         </p>
-                      ) : null}
+                      ) : <div className="mt-3 min-h-[3.2rem]" />}
 
-                      <div className="mt-4 flex items-center gap-3">
+                      <div className="mt-auto flex items-center gap-3 pt-4">
                         <a
                           href={isLinkValid ? href : undefined}
                           target={isLinkValid ? '_blank' : undefined}
                           rel={isLinkValid ? 'noreferrer' : undefined}
-                          className="inline-flex items-center gap-2 rounded-full bg-[#1453a6] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-[#0f448b] dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100"
+                          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#082a5d] transition hover:brightness-105"
                         >
                           <FolderOpen className="h-3.5 w-3.5" />
                           Open
@@ -224,7 +199,7 @@ const ResumeTemplates = () => {
                         <a
                           href={isLinkValid ? href : undefined}
                           download={isLinkValid ? '' : undefined}
-                          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 transition hover:border-sky-300 hover:text-sky-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-sky-300/30 dark:hover:text-sky-200"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/45 bg-[#f5fbff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4c6f9a] transition hover:border-[#5da8f0] hover:text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#7fb8e2] dark:hover:border-[#8fd9ff]/60 dark:hover:text-[#a8e6ff]"
                         >
                           <Download className="h-3.5 w-3.5" />
                           Download
@@ -236,23 +211,22 @@ const ResumeTemplates = () => {
               })}
             </section>
           ) : (
-            <section className="rounded-[2rem] border border-dashed border-slate-200 bg-white/72 p-8 text-left shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-950">
+            <section className="rounded-[2rem] border border-dashed border-[#86c4ff]/45 bg-[#e7f6ff] p-8 text-left shadow-sm backdrop-blur-xl dark:border-[#6fbfff]/35 dark:bg-[#0d366f]/65">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2d7fe8] text-white dark:bg-[#8fd9ff] dark:text-[#0a2f6f]">
                 <FileText className="h-5 w-5" />
               </div>
-              <h2 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
                 Resume PDFs will appear here
               </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-[#4c6f9a] dark:text-[#7fb8e2]">
                 {error
                   ? `Create ${MANIFEST_PATH} with your PDF entries and the grid will populate automatically.`
                   : 'Add PDF entries to the manifest and this page will render them in the document grid.'}
               </p>
             </section>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </UserSidebarLayout>
   );
 };
 

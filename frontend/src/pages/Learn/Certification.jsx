@@ -7,6 +7,7 @@ import {
   Clock,
   Users,
   CheckCircle,
+  ArrowLeft,
   ArrowRight,
   Download,
   Trophy,
@@ -243,6 +244,17 @@ const Certification = () => {
       <ScrollProgress />
 
       <div className="max-w-7xl mx-auto px-6">
+        <div className="mb-6 flex justify-start">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="inline-flex items-center gap-2 px-1 py-1 text-sm font-semibold text-[#2d7fe8] transition hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
+          </button>
+        </div>
+
         {/* Hero Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -250,14 +262,16 @@ const Certification = () => {
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
+          <div className="flex justify-center">
           <h1
             ref={certificationsHeadingRef}
             className={`Marquee-title-no-border ${
               isCertificationsHeadingInViewport ? "in-viewport" : ""
-            } mb-6`}
+            } mb-6 mx-auto w-fit text-center`}
           >
             Get Certified
           </h1>
+          </div>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
             Advance your career with industry-recognized certifications. Learn
             from experts, build real projects, and get the skills that matter.
@@ -331,29 +345,29 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
-      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/20 hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col"
+      className="h-full overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:from-[#ecf8ff] hover:to-[#deefff] hover:shadow-[0_18px_40px_rgba(60,131,246,0.16)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 flex flex-col"
     >
       {/* Content Section */}
       <div className="p-6 flex-1 flex flex-col">
         {/* Header with Level and Price */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full text-sm font-medium">
+            <span className="rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-3 py-1 text-sm font-medium text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
               {certification.level}
             </span>
             <div className="flex items-center gap-1">
               <Star className="w-4 h-4 text-yellow-500 fill-current" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-[#4c6f9a] dark:text-[#7fb8e2]">
                 {certification.rating}
               </span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="text-2xl font-bold text-[#0d2a57] dark:text-[#8fd9ff]">
               ₹{certification.price.toLocaleString()}
             </div>
             {certification.xpDiscount && (
-              <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              <div className="mt-1 text-xs text-[#2d7fe8] dark:text-[#8fd9ff]">
                 Save ₹{certification.xpDiscount} with {certification.requiredXP}{" "}
                 XP
               </div>
@@ -363,15 +377,15 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
 
         {/* Title and Description */}
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h3 className="mb-2 text-xl font-bold text-[#0d2a57] dark:text-[#8fd9ff]">
             {certification.title}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm line-clamp-2">
+          <p className="mb-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] line-clamp-2">
             {certification.description}
           </p>
 
           {/* Stats */}
-          <div className="flex items-center gap-4 mb-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mb-4 flex items-center gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               <span>{certification.duration}</span>
@@ -384,20 +398,20 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
 
           {/* Skills */}
           <div className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            <h4 className="mb-2 text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
               Skills You'll Learn:
             </h4>
             <div className="flex flex-wrap gap-1">
               {certification.skills.slice(0, 3).map((skill, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs"
+                  className="rounded border border-[#86c4ff]/45 bg-[#dbf1ff] px-2 py-1 text-xs text-[#4c6f9a] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#7fb8e2]"
                 >
                   {skill}
                 </span>
               ))}
               {certification.skills.length > 3 && (
-                <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
+                <span className="rounded border border-[#86c4ff]/45 bg-[#dbf1ff] px-2 py-1 text-xs text-[#4c6f9a] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#7fb8e2]">
                   +{certification.skills.length - 3} more
                 </span>
               )}
@@ -406,14 +420,14 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
 
           {/* Features */}
           <div className="mb-6">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            <h4 className="mb-2 text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
               What's Included:
             </h4>
             <ul className="space-y-1">
               {certification.features.slice(0, 3).map((feature, idx) => (
                 <li
                   key={idx}
-                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400"
+                  className="flex items-center gap-2 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]"
                 >
                   <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
                   <span className="line-clamp-1">{feature}</span>
@@ -426,7 +440,7 @@ const CertificationCard = ({ certification, index, onGetCertified }) => {
         {/* Action Button */}
         <button
           onClick={onGetCertified}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 font-semibold rounded-xl transition-all duration-300 hover:shadow-md border border-blue-200/50 dark:border-blue-700/50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#86c4ff]/45 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-6 py-3 font-semibold text-[#082a5d] shadow-md transition-all duration-300 hover:brightness-105 hover:shadow-lg dark:border-[#6fbfff]/35"
         >
           <Trophy className="w-4 h-4" />
           <span>Get Certified</span>

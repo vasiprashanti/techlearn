@@ -35,8 +35,10 @@ import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Performance from './pages/Dashboard/Performance'
 import DailyChallenge from './pages/Dashboard/DailyChallenge'
+import DashboardSettings from './pages/Dashboard/Settings'
 import Languages from './pages/Dashboard/Languages'
 import Concepts from './pages/Dashboard/Concepts'
+import ImportantConceptDetail from './pages/Dashboard/ImportantConceptDetail'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
 import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
@@ -696,12 +698,14 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
-            <Route path="/dashboard/resources/free-courses" element={<LearnMain />} />
+            <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
             <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
+            <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
             <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
-            <Route path="/dashboard/account" element={<Profile />} />
-            <Route path="/dashboard/settings" element={<Profile />} />
+            <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
+            <Route path="/dashboard/profile" element={<Profile />} />
+            <Route path="/dashboard/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
             <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
@@ -722,6 +726,7 @@ function LayoutWrapper() {
             <Route path="/interview/company-based-questions" element={<CompanyQuestions />} />
             <Route path="/core-prep/languages" element={<Languages />} />
             <Route path="/core-prep/important-concepts" element={<Concepts />} />
+            <Route path="/core-prep/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
             <Route path="/resources/roadmaps" element={<Roadmaps />} />
             <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/track-templates" element={<TrackTemplate />} />

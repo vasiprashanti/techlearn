@@ -5,6 +5,7 @@ import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
+const INITIAL_VISIBLE_TAGS = 10;
 
 const difficultyPillClass = {
   Easy: 'bg-[#dff8e7] text-[#1f9c5d] border-[#bceccb]',
@@ -77,6 +78,7 @@ export default function QuestionCatalogPage({
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
   const [selectedTopic, setSelectedTopic] = useState(lockedTopic || 'All Topics');
   const [selectedTag, setSelectedTag] = useState('All');
+  const [showAllTags, setShowAllTags] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const dropdownRef = useRef(null);
 
@@ -86,6 +88,7 @@ export default function QuestionCatalogPage({
 
   useEffect(() => {
     setSelectedTag('All');
+    setShowAllTags(false);
   }, [selectedTopic, lockedTopic]);
 
   useEffect(() => {
@@ -129,6 +132,11 @@ export default function QuestionCatalogPage({
       return matchesSearch && matchesDifficulty && matchesTopic && matchesTag;
     });
   }, [questions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
+
+  const visibleTags = useMemo(() => {
+    if (showAllTags) return availableTags;
+    return availableTags.slice(0, INITIAL_VISIBLE_TAGS);
+  }, [availableTags, showAllTags]);
 
   const handleRowOpen = (question) => {
     if (!question?.topic || !question?.id) return;
@@ -226,56 +234,76 @@ export default function QuestionCatalogPage({
             </div>
 
             {showTopicFilter && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {topicOptions.map((topic) => {
-                  const active = selectedTopic === topic;
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">Topics</p>
+                <div className="question-catalog-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {topicOptions.map((topic) => {
+                    const active = selectedTopic === topic;
+                    return (
+                      <button
+                        key={topic}
+                        type="button"
+                        onClick={() => setSelectedTopic(topic)}
+                        className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition border ${
+                          active
+                            ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-700/50 dark:bg-blue-900/30 dark:text-blue-200'
+                            : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                        }`}
+                      >
+                        {topic}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                  {selectedTopic === 'Company' ? 'Companies' : 'Subtopics'}
+                </p>
+                {availableTags.length > INITIAL_VISIBLE_TAGS && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTags((value) => !value)}
+                    className="text-xs font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+                  >
+                    {showAllTags ? 'Show less' : `Show all (${availableTags.length})`}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTag('All')}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
+                    selectedTag === 'All'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
+                      : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                  }`}
+                >
+                  {selectedTopic === 'Company' ? 'All Companies' : 'All Subtopics'}
+                </button>
+                {visibleTags.map((tag) => {
+                  const active = selectedTag === tag;
                   return (
                     <button
-                      key={topic}
+                      key={tag}
                       type="button"
-                      onClick={() => setSelectedTopic(topic)}
+                      onClick={() => setSelectedTag(tag)}
                       className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                         active
-                          ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-700/50 dark:bg-blue-900/30 dark:text-blue-200'
+                          ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
                           : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
                       }`}
                     >
-                      {topic}
+                      {tag}
                     </button>
                   );
                 })}
               </div>
-            )}
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedTag('All')}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
-                  selectedTag === 'All'
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
-                    : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
-                }`}
-              >
-                {selectedTopic === 'Company' ? 'All Companies' : 'All Topics'}
-              </button>
-              {availableTags.map((tag) => {
-                const active = selectedTag === tag;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setSelectedTag(tag)}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
-                      active
-                        ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
-                        : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
-                    }`}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
             </div>
           </div>
 

@@ -16,6 +16,7 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-7xl
     /^\/dashboard\/practice\/aptitude\/[^/]+$/.test(location.pathname) ||
     /^\/dashboard\/practice\/company-based\/[^/]+$/.test(location.pathname) ||
     /^\/dashboard\/practice\/company-based\/mock\/[^/]+\/[^/]+$/.test(location.pathname) ||
+    /^\/dashboard\/resources\/important-concepts\/[^/]+$/.test(location.pathname) ||
     /^\/dashboard\/daily-challenge\/[^/]+$/.test(location.pathname);
   const showSidebar = isDashboardRoute && !isDashboardDetailRoute;
 

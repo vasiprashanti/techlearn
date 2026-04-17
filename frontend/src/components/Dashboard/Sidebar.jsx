@@ -61,7 +61,7 @@ const menuGroups = [
   {
     title: "ACCOUNT",
     items: [
-      { id: "dashboard/account", title: "Profile & Analytics", icon: <FiUser className="w-4 h-4" /> },
+      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
       { id: "dashboard/settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
     ]
   }
