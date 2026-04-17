@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
-import XPBadge from './XPBadge';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -89,7 +88,7 @@ const Navbar = () => {
     >
       <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
         
-        {/* Logo and XP Badge */}
+        {/* Logo */}
         <div className="logo flex items-center gap-3">
           {!hideLogo && (
             <>
@@ -111,11 +110,6 @@ const Navbar = () => {
                   />
                 </div>
               </Link>
-
-              {/* XP Badge beside logo - Desktop */}
-              <div className="hidden md:block ml-4">
-                <XPBadge />
-              </div>
             </>
           )}
         </div>
@@ -307,11 +301,6 @@ const Navbar = () => {
               </button>
             </div>
           )}
-        </div>
-
-        {/* XP Badge - Mobile */}
-        <div className="py-2 w-full flex justify-start pl-4">
-          <XPBadge />
         </div>
 
         {/* Dark Mode Toggle - Mobile */}
