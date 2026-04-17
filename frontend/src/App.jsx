@@ -55,6 +55,8 @@ import DsaQuestions from './pages/Learn/DsaQuestions'
 import SqlQuestions from './pages/Learn/SqlQuestions'
 import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
 import CompanyQuestions from './pages/Learn/CompanyQuestions'
+import InterviewDsaQuestionDetail from './pages/Learn/InterviewDsaQuestionDetail'
+import InterviewSqlQuestionDetail from './pages/Learn/InterviewSqlQuestionDetail'
 import Roadmaps from './pages/Resources/Roadmaps'
 import ResumeTemplates from './pages/Resources/ResumeTemplates'
 
@@ -642,6 +644,7 @@ function LayoutWrapper() {
   const isStudentSidebarRoute =
     ['/dashboard', '/projects', '/leaderboard'].includes(location.pathname) ||
     location.pathname.startsWith('/interview/') ||
+    location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
     location.pathname.startsWith('/core-prep/important-concepts') ||
     location.pathname.startsWith('/resources/roadmaps') ||
@@ -671,6 +674,13 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
+            <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
+            <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
+            <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
+            <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
+            <Route path="/learn/interview-questions/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
+            <Route path="/learn/interview-questions/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
             <Route path="/interview/all-questions" element={<AllInterviewQuestions />} />
             <Route path="/interview/dsa-questions" element={<DsaQuestions />} />
             <Route path="/interview/sql-questions" element={<SqlQuestions />} />
