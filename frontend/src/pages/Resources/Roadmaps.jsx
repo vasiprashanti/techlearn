@@ -6,13 +6,15 @@ import 'highlight.js/styles/github-dark.css';
 import {
   AlertCircle,
   ArrowUpRight,
-  BookMarked,
+  BookOpenText,
+  CheckSquare,
+  Compass,
   FileText,
-  RefreshCw
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
-import Sidebar from '../../components/Dashboard/Sidebar';
 import ScrollProgress from '../../components/ScrollProgress';
-import { useTheme } from '../../context/ThemeContext';
+import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 
 const ROADMAP_PATH = '/resources/roadmaps/roadmap.md';
 
@@ -24,42 +26,32 @@ const looksLikeHtmlDocument = (content) => {
 
 const markdownComponents = {
   h1: ({ children }) => (
-    <h1 className="mt-10 mb-5 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-4xl">
+    <h1 className="mt-10 mb-5 text-3xl font-bold tracking-tight text-[#0d2a57] dark:text-[#dff3ff] md:text-4xl">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="mt-10 mb-4 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100 md:text-3xl">
+    <h2 className="mt-10 mb-4 text-2xl font-semibold tracking-tight text-[#14386f] dark:text-[#c9e9ff] md:text-3xl">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="mt-8 mb-3 text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+    <h3 className="mt-8 mb-3 text-xl font-semibold tracking-tight text-[#1d4b87] dark:text-[#b7ddff]">
       {children}
     </h3>
   ),
   p: ({ children }) => (
-    <p className="mb-5 text-[15px] leading-8 text-slate-700 dark:text-slate-300 md:text-base">
-      {children}
-    </p>
+    <p className="mb-5 text-[15px] leading-8 text-[#2f588c] dark:text-[#afcff1] md:text-base">{children}</p>
   ),
-  ul: ({ children }) => (
-    <ul className="mb-6 ml-1 space-y-3 text-slate-700 dark:text-slate-300">
-      {children}
-    </ul>
-  ),
+  ul: ({ children }) => <ul className="mb-6 ml-1 space-y-3 text-[#2f588c] dark:text-[#afcff1]">{children}</ul>,
   ol: ({ children }) => (
-    <ol className="mb-6 ml-5 list-decimal space-y-3 text-slate-700 dark:text-slate-300">
-      {children}
-    </ol>
+    <ol className="mb-6 ml-5 list-decimal space-y-3 text-[#2f588c] dark:text-[#afcff1]">{children}</ol>
   ),
   li: ({ children }) => (
-    <li className="pl-2 text-[15px] leading-7 marker:text-[#3C83F6] dark:marker:text-sky-300">
-      {children}
-    </li>
+    <li className="pl-2 text-[15px] leading-7 marker:text-[#1983d8] dark:marker:text-[#7ac7ff]">{children}</li>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="my-8 rounded-3xl border border-sky-200/70 bg-sky-50/80 px-6 py-5 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+    <blockquote className="my-8 rounded-3xl border border-[#90c8ff] bg-[#e9f6ff] px-6 py-5 text-[#2c578d] shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f] dark:text-[#bee1ff]">
       {children}
     </blockquote>
   ),
@@ -68,7 +60,7 @@ const markdownComponents = {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="font-medium text-[#2563eb] underline decoration-[#2563eb]/30 underline-offset-4 transition hover:text-[#1d4ed8] dark:text-sky-300 dark:decoration-sky-300/30 dark:hover:text-sky-200"
+      className="font-medium text-[#0c73be] underline decoration-[#0c73be]/35 underline-offset-4 transition hover:text-[#085a96] dark:text-[#7ac8ff] dark:decoration-[#7ac8ff]/50 dark:hover:text-[#9edbff]"
     >
       {children}
     </a>
@@ -77,7 +69,7 @@ const markdownComponents = {
     if (inline) {
       return (
         <code
-          className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[13px] text-slate-800 dark:border-white/10 dark:bg-white/10 dark:text-slate-100"
+          className="rounded-md border border-[#9fd2ff] bg-[#e1f2ff] px-1.5 py-0.5 font-mono text-[13px] text-[#133f73] dark:border-[#3f74ac] dark:bg-[#10335f] dark:text-[#bee1ff]"
           {...props}
         >
           {children}
@@ -92,17 +84,14 @@ const markdownComponents = {
     );
   },
   pre: ({ children }) => (
-    <pre className="my-8 overflow-x-auto rounded-3xl border border-slate-900/10 bg-slate-950 p-5 text-sm text-slate-100 shadow-xl shadow-slate-950/10 dark:border-white/10">
+    <pre className="my-8 overflow-x-auto rounded-3xl border border-[#335e92] bg-[#0b1f3f] p-5 text-sm text-slate-100 shadow-xl shadow-[#0b1f3f]/30 dark:border-[#3f74ac] dark:bg-[#071831]">
       {children}
     </pre>
   ),
-  hr: () => <hr className="my-10 border-slate-200 dark:border-white/10" />
+  hr: () => <hr className="my-10 border-[#9fd2ff] dark:border-[#3f74ac]" />,
 };
 
-const Roadmaps = () => {
-  const { theme } = useTheme();
-  const isDarkMode = theme === 'dark';
-
+export default function Roadmaps() {
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -116,13 +105,11 @@ const Roadmaps = () => {
         setError('');
 
         const response = await fetch(ROADMAP_PATH, { cache: 'no-store' });
-
         if (!response.ok) {
           throw new Error('Roadmap markdown is not available yet.');
         }
 
         const content = await response.text();
-
         if (looksLikeHtmlDocument(content)) {
           throw new Error('Roadmap markdown file is missing or being served as HTML fallback.');
         }
@@ -143,7 +130,6 @@ const Roadmaps = () => {
     };
 
     loadRoadmap();
-
     return () => {
       cancelled = true;
     };
@@ -152,145 +138,204 @@ const Roadmaps = () => {
   const statusCopy = useMemo(() => {
     if (loading) {
       return {
-        title: 'Loading roadmap',
-        description: 'Preparing the latest markdown content for reading.'
+        title: 'Syncing roadmap',
+        description: 'Loading the latest roadmap markdown and preparing the reading stage.',
       };
     }
 
     if (error) {
       return {
-        title: 'Roadmap not uploaded yet',
-        description: `Add a markdown file at ${ROADMAP_PATH} and this page will render it automatically.`
+        title: 'Roadmap file not available',
+        description: `Add markdown at ${ROADMAP_PATH} and this page will render it automatically.`,
       };
     }
 
     return {
-      title: 'Markdown-powered roadmap',
-      description: 'Uploaded roadmap content is rendered in a clean, reading-first layout.'
+      title: 'Roadmap ready',
+      description: 'Your markdown is now rendered with readability-first structure and visual hierarchy.',
     };
   }, [error, loading]);
 
+  const roadmapMetrics = useMemo(() => {
+    if (!markdown) {
+      return {
+        words: 0,
+        sections: 0,
+        checkboxes: 0,
+      };
+    }
+
+    const words = markdown.trim().split(/\s+/).filter(Boolean).length;
+    const sections = markdown.split('\n').filter((line) => /^#{1,3}\s/.test(line.trim())).length;
+    const checkboxes = markdown.split('\n').filter((line) => /-\s\[[ xX]\]/.test(line.trim())).length;
+
+    return { words, sections, checkboxes };
+  }, [markdown]);
+
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased ${isDarkMode ? 'dark' : 'light'}`}>
+    <UserSidebarLayout maxWidthClass="max-w-[90rem]">
       <ScrollProgress />
 
-      <div
-        className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
-          isDarkMode
-            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
-            : 'bg-gradient-to-br from-[#daf0fa] via-[#c9edff] to-[#daf0fa]'
-        }`}
-      />
-
-      <Sidebar />
-
-      <main className="relative z-10 flex-1 overflow-y-auto px-5 pb-10 pt-24 lg:ml-64 lg:px-10">
-        <div className="mx-auto max-w-6xl space-y-6">
-          <section className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-[0_24px_80px_-40px_rgba(37,99,235,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_24px_80px_-40px_rgba(15,23,42,0.9)] md:p-8">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-sky-200/80 bg-sky-100/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 dark:border-sky-300/20 dark:bg-sky-400/10 dark:text-sky-200">
-                  <BookMarked className="h-4 w-4" />
-                  Roadmaps
-                </div>
-                <h1 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white md:text-5xl">
-                  Clear, readable learning plans.
-                </h1>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300 md:text-lg">
-                  This page is built to feel like a focused notes view: soft framing, generous spacing, and markdown rendered with strong hierarchy.
-                </p>
+      <div className="space-y-6">
+        <section className="overflow-hidden rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-8 lg:p-10">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#8ec8ff] bg-[#e4f4ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#10335f] dark:text-[#9cd6ff]">
+                <Compass className="h-4 w-4" />
+                Learning Roadmaps
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 md:max-w-sm md:grid-cols-1">
-                <div className="rounded-[1.5rem] border border-slate-200/70 bg-white/85 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Source
-                  </p>
-                  <p className="mt-2 break-all text-sm text-slate-700 dark:text-slate-200">
-                    {ROADMAP_PATH}
-                  </p>
+              <h1 className="mt-5 text-3xl font-bold leading-tight tracking-tight text-[#0f2d5d] dark:text-[#dff3ff] sm:text-4xl md:text-5xl">
+                Plan clearly, track faster, and read your roadmap without visual noise.
+              </h1>
+
+              <p className="mt-4 max-w-3xl text-base leading-8 text-[#2f588c] dark:text-[#afcff1] md:text-lg">
+                This page is rebuilt from scratch with high-clarity cards, stronger borders, and a markdown stage tuned for both light and dark mode readability.
+              </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Sections</p>
+                  <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.sections}</p>
                 </div>
-                <div className="rounded-[1.5rem] border border-slate-200/70 bg-white/85 px-5 py-4 shadow-sm dark:border-white/10 dark:bg-white/5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Status
-                  </p>
-                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
-                    {statusCopy.title}
-                  </p>
+                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Words</p>
+                  <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.words}</p>
+                </div>
+                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Checkpoints</p>
+                  <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.checkboxes}</p>
                 </div>
               </div>
             </div>
-          </section>
 
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-            <article className="rounded-[2rem] border border-white/60 bg-white/82 p-6 shadow-[0_24px_70px_-45px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-[#081223]/80 md:p-8 lg:p-10">
-              {loading ? (
-                <div className="flex min-h-[320px] items-center justify-center">
-                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-5 py-3 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Loading roadmap content
-                  </div>
-                </div>
-              ) : error ? (
-                <div className="flex min-h-[320px] flex-col items-start justify-center rounded-[1.75rem] border border-dashed border-slate-200 bg-slate-50/70 p-8 dark:border-white/10 dark:bg-white/[0.03]">
-                  <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-slate-950">
-                    <AlertCircle className="h-5 w-5" />
-                  </div>
-                  <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
-                    {statusCopy.title}
-                  </h2>
-                  <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    {statusCopy.description}
-                  </p>
-                </div>
-              ) : (
-                <div className="markdown-body">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                    components={markdownComponents}
-                  >
-                    {markdown}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </article>
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] p-4 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Roadmap Source</p>
+                <p className="mt-2 break-all text-sm font-medium text-[#163f75] dark:text-[#d3edff]">{ROADMAP_PATH}</p>
+              </div>
 
-            <aside className="space-y-4">
-              <div className="rounded-[1.75rem] border border-white/60 bg-white/72 p-5 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
-                <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-400/10 dark:text-sky-200">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <h2 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">
-                  Reading-first layout
-                </h2>
-                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                  Wide enough for comfortable reading, but constrained enough to keep long markdown easy to scan on desktop and mobile.
-                </p>
+              <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] p-4 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Current Status</p>
+                <p className="mt-2 text-base font-semibold text-[#163f75] dark:text-[#d3edff]">{statusCopy.title}</p>
+                <p className="mt-1 text-sm leading-6 text-[#2f588c] dark:text-[#afcff1]">{statusCopy.description}</p>
               </div>
 
               <a
                 href={ROADMAP_PATH}
                 target="_blank"
                 rel="noreferrer"
-                className="group flex items-center justify-between rounded-[1.75rem] border border-slate-200/80 bg-white/85 p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-lg dark:border-white/10 dark:bg-white/5 dark:hover:border-sky-300/30"
+                className="group flex items-center justify-between rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] px-4 py-3 text-sm font-semibold text-[#1266af] transition hover:-translate-y-0.5 hover:border-[#6fbfff] hover:bg-[#d9efff] dark:border-[#6fbfff] dark:bg-[#10335f] dark:text-[#9cd6ff] dark:hover:bg-[#14406f]"
               >
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    Open Source File
-                  </p>
-                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
-                    View raw markdown
-                  </p>
-                </div>
-                <ArrowUpRight className="h-5 w-5 text-slate-400 transition group-hover:text-sky-600 dark:group-hover:text-sky-300" />
+                Open Raw Markdown
+                <ArrowUpRight className="h-4 w-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </a>
-            </aside>
-          </section>
-        </div>
-      </main>
-    </div>
-  );
-};
+            </div>
+          </div>
+        </section>
 
-export default Roadmaps;
+        <section className="grid gap-5 md:grid-cols-3">
+          <div className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-5 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
+              <BookOpenText className="h-5 w-5" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-[#163f75] dark:text-[#d3edff]">Reading-first markdown</h2>
+            <p className="mt-2 text-sm leading-7 text-[#2f588c] dark:text-[#afcff1]">
+              Typography and spacing are tuned for long roadmap docs with less eye strain.
+            </p>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-5 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
+              <FileText className="h-5 w-5" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-[#163f75] dark:text-[#d3edff]">Single source flow</h2>
+            <p className="mt-2 text-sm leading-7 text-[#2f588c] dark:text-[#afcff1]">
+              Edit one markdown file and this page remains synced without manual page updates.
+            </p>
+          </div>
+
+          <div className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-5 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <h2 className="mt-4 text-lg font-semibold text-[#163f75] dark:text-[#d3edff]">Clear visual rails</h2>
+            <p className="mt-2 text-sm leading-7 text-[#2f588c] dark:text-[#afcff1]">
+              Every component uses explicit borders and contrast-safe colors in both modes.
+            </p>
+          </div>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-stretch">
+          <article className="rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-8 lg:p-10 xl:flex xl:h-[40rem] xl:flex-col">
+            {loading ? (
+              <div className="flex min-h-[360px] items-center justify-center xl:flex-1">
+                <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-5 py-3 text-sm font-medium text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading roadmap content
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex min-h-[360px] flex-col items-start justify-center rounded-[1.6rem] border border-dashed border-[#86c4ff]/45 bg-[#e7f6ff] p-8 dark:border-[#6fbfff]/35 dark:bg-[#0d366f]/65 xl:flex-1">
+                <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <h2 className="text-2xl font-semibold tracking-tight text-[#163f75] dark:text-[#d3edff]">{statusCopy.title}</h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-[#2f588c] dark:text-[#afcff1]">{statusCopy.description}</p>
+              </div>
+            ) : (
+              <div className="markdown-body xl:flex-1 xl:overflow-y-auto xl:pr-2 xl:[scrollbar-width:thin] xl:[scrollbar-color:#7abdf2_transparent] xl:[&::-webkit-scrollbar]:w-1.5 xl:[&::-webkit-scrollbar-track]:bg-transparent xl:[&::-webkit-scrollbar-thumb]:rounded-full xl:[&::-webkit-scrollbar-thumb]:bg-[#7abdf2]/70 dark:xl:[&::-webkit-scrollbar-thumb]:bg-[#5e9dd0]/70">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
+                  {markdown}
+                </ReactMarkdown>
+              </div>
+            )}
+          </article>
+
+          <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start xl:flex xl:h-[40rem] xl:flex-col">
+            <div className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-5 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f]">
+              <h2 className="text-lg font-semibold text-[#163f75] dark:text-[#d3edff]">Usage guide</h2>
+              <ul className="mt-3 space-y-2 text-sm leading-7 text-[#2f588c] dark:text-[#afcff1]">
+                <li>1. Add milestones with markdown headings.</li>
+                <li>2. Track task completion with checkboxes.</li>
+                <li>3. Keep one roadmap file for consistent updates.</li>
+              </ul>
+            </div>
+
+            <div className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-5 shadow-sm dark:border-[#3f74ac] dark:bg-[#10335f] xl:flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#4a79ab] dark:text-[#9ed0ff]">Live snapshot</p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between rounded-xl border border-[#9fd2ff] bg-[#f7fcff] px-3 py-2 dark:border-[#3f74ac] dark:bg-[#0a2345]">
+                  <span className="text-sm text-[#2f588c] dark:text-[#afcff1]">Sections</span>
+                  <span className="text-sm font-semibold text-[#163f75] dark:text-[#d3edff]">{roadmapMetrics.sections}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-[#9fd2ff] bg-[#f7fcff] px-3 py-2 dark:border-[#3f74ac] dark:bg-[#0a2345]">
+                  <span className="text-sm text-[#2f588c] dark:text-[#afcff1]">Words</span>
+                  <span className="text-sm font-semibold text-[#163f75] dark:text-[#d3edff]">{roadmapMetrics.words}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl border border-[#9fd2ff] bg-[#f7fcff] px-3 py-2 dark:border-[#3f74ac] dark:bg-[#0a2345]">
+                  <span className="text-sm text-[#2f588c] dark:text-[#afcff1]">Checklist items</span>
+                  <span className="text-sm font-semibold text-[#163f75] dark:text-[#d3edff]">{roadmapMetrics.checkboxes}</span>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-[#9fd2ff] bg-[#f7fcff] p-3 text-xs leading-6 text-[#2f588c] dark:border-[#3f74ac] dark:bg-[#0a2345] dark:text-[#afcff1]">
+                Current render mode: {loading ? 'Loading' : error ? 'Awaiting markdown file' : 'Markdown live'}
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="rounded-[1.6rem] border border-[#9fd2ff] bg-[#edf8ff] p-4 text-sm text-[#2f588c] dark:border-[#3f74ac] dark:bg-[#10335f] dark:text-[#afcff1]">
+          <div className="inline-flex items-center gap-2 font-semibold text-[#163f75] dark:text-[#d3edff]">
+            <CheckSquare className="h-4 w-4" />
+            Visibility and contrast pass
+          </div>
+          <p className="mt-2">
+            All main containers, metric blocks, and markdown regions use clear border separation and high-contrast text in both light and dark modes.
+          </p>
+        </section>
+      </div>
+    </UserSidebarLayout>
+  );
+}

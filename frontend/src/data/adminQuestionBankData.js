@@ -262,4 +262,9 @@ export const interviewQuestionsCatalog = [
   { id: 'iq-22', title: 'Dynamic Programming - Knapsack', subtitle: 'DP', difficulty: 'Hard', topic: 'DSA' },
   { id: 'iq-23', title: 'Indexed Views in SQL', subtitle: 'Advanced', difficulty: 'Hard', topic: 'SQL' },
   { id: 'iq-24', title: 'Deadlock Detection', subtitle: 'OS', difficulty: 'Hard', topic: 'Core CS' },
+  { id: 'iq-25', title: 'Ratio and Proportion Basics', subtitle: 'Ratios', difficulty: 'Easy', topic: 'Aptitude' },
+  { id: 'iq-26', title: 'Time and Work Efficiency', subtitle: 'Time & Work', difficulty: 'Medium', topic: 'Aptitude' },
+  { id: 'iq-27', title: 'Profit and Loss with Discounts', subtitle: 'Percentages', difficulty: 'Medium', topic: 'Aptitude' },
+  { id: 'iq-28', title: 'Number Series Pattern Match', subtitle: 'Reasoning', difficulty: 'Easy', topic: 'Aptitude' },
+  { id: 'iq-29', title: 'Speed, Distance and Relative Motion', subtitle: 'Speed & Distance', difficulty: 'Hard', topic: 'Aptitude' },
 ];

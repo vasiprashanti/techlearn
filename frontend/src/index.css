@@ -14,13 +14,6 @@
   }
 }
 
-@media (min-width: 1024px) {
-  body.dashboard-sidebar-disabled .lg\:ml-64,
-  body.dashboard-sidebar-disabled .lg\:ml-20 {
-    margin-left: 0 !important;
-  }
-}
-
 /* Custom component styles */
 @layer components {
   .btn-primary {

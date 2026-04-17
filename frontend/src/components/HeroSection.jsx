@@ -10,7 +10,7 @@ const HeroSection = () => {
 
   return (
     <motion.div
-      className="relative z-10 bg-white/40 dark:bg-gray-900/40 backdrop-blur-xl border-b border-white/20 dark:border-gray-700/20 overflow-hidden pt-20"
+      className="relative z-10 bg-[var(--tl-sky-50)] dark:bg-[var(--tl-sky-100)] backdrop-blur-xl border-b border-[var(--tl-sky-200)] dark:border-[var(--tl-sky-400)] overflow-hidden pt-20"
       initial={{ filter: "blur(10px)" }}
       animate={{ filter: "blur(0px)" }}
       transition={{ duration: 1.2, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -57,7 +57,7 @@ const HeroSection = () => {
 
             {/* Warning Text */}
             <motion.p
-              className="font-poppins text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-400 hover-gradient-text max-w-full break-words"
+              className="font-poppins text-sm sm:text-base md:text-lg lg:text-xl text-[var(--tl-navy-800)] dark:text-[var(--tl-sky-600)] hover-gradient-text max-w-full break-words"
               initial={{ filter: "blur(4px)" }}
               animate={{ filter: "blur(0px)" }}
               transition={{ duration: 0.8, delay: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}

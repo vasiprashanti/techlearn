@@ -33,6 +33,8 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
+import Performance from './pages/Dashboard/Performance'
+import DailyChallenge from './pages/Dashboard/DailyChallenge'
 import Languages from './pages/Dashboard/Languages'
 import Concepts from './pages/Dashboard/Concepts'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
@@ -45,7 +47,6 @@ import UserCoding from './pages/Coding/UserCoding';
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
-import AllCourses from './pages/Learn/AllCourses'
 import CourseDetails from './pages/Learn/CourseDetails'
 import CourseQuiz from './pages/Learn/CourseQuiz'
 import CourseTopics from './pages/Learn/CourseTopics'
@@ -54,9 +55,14 @@ import AllInterviewQuestions from './pages/Learn/AllInterviewQuestions'
 import DsaQuestions from './pages/Learn/DsaQuestions'
 import SqlQuestions from './pages/Learn/SqlQuestions'
 import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
+import AptitudeQuestions from './pages/Learn/AptitudeQuestions'
 import CompanyQuestions from './pages/Learn/CompanyQuestions'
 import InterviewDsaQuestionDetail from './pages/Learn/InterviewDsaQuestionDetail'
 import InterviewSqlQuestionDetail from './pages/Learn/InterviewSqlQuestionDetail'
+import InterviewCoreCsQuestionDetail from './pages/Learn/InterviewCoreCsQuestionDetail'
+import InterviewCompanyQuestionDetail from './pages/Learn/InterviewCompanyQuestionDetail'
+import InterviewAptitudeQuestionDetail from './pages/Learn/InterviewAptitudeQuestionDetail'
+import CompanyMockQuestionDetail from './pages/Learn/CompanyMockQuestionDetail'
 import Roadmaps from './pages/Resources/Roadmaps'
 import ResumeTemplates from './pages/Resources/ResumeTemplates'
 
@@ -642,7 +648,8 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/admin');
 
   const isStudentSidebarRoute =
-    ['/dashboard', '/projects', '/leaderboard'].includes(location.pathname) ||
+    ['/projects', '/leaderboard'].includes(location.pathname) ||
+    location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/interview/') ||
     location.pathname.startsWith('/learn/interview-questions') ||
     location.pathname.startsWith('/core-prep/languages') ||
@@ -673,14 +680,41 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/dashboard/roadmap" element={<Roadmaps />} />
+            <Route path="/dashboard/practice" element={<AllInterviewQuestions />} />
+            <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
+            <Route path="/dashboard/practice/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
+            <Route path="/dashboard/practice/aptitude" element={<AptitudeQuestions />} />
+            <Route path="/dashboard/practice/aptitude/:questionId" element={<InterviewAptitudeQuestionDetail />} />
+            <Route path="/dashboard/practice/sql" element={<SqlQuestions />} />
+            <Route path="/dashboard/practice/dsa" element={<DsaQuestions />} />
+            <Route path="/dashboard/practice/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
+            <Route path="/dashboard/practice/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
+            <Route path="/dashboard/practice/company-based" element={<CompanyQuestions />} />
+            <Route path="/dashboard/practice/company-based/:questionId" element={<InterviewCompanyQuestionDetail />} />
+            <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
+            <Route path="/dashboard/performance" element={<Performance />} />
+            <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
+            <Route path="/dashboard/resources/free-courses" element={<LearnMain />} />
+            <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
+            <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
+            <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
+            <Route path="/dashboard/account" element={<Profile />} />
+            <Route path="/dashboard/settings" element={<Profile />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
             <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
             <Route path="/learn/interview-questions/sql" element={<SqlQuestions />} />
             <Route path="/learn/interview-questions/core-cs" element={<CoreCsQuestions />} />
+            <Route path="/learn/interview-questions/aptitude" element={<AptitudeQuestions />} />
             <Route path="/learn/interview-questions/company" element={<CompanyQuestions />} />
             <Route path="/learn/interview-questions/dsa/:questionId" element={<InterviewDsaQuestionDetail />} />
             <Route path="/learn/interview-questions/sql/:questionId" element={<InterviewSqlQuestionDetail />} />
+            <Route path="/learn/interview-questions/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
+            <Route path="/learn/interview-questions/aptitude/:questionId" element={<InterviewAptitudeQuestionDetail />} />
+            <Route path="/learn/interview-questions/company/:questionId" element={<InterviewCompanyQuestionDetail />} />
+            <Route path="/learn/interview-questions/company/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/interview/all-questions" element={<AllInterviewQuestions />} />
             <Route path="/interview/dsa-questions" element={<DsaQuestions />} />
             <Route path="/interview/sql-questions" element={<SqlQuestions />} />
@@ -700,7 +734,7 @@ function LayoutWrapper() {
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
           <Route path="/learn/courses" element={<Navigate to="/learn" replace />} />
-          <Route path="/learn/courses/all" element={<AllCourses />} />
+          <Route path="/learn/courses/all" element={<Navigate to="/learn" replace />} />
           <Route path="/learn/courses/:courseId" element={<CourseDetails />} />
           <Route path="/learn/courses/:courseId/topics" element={<CourseTopics />} />
           <Route path="/learn/courses/:courseId/quiz" element={<CourseQuiz />} />

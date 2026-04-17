@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Filter, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
-const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company'];
+const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
 
 const difficultyPillClass = {
   Easy: 'bg-[#dff8e7] text-[#1f9c5d] border-[#bceccb]',
@@ -17,6 +17,7 @@ const topicPillClass = {
   SQL: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800',
   'Core CS': 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-300 dark:border-slate-800',
   Company: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800',
+  Aptitude: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
 };
 
 function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
@@ -71,6 +72,7 @@ export default function QuestionCatalogPage({
   showTopicFilter = true,
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
   const [selectedTopic, setSelectedTopic] = useState(lockedTopic || 'All Topics');
@@ -131,23 +133,55 @@ export default function QuestionCatalogPage({
   const handleRowOpen = (question) => {
     if (!question?.topic || !question?.id) return;
 
+    const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/');
+
     if (question.topic === 'DSA') {
-      navigate(`/learn/interview-questions/dsa/${question.id}`);
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/dsa/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/dsa/${question.id}`);
+      }
       return;
     }
 
     if (question.topic === 'SQL') {
-      navigate(`/learn/interview-questions/sql/${question.id}`);
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/sql/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/sql/${question.id}`);
+      }
       return;
     }
 
     if (question.topic === 'Core CS') {
-      navigate('/learn/interview-questions/core-cs');
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/core-cs/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/core-cs/${question.id}`);
+      }
       return;
     }
 
     if (question.topic === 'Company') {
-      navigate('/learn/interview-questions/company');
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/company-based/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/company/${question.id}`);
+      }
+      return;
+    }
+
+    if (question.topic === 'Aptitude') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/aptitude/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/aptitude/${question.id}`);
+      }
     }
   };
 
@@ -245,8 +279,8 @@ export default function QuestionCatalogPage({
             </div>
           </div>
 
-          <div className="relative z-0 mt-5 overflow-hidden rounded-[1.375rem] border border-white/20 bg-white/50 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/30">
-            <div className="overflow-x-auto">
+          <div className="relative z-0 mt-5 overflow-hidden rounded-[1.375rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <div className="question-catalog-scroll max-h-[62vh] overflow-y-auto overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-white/50 text-left text-xs font-semibold uppercase tracking-[0.08em] text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">

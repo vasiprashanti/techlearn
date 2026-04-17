@@ -217,7 +217,7 @@ const Navbar = () => {
         <button
           type="button"
           className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
-            isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
+            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
           }`}
           onClick={toggleMenu}
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}

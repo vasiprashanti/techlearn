@@ -21,7 +21,7 @@ const LiveBatchDetails = () => {
 
   const handleBackToCourses = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    setTimeout(() => navigate('/learn/courses'), 100);
+    setTimeout(() => navigate('/learn'), 100);
   };
 
   // Live Batches detailed data
