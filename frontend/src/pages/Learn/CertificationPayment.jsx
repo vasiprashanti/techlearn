@@ -372,7 +372,7 @@ const CertificationPayment = () => {
         >
           <button
             onClick={() => navigate("/learn/certification")}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-1 py-1 text-sm font-semibold text-[#2d7fe8] transition hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Back to Certifications</span>
@@ -387,19 +387,19 @@ const CertificationPayment = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="lg:col-span-2"
           >
-            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl p-8 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 font-poppins">
+            <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-lg dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+              <h2 className="mb-8 font-poppins text-3xl font-bold text-[#0d2a57] dark:text-[#8fd9ff]">
                 Complete Your Enrollment
               </h2>
 
               {/* Contact Information */}
               <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                <h3 className="mb-6 text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                   Contact Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[#4c6f9a] dark:text-[#7fb8e2]">
                       Full Name
                     </label>
                     <input
@@ -407,12 +407,12 @@ const CertificationPayment = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full rounded-lg border border-[#86c4ff]/45 bg-[#f5fbff] px-4 py-3 text-[#0d2a57] placeholder-[#7aa1c6] outline-none focus:border-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#8fd9ff] dark:placeholder-[#78b3de]"
                       placeholder="Enter your full name"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[#4c6f9a] dark:text-[#7fb8e2]">
                       Email Address
                     </label>
                     <input
@@ -420,12 +420,12 @@ const CertificationPayment = () => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full rounded-lg border border-[#86c4ff]/45 bg-[#f5fbff] px-4 py-3 text-[#0d2a57] placeholder-[#7aa1c6] outline-none focus:border-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#8fd9ff] dark:placeholder-[#78b3de]"
                       placeholder="Enter your email address"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="mb-2 block text-sm font-medium text-[#4c6f9a] dark:text-[#7fb8e2]">
                       Phone Number
                     </label>
                     <input
@@ -433,7 +433,7 @@ const CertificationPayment = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
-                      className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full rounded-lg border border-[#86c4ff]/45 bg-[#f5fbff] px-4 py-3 text-[#0d2a57] placeholder-[#7aa1c6] outline-none focus:border-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#8fd9ff] dark:placeholder-[#78b3de]"
                       placeholder="Enter your phone number"
                     />
                   </div>
@@ -442,7 +442,7 @@ const CertificationPayment = () => {
 
               {/* Payment Method */}
               <div className="mb-8">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                <h3 className="mb-6 text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                   Choose Payment Method
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -450,8 +450,8 @@ const CertificationPayment = () => {
                   <div
                     className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       selectedPaymentMethod === "upi"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700/30 hover:border-gray-400 dark:hover:border-gray-500"
+                        ? "border-[#2d7fe8] bg-[#dbf1ff] dark:border-[#8fd9ff] dark:bg-[#0d366f]/60"
+                        : "border-[#86c4ff]/40 bg-[#f5fbff] hover:border-[#5da8f0] dark:border-[#6fbfff]/30 dark:bg-[#0a2f6f]/45 dark:hover:border-[#8fd9ff]/60"
                     }`}
                     onClick={() => setSelectedPaymentMethod("upi")}
                   >
@@ -461,13 +461,13 @@ const CertificationPayment = () => {
                           <Smartphone className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                          <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                             UPI Payment
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                             Secure payment with UPI
                           </p>
-                          <p className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                          <p className="text-lg font-bold text-[#2d7fe8] dark:text-[#8fd9ff]">
                             ₹{getFinalPrice().toLocaleString()}
                           </p>
                         </div>
@@ -491,8 +491,8 @@ const CertificationPayment = () => {
                   <div
                     className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       selectedPaymentMethod === "xp"
-                        ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-500/10"
-                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700/30 hover:border-gray-400 dark:hover:border-gray-500"
+                        ? "border-[#f0c85f] bg-[#fff4cc] dark:border-[#f0c85f]/70 dark:bg-[#7c6216]/25"
+                        : "border-[#86c4ff]/40 bg-[#f5fbff] hover:border-[#5da8f0] dark:border-[#6fbfff]/30 dark:bg-[#0a2f6f]/45 dark:hover:border-[#8fd9ff]/60"
                     }`}
                     onClick={() => setSelectedPaymentMethod("xp")}
                   >
@@ -502,10 +502,10 @@ const CertificationPayment = () => {
                           <Trophy className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-gray-900 dark:text-white">
+                          <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                             Redeem XP Points
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                             {certification.xpDiscount
                               ? `Save ₹${certification.xpDiscount} with XP points`
                               : "Use your earned XP points"}
@@ -527,18 +527,18 @@ const CertificationPayment = () => {
               {/* Payment Details - Only show after user clicks "Proceed to Pay" */}
               {showPaymentDetails && selectedPaymentMethod === "upi" && (
                 <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                  <h3 className="mb-6 text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                     Complete Your Payment
                   </h3>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                  <div className="rounded-lg border border-[#86c4ff]/40 bg-[#f5fbff] p-6 dark:border-[#6fbfff]/30 dark:bg-[#0a2f6f]/55">
                     <div className="text-center mb-6">
                       <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
                         <Smartphone className="w-8 h-8 text-white" />
                       </div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      <h4 className="mb-2 text-lg font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                         UPI Payment
                       </h4>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">
+                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Google Pay, PhonePe, Paytm, BHIM
                       </p>
                     </div>
@@ -550,9 +550,9 @@ const CertificationPayment = () => {
                           className="w-48 h-48 mx-auto"
                         />
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Scan QR code or pay to UPI ID:{" "}
-                        <strong className="text-gray-900 dark:text-white">
+                        <strong className="text-[#0d2a57] dark:text-[#8fd9ff]">
                           9676663136@axl
                         </strong>
                       </p>
@@ -563,7 +563,7 @@ const CertificationPayment = () => {
 
                     {/* Transaction ID Input */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Transaction ID *
                       </label>
                       <input
@@ -571,11 +571,11 @@ const CertificationPayment = () => {
                         name="transactionId"
                         value={formData.transactionId}
                         onChange={handleInputChange}
-                        className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full rounded-lg border border-[#86c4ff]/45 bg-white px-4 py-3 text-[#0d2a57] placeholder-[#7aa1c6] outline-none focus:border-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#8fd9ff] dark:placeholder-[#78b3de]"
                         placeholder="Enter transaction ID after payment"
                         required
                       />
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="mt-1 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Enter the transaction ID you received after completing
                         the UPI payment
                       </p>
@@ -587,12 +587,12 @@ const CertificationPayment = () => {
               {/* XP Redemption Details */}
               {selectedPaymentMethod === "xp" && (
                 <div className="mb-8">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                  <h3 className="mb-6 text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                     XP Points Redemption
                   </h3>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                  <div className="rounded-lg border border-[#86c4ff]/40 bg-[#f5fbff] p-6 dark:border-[#6fbfff]/30 dark:bg-[#0a2f6f]/55">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-gray-700 dark:text-gray-300">
+                      <span className="text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Available XP Points:
                       </span>
                       <span className="text-yellow-600 dark:text-yellow-400 font-bold">
@@ -600,10 +600,10 @@ const CertificationPayment = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-gray-700 dark:text-gray-300">
+                      <span className="text-[#4c6f9a] dark:text-[#7fb8e2]">
                         Required XP Points:
                       </span>
-                      <span className="text-gray-900 dark:text-white font-bold">
+                      <span className="font-bold text-[#0d2a57] dark:text-[#8fd9ff]">
                         1000 XP
                       </span>
                     </div>
@@ -687,7 +687,7 @@ const CertificationPayment = () => {
                     isProcessing ||
                     (selectedPaymentMethod === "xp" && userXP < 1000)
                   }
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#86c4ff]/45 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-6 py-4 font-semibold text-[#082a5d] shadow-md transition-all duration-300 hover:brightness-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#6fbfff]/35"
                 >
                   {isProcessing ? (
                     <>
@@ -712,7 +712,7 @@ const CertificationPayment = () => {
                       !formData.transactionId) ||
                     paymentStatus !== "eligible"
                   }
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#86c4ff]/45 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-6 py-4 font-semibold text-[#082a5d] shadow-md transition-all duration-300 hover:brightness-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#6fbfff]/35"
                 >
                   {isProcessing ? (
                     <>
@@ -736,21 +736,21 @@ const CertificationPayment = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
           >
-            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl p-6 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+            <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-lg dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+              <h3 className="mb-6 text-xl font-bold text-[#0d2a57] dark:text-[#8fd9ff]">
                 Order Summary
               </h3>
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-lg">
+                  <h4 className="text-lg font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                     {certification.title} Programming
                   </h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-2">
+                  <p className="mb-2 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                     {certification.description}
                   </p>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <div className="mb-4 flex items-center gap-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
                       <span>{certification.duration}</span>
@@ -761,20 +761,20 @@ const CertificationPayment = () => {
                     </div>
                   </div>
 
-                  <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                  <span className="rounded border border-[#86c4ff]/45 bg-[#dbf1ff] px-2 py-1 text-xs text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
                     Beginner
                   </span>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                  <h5 className="font-semibold text-gray-900 dark:text-white mb-3">
+                <div className="border-t border-[#86c4ff]/35 pt-4 dark:border-[#6fbfff]/25">
+                  <h5 className="mb-3 font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                     What's Included:
                   </h5>
                   <div className="space-y-2">
                     {certification.features.map((feature, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                           {feature}
                         </span>
                       </div>
@@ -782,18 +782,18 @@ const CertificationPayment = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-gray-200 dark:border-gray-600 pt-4 space-y-2">
+                <div className="space-y-2 border-t border-[#86c4ff]/35 pt-4 dark:border-[#6fbfff]/25">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">
+                    <span className="text-[#4c6f9a] dark:text-[#7fb8e2]">
                       Original Price:
                     </span>
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#0d2a57] dark:text-[#8fd9ff]">
                       ₹{certification.originalPrice.toLocaleString()}
                     </span>
                   </div>
                   {isEligibleForXPDiscount() && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
+                      <span className="text-[#4c6f9a] dark:text-[#7fb8e2]">
                         XP Discount ({certification.requiredXP} XP):
                       </span>
                       <span className="text-green-600 dark:text-green-400">
@@ -802,10 +802,10 @@ const CertificationPayment = () => {
                     </div>
                   )}
                   <div className="flex justify-between text-xl font-bold">
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#0d2a57] dark:text-[#8fd9ff]">
                       Total:
                     </span>
-                    <span className="text-gray-900 dark:text-white">
+                    <span className="text-[#0d2a57] dark:text-[#8fd9ff]">
                       ₹{getFinalPrice().toLocaleString()}
                     </span>
                   </div>

@@ -44,7 +44,7 @@ const CourseQuiz = () => {
   useEffect(() => {
     if (!isAuthenticated) {
       window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-      setTimeout(() => navigate('/learn/courses', { replace: true }), 100);
+      setTimeout(() => navigate('/learn', { replace: true }), 100);
     }
   }, [isAuthenticated, navigate]);
 
@@ -233,8 +233,8 @@ const CourseQuiz = () => {
             <p className="text-sm text-black/60 dark:text-white/60 font-light mb-8">
               {!isAuthenticated ? 'Please log in to access the quiz.' : error ? error : 'The requested quiz could not be located.'}
             </p>
-            <button onClick={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn/courses'), 100); }} className="px-6 py-3 bg-[#3C83F6] text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md hover:shadow-lg w-full">
-              Back to Courses
+            <button onClick={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn'), 100); }} className="px-6 py-3 bg-[#3C83F6] text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md hover:shadow-lg w-full">
+              Back to Learn
             </button>
           </div>
         )}
@@ -301,7 +301,7 @@ const CourseQuiz = () => {
               totalQuestions={quiz.questions.length}
               correctAnswers={correctAnswers}
               totalXP={calculateTotalXP()}
-              onBackToCourse={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate(`/learn/courses/${courseId}`), 100); }}
+              onBackToCourse={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn'), 100); }}
               onBackToHome={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn'), 100); }}
             />
           ) : (
@@ -496,7 +496,7 @@ const QuizResults = ({ score, passingScore, totalQuestions, correctAnswers, onBa
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button onClick={onBackToCourse} className="flex items-center justify-center gap-2 px-8 py-3 bg-white/40 dark:bg-black/40 border border-black/5 dark:border-white/5 text-black/60 dark:text-white/60 hover:bg-white/60 dark:hover:bg-black/60 hover:text-black dark:hover:text-white rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300">
-            <ArrowLeft className="w-3 h-3" /> Back to Course
+            <ArrowLeft className="w-3 h-3" /> Back to Learn
           </button>
           <button onClick={onBackToHome} className="flex items-center justify-center gap-2 px-8 py-3 bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md">
             <Home className="w-3 h-3" /> Learn Home

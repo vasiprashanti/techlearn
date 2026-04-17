@@ -103,7 +103,7 @@ const SectionCard = ({ section, index }) => {
   const handleNavigation = () => {
     switch(section.id) {
       case 'courses':
-        navigate('/learn/courses');
+        navigate('/learn');
         break;
       case 'exercises':
         navigate('/learn/exercises');

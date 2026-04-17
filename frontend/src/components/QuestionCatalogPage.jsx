@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Filter, Search } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
-const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company'];
+const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
+const INITIAL_VISIBLE_TAGS = 10;
 
 const difficultyPillClass = {
   Easy: 'bg-[#dff8e7] text-[#1f9c5d] border-[#bceccb]',
@@ -12,10 +14,11 @@ const difficultyPillClass = {
 };
 
 const topicPillClass = {
-  DSA: 'bg-[#dcecff] text-[#2567c7] border-[#bedaff]',
-  SQL: 'bg-[#def1ff] text-[#2374c6] border-[#c5e4ff]',
-  'Core CS': 'bg-[#e5ebf2] text-[#4c5e78] border-[#d4dce7]',
-  Company: 'bg-[#ffe9c9] text-[#c67a10] border-[#ffd89e]',
+  DSA: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800',
+  SQL: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800',
+  'Core CS': 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-300 dark:border-slate-800',
+  Company: 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800',
+  Aptitude: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
 };
 
 function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
@@ -69,15 +72,24 @@ export default function QuestionCatalogPage({
   lockedTopic = null,
   showTopicFilter = true,
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
   const [selectedTopic, setSelectedTopic] = useState(lockedTopic || 'All Topics');
+  const [selectedTag, setSelectedTag] = useState('All');
+  const [showAllTags, setShowAllTags] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
     setSelectedTopic(lockedTopic || 'All Topics');
   }, [lockedTopic]);
+
+  useEffect(() => {
+    setSelectedTag('All');
+    setShowAllTags(false);
+  }, [selectedTopic, lockedTopic]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -90,9 +102,15 @@ export default function QuestionCatalogPage({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const quickFilters = showTopicFilter
-    ? ['Easy', 'Medium', 'Hard', 'DSA', 'SQL', 'Core CS', 'Company']
-    : ['Easy', 'Medium', 'Hard'];
+  const availableTags = useMemo(() => {
+    const pool = selectedTopic === 'All Topics'
+      ? questions
+      : questions.filter((question) => question.topic === selectedTopic);
+
+    return Array.from(new Set(pool.map((question) => question.subtitle))).sort((a, b) =>
+      a.localeCompare(b)
+    );
+  }, [questions, selectedTopic]);
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
@@ -108,153 +126,246 @@ export default function QuestionCatalogPage({
       const matchesTopic =
         selectedTopic === 'All Topics' || question.topic === selectedTopic;
 
-      return matchesSearch && matchesDifficulty && matchesTopic;
-    });
-  }, [questions, searchTerm, selectedDifficulty, selectedTopic]);
+      const matchesTag =
+        selectedTag === 'All' || question.subtitle === selectedTag;
 
-  const applyQuickFilter = (value) => {
-    if (difficultyOptions.includes(value)) {
-      setSelectedDifficulty((current) => (current === value ? 'All Difficulty' : value));
+      return matchesSearch && matchesDifficulty && matchesTopic && matchesTag;
+    });
+  }, [questions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
+
+  const visibleTags = useMemo(() => {
+    if (showAllTags) return availableTags;
+    return availableTags.slice(0, INITIAL_VISIBLE_TAGS);
+  }, [availableTags, showAllTags]);
+
+  const handleRowOpen = (question) => {
+    if (!question?.topic || !question?.id) return;
+
+    const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/');
+
+    if (question.topic === 'DSA') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/dsa/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/dsa/${question.id}`);
+      }
       return;
     }
 
-    if (!showTopicFilter) return;
+    if (question.topic === 'SQL') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/sql/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/sql/${question.id}`);
+      }
+      return;
+    }
 
-    if (topicOptions.includes(value)) {
-      setSelectedTopic((current) => (current === value ? 'All Topics' : value));
+    if (question.topic === 'Core CS') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/core-cs/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/core-cs/${question.id}`);
+      }
+      return;
+    }
+
+    if (question.topic === 'Company') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/company-based/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/company/${question.id}`);
+      }
+      return;
+    }
+
+    if (question.topic === 'Aptitude') {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/aptitude/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/aptitude/${question.id}`);
+      }
     }
   };
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-7xl">
-      <section className="p-1 sm:p-2">
-        <div className="mb-5">
-          <h1 className="text-2xl font-semibold tracking-tight text-[#18354f] sm:text-[2rem]">{pageTitle}</h1>
-          <p className="mt-1 text-sm text-[#6d87a1]">{pageSubtitle}</p>
-        </div>
+        <section className="p-1 sm:p-2">
+          <div className="mb-5">
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-[2rem]">
+              {pageTitle}
+            </h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              {pageSubtitle}
+            </p>
+          </div>
 
-        <div className="rounded-[22px] border border-[#d7e7f2] bg-[#e6f2f9]/70 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] sm:p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <label className="relative flex-1">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#89a3b9]" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search questions..."
-                className="h-11 w-full rounded-full border border-[#d5e3ee] bg-[#f7fbfd] pl-11 pr-4 text-sm text-[#47627c] outline-none transition placeholder:text-[#9aaec0] focus:border-[#89b5db] focus:ring-4 focus:ring-[#a8cceb]/20"
-              />
-            </label>
+          <div className="relative z-30 rounded-[1.375rem] border border-white/20 bg-white/60 p-3 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-800/60 sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label className="relative flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search questions..."
+                  className="h-11 w-full rounded-full border border-white/20 bg-white/70 pl-11 pr-4 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-200/40 dark:border-gray-700/20 dark:bg-gray-900/40 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:border-blue-600 dark:focus:ring-blue-900/30"
+                />
+              </label>
 
-            <div ref={dropdownRef} className="flex flex-col gap-3 sm:flex-row">
-              <FilterDropdown
-                label="All Difficulty"
-                options={difficultyOptions}
-                value={selectedDifficulty}
-                onChange={(option) => {
-                  setSelectedDifficulty(option);
-                  setOpenMenu(null);
-                }}
-                isOpen={openMenu === 'difficulty'}
-                onToggle={() => setOpenMenu((current) => (current === 'difficulty' ? null : 'difficulty'))}
-              />
-
-              {showTopicFilter && (
+              <div ref={dropdownRef} className="flex flex-col gap-3 sm:flex-row">
                 <FilterDropdown
-                  label="All Topics"
-                  options={topicOptions}
-                  value={selectedTopic}
+                  label="All Difficulty"
+                  options={difficultyOptions}
+                  value={selectedDifficulty}
                   onChange={(option) => {
-                    setSelectedTopic(option);
+                    setSelectedDifficulty(option);
                     setOpenMenu(null);
                   }}
-                  isOpen={openMenu === 'topic'}
-                  onToggle={() => setOpenMenu((current) => (current === 'topic' ? null : 'topic'))}
+                  isOpen={openMenu === 'difficulty'}
+                  onToggle={() => setOpenMenu((current) => (current === 'difficulty' ? null : 'difficulty'))}
                 />
-              )}
+              </div>
+            </div>
+
+            {showTopicFilter && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">Topics</p>
+                <div className="question-catalog-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                  {topicOptions.map((topic) => {
+                    const active = selectedTopic === topic;
+                    return (
+                      <button
+                        key={topic}
+                        type="button"
+                        onClick={() => setSelectedTopic(topic)}
+                        className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition border ${
+                          active
+                            ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-700/50 dark:bg-blue-900/30 dark:text-blue-200'
+                            : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                        }`}
+                      >
+                        {topic}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                  {selectedTopic === 'Company' ? 'Companies' : 'Subtopics'}
+                </p>
+                {availableTags.length > INITIAL_VISIBLE_TAGS && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllTags((value) => !value)}
+                    className="text-xs font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+                  >
+                    {showAllTags ? 'Show less' : `Show all (${availableTags.length})`}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTag('All')}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
+                    selectedTag === 'All'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
+                      : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                  }`}
+                >
+                  {selectedTopic === 'Company' ? 'All Companies' : 'All Subtopics'}
+                </button>
+                {visibleTags.map((tag) => {
+                  const active = selectedTag === tag;
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setSelectedTag(tag)}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
+                        active
+                          ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
+                          : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            {quickFilters.map((filter) => {
-              const active = selectedDifficulty === filter || selectedTopic === filter;
-
-              return (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => applyQuickFilter(filter)}
-                  className={`rounded-full px-5 py-2 text-sm font-medium transition ${
-                    active
-                      ? 'border border-[#64d09a] bg-[#dff8e9] text-[#168d55] shadow-[0_8px_20px_rgba(68,175,117,0.14)]'
-                      : 'bg-[#edf4f8] text-[#6c8197] hover:bg-[#e5eff6]'
-                  }`}
-                >
-                  {filter}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-5 overflow-hidden rounded-[22px] border border-[#d4e5ef] bg-[#d9edf8]/65 shadow-[0_14px_30px_rgba(100,142,177,0.1)]">
-          <div className="question-catalog-scroll max-h-[540px] overflow-auto">
-            <table className="min-w-full border-separate border-spacing-0">
-              <thead>
-                <tr className="sticky top-0 z-10 bg-[#edf3f7] text-left text-xs font-semibold uppercase tracking-[0.08em] text-[#7d91a5]">
-                  <th className="w-14 px-4 py-4">#</th>
-                  <th className="px-4 py-4">Title</th>
-                  <th className="w-36 px-4 py-4">Difficulty</th>
-                  <th className="w-32 px-4 py-4">Topic</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredQuestions.map((question, index) => (
-                  <tr
-                    key={question.id}
-                    className="border-t border-[#d9e7f0] text-sm text-[#2f445b] transition hover:bg-[#e2f1f9]/70"
-                  >
-                    <td className="px-4 py-4 text-[#8fa4b7]">{index + 1}</td>
-                    <td className="px-4 py-4">
-                      <div className="font-medium text-[#263e59]">{question.title}</div>
-                      <div className="mt-1 text-xs text-[#8ea4b8]">{question.subtitle}</div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                          difficultyPillClass[question.difficulty]
-                        }`}
-                      >
-                        {question.difficulty}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                          topicPillClass[question.topic]
-                        }`}
-                      >
-                        {question.topic}
-                      </span>
-                    </td>
+          <div className="relative z-0 mt-5 overflow-hidden rounded-[1.375rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <div className="question-catalog-scroll max-h-[62vh] overflow-y-auto overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-white/50 text-left text-xs font-semibold uppercase tracking-[0.08em] text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                    <th className="w-14 px-4 py-4">#</th>
+                    <th className="px-4 py-4">Title</th>
+                    <th className="w-36 px-4 py-4">Difficulty</th>
+                    <th className="w-32 px-4 py-4">Topic</th>
                   </tr>
-                ))}
-                {filteredQuestions.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="px-4 py-10 text-center text-sm text-[#6f859d]">
-                      No questions match the selected filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredQuestions.map((question, index) => (
+                    <tr
+                      key={question.id}
+                      onClick={() => handleRowOpen(question)}
+                      className="cursor-pointer border-t border-white/10 text-sm text-gray-800 transition hover:bg-white/40 dark:border-gray-700/30 dark:text-gray-200 dark:hover:bg-gray-800/40"
+                    >
+                      <td className="px-4 py-4 text-gray-500 dark:text-gray-400">{index + 1}</td>
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-gray-900 dark:text-white">{question.title}</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{question.subtitle}</div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            difficultyPillClass[question.difficulty]
+                          }`}
+                        >
+                          {question.difficulty}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            topicPillClass[question.topic]
+                          }`}
+                        >
+                          {question.topic}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredQuestions.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-10 text-center text-sm text-gray-600 dark:text-gray-300">
+                        No questions match the selected filters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="border-t border-[#d9e7f0] bg-[#eef5f9] px-4 py-3 text-sm text-[#7e93a7]">
-            Showing {filteredQuestions.length} of {questions.length} questions
+            <div className="border-t border-white/10 bg-white/40 px-4 py-3 text-sm text-gray-600 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-300">
+              Showing {filteredQuestions.length} of {questions.length} questions
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
     </UserSidebarLayout>
   );
 }

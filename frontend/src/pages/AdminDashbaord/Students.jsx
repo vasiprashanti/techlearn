@@ -599,7 +599,7 @@ const Students = () => {
                   <input value={studentForm.track} onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))} placeholder="Primary track" className={`mt-1 ${studentFormInputClass}`} />
                 </div>
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Statuscd </label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select value={studentForm.status} onChange={(e) => setStudentForm((prev) => ({ ...prev, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
                       <option className={dropdownOptionClass} value="Active">Active</option>

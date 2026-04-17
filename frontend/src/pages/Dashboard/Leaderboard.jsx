@@ -1,13 +1,10 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
 import { 
   Trophy, Medal, TrendingUp, TrendingDown, 
   Minus, Star, Zap
 } from "lucide-react";
-import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
-import Sidebar from "../../components/Dashboard/Sidebar";
-import ScrollProgress from "../../components/ScrollProgress";
+import UserSidebarLayout from "../../components/Dashboard/UserSidebarLayout";
 
 // Mock Data for the Leaderboard
 const mockLeaderboard = [
@@ -22,13 +19,7 @@ const mockLeaderboard = [
 ];
 
 const Leaderboard = () => {
-  const { theme } = useTheme();
   const { user } = useAuth();
-  
-  // Layout State
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  const isDarkMode = theme === 'dark';
   
   const userName = user?.firstName ? user.firstName : 'Student';
   const userAvatar = JSON.parse(localStorage.getItem("userData"))?.photoUrl || "/profile_avatars/avatar1.png";
@@ -43,9 +34,9 @@ const Leaderboard = () => {
   };
 
   const getPodiumStyles = (rank) => {
-    if (rank === 1) return "h-48 bg-gradient-to-t from-yellow-500/20 to-yellow-500/5 border-yellow-500/30";
-    if (rank === 2) return "h-36 bg-gradient-to-t from-slate-400/20 to-slate-400/5 border-slate-400/30";
-    if (rank === 3) return "h-28 bg-gradient-to-t from-amber-700/20 to-amber-700/5 border-amber-700/30";
+    if (rank === 1) return "h-48 bg-gradient-to-t from-[#f8df8b]/30 to-[#f8df8b]/10 border-[#f0c85f]/45 dark:from-[#7c6216]/35 dark:to-[#7c6216]/10 dark:border-[#f0c85f]/40";
+    if (rank === 2) return "h-36 bg-gradient-to-t from-[#cbd7ea]/35 to-[#cbd7ea]/10 border-[#9eb4d3]/50 dark:from-[#5d6f89]/35 dark:to-[#5d6f89]/10 dark:border-[#9eb4d3]/45";
+    if (rank === 3) return "h-28 bg-gradient-to-t from-[#e7b08c]/35 to-[#e7b08c]/10 border-[#cc885e]/50 dark:from-[#8a5538]/35 dark:to-[#8a5538]/10 dark:border-[#cc885e]/45";
   };
 
   const getRankBadge = (rank) => {
@@ -56,32 +47,23 @@ const Leaderboard = () => {
   };
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-      <ScrollProgress />
-      
-      {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
-
-      {/* Main Sidebar */}
-      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
-
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
-        <div className="max-w-[1600px] mx-auto space-y-8">
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
+      <div className="space-y-8">
           
           {/* Top Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+          <header className="flex flex-col gap-4 border-b border-[#8ec8ff]/30 pb-6 dark:border-[#6fbfff]/25 md:flex-row md:items-end md:justify-between">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+              <h1 className="brand-heading-primary font-poppins text-3xl tracking-tight md:text-4xl">
                 Leaderboard.
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+              <p className="mt-2 text-xs uppercase tracking-widest text-[#4d6f9c] dark:text-[#7fb9e6]">
                 Global Rankings & Achievements
               </p>
             </motion.div>
 
           </header>
 
-          <div className="max-w-5xl mx-auto pt-10">
+          <div className="mx-auto max-w-6xl pt-8">
             {/* Top 3 Podium Section */}
             <div className="flex flex-col md:flex-row justify-center items-end gap-6 mb-20 mt-10 px-4">
               {/* 2nd Place */}
@@ -95,8 +77,8 @@ const Leaderboard = () => {
                   </div>
                   <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-slate-400 rounded-full flex items-center justify-center text-white font-bold border-2 border-[#0a1128]">2</div>
                 </div>
-                <h3 className="text-sm font-medium text-black dark:text-white mt-2">{topThree[1].name}</h3>
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold mb-4">{topThree[1].xp} XP</p>
+                <h3 className="mt-2 text-sm font-medium text-[#0d2a57] dark:text-[#8fd9ff]">{topThree[1].name}</h3>
+                <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">{topThree[1].xp} XP</p>
                 <div className={`w-full max-w-[140px] rounded-t-2xl border-t border-x backdrop-blur-xl flex justify-center pt-4 ${getPodiumStyles(2)}`}>
                   <Medal className="w-6 h-6 text-slate-400 opacity-50" />
                 </div>
@@ -114,7 +96,7 @@ const Leaderboard = () => {
                   </div>
                   <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-lg border-2 border-[#0a1128]">1</div>
                 </div>
-                <h3 className="text-base font-semibold text-black dark:text-white mt-3">{topThree[0].name}</h3>
+                <h3 className="mt-3 text-base font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{topThree[0].name}</h3>
                 <p className="text-[11px] uppercase tracking-widest text-yellow-600 dark:text-yellow-500 font-bold mb-4">{topThree[0].xp} XP</p>
                 <div className={`w-full max-w-[160px] rounded-t-2xl border-t border-x backdrop-blur-xl flex justify-center pt-6 ${getPodiumStyles(1)}`}>
                   <Star className="w-8 h-8 text-yellow-500 opacity-50" />
@@ -132,8 +114,8 @@ const Leaderboard = () => {
                   </div>
                   <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 bg-amber-700 rounded-full flex items-center justify-center text-white font-bold border-2 border-[#0a1128]">3</div>
                 </div>
-                <h3 className="text-sm font-medium text-black dark:text-white mt-2">{topThree[2].name}</h3>
-                <p className="text-[10px] uppercase tracking-widest text-amber-700 dark:text-amber-600 font-bold mb-4">{topThree[2].xp} XP</p>
+                <h3 className="mt-2 text-sm font-medium text-[#0d2a57] dark:text-[#8fd9ff]">{topThree[2].name}</h3>
+                <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-500">{topThree[2].xp} XP</p>
                 <div className={`w-full max-w-[140px] rounded-t-2xl border-t border-x backdrop-blur-xl flex justify-center pt-4 ${getPodiumStyles(3)}`}>
                   <Medal className="w-6 h-6 text-amber-700 opacity-50" />
                 </div>
@@ -143,26 +125,26 @@ const Leaderboard = () => {
             {/* Current User Stats Bar */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.5 }}
-              className="bg-white/60 dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 rounded-2xl p-4 md:p-6 mb-12 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
+              className="mb-12 flex flex-col items-center justify-between gap-6 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-2xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:flex-row md:p-6"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full border-2 border-[#3C83F6] dark:border-white overflow-hidden p-0.5">
+                <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-[#2d7fe8] p-0.5 dark:border-[#8fd9ff]">
                   <img src={userAvatar} alt="Your Profile" className="w-full h-full rounded-full object-cover" />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-1">Your Ranking</p>
-                  <h3 className="text-lg font-medium text-black dark:text-white">#42 <span className="text-sm font-normal text-black/40 dark:text-white/40 ml-1">in Global</span></h3>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">Your Ranking</p>
+                  <h3 className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff]">#42 <span className="ml-1 text-sm font-normal text-[#5f82ac] dark:text-[#81bde6]">in Global</span></h3>
                 </div>
               </div>
 
-              <div className="flex gap-8 md:gap-12 w-full md:w-auto px-4 md:px-0 justify-between md:justify-end border-t md:border-t-0 border-black/5 dark:border-white/5 pt-4 md:pt-0">
+              <div className="flex w-full justify-between gap-8 border-t border-[#86c4ff]/30 px-4 pt-4 md:w-auto md:justify-end md:gap-12 md:border-t-0 md:px-0 md:pt-0 dark:border-[#6fbfff]/25">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-1 flex items-center gap-1"><Zap className="w-3 h-3 text-[#3C83F6] dark:text-white" /> Total XP</p>
-                  <p className="text-lg font-medium text-black dark:text-white">2,450</p>
+                  <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]"><Zap className="h-3 w-3 text-[#2d7fe8] dark:text-[#8fd9ff]" /> Total XP</p>
+                  <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff]">2,450</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-1">To Next Rank</p>
-                  <p className="text-lg font-medium text-black dark:text-white">150 <span className="text-xs text-black/40 dark:text-white/40">XP</span></p>
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">To Next Rank</p>
+                  <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff]">150 <span className="text-xs text-[#5f82ac] dark:text-[#81bde6]">XP</span></p>
                 </div>
               </div>
             </motion.div>
@@ -170,18 +152,18 @@ const Leaderboard = () => {
             {/* Full List Rankings */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.6 }}
-              className="bg-white/40 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm"
+              className="overflow-hidden rounded-3xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
             >
-              <div className="grid grid-cols-12 gap-4 px-6 md:px-8 py-5 border-b border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5">
-                <div className="col-span-2 md:col-span-1 text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold">Rank</div>
-                <div className="col-span-6 md:col-span-5 text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold">Student</div>
-                <div className="col-span-4 md:col-span-3 text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold text-right md:text-left">Score</div>
-                <div className="col-span-3 hidden md:block text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold">Track</div>
+              <div className="grid grid-cols-12 gap-4 border-b border-[#86c4ff]/35 bg-[#dbf1ff]/75 px-6 py-5 dark:border-[#6fbfff]/25 dark:bg-[#0d366f]/55 md:px-8">
+                <div className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] md:col-span-1">Rank</div>
+                <div className="col-span-6 text-[10px] font-bold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] md:col-span-5">Student</div>
+                <div className="col-span-4 text-right text-[10px] font-bold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] md:col-span-3 md:text-left">Score</div>
+                <div className="col-span-3 hidden text-[10px] font-bold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] md:block">Track</div>
               </div>
 
-              <div className="divide-y divide-black/5 dark:divide-white/5">
-                {restOfList.map((user, index) => (
-                  <div key={user.rank} className="grid grid-cols-12 gap-4 px-6 md:px-8 py-4 items-center hover:bg-white/40 dark:hover:bg-black/40 transition-colors duration-300">
+              <div className="divide-y divide-[#86c4ff]/30 dark:divide-[#6fbfff]/20">
+                {restOfList.map((user) => (
+                  <div key={user.rank} className="grid grid-cols-12 items-center gap-4 px-6 py-4 transition-colors duration-300 hover:bg-[#edf7ff]/75 dark:hover:bg-[#0a2f6f]/55 md:px-8">
                     <div className="col-span-2 md:col-span-1 flex items-center gap-2">
                       <span className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${getRankBadge(user.rank)}`}>
                         {user.rank}
@@ -190,19 +172,19 @@ const Leaderboard = () => {
                     </div>
                     
                     <div className="col-span-6 md:col-span-5 flex items-center gap-4">
-                      <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover border border-black/10 dark:border-white/10" />
+                      <img src={user.avatar} alt={user.name} className="h-10 w-10 rounded-full border border-[#86c4ff]/45 object-cover dark:border-[#6fbfff]/35" />
                       <div>
-                        <p className="text-sm font-medium text-black dark:text-white">{user.name}</p>
-                        <p className="text-[10px] text-black/40 dark:text-white/40 md:hidden">{user.track}</p>
+                        <p className="text-sm font-medium text-[#0d2a57] dark:text-[#8fd9ff]">{user.name}</p>
+                        <p className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] md:hidden">{user.track}</p>
                       </div>
                     </div>
                     
                     <div className="col-span-4 md:col-span-3 flex flex-col justify-center text-right md:text-left">
-                      <span className="text-sm font-bold text-[#3C83F6] dark:text-white">{user.xp.toLocaleString()} XP</span>
+                      <span className="text-sm font-bold text-[#2d7fe8] dark:text-[#8fd9ff]">{user.xp.toLocaleString()} XP</span>
                     </div>
 
                     <div className="col-span-3 hidden md:flex items-center">
-                      <span className="text-xs text-black/60 dark:text-white/60 font-medium px-3 py-1 bg-black/5 dark:bg-white/5 rounded-full">
+                      <span className="rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-3 py-1 text-xs font-medium text-[#4c6f9a] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#7fb8e2]">
                         {user.track}
                       </span>
                     </div>
@@ -211,10 +193,9 @@ const Leaderboard = () => {
               </div>
             </motion.div>
 
-          </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </UserSidebarLayout>
   );
 };
 

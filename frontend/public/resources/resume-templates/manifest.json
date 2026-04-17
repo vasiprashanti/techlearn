@@ -1,0 +1,25 @@
+{
+  "templates": [
+    {
+      "id": "software-engineer",
+      "title": "Software Engineer Resume",
+      "category": "Engineering",
+      "description": "ATS-friendly structure focused on projects, impact, and backend/frontend skills.",
+      "file": "/resources/resume-templates/files/software-engineer-template.md"
+    },
+    {
+      "id": "frontend-developer",
+      "title": "Frontend Developer Resume",
+      "category": "Frontend",
+      "description": "Clean layout for UI-heavy profiles with portfolio and performance highlights.",
+      "file": "/resources/resume-templates/files/frontend-developer-template.md"
+    },
+    {
+      "id": "fresher",
+      "title": "Fresher Resume",
+      "category": "Entry Level",
+      "description": "Starter format for students and fresh graduates with projects and certifications.",
+      "file": "/resources/resume-templates/files/fresher-template.md"
+    }
+  ]
+}
