@@ -442,24 +442,37 @@ const HomePage = () => {
               </span>
             </h2>
           </a>
-          <p className={item.reverse ? "marquee-subtext-2" : "marquee-subtext"}>
-            {item.subtitle}<br/><br/>
-            <strong>{item.description}</strong>
-            {item.features && (
-              <>
-                <br/>
-                {item.features.map((feature, idx) => (
-                  <span key={idx}>• {feature}<br/></span>
-                ))}
-              </>
-            )}
-            {item.note && (
-              <>
-                <br/>
-                <em>{item.note}</em>
-              </>
-            )}
-          </p>
+          <div className="w-full max-w-[640px] flex-1 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 sm:p-6 md:p-7">
+            <div className="flex flex-col gap-4">
+              <p className="text-sm font-medium text-[#2b5388] dark:text-[#96d8ff] sm:text-base">
+                {item.subtitle}
+              </p>
+
+              <p className="text-[13px] leading-relaxed text-[#355b8f] dark:text-[#b5ddff] sm:text-sm md:text-[15px]">
+                {item.description}
+              </p>
+
+              {item.features && (
+                <ul className="grid gap-2">
+                  {item.features.map((feature, idx) => (
+                    <li
+                      key={idx}
+                      className="flex items-start gap-2 rounded-xl border border-[#9fcfff]/45 bg-[#dbf1ff]/70 px-3 py-2 text-xs text-[#315987] dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]/60 dark:text-[#a6d6ff] sm:text-[13px]"
+                    >
+                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3c83f6] dark:bg-[#8fd9ff]" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {item.note && (
+                <div className="rounded-xl border border-[#ffe396] bg-[#fff6c9]/85 px-3 py-2 text-xs text-[#8b6e12] dark:border-[#8e6d1a]/50 dark:bg-[#5b450f]/45 dark:text-[#ffd778] sm:text-[13px]">
+                  <em>{item.note}</em>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       ))}
 
