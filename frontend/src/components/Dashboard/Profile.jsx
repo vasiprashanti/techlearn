@@ -121,8 +121,10 @@ const Profile = () => {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Dashboard
               </button>
-              <h1 className="mt-8 text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
-                My Profile.
+              <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                  My Profile.
+                </span>
               </h1>
               <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
                 Manage your personal information
@@ -266,6 +268,14 @@ const Profile = () => {
                     Student Account
                   </span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/profile/edit')}
+                  className="relative z-10 mt-5 inline-flex items-center rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg"
+                >
+                  Edit Profile
+                </button>
               </div>
             </motion.div>
           </div>

@@ -88,6 +88,7 @@ import ProjectPayment from './pages/Build/ProjectPayment'
 import PaymentGateway from './pages/Build/PaymentGateway'
 import UILibrary from './pages/Build/UILibrary'
 import Profile from './components/Dashboard/Profile'
+import EditProfile from './components/Dashboard/EditProfile'
 
 import Analytics from './pages/AdminDashbaord/Analytics';
 import SystemHealth from './pages/AdminDashbaord/SystemHealth';
@@ -705,6 +706,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
             <Route path="/dashboard/profile" element={<Profile />} />
+            <Route path="/dashboard/profile/edit" element={<EditProfile />} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
