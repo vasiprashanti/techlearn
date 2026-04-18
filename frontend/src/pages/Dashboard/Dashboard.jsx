@@ -175,7 +175,7 @@ export default function Dashboard() {
 
                   <div className="mt-8 flex items-center justify-between">
                     <button 
-                      onClick={() => navigate('/track-templates')}
+                      onClick={() => navigate('/dashboard/daily-challenge')}
                       className="bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:brightness-105 flex items-center gap-2"
                     >
                       Start Challenge <FiChevronRight />

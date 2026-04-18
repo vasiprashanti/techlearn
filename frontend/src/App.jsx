@@ -744,8 +744,6 @@ function LayoutWrapper() {
             <Route path="/core-prep/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
             <Route path="/resources/roadmaps" element={<Roadmaps />} />
             <Route path="/resources/resume-templates" element={<ResumeTemplates />} />
-            <Route path="/track-templates" element={<TrackTemplate />} />
-            <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
@@ -798,6 +796,8 @@ function LayoutWrapper() {
 <Route path="/students" element={<Students />} />
 <Route path="/question-bank" element={<QuestionBank />} />
 <Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
+<Route path="/track-templates" element={<TrackTemplate />} />
+<Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
 <Route path="/resources" element={<Resources />} />
 <Route path="/certificates" element={<Certificates />} />
 <Route path="/submission-monitor" element={<SubmissionMonitor />} />
