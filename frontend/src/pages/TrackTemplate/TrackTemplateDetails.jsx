@@ -4,13 +4,17 @@ import {
   FiArrowLeft,
   FiBell,
   FiSearch,
+  FiBarChart2,
   FiCode,
   FiDatabase,
+  FiGlobe,
   FiPlus,
+  FiTerminal,
   FiCpu,
   FiX,
   FiChevronDown,
 } from 'react-icons/fi';
+import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
@@ -19,9 +23,13 @@ import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 
 const iconMap = {
+  chart: FiBarChart2,
   code: FiCode,
   cpu: FiCpu,
   database: FiDatabase,
+  globe: FiGlobe,
+  terminal: FiTerminal,
+  brain: PiBrainLight,
 };
 
 const categorySlugMap = {
@@ -64,6 +72,7 @@ export default function TrackTemplateDetails() {
   const [assignedQuestions, setAssignedQuestions] = useState([]);
   const [availableQuestions, setAvailableQuestions] = useState([]);
   const [trackDetail, setTrackDetail] = useState(null);
+  const [isTrackLoading, setIsTrackLoading] = useState(!location.state?.track);
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
   const [addDayForm, setAddDayForm] = useState({
     dayNumber: '1',
@@ -96,17 +105,20 @@ export default function TrackTemplateDetails() {
 
   useEffect(() => {
     let cancelled = false;
+    setIsTrackLoading(!location.state?.track);
 
     adminAPI
       .getTrackTemplate(templateId)
       .then((remoteTemplate) => {
         if (!cancelled) {
           setTrackDetail(preferRemoteData(remoteTemplate, null));
+          setIsTrackLoading(false);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setTrackDetail(null);
+          setIsTrackLoading(false);
         }
       });
 
@@ -184,6 +196,8 @@ export default function TrackTemplateDetails() {
 
   if (!mounted) return <LoadingScreen />;
 
+  if (isTrackLoading) return <LoadingScreen />;
+
   if (!track) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#cbe0ec] dark:bg-[#001233] px-6">
@@ -225,7 +239,7 @@ export default function TrackTemplateDetails() {
                   min="1"
                   value={addDayForm.dayNumber}
                   onChange={(e) => setAddDayForm((prev) => ({ ...prev, dayNumber: e.target.value }))}
-                  className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 text-base text-[#1a2335] dark:text-white"
+                  className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 text-base text-[#1a2335] dark:text-white"
                 />
               </div>
 
@@ -237,7 +251,7 @@ export default function TrackTemplateDetails() {
                   <select
                     value={addDayForm.questionId}
                     onChange={(e) => setAddDayForm((prev) => ({ ...prev, questionId: e.target.value }))}
-                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e6edf5] dark:bg-[#17345f] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
+                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
                   >
                     <option value="">Select a question</option>
                     {dayWiseQuestions.map((question) => (

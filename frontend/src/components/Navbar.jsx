@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
-import XPBadge from './XPBadge';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
@@ -89,7 +88,7 @@ const Navbar = () => {
     >
       <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
         
-        {/* Logo and XP Badge */}
+        {/* Logo */}
         <div className="logo flex items-center gap-3">
           {!hideLogo && (
             <>
@@ -111,11 +110,6 @@ const Navbar = () => {
                   />
                 </div>
               </Link>
-
-              {/* XP Badge beside logo - Desktop */}
-              <div className="hidden md:block ml-4">
-                <XPBadge />
-              </div>
             </>
           )}
         </div>
@@ -131,16 +125,6 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
           >
             Learn
-          </Link>
-          <Link
-            to="/build"
-            className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
-              after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/build') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
-          >
-            Build
           </Link>
           <Link
             to="/dashboard"
@@ -170,15 +154,15 @@ const Navbar = () => {
               </button>
 
               {isUserMenuOpen && (
-                <div className={`absolute top-full right-0 mt-3 w-72 rounded-2xl border shadow-2xl backdrop-blur-xl overflow-hidden z-50 ${isDarkMode ? 'bg-[#001233]/95 border-white/12' : 'bg-[#daf0fa]/95 border-black/10'}`}>
-                  <div className={`p-4 border-b ${isDarkMode ? 'border-white/10 bg-white/[0.03]' : 'border-black/10 bg-white/40'}`}>
-                    <h3 className={`text-sm font-semibold truncate ${isDarkMode ? 'text-white' : 'text-[#0c2b5e]'}`}>
+                <div className="absolute top-full right-0 z-50 mt-3 w-72 overflow-hidden rounded-2xl border border-[#86c4ff]/45 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 shadow-[0_12px_34px_rgba(60,131,246,0.16)] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:from-[#052152]/90 dark:to-[#072b63]/85">
+                  <div className="border-b border-[#86c4ff]/45 bg-[#dbf1ff]/70 p-4 dark:border-[#6fbfff]/30 dark:bg-[#0d366f]/60">
+                    <h3 className="truncate text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                       {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : (user?.email || 'User')}
                     </h3>
-                    <p className={`text-xs truncate mt-0.5 ${isDarkMode ? 'text-white/65' : 'text-[#17345f]/65'}`}>
+                    <p className="mt-0.5 truncate text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
                       {user?.email || 'student@techlearn.com'}
                     </p>
-                    <span className={`inline-flex mt-2 items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${isDarkMode ? 'bg-white/10 text-white border border-white/20' : 'bg-[#3C83F6]/10 text-[#3C83F6] border border-[#3C83F6]/20'}`}>
+                    <span className="mt-2 inline-flex items-center rounded-full border border-[#86c4ff]/60 bg-[#edf8ff] px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-[#2d7fe8] dark:border-[#6bb8ec]/50 dark:bg-[#0a2f6f] dark:text-[#8fd9ff]">
                       Student
                     </span>
                   </div>
@@ -187,18 +171,9 @@ const Navbar = () => {
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        navigate('/profile');
-                      }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-[#0c2b5e] hover:bg-white/50'}`}
-                    >
-                      Profile
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
                         logout();
                       }}
-                      className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      className="w-full rounded-xl border border-[#f6b6b4]/60 bg-[#ffe6e5] px-3 py-2.5 text-left text-sm font-medium text-[#be4b43] transition hover:bg-[#ffd9d7] dark:border-[#8a3a35]/60 dark:bg-[#4a1f22]/50 dark:text-[#ffb6b0] dark:hover:bg-[#5b272b]/60"
                     >
                       Logout
                     </button>
@@ -230,28 +205,16 @@ const Navbar = () => {
         </nav>
 
         {/* Mobile Menu Toggle */}
-        <div
-          className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 ${
-            isMenuOpen ? 'flex-col gap-[5px]' : 'gap-[5px]'
+        <button
+          type="button"
+          className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
+            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
           }`}
           onClick={toggleMenu}
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
         >
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-          <span
-            className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${
-              isDarkMode ? 'bg-[#e0e6f5]' : 'bg-black'
-            }`}
-          ></span>
-        </div>
+          <span className="text-2xl leading-none">{isMenuOpen ? '✕' : '☰'}</span>
+        </button>
       </nav>
 
       {/* Mobile Navigation Menu */}
@@ -276,17 +239,6 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
           >
             Learn
-          </Link>
-          <Link
-            to="/build"
-            onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
-              hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
-              after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-              ${location.pathname.startsWith('/build') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
-          >
-            Build
           </Link>
           <Link
             to="/dashboard"
@@ -340,11 +292,6 @@ const Navbar = () => {
               </button>
             </div>
           )}
-        </div>
-
-        {/* XP Badge - Mobile */}
-        <div className="py-2 w-full flex justify-start pl-4">
-          <XPBadge />
         </div>
 
         {/* Dark Mode Toggle - Mobile */}

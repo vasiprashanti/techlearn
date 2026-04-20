@@ -5,6 +5,7 @@ import {
   FiChevronDown,
   FiEdit2,
   FiEye,
+  FiMoreHorizontal,
   FiPlus,
   FiSearch,
   FiTrash2,
@@ -98,6 +99,7 @@ export default function QuestionCategoryDetails() {
   const [difficultyFilter, setDifficultyFilter] = useState('All levels');
 
   const [questions, setQuestions] = useState([]);
+  const [createdTracks, setCreatedTracks] = useState([]);
   const [isQuestionFormOpen, setIsQuestionFormOpen] = useState(false);
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [questionForm, setQuestionForm] = useState(createQuestionForm());
@@ -112,22 +114,17 @@ export default function QuestionCategoryDetails() {
   const [formError, setFormError] = useState('');
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
+  const [openQuestionMenuId, setOpenQuestionMenuId] = useState(null);
 
   const isDarkMode = theme === 'dark';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const category = remoteCategory || dynamicCategoryFallback(categorySlug);
 
   const seedQuestions = useMemo(() => [], []);
 
   const trackOptions = useMemo(
-    () => Array.from(new Set([
-      'Data Structures & Algorithms',
-      'Web Development',
-      'Python Programming',
-      'Database Management',
-      'Machine Learning',
-      category?.title,
-    ].filter(Boolean))),
-    [category?.title]
+    () => Array.from(new Set(createdTracks.filter(Boolean))),
+    [createdTracks]
   );
 
   useEffect(() => {
@@ -156,6 +153,30 @@ export default function QuestionCategoryDetails() {
     };
   }, [categorySlug]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    adminAPI
+      .getTrackTemplates()
+      .then((remoteTracks) => {
+        if (!cancelled) {
+          const normalized = preferRemoteData(remoteTracks, [])
+            .map((track) => track.name || track.title || track.trackName || '')
+            .filter(Boolean);
+          setCreatedTracks(Array.from(new Set(normalized)));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCreatedTracks([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const loadQuestions = useCallback(async () => {
     const remoteQuestions = await adminAPI.getQuestions({ categorySlug });
     setQuestions(preferRemoteData(remoteQuestions, seedQuestions));
@@ -175,6 +196,19 @@ export default function QuestionCategoryDetails() {
     };
   }, [loadQuestions, seedQuestions]);
 
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      const clickedTrigger = event.target.closest('.question-actions-trigger');
+      const clickedMenu = event.target.closest('.question-actions-menu');
+      if (!clickedTrigger && !clickedMenu) {
+        setOpenQuestionMenuId(null);
+      }
+    };
+
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
       const matchesSearch =
@@ -193,7 +227,7 @@ export default function QuestionCategoryDetails() {
   const openAddQuestion = () => {
     setEditingQuestionId(null);
     setFormError('');
-    setQuestionForm(createQuestionForm(category?.title || ''));
+    setQuestionForm(createQuestionForm(trackOptions[0] || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
     setIsQuestionFormOpen(true);
   };
@@ -210,7 +244,7 @@ export default function QuestionCategoryDetails() {
     setIsQuestionFormOpen(false);
     setEditingQuestionId(null);
     setFormError('');
-    setQuestionForm(createQuestionForm(category?.title || ''));
+    setQuestionForm(createQuestionForm(trackOptions[0] || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
   };
 
@@ -337,34 +371,37 @@ export default function QuestionCategoryDetails() {
 
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Track type*</label>
-                  <div className="relative mt-1">
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={questionForm.trackType}
                       onChange={(e) => updateFormField('trackType', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm"
+                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                     >
-                      <option value="">Select track type</option>
+                      <option className={dropdownOptionClass} value="">Select track type</option>
                       {trackOptions.map((track) => (
-                        <option key={track} value={track}>{track}</option>
+                        <option className={dropdownOptionClass} key={track} value={track}>{track}</option>
                       ))}
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
+                  {trackOptions.length === 0 && (
+                    <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">No tracks created yet. Create a track template first.</p>
+                  )}
                 </div>
 
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Difficulty*</label>
-                  <div className="relative mt-1">
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={questionForm.difficulty}
                       onChange={(e) => updateFormField('difficulty', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm"
+                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                     >
-                      <option>Easy</option>
-                      <option>Medium</option>
-                      <option>Hard</option>
+                      <option className={dropdownOptionClass}>Easy</option>
+                      <option className={dropdownOptionClass}>Medium</option>
+                      <option className={dropdownOptionClass}>Hard</option>
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
 
@@ -534,14 +571,14 @@ export default function QuestionCategoryDetails() {
                   <div className="p-3.5 space-y-2.5">
                     <div>
                       <label className="admin-micro-label text-black/50 dark:text-white/50">Language</label>
-                      <div className="relative mt-1">
-                        <select value={questionForm.referenceLanguage} onChange={(e) => updateFormField('referenceLanguage', e.target.value)} className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 pr-10 text-sm">
-                          <option>C++</option>
-                          <option>Python</option>
-                          <option>Java</option>
-                          <option>JavaScript</option>
+                      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                        <select value={questionForm.referenceLanguage} onChange={(e) => updateFormField('referenceLanguage', e.target.value)} className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none">
+                          <option className={dropdownOptionClass}>C++</option>
+                          <option className={dropdownOptionClass}>Python</option>
+                          <option className={dropdownOptionClass}>Java</option>
+                          <option className={dropdownOptionClass}>JavaScript</option>
                         </select>
-                        <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                       </div>
                     </div>
                     <div>
@@ -707,36 +744,77 @@ export default function QuestionCategoryDetails() {
 
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-300" />
-                  <input
-                    type="text"
-                    placeholder="Search questions..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-9 md:h-10 rounded-lg border border-black/10 dark:border-white/10 bg-[#d7e3ee] dark:bg-[#1a2f57] pl-9 pr-3.5 text-xs md:text-sm text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#3c83f6]/30"
-                  />
+                  <div className="relative">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                    <input
+                      type="text"
+                      placeholder="Search questions..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full h-10 md:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] md:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    />
+                  </div>
                 </div>
 
                 <div className="relative md:w-[280px]">
-                  <select
-                    value={difficultyFilter}
-                    onChange={(e) => setDifficultyFilter(e.target.value)}
-                    className="w-full h-9 md:h-10 rounded-lg border border-black/10 dark:border-white/10 bg-[#d7e3ee] dark:bg-[#1a2f57] px-3.5 pr-8 text-xs md:text-sm text-slate-700 dark:text-slate-100 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3c83f6]/30"
-                  >
-                    <option>All levels</option>
-                    <option>Easy</option>
-                    <option>Medium</option>
-                    <option>Hard</option>
-                  </select>
-                  <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-300 pointer-events-none" />
+                  <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={difficultyFilter}
+                      onChange={(e) => setDifficultyFilter(e.target.value)}
+                      className="appearance-none w-full h-10 md:h-9 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass}>All levels</option>
+                      <option className={dropdownOptionClass}>Easy</option>
+                      <option className={dropdownOptionClass}>Medium</option>
+                      <option className={dropdownOptionClass}>Hard</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-3 lg:hidden">
                 {filteredQuestions.map((question) => (
-                  <article key={question.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] p-4 shadow-sm">
+                  <article key={question.id} className="relative rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] p-4 shadow-sm">
+                    <div className="absolute left-3.5 top-3.5 z-10">
+                      <button
+                        type="button"
+                        className="question-actions-trigger w-7 h-7 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenQuestionMenuId((current) => (current === question.id ? null : question.id));
+                        }}
+                        aria-label="Open question actions"
+                      >
+                        <FiMoreHorizontal className="w-4 h-4" />
+                      </button>
+
+                      {openQuestionMenuId === question.id && (
+                        <div className="question-actions-menu absolute left-0 top-8 w-36 rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#071739] backdrop-blur-xl shadow-xl overflow-hidden">
+                          <button
+                            onClick={() => {
+                              setOpenQuestionMenuId(null);
+                              openEditQuestion(question);
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOpenQuestionMenuId(null);
+                              setDeleteTarget(question);
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <div className="min-w-0 pl-9">
                         <h3 className="text-base font-semibold text-slate-900 dark:text-white break-words">{question.title || 'Untitled Question'}</h3>
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 break-words">{question.track || 'General'}</p>
                       </div>
@@ -763,12 +841,6 @@ export default function QuestionCategoryDetails() {
                     <div className="mt-4 flex items-center justify-end gap-3 text-slate-800 dark:text-slate-100">
                       <button onClick={() => setViewQuestion(question)} className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors" aria-label="View question">
                         <FiEye className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => openEditQuestion(question)} className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors" aria-label="Edit question">
-                        <FiEdit2 className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => setDeleteTarget(question)} className="p-2 rounded-lg hover:text-rose-500 hover:bg-rose-500/10 transition-colors" aria-label="Delete question">
-                        <FiTrash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </article>

@@ -9,6 +9,7 @@ const resourceSchema = new mongoose.Schema(
     },
     category: {
       type: String,
+      enum: ["Courses", "Important Topics", "Resume Templates"],
       required: true,
       trim: true,
     },

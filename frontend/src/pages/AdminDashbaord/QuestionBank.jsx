@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBarChart2, FiCode, FiDatabase, FiGlobe, FiPlus, FiTerminal, FiX } from 'react-icons/fi';
+import { FiBarChart2, FiChevronDown, FiCode, FiDatabase, FiGlobe, FiMoreHorizontal, FiPlus, FiTerminal, FiTrash2, FiX } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -60,6 +60,8 @@ const getCategoryTheme = (icon) => {
   }
 };
 
+const isPersistedCategory = (categoryId) => /^[a-f0-9]{24}$/i.test(String(categoryId || ''));
+
 export default function QuestionBank() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -71,10 +73,15 @@ export default function QuestionBank() {
   const [categoryState, setCategoryState] = useState(emptyQuestionCategories);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart' });
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [openCategoryMenuId, setOpenCategoryMenuId] = useState(null);
   const [categoryError, setCategoryError] = useState('');
   const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   const isDarkMode = theme === 'dark';
+  const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
   useEffect(() => {
     setMounted(true);
@@ -105,15 +112,40 @@ export default function QuestionBank() {
     };
   }, []);
 
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      const clickedTrigger = event.target.closest('.category-actions-trigger');
+      const clickedMenu = event.target.closest('.category-actions-menu');
+      if (!clickedTrigger && !clickedMenu) {
+        setOpenCategoryMenuId(null);
+      }
+    };
+
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
   if (!mounted) {
     return <LoadingScreen />;
   }
 
   const closeCategoryModal = () => {
     setIsCategoryModalOpen(false);
+    setEditingCategoryId(null);
     setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
     setCategoryError('');
     setIsSavingCategory(false);
+  };
+
+  const openEditCategory = (category) => {
+    setEditingCategoryId(category.id);
+    setCategoryError('');
+    setCategoryForm({
+      title: category.title || '',
+      subtitle: category.subtitle || '',
+      icon: category.icon || 'chart',
+    });
+    setIsCategoryModalOpen(true);
   };
 
   const saveCategory = async () => {
@@ -126,16 +158,47 @@ export default function QuestionBank() {
     setCategoryError('');
 
     try {
-      const createdCategory = await adminAPI.createQuestionCategory(categoryForm);
-      const categoryWithTheme = {
-        ...getCategoryTheme(createdCategory.icon),
-        ...createdCategory,
-      };
-      setCategoryState((prev) => [...prev, categoryWithTheme]);
+      if (editingCategoryId) {
+        const updatedCategory = await adminAPI.updateQuestionCategory(editingCategoryId, categoryForm);
+        const updatedTheme = {
+          ...getCategoryTheme(updatedCategory.icon),
+          ...updatedCategory,
+        };
+        setCategoryState((prev) => prev.map((category) => (
+          String(category.id) === String(editingCategoryId)
+            ? {
+              ...category,
+              ...updatedTheme,
+            }
+            : category
+        )));
+      } else {
+        const createdCategory = await adminAPI.createQuestionCategory(categoryForm);
+        const categoryWithTheme = {
+          ...getCategoryTheme(createdCategory.icon),
+          ...createdCategory,
+        };
+        setCategoryState((prev) => [...prev, categoryWithTheme]);
+      }
       closeCategoryModal();
     } catch (error) {
       setCategoryError(error.message || 'Failed to create category.');
       setIsSavingCategory(false);
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deleteCategoryTarget?.id) return;
+    setIsDeletingCategory(true);
+    setCategoryError('');
+    try {
+      await adminAPI.deleteQuestionCategory(deleteCategoryTarget.id);
+      setCategoryState((prev) => prev.filter((category) => String(category.id) !== String(deleteCategoryTarget.id)));
+      setDeleteCategoryTarget(null);
+    } catch (error) {
+      setCategoryError(error.message || 'Failed to delete category.');
+    } finally {
+      setIsDeletingCategory(false);
     }
   };
 
@@ -146,7 +209,7 @@ export default function QuestionBank() {
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCategoryModal} />
           <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1d45] shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add Question Category</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{editingCategoryId ? 'Edit Question Category' : 'Add Question Category'}</h2>
               <button onClick={closeCategoryModal} className="text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white" aria-label="Close category form">
                 <FiX className="w-5 h-5" />
               </button>
@@ -175,18 +238,21 @@ export default function QuestionBank() {
 
               <div>
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Icon</label>
-                <select
-                  value={categoryForm.icon}
-                  onChange={(event) => setCategoryForm((prev) => ({ ...prev, icon: event.target.value }))}
-                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
-                >
-                  <option value="chart">Chart</option>
-                  <option value="code">Code</option>
-                  <option value="globe">Globe</option>
-                  <option value="terminal">Terminal</option>
-                  <option value="database">Database</option>
-                  <option value="brain">Brain</option>
-                </select>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={categoryForm.icon}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, icon: event.target.value }))}
+                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="chart">Chart</option>
+                    <option className={dropdownOptionClass} value="code">Code</option>
+                    <option className={dropdownOptionClass} value="globe">Globe</option>
+                    <option className={dropdownOptionClass} value="terminal">Terminal</option>
+                    <option className={dropdownOptionClass} value="database">Database</option>
+                    <option className={dropdownOptionClass} value="brain">Brain</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
 
               {categoryError && (
@@ -205,9 +271,37 @@ export default function QuestionBank() {
                   disabled={isSavingCategory}
                   className="h-10 px-5 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold transition-colors"
                 >
-                  {isSavingCategory ? 'Saving...' : 'Create Category'}
+                  {isSavingCategory ? 'Saving...' : editingCategoryId ? 'Save Changes' : 'Create Category'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteCategoryTarget && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setDeleteCategoryTarget(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1d45] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-black/85 dark:text-white/90">Delete Category?</h3>
+            <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+              Are you sure you want to delete <span className="font-semibold">{deleteCategoryTarget.title}</span>? Associated questions in this category will also be removed.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteCategoryTarget(null)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteCategory}
+                disabled={isDeletingCategory}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-70 text-white text-sm font-semibold inline-flex items-center gap-2"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {isDeletingCategory ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>
@@ -250,7 +344,12 @@ export default function QuestionBank() {
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
               <button
-                onClick={() => setIsCategoryModalOpen(true)}
+                onClick={() => {
+                  setEditingCategoryId(null);
+                  setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
+                  setCategoryError('');
+                  setIsCategoryModalOpen(true);
+                }}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#3c83f6] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2563eb]"
               >
                 <FiPlus className="w-4 h-4" />
@@ -261,10 +360,55 @@ export default function QuestionBank() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {categoryState.map((category) => {
                 const Icon = categoryIconMap[category.icon] || FiBarChart2;
+                const isCrudEnabled = isPersistedCategory(category.id);
 
                 return (
-                  <article key={category.id} className="rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] shadow-sm h-full flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                    <div className={`px-4 py-4 min-h-[104px] border-b border-black/5 dark:border-white/10 ${category.topTint}`}>
+                  <article key={category.id} className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] shadow-sm h-full flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                    <div className="absolute right-3 top-3 z-20">
+                      <button
+                        type="button"
+                        className="category-actions-trigger w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenCategoryMenuId((current) => (current === category.id ? null : category.id));
+                        }}
+                        aria-label="Open category actions"
+                      >
+                        <FiMoreHorizontal className="w-4 h-4" />
+                      </button>
+
+                      {openCategoryMenuId === category.id && (
+                        <div className="category-actions-menu absolute right-0 top-9 w-40 rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#071739] backdrop-blur-xl shadow-xl overflow-hidden">
+                          <button
+                            onClick={() => {
+                              if (!isCrudEnabled) return;
+                              setOpenCategoryMenuId(null);
+                              openEditCategory(category);
+                            }}
+                            disabled={!isCrudEnabled}
+                            className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${isCrudEnabled ? 'text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10' : 'text-black/35 dark:text-white/35 cursor-not-allowed'}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!isCrudEnabled) return;
+                              setOpenCategoryMenuId(null);
+                              setDeleteCategoryTarget(category);
+                            }}
+                            disabled={!isCrudEnabled}
+                            className={`w-full text-left px-3.5 py-2.5 text-sm transition-colors ${isCrudEnabled ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-red-400/70 dark:text-red-400/45 cursor-not-allowed'}`}
+                          >
+                            Delete
+                          </button>
+                          {!isCrudEnabled && (
+                            <p className="px-3.5 pb-2.5 text-[11px] text-black/45 dark:text-white/45">System category</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/10 ${category.topTint}`}>
                       <div className="flex items-start gap-2.5">
                         <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm ${category.iconBg}`}>
                           <Icon className={`w-5 h-5 ${category.iconColor}`} />

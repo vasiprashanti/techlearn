@@ -1,47 +1,68 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { 
   FiX,
   FiMenu,
   FiGrid,
-  FiList,
-  FiDatabase,
-  FiCode,
+  FiTarget,
+  FiMap,
+  FiPlayCircle,
   FiCpu,
-  FiBriefcase,
+  FiBarChart2,
   FiAward,
   FiBook,
   FiLayers,
-  FiMap,
-  FiFileText
+  FiFileText,
+  FiUser,
+  FiSettings,
+  FiDatabase,
+  FiCode,
+  FiBriefcase,
+  FiCheckCircle
 } from "react-icons/fi";
 
 const menuGroups = [
   {
-    title: "INTERVIEW PREP",
+    title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "interview/all-questions", title: "All Interview Questions", icon: <FiList className="w-4 h-4" /> },
-      { id: "interview/sql-questions", title: "SQL Questions", icon: <FiDatabase className="w-4 h-4" /> },
-      { id: "interview/dsa-questions", title: "DSA Questions", icon: <FiCode className="w-4 h-4" /> },
-      { id: "interview/core-cs-questions", title: "Core CS Questions", icon: <FiCpu className="w-4 h-4" /> },
-      { id: "interview/company-based-questions", title: "Company-Based Questions", icon: <FiBriefcase className="w-4 h-4" /> },
-      { id: "leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
+      { id: "dashboard/daily-challenge", title: "Daily Challenge", icon: <FiTarget className="w-4 h-4" /> },
+      { id: "dashboard/roadmap", title: "Roadmap", icon: <FiMap className="w-4 h-4" /> },
+      { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-4 h-4" /> },
     ]
   },
   {
-    title: "CORE PREP",
+    title: "PRACTICE",
     items: [
-      { id: "core-prep/languages", title: "Languages", icon: <FiBook className="w-4 h-4" /> },
-      { id: "core-prep/important-concepts", title: "Important concepts", icon: <FiLayers className="w-4 h-4" /> },
+      { id: "dashboard/practice/core-cs", title: "Core CS", icon: <FiCpu className="w-4 h-4" /> },
+      { id: "dashboard/practice/aptitude", title: "Aptitude", icon: <FiCheckCircle className="w-4 h-4" /> },
+      { id: "dashboard/practice/sql", title: "SQL Practice", icon: <FiDatabase className="w-4 h-4" /> },
+      { id: "dashboard/practice/dsa", title: "DSA Practice", icon: <FiCode className="w-4 h-4" /> },
+      { id: "dashboard/practice/company-based", title: "Company-Based Questions", icon: <FiBriefcase className="w-4 h-4" /> },
+    ]
+  },
+  {
+    title: "PERFORMANCE",
+    items: [
+      { id: "dashboard/performance", title: "Performance", icon: <FiBarChart2 className="w-4 h-4" /> },
+      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
     ]
   },
   {
     title: "RESOURCES",
     items: [
-      { id: "resources/roadmaps", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
-      { id: "resources/resume-templates", title: "Resume Templates", icon: <FiFileText className="w-4 h-4" /> },
+      { id: "dashboard/resources/free-courses", title: "Free Courses", icon: <FiBook className="w-4 h-4" /> },
+      { id: "dashboard/resources/important-concepts", title: "Important Concepts", icon: <FiLayers className="w-4 h-4" /> },
+      { id: "dashboard/resources/free-certifications", title: "Free Certifications", icon: <FiAward className="w-4 h-4" /> },
+      { id: "dashboard/resources/resume-templates", title: "Resume Templates", icon: <FiFileText className="w-4 h-4" /> },
+    ]
+  },
+  {
+    title: "ACCOUNT",
+    items: [
+      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
+      { id: "dashboard/settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
     ]
   }
 ];
@@ -51,6 +72,8 @@ const SCROLL_KEY = 'student-sidebar-scroll';
 const Sidebar = ({ isCollapsed, onToggle }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
+  const location = useLocation();
+  const isDashboardRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
 
   useEffect(() => {
     if (desktopNavRef.current) {
@@ -58,6 +81,18 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       if (saved) desktopNavRef.current.scrollTop = parseInt(saved, 10);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isDashboardRoute) {
+      document.body.classList.add('dashboard-sidebar-disabled');
+    } else {
+      document.body.classList.remove('dashboard-sidebar-disabled');
+    }
+
+    return () => {
+      document.body.classList.remove('dashboard-sidebar-disabled');
+    };
+  }, [isDashboardRoute]);
 
   const handleDesktopScroll = () => {
     if (desktopNavRef.current) {
@@ -77,6 +112,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               <NavLink
                 key={item.id}
                 to={`/${item.id}`}
+                end
                 onClick={onClickAction}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
@@ -96,6 +132,10 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       ))}
     </div>
   );
+
+  if (!isDashboardRoute) {
+    return null;
+  }
 
   return (
     <>

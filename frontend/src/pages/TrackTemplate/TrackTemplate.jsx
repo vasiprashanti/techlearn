@@ -8,7 +8,8 @@ import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2 } from 'react-icons/fi';
+import { PiBrainLight } from 'react-icons/pi';
 
 // --- Mock Data ---
 const searchRoutes = [
@@ -26,16 +27,24 @@ const searchRoutes = [
   { id: 'settings', title: 'Settings', category: 'Configuration' },
 ];
 
-const statusPillClass = (status) =>
-  status === 'Active'
-    ? 'bg-[#16a34a] text-white'
-    : 'bg-[#dbe7ff] text-[#3c83f6]';
-
 const iconMapForTrack = (iconKeyOrCategory) => {
+  if (iconKeyOrCategory === 'chart') return FiBarChart2;
+  if (iconKeyOrCategory === 'globe') return FiGlobe;
+  if (iconKeyOrCategory === 'terminal') return FiTerminal;
+  if (iconKeyOrCategory === 'brain') return PiBrainLight;
   if (iconKeyOrCategory === 'database' || iconKeyOrCategory === 'Database Management') return FiDatabase;
   if (iconKeyOrCategory === 'cpu' || iconKeyOrCategory === 'Web Development') return FiCpu;
   return FiCode;
 };
+
+const iconChoices = [
+  { key: 'chart', label: 'Chart', Icon: FiBarChart2 },
+  { key: 'code', label: 'Code', Icon: FiCode },
+  { key: 'globe', label: 'Globe', Icon: FiGlobe },
+  { key: 'terminal', label: 'Terminal', Icon: FiTerminal },
+  { key: 'database', label: 'Database', Icon: FiDatabase },
+  { key: 'brain', label: 'Brain', Icon: PiBrainLight },
+];
 
 export default function TrackTemplate() {
   const navigate = useNavigate();
@@ -63,6 +72,7 @@ export default function TrackTemplate() {
     endDate: '',
     batchId: '',
     totalDays: '30',
+    iconKey: 'code',
     status: 'Active',
   });
   const [selectedTrack, setSelectedTrack] = useState(null);
@@ -81,13 +91,6 @@ export default function TrackTemplate() {
     return date.toISOString().slice(0, 10);
   };
 
-  const formatDateLabel = (value) => {
-    if (!value) return 'Not set';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Not set';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
   const loadTrackTemplatePageData = useCallback(async () => {
     const [remoteTracks, remoteCategories, remoteBatches] = await Promise.all([
       adminAPI.getTrackTemplates(),
@@ -97,6 +100,7 @@ export default function TrackTemplate() {
 
     const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
       ...track,
+      id: track.id || track._id,
       icon: track.icon || iconMapForTrack(track.iconKey || track.category),
       startDate: track.startDate || '',
       endDate: track.endDate || '',
@@ -214,6 +218,7 @@ export default function TrackTemplate() {
       endDate: '',
       batchId: '',
       totalDays: '30',
+      iconKey: 'code',
       status: 'Active',
     });
   };
@@ -229,6 +234,7 @@ export default function TrackTemplate() {
       endDate: '',
       batchId: '',
       totalDays: '30',
+      iconKey: 'code',
       status: 'Active',
     });
     setIsCreateTemplateOpen(true);
@@ -244,6 +250,7 @@ export default function TrackTemplate() {
       endDate: formatDateInput(track.endDate),
       batchId: track.batchId || '',
       totalDays: String(track.totalDays || 1),
+      iconKey: track.iconKey || 'code',
       status: track.status || 'Active',
     });
     setTemplateFormError('');
@@ -285,6 +292,7 @@ export default function TrackTemplate() {
       endDate: createTemplateForm.endDate,
       batchId: createTemplateForm.batchId,
       totalDays,
+      iconKey: createTemplateForm.iconKey,
       status: createTemplateForm.status,
     };
 
@@ -423,36 +431,39 @@ export default function TrackTemplate() {
       {isCreateTemplateOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCreateTemplateModal} />
-          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+          <div
+            className="relative w-full max-w-[420px] max-h-[84vh] rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full"
+            style={{ scrollbarWidth: 'thin' }}
+          >
+            <div className="sticky top-0 z-10 px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 backdrop-blur">
+              <h2 className="text-base font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
             </div>
 
-            <div className="p-5 space-y-3.5">
+            <div className="p-3.5 space-y-2.5">
               <div>
                 <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
                 <input
                   value={createTemplateForm.name}
                   onChange={(e) => updateCreateTemplateField('name', e.target.value)}
                   placeholder="Enter template name"
-                  className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
+                  className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
                 />
               </div>
 
               <div>
                 <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
-                <div className="relative mt-1">
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
                     value={createTemplateForm.category}
                     onChange={(e) => updateCreateTemplateField('category', e.target.value)}
-                    className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
+                    className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                   >
-                    <option value="">Select category</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
                     {questionCategories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={category} value={category}>{category}</option>
                     ))}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
                 {questionCategories.length === 0 && (
                   <p className="mt-2 text-xs text-black/45 dark:text-white/45">
@@ -468,11 +479,11 @@ export default function TrackTemplate() {
                   onChange={(e) => updateCreateTemplateField('description', e.target.value)}
                   rows={3}
                   placeholder="Describe this template"
-                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 py-2 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
+                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 py-2 text-sm text-[#1a2335] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Start date*</label>
                   <div className="mt-1">
@@ -504,24 +515,24 @@ export default function TrackTemplate() {
                 </div>
               </div>
 
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Assigned batch*</label>
-                <div className="relative mt-1">
-                  <select
-                    value={createTemplateForm.batchId}
-                    onChange={(e) => updateCreateTemplateField('batchId', e.target.value)}
-                    className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
-                  >
-                    <option value="">Select batch</option>
-                    {batches.map((batch) => (
-                      <option key={batch.id} value={batch.id}>{batch.name}</option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Assigned batch*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createTemplateForm.batchId}
+                      onChange={(e) => updateCreateTemplateField('batchId', e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select batch</option>
+                      {batches.map((batch) => (
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={batch.id} value={batch.id}>{batch.name}</option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Total days</label>
                   <input
@@ -529,22 +540,40 @@ export default function TrackTemplate() {
                     min="1"
                     value={createTemplateForm.totalDays}
                     onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
-                    className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 text-sm text-black/80 dark:text-white"
+                    className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Status</label>
-                  <div className="relative mt-1">
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createTemplateForm.status}
                       onChange={(e) => updateCreateTemplateField('status', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3 pr-10 text-sm text-black/80 dark:text-white"
+                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                     >
-                      <option value="Active">active</option>
-                      <option value="Draft">draft</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Active">active</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Draft">draft</option>
                     </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/45" />
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Icon</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createTemplateForm.iconKey}
+                      onChange={(e) => updateCreateTemplateField('iconKey', e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                    >
+                      {iconChoices.map(({ key, label }) => (
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={key} value={key}>{label}</option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
               </div>
@@ -553,7 +582,7 @@ export default function TrackTemplate() {
                 <p className="text-xs text-red-500">{templateFormError}</p>
               )}
 
-              <div className="pt-1 flex items-center justify-end gap-2.5">
+              <div className="pt-0.5 flex items-center justify-end gap-2">
                 <button
                   onClick={closeCreateTemplateModal}
                   className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
@@ -629,13 +658,13 @@ export default function TrackTemplate() {
             {/* Search + Create Row */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <div className="relative flex-1">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
                 <input
                   type="text"
                   placeholder="Search templates..."
                   value={templateSearch}
                   onChange={(e) => setTemplateSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white/40 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-xl backdrop-blur-md text-sm text-black/70 dark:text-white/70 placeholder:text-black/30 dark:placeholder:text-white/30 outline-none focus:border-black/20 dark:focus:border-white/20 transition-colors"
+                  className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                 />
               </div>
 
@@ -660,85 +689,75 @@ export default function TrackTemplate() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredTracks.map((track) => {
+                  const templateId = track.id || track._id;
                   const Icon = track.icon;
-                  const iconTileBgClass =
-                    track.id === 'trk_dsa_01'
-                      ? 'from-blue-500/15 to-indigo-500/15'
-                      : track.id === 'trk_core_01'
-                        ? 'from-orange-500/15 to-amber-500/15'
-                        : 'from-violet-500/15 to-purple-500/15';
-                  const iconColorClass =
-                    track.id === 'trk_dsa_01'
-                      ? 'text-blue-600 dark:text-blue-300'
-                      : track.id === 'trk_core_01'
-                        ? 'text-orange-600 dark:text-orange-300'
-                        : 'text-violet-600 dark:text-violet-300';
+                  const statusBadgeClass =
+                    track.status === 'Active'
+                      ? 'bg-emerald-600 text-white'
+                      : track.status === 'Draft'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-slate-600 text-white';
                   return (
-                    <div key={track.id} className="rounded-2xl bg-white dark:bg-[#0f1e3e] border border-black/10 dark:border-white/10 p-6 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-                      <div className="space-y-4">
-                      {/* Top row: icon + status badge */}
-                      <div className="flex items-start justify-between">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 ${iconTileBgClass}`}>
-                          <Icon className={`w-[22px] h-[22px] ${iconColorClass}`} />
+                    <div key={templateId || track.name} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0e2148] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-250 overflow-hidden">
+                      <div className="p-5">
+                        <div className="flex items-start justify-between gap-3.5">
+                          <div className="w-12 h-12 rounded-2xl bg-[#e3edfb] dark:bg-[#1f365c] text-[#2f73e0] dark:text-[#9dc4ff] flex items-center justify-center shrink-0 border border-black/5 dark:border-white/10 shadow-sm">
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${statusBadgeClass}`}>
+                            {track.status}
+                          </span>
                         </div>
-                        <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(track.status)}`}>
-                          {track.status}
-                        </span>
-                      </div>
 
-                      {/* Track name + description */}
-                      <div>
-                        <h3 className="text-lg font-bold text-[#0f172a] dark:text-white">
-                          {track.name}
-                        </h3>
-                        <p className="text-xs text-[#64748b] dark:text-slate-300 mt-1 line-clamp-2">
-                          {track.description}
-                        </p>
-                      </div>
+                        <div className="mt-3 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="text-[1.02rem] font-bold tracking-tight text-[#0f172a] dark:text-white truncate">{track.name}</h3>
+                            <span className="shrink-0 text-[#6f86a3] dark:text-[#9bb8de]">|</span>
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5e7595] dark:text-[#9bb8de] truncate">{track.category}</p>
+                          </div>
+                          <p className="mt-1.5 text-xs leading-relaxed text-[#5d6f86] dark:text-slate-300 line-clamp-2">{track.description || 'No description available.'}</p>
+                        </div>
 
-                      {/* Stats */}
-                      <div className="space-y-2.5">
-                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
-                          <span className="text-xs text-[#64748b] dark:text-slate-300">Total Days</span>
-                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
+                        <div className="mt-4 grid grid-cols-2 gap-2.5">
+                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
+                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Total Days</p>
+                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
+                          </div>
+                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
+                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Questions</p>
+                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.questionsAssigned}</p>
+                          </div>
+                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
+                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Start Date</p>
+                            <p className="mt-0.5 text-sm font-semibold text-[#0f172a] dark:text-white">{track.startDate ? formatDateInput(track.startDate) : 'Not set'}</p>
+                          </div>
+                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
+                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">End Date</p>
+                            <p className="mt-0.5 text-sm font-semibold text-[#0f172a] dark:text-white">{track.endDate ? formatDateInput(track.endDate) : 'Not set'}</p>
+                          </div>
                         </div>
-                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
-                          <span className="text-xs text-[#64748b] dark:text-slate-300">Start Date</span>
-                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{formatDateLabel(track.startDate)}</p>
-                        </div>
-                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
-                          <span className="text-xs text-[#64748b] dark:text-slate-300">End Date</span>
-                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">{formatDateLabel(track.endDate)}</p>
-                        </div>
-                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
-                          <span className="text-xs text-[#64748b] dark:text-slate-300">Assigned Batch</span>
-                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white truncate">{track.assignedBatch || 'Not set'}</p>
-                        </div>
-                        <div className="rounded-xl bg-[#e8edf4] dark:bg-white/15 px-4 py-2.5 border border-black/5 dark:border-white/10">
-                          <span className="text-xs text-[#64748b] dark:text-slate-300">Questions Assigned</span>
-                          <p className="text-sm font-semibold text-[#0f172a] dark:text-white">
-                            {track.questionsAssigned} / {track.totalDays}
-                          </p>
-                        </div>
-                      </div>
-                      </div>
 
                       {/* Actions row */}
-                      <div className="flex items-center gap-2 mt-5">
+                        <div className="flex items-center gap-2 mt-4">
                         <button
-                          onClick={() => navigate(`/track-templates/${track.id}`)}
-                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-md px-4 text-sm font-medium bg-[#3C83F6] hover:bg-[#2563eb] text-white transition-colors whitespace-nowrap"
+                          onClick={() => {
+                            if (!templateId) return;
+                            navigate(`/track-templates/${templateId}`);
+                          }}
+                          disabled={!templateId}
+                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
                         >
                           <FiEye className="w-[15px] h-[15px]" />
                           View Template
                         </button>
-                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
                           <FiEdit2 className="w-[15px] h-[15px]" />
                         </button>
-                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-md border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
+                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
                           <FiTrash2 className="w-[15px] h-[15px]" />
                         </button>
                       </div>
+                    </div>
                     </div>
                   );
                 })}

@@ -157,6 +157,8 @@ export const adminAPI = {
 
   getQuestionCategories: () => request('/admin/questions/categories'),
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
+  updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteQuestionCategory: (categoryId) => request(`/admin/questions/categories/${categoryId}`, { method: 'DELETE' }),
   getQuestions: (params = {}) => {
     const query = new URLSearchParams(params);
     const suffix = query.toString() ? `?${query.toString()}` : '';

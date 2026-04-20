@@ -212,9 +212,9 @@ export default function SubmissionMonitor() {
             {/* Toolbar */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="relative w-full md:max-w-[520px]">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/30 dark:text-white/35 pointer-events-none" />
+                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40 pointer-events-none" />
                 <input type="text" placeholder="Search by student or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
-                  className="w-full h-10 pl-10 pr-3.5 text-xs bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25 text-slate-700 dark:text-white/80 placeholder:text-black/30 dark:placeholder:text-white/35 transition-all" />
+                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30" />
               </div>
               <button
                 onClick={() => setTableSearch('')}
