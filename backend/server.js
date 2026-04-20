@@ -31,6 +31,7 @@ import mcqRouter from "./routes/checkpointMcqRoutes.js";
 import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
+import dailyChallengeRoutes from "./routes/dailyChallengeRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import submissionRoutes from "./routes/submissionRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
@@ -100,6 +101,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", mcqRouter);
 app.use("/api/college-mcq", collegeMcqRoutes);
 app.use("/api/college-coding", codingRoundRoutes);
+app.use("/api/daily-challenge", dailyChallengeRoutes);
 app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 
@@ -150,6 +152,7 @@ app.use((req, res) => {
       "/api/college",
       "/api/college-mcq",
       "/api/college-coding",
+      "/api/daily-challenge",
       "/api/mini-projects",
       "/api/major-projects",
       "/api/bookings",

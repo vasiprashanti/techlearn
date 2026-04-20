@@ -6,65 +6,112 @@ import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import mongoose from "mongoose";
 
+const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+const dashboardCache = new Map();
+
+const toPlainMap = (value) => {
+  if (!value) return {};
+  if (value instanceof Map) {
+    return Object.fromEntries(value);
+  }
+  return Object.fromEntries(Object.entries(value));
+};
+
+const getCachedDashboard = (userId) => {
+  const cached = dashboardCache.get(String(userId));
+  if (!cached) return null;
+  if (Date.now() > cached.expiresAt) {
+    dashboardCache.delete(String(userId));
+    return null;
+  }
+  return cached.payload;
+};
+
+const setCachedDashboard = (userId, payload) => {
+  dashboardCache.set(String(userId), {
+    expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS,
+    payload,
+  });
+};
+
 export const getDashboardData = async (req, res) => {
   try {
     const userId = req.user._id;
-    //fetching the user
-    const user = await User.findById(userId);
+    const cached = getCachedDashboard(userId);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
-    const progress = await UserProgress.findOne({ userId }).populate({
-      path: "completedExercises.exerciseId",
-      select: "title courseId",
-      populate: {
-        path: "courseId",
-        select: "title",
-      },
-    });
+    const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
+      User.findById(userId).select("avatar").lean(),
+      UserProgress.findOne({ userId })
+        .select("courseXP exerciseXP completedExercises answeredCheckpointMcqs createdAt")
+        .populate({
+          path: "completedExercises.exerciseId",
+          select: "title courseId",
+          populate: {
+            path: "courseId",
+            select: "title",
+          },
+        })
+        .lean(),
+      Exercise.countDocuments(),
+      Notes.aggregate([
+        {
+          $project: {
+            checkpointCount: {
+              $size: {
+                $ifNull: ["$checkpointMcqs", []],
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalMcqs: { $sum: "$checkpointCount" },
+          },
+        },
+      ]),
+    ]);
 
     if (!progress) {
-      return res.status(200).json({
+      const emptyPayload = {
         courseXP: {},
         exerciseXP: {},
-        totalCourseXP: {}, // Show empty object when no progress exists
-        totalExerciseXP: {}, // Show empty object when no progress exists
+        totalCourseXP: {},
+        totalExerciseXP: {},
         completedExercises: [],
         calendarActivity: {},
         answeredQuestions: {},
-        courseProgress: { progressPercent: 0 },
+        totalCourseProgress: { progressPercent: 0 },
         exerciseProgress: {
-          totalExercises: 0, // Show 0 initially
+          totalExercises: 0,
           completedExercises: 0,
           progressPercent: 0,
         },
-        avatar: user.avatar,
+        avatar: user?.avatar || "",
         mcqProgress: {
-          totalMcqs: 0, // Show 0 initially
+          totalMcqs: 0,
           answeredMcqs: 0,
           progressPercent: 0,
         },
-      });
+      };
+      setCachedDashboard(userId, emptyPayload);
+      return res.status(200).json(emptyPayload);
     }
 
-    // CALCULATE progress from actual data (no schema changes needed)
-    const totalExercises = await Exercise.countDocuments();
+    const totalMcqs = notesMcqCounts[0]?.totalMcqs || 0;
+    const completedExercisesCount = progress.completedExercises?.length || 0;
 
-    // Get all notes to count total MCQs
-    const allNotes = await Notes.find();
-    let totalMcqs = 0;
-    for (const note of allNotes) {
-      totalMcqs += note.checkpointMcqs.length;
-    }
-
-    const completedExercisesCount = progress.completedExercises.length;
-
-    // Calculate MCQ progress based on answered checkpoint MCQs
     let answeredMcqs = 0;
-
-    // Count answered MCQs from progress.answeredCheckpointMcqs
-    if (progress.answeredCheckpointMcqs) {
-      for (const [notesId, mcqIds] of progress.answeredCheckpointMcqs) {
-        answeredMcqs += mcqIds.length;
-      }
+    const answeredCheckpointMcqs = progress.answeredCheckpointMcqs || {};
+    const answeredEntries =
+      answeredCheckpointMcqs instanceof Map
+        ? answeredCheckpointMcqs.entries()
+        : Object.entries(answeredCheckpointMcqs);
+    for (const [, mcqIds] of answeredEntries) {
+      answeredMcqs += Array.isArray(mcqIds) ? mcqIds.length : 0;
     }
 
     const exercisePercent =
@@ -76,68 +123,73 @@ export const getDashboardData = async (req, res) => {
     const courseProgressPercent =
       Math.round(((exercisePercent + mcqPercent) / 2) * 10) / 10;
 
-    // Create calendar activity
     const calendarActivity = {};
     if (progress.createdAt) {
-      const dateKey = progress.createdAt.toISOString().split("T")[0];
-      calendarActivity[dateKey] = "active"; // Use string instead of boolean
+      const dateKey = new Date(progress.createdAt).toISOString().split("T")[0];
+      calendarActivity[dateKey] = "active";
     }
 
-    // Convert Maps to plain objects for frontend
-    const courseXPObject = {};
-    const exerciseXPObject = {};
-    const totalCourseXPObject = {};
-    const totalExerciseXPObject = {};
+    const courseXPObject = toPlainMap(progress.courseXP);
+    const exerciseXPObject = toPlainMap(progress.exerciseXP);
 
-    if (progress.courseXP) {
-      for (const [courseId, xp] of progress.courseXP) {
-        courseXPObject[courseId] = xp;
-      }
-    }
-    if (progress.exerciseXP) {
-      for (const [courseId, xp] of progress.exerciseXP) {
-        exerciseXPObject[courseId] = xp;
-      }
-    }
+    const allCourseIds = [...new Set([
+      ...Object.keys(courseXPObject),
+      ...Object.keys(exerciseXPObject),
+    ])];
+    const courseObjectIds = allCourseIds
+      .filter((courseId) => mongoose.Types.ObjectId.isValid(courseId))
+      .map((courseId) => new mongoose.Types.ObjectId(courseId));
 
-    // Calculate total possible XP for each course the user has progress in
-    const allCourseIds = Array.from(
-      new Set([...progress.courseXP.keys(), ...progress.exerciseXP.keys()])
+    const [courses, exercisesByCourse, topicsByCourse, notesById] = await Promise.all([
+      Course.find({ _id: { $in: courseObjectIds } }).select("_id topicIds").lean(),
+      Exercise.aggregate([
+        { $match: { courseId: { $in: courseObjectIds } } },
+        { $group: { _id: "$courseId", totalExercises: { $sum: 1 } } },
+      ]),
+      Topic.find({
+        courseId: { $in: courseObjectIds },
+      })
+        .select("courseId notesId")
+        .lean(),
+      Notes.find()
+        .select("_id checkpointMcqs")
+        .lean(),
+    ]);
+
+    const noteMcqCountById = Object.fromEntries(
+      notesById.map((note) => [String(note._id), note.checkpointMcqs?.length || 0])
+    );
+    const exerciseCountByCourse = Object.fromEntries(
+      exercisesByCourse.map((entry) => [String(entry._id), entry.totalExercises || 0])
     );
 
-    for (const courseId of allCourseIds) {
-      // Calculate total MCQ XP for this course
-      const course = await Course.findById(courseId);
-      let totalMcqXP = 0;
-      let totalExerciseXP = 0;
-
-      if (course) {
-        const topics = await Topic.find({ _id: { $in: course.topicIds } });
-        for (const topic of topics) {
-          if (topic.notesId) {
-            const notes = await Notes.findById(topic.notesId);
-            if (notes && notes.checkpointMcqs) {
-              totalMcqXP += notes.checkpointMcqs.length * 10;
-            }
-          }
-        }
-        // Calculate total exercise XP for this course
-        const exerciseCount = await Exercise.countDocuments({ courseId });
-        totalExerciseXP = exerciseCount * 10;
-      }
-
-      totalCourseXPObject[courseId] = totalMcqXP;
-      totalExerciseXPObject[courseId] = totalExerciseXP;
+    const topicsGroupedByCourse = {};
+    for (const topic of topicsByCourse) {
+      const courseKey = String(topic.courseId);
+      if (!topicsGroupedByCourse[courseKey]) topicsGroupedByCourse[courseKey] = [];
+      topicsGroupedByCourse[courseKey].push(topic);
     }
 
-    res.status(200).json({
+    const totalCourseXPObject = {};
+    const totalExerciseXPObject = {};
+    for (const course of courses) {
+      const courseKey = String(course._id);
+      const courseTopics = topicsGroupedByCourse[courseKey] || [];
+      totalCourseXPObject[courseKey] = courseTopics.reduce(
+        (sum, topic) => sum + (topic.notesId ? (noteMcqCountById[String(topic.notesId)] || 0) * 10 : 0),
+        0,
+      );
+      totalExerciseXPObject[courseKey] = (exerciseCountByCourse[courseKey] || 0) * 10;
+    }
+
+    const payload = {
       courseXP: courseXPObject,
       exerciseXP: exerciseXPObject,
       totalCourseXP: totalCourseXPObject,
       totalExerciseXP: totalExerciseXPObject,
-      completedExercises: progress.completedExercises,
+      completedExercises: progress.completedExercises || [],
       calendarActivity,
-      answeredCheckpointMcqs: progress.answeredCheckpointMcqs,
+      answeredCheckpointMcqs,
       totalCourseProgress: { progressPercent: courseProgressPercent },
       mcqProgress: {
         totalMcqs,
@@ -149,8 +201,11 @@ export const getDashboardData = async (req, res) => {
         completedExercises: completedExercisesCount,
         progressPercent: exercisePercent,
       },
-      avatar: user.avatar,
-    });
+      avatar: user?.avatar || "",
+    };
+
+    setCachedDashboard(userId, payload);
+    res.status(200).json(payload);
   } catch (error) {
     console.error("Dashboard data fetch error:", error);
     res.status(500).json({ message: "Server error fetching dashboard data" });

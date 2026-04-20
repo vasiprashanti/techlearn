@@ -36,6 +36,67 @@ const convertISTToUTC = (istDateString) => {
   return utcDate;
 };
 
+const startOfDay = (date) => {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+};
+
+const buildDailyChallengeOutcome = async ({ codingRound, submission, totalProblems, correctSolutions }) => {
+  if (codingRound.challengeType !== "daily_challenge") {
+    return {};
+  }
+
+  const completedRounds = await StudentCodingSubmission.find({
+    studentEmail: submission.studentEmail,
+    isRoundEnded: true,
+  })
+    .populate({
+      path: "codingRoundId",
+      select: "challengeType date",
+      match: { challengeType: "daily_challenge" },
+    })
+    .lean();
+
+  const distinctDates = [...new Set(
+    completedRounds
+      .filter((item) => item.codingRoundId?.date)
+      .map((item) => startOfDay(item.codingRoundId.date).toISOString())
+  )].sort();
+
+  let streak = 0;
+  if (distinctDates.length > 0) {
+    streak = 1;
+    for (let index = distinctDates.length - 1; index > 0; index -= 1) {
+      const current = new Date(distinctDates[index]);
+      const previous = new Date(distinctDates[index - 1]);
+      const diffDays = Math.round((current.getTime() - previous.getTime()) / (24 * 60 * 60 * 1000));
+      if (diffDays === 1) {
+        streak += 1;
+      } else {
+        break;
+      }
+    }
+  }
+
+  const startedAt = submission.submittedAt || submission.createdAt || new Date();
+  const endedAt = submission.roundEndedAt || new Date();
+  const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
+  const xpGained = Math.max(0, Math.round(submission.totalScore || 0));
+
+  return {
+    challengeMetrics: {
+      xpGained,
+      streak,
+      timeTakenSeconds,
+      timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
+      score: submission.totalScore || 0,
+      correctSolutions,
+      totalProblems,
+    },
+  };
+};
+
 // Create a new coding round
 export const createCodingRound = async (req, res) => {
   try {
@@ -927,6 +988,12 @@ export const endCodingRound = async (req, res) => {
       (p) => p.attempted
     ).length;
     const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
+    const challengeOutcome = await buildDailyChallengeOutcome({
+      codingRound,
+      submission,
+      totalProblems: codingRound.problems.length,
+      correctSolutions,
+    });
 
     res.status(200).json({
       success: true,
@@ -940,6 +1007,7 @@ export const endCodingRound = async (req, res) => {
         totalProblems: codingRound.problems.length,
         attempted: totalProblemsAttempted,
         correctSolutions: correctSolutions,
+        ...challengeOutcome,
       },
     });
   } catch (error) {
@@ -1024,6 +1092,12 @@ export const autoSubmitRound = async (req, res) => {
     });
 
     const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
+    const challengeOutcome = await buildDailyChallengeOutcome({
+      codingRound,
+      submission,
+      totalProblems: codingRound.problems.length,
+      correctSolutions,
+    });
 
     res.status(200).json({
       success: true,
@@ -1036,6 +1110,7 @@ export const autoSubmitRound = async (req, res) => {
         problemResults,
         correctSolutions,
         totalProblems: codingRound.problems.length,
+        ...challengeOutcome,
       },
     });
   } catch (error) {
