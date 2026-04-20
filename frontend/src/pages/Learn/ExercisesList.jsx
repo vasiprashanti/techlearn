@@ -80,8 +80,6 @@ export default function ExercisesList() {
     navigate(`/learn/exercises/${courseId}/${exercise.id}`);
   };
 
-  if (loading) return <LoadingScreen showMessage={false} size={48} duration={800} />;
-
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
@@ -91,25 +89,27 @@ export default function ExercisesList() {
       <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
         <div className="max-w-[1200px] mx-auto space-y-6">
           
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-            <div>
-              <button onClick={() => navigate('/learn/exercises')} className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-blue-400 transition-colors mb-4">
-                <ArrowLeft className="w-4 h-4" /> Back to Categories
+          <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <button onClick={() => navigate('/learn/exercises')} className="flex items-center gap-1 text-[8px] sm:text-[9px] md:text-[10px] uppercase tracking-widest font-semibold text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-blue-400 transition-colors whitespace-nowrap flex-shrink-0">
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
               </button>
-              <h1 className="text-3xl md:text-5xl font-light tracking-tight text-[#3C83F6] dark:text-white">
-                {course?.title || 'Course Exercises'}
-              </h1>
-              <div className="flex items-center gap-6 mt-6">
-                <span className="text-[9px] uppercase tracking-widest px-3 py-1 bg-[#3C83F6]/10 text-[#3C83F6] rounded-full font-medium border border-[#3C83F6]/20">
-                  Beginner Friendly
-                </span>
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-black/50 dark:text-white/50 flex items-center gap-1.5"><Code className="w-3 h-3 text-[#3C83F6]"/> {exercises.length} Qs</span>
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-black/50 dark:text-white/50 flex items-center gap-1.5"><Trophy className="w-3 h-3 text-[#3C83F6]"/> {exercises.reduce((s, e) => s + e.xp, 0)} XP</span>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-5xl font-light tracking-tight text-[#3C83F6] dark:text-white truncate">
+                  {course?.title || 'Course Exercises'}
+                </h1>
+                <div className="hidden sm:flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+                  <span className="text-[8px] sm:text-[9px] uppercase tracking-widest px-2 py-0.5 bg-[#3C83F6]/10 text-[#3C83F6] rounded-full font-medium border border-[#3C83F6]/20 whitespace-nowrap">
+                    Beginner
+                  </span>
+                  <span className="text-[9px] uppercase tracking-widest font-semibold text-black/50 dark:text-white/50 flex items-center gap-1 whitespace-nowrap"><Code className="w-3 h-3 text-[#3C83F6]"/> {exercises.length} Qs</span>
+                  <span className="text-[9px] uppercase tracking-widest font-semibold text-black/50 dark:text-white/50 flex items-center gap-1 whitespace-nowrap"><Trophy className="w-3 h-3 text-[#3C83F6]"/> {exercises.reduce((s, e) => s + e.xp, 0)} XP</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 self-end md:self-auto relative z-50">
-              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0 relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap">
                 {isDarkMode ? "Light" : "Dark"}
               </button>
               

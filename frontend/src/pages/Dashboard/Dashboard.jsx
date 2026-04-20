@@ -104,23 +104,23 @@ export default function Dashboard() {
           <div className="max-w-[1600px] mx-auto space-y-6">
             
             {/* Header Section with Profile & Theme Toggle */}
-            <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
                   Welcome back, {userName}.
                 </h1>
-                <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+                <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
                   Student Overview
                 </p>
               </div>
 
               {/* Right Side Header Controls */}
-              <div className="flex items-center gap-6 self-end md:self-auto">
+              <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0">
                 
                 {/* Theme Toggle */}
                 <button
                   onClick={toggleTheme}
-                  className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors"
+                  className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap"
                 >
                   {isDarkMode ? "Light" : "Dark"}
                 </button>
@@ -276,7 +276,15 @@ export default function Dashboard() {
 
                   <div className="mt-8 flex items-center justify-between">
                     <button 
-                      onClick={() => navigate('/track-templates')}
+                      onClick={() => {
+                        const courseIds = [
+                          '6890c2acbc09eb4b5c346b9b', // C Programming
+                          '6890ec81950225df57310f52', // Python  
+                          '6890f09830551d88a325f623'  // Core Java
+                        ]; // Actual working course IDs
+                        const randomCourseId = courseIds[Math.floor(Math.random() * courseIds.length)];
+                        navigate(`/learn/exercises/${randomCourseId}`);
+                      }}
                       className="bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                     >
                       Start Challenge <FiChevronRight />

@@ -132,19 +132,19 @@ export default function Courses() {
         <div className="max-w-[1600px] mx-auto space-y-8">
           
           {/* Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+          <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
                 Courses.
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
-                Discover our comprehensive learning programs
+              <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
+                Discover comprehensive learning programs
               </p>
             </motion.div>
 
             {/* Right Side Header Controls */}
-            <div className="flex items-center gap-6 self-end md:self-auto relative z-50">
-              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0 relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap">
                 {isDarkMode ? "Light" : "Dark"}
               </button>
 

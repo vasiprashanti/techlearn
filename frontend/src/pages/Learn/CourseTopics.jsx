@@ -94,8 +94,6 @@ const CourseTopics = () => {
     }
   }, [selectedTopic]);
 
-  if (loading) return <><ScrollProgress /><LoadingScreen showMessage={false} size={48} duration={800} /></>;
-
   if (error || !currentCourse) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>

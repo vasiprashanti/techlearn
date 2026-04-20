@@ -9,6 +9,7 @@ import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import Sidebar from "./Sidebar";
 import ScrollProgress from "../../components/ScrollProgress";
+import { compilerAPI } from "../../services/api";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";

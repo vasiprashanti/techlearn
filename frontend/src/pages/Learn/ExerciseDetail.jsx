@@ -238,7 +238,9 @@ const ExerciseDetail = () => {
     setOutput('');
   };
 
-  if (loading) return <LoadingScreen showMessage={false} size={48} duration={800} />;
+  if (loading) {
+    return <LoadingScreen showMessage={false} fullScreen={true} size={40} duration={800} />;
+  }
 
   if (!exercise?.id || exercise.id === 'undefined') {
     return (

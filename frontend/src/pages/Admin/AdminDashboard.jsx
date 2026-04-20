@@ -77,8 +77,6 @@ const AdminDashboard = () => {
     fetchPayments();
   }, []);
 
-  if (loading) return <LoadingScreen fullScreen={true} />;
-
   if (error) return (
     <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900">
       <div className="bg-red-100 dark:bg-red-900 p-6 rounded-lg max-w-md mx-4">

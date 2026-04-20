@@ -56,8 +56,6 @@ export default function AllCourses() {
     return course.difficulty?.toLowerCase() === selectedFilter;
   });
 
-  if (loading) return <LoadingScreen showMessage={false} size={48} duration={800} />;
-
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       {/* Unified Background */}
@@ -69,22 +67,24 @@ export default function AllCourses() {
         <div className="max-w-[1600px] mx-auto space-y-6">
           
           {/* Header */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-            <div>
-              <button onClick={() => navigate('/learn/courses')} className="flex items-center gap-2 text-[10px] font-medium text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-white transition-colors mb-4 uppercase tracking-widest">
-                <ArrowLeft className="w-4 h-4" /> Back to Overview
+          <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <button onClick={() => navigate('/learn/courses')} className="flex items-center gap-1 text-[8px] sm:text-[9px] md:text-[10px] font-medium text-black/40 dark:text-white/40 hover:text-[#3C83F6] dark:hover:text-white transition-colors uppercase tracking-widest whitespace-nowrap flex-shrink-0">
+                <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Back</span>
               </button>
-              <h1 className="text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
-                Course Catalog.
-              </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
-                Browse our complete collection of tracks
-              </p>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
+                  Course Catalog.
+                </h1>
+                <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
+                  Browse our complete collection of tracks
+                </p>
+              </div>
             </div>
 
             {/* Right Side Header Controls */}
-            <div className="flex items-center gap-6 self-end md:self-auto relative z-50">
-              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0 relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap">
                 {isDarkMode ? "Light" : "Dark"}
               </button>
               
