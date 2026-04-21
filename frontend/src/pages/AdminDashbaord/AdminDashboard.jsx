@@ -192,7 +192,7 @@ export default function AdminDashboard() {
         >
           <div className="max-w-[1600px] mx-auto space-y-6">
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
-              <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">
                 Overview
               </h1>
 

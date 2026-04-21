@@ -18,8 +18,9 @@ const PixelStar = () => (
 const PixelQuestion = () => (
   <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
     <rect width="10" height="10" fill="#4FB7FF" />
-    <path d="M3 2h4v1H3V2zm4 1h1v3H7V3zM5 6h2v1H5V6zm0 2h1v1H5V8z" fill="white" />
-    <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" />
+    <path d="M2 2h6v2H8v2H7V5H5v2H4V5H2V2zm2 6h4v1H4V8z" fill="white" />
+    <circle cx="5" cy="3" r="1" fill="white" />
+    <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="0.5" />
   </svg>
 );
 
@@ -32,8 +33,9 @@ const PixelDiamond = () => (
 
 const PixelFlame = () => (
   <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
-    <path d="M4 0h2v2H4V0zm-2 2h2v2H2V2zm4 0h2v2H6V2zm-2 2h2v2H4V4zm-2 2h2v2H2V6zm4 0h2v2H6V6zm-2 2h2v2H4V8z" fill="#FF4D00" />
-    <path d="M4 4h2v4H4V4z" fill="#FFD700" />
+    <path d="M3 0h4v1H7v1H6v1H5v1H4V3H3V0zm0 3h1v1H3V3zm4 0h1v1H7V3zm-3 2h1v1H4V5zm2 0h1v1H6V5zm-3 2h1v1H3V7zm4 0h1v1H7V7zm-2 2h2v1H5V9z" fill="#FF4D00" />
+    <path d="M4 2h2v1H4V2zm1 3h1v3H5V5z" fill="#FFD700" />
+    <path d="M4.5 1h1v2h-1V1z" fill="#FF8C00" />
   </svg>
 );
 
@@ -156,15 +158,12 @@ export default function Dashboard() {
           <div className="max-w-[1600px] mx-auto space-y-8">
             
             {/* HEADER */}
-            <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+            <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
                 {/* Header now uses Press Start 2P - Adjusted text sizes to fit the wider font natively */}
                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
   Welcome back, {userName}.
 </h1>
-                <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
-                  Student Overview
-                </p>
               </div>
 
               {/* Right Side Header Controls */}

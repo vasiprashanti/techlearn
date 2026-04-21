@@ -162,7 +162,7 @@ export default function QuestionBank() {
 
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5">
               <div>
-                <h1 className="text-2xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Question Bank</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white">Question Bank</h1>
                 <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40 mt-1">Manage and organise all assessment questions</p>
               </div>
               <div className="flex items-center gap-6">
