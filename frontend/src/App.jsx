@@ -46,6 +46,10 @@ import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
 import Leaderboard from './pages/Dashboard/Leaderboard'
 import UserCoding from './pages/Coding/UserCoding';
+import DailyChallengeAccess from './pages/DailyChallenge/DailyChallengeAccess';
+import DailyChallengeInstructions from './pages/DailyChallenge/DailyChallengeInstructions';
+import DailyChallengeTest from './pages/DailyChallenge/DailyChallengeTest';
+import DailyChallengeResult from './pages/DailyChallenge/DailyChallengeResult';
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
@@ -697,6 +701,10 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
+            <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
+            <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />
+            <Route path="/daily-challenge/:linkId/result" element={<DailyChallengeResult />} />
             <Route path="/dashboard/roadmap" element={<Roadmaps />} />
             <Route path="/dashboard/practice" element={<AllInterviewQuestions />} />
             <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
