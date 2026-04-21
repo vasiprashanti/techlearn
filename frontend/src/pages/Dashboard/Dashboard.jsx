@@ -4,8 +4,38 @@ import Sidebar from '../../components/Dashboard/Sidebar';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-import { useAuth } from '../../context/AuthContext'; // Added for logout
+import { useAuth } from '../../context/AuthContext';
 import { FiChevronRight, FiClock, FiStar, FiTrendingUp, FiTarget } from 'react-icons/fi';
+
+// --- CUSTOM RETRO PIXEL SVGs ---
+const PixelStar = () => (
+  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
+    <path d="M4 0h2v2H4V0zM2 2h2v2H2V2zM6 2h2v2H6V2zM0 4h10v2H0V4zM2 6h2v2H2V6zM6 6h2v2H6V6zM4 8h2v2H4V8z" fill="#FFD700" />
+    <path d="M4 2h2v6H4V2zM2 4h6v2H2V4z" fill="#FFF2AC" />
+  </svg>
+);
+
+const PixelQuestion = () => (
+  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
+    <rect width="10" height="10" fill="#4FB7FF" />
+    <path d="M3 2h4v1H3V2zm4 1h1v3H7V3zM5 6h2v1H5V6zm0 2h1v1H5V8z" fill="white" />
+    <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.2)" />
+  </svg>
+);
+
+const PixelDiamond = () => (
+  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
+    <path d="M4 0h2v2h2v2h2v2H8v2H6v2H4V8H2V6H0V4h2V2h2V0z" fill="#00E5FF" />
+    <path d="M4 2h2v2H4V2zm2 2h2v2H6V4z" fill="white" fillOpacity="0.5" />
+  </svg>
+);
+
+const PixelFlame = () => (
+  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
+    <path d="M4 0h2v2H4V0zm-2 2h2v2H2V2zm4 0h2v2H6V2zm-2 2h2v2H4V4zm-2 2h2v2H2V6zm4 0h2v2H6V6zm-2 2h2v2H4V8z" fill="#FF4D00" />
+    <path d="M4 4h2v4H4V4z" fill="#FFD700" />
+  </svg>
+);
 
 export default function Dashboard() {
   const { theme, toggleTheme } = useTheme();
@@ -24,7 +54,7 @@ export default function Dashboard() {
     isReady
   } = useUser();
   
-  const { logout } = useAuth(); // Destructure logout
+  const { logout } = useAuth(); 
 
   const isDarkMode = theme === 'dark';
 
@@ -41,12 +71,12 @@ export default function Dashboard() {
     };
   }, [contextProgress, xp]);
 
-  // --- Mock Data for UI (Replace with your API data) ---
-  const stats = [
-    { title: "Total XP", value: progress.xp.toLocaleString(), subtitle: "Global Rank: #402" },
-    { title: "Current Streak", value: "12", subtitle: "Days in a row " },
-    { title: "Problems Solved", value: progress.completed.toString(), subtitle: `Out of ${progress.total || 150} available` },
-    { title: "Course Progress", value: "68%", subtitle: "Data Structures Track" }
+  // --- RETRO DATA CONFIG ---
+  const retroStats = [
+    { title: "Course Progress", value: "68%", icon: <PixelDiamond />, color: "#00E5FF" },
+    { title: "Total Solved", value: progress.completed.toString(), icon: <PixelQuestion />, color: "#50E3C2" },
+    { title: "Total XP", value: progress.xp.toLocaleString(), icon: <PixelStar />, color: "#FFD700" },
+    { title: "Day Streak", value: "12", icon: <PixelFlame />, color: "#FF8C00" }
   ];
 
   const dailyChallenge = {
@@ -87,23 +117,41 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Retro Styles Scoped to the Widget */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        .pixel-font { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
+        .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
+        .pixel-container.dark-mode {
+          background: #050a18;
+          border: 4px solid #1a2b6d;
+          box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
+        }
+        .pixel-container.light-mode {
+          background: #ffffff;
+          border: 4px solid #3C83F6;
+          box-shadow: 8px 8px 0px rgba(60, 131, 246, 0.2);
+        }
+      `}} />
+
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
         {/* Unified Background matches Admin */}
-        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
+        <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${
             isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"
           }`}
         />
 
+        {/* SIDEBAR - UNTOUCHED */}
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 transition-all duration-700 ease-in-out z-10 
+        <main className={`flex-1 transition-all duration-300 ease-in-out z-10 
             ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} 
             pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
         >
-          <div className="max-w-[1600px] mx-auto space-y-6">
+          <div className="max-w-[1600px] mx-auto space-y-8">
             
-            {/* Header Section with Profile & Theme Toggle */}
+            {/* HEADER - UNTOUCHED */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
@@ -211,31 +259,34 @@ export default function Dashboard() {
               </div>
             </header>
 
-            {/* KPIs Grid (Stats & Streak) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {stats.map((stat, i) => (
-                <div key={i} className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-6 flex flex-col justify-between hover:bg-white/60 dark:hover:bg-black/60 transition-colors rounded-xl">
-                  <span className="text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50">
-                    {stat.title}
-                  </span>
-                  <div className="mt-4 mb-1 flex items-end gap-2">
-                    <span className="text-3xl font-normal tracking-tighter text-[#3C83F6] dark:text-white">
+            {/* --- REPLACED: NEW RETRO KPI GRID --- */}
+            <div className={`pixel-container p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 rounded-xl transition-colors duration-300 ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
+              {retroStats.map((stat, i) => (
+                <div key={i} className="flex items-center gap-6 group hover:translate-x-1 transition-transform">
+                  <div className="shrink-0">{stat.icon}</div>
+                  <div className="flex flex-col mt-1">
+                    <span 
+                      className="pixel-font text-xl md:text-2xl" 
+                      style={{ color: isDarkMode ? stat.color : '#0f172a' }}
+                    >
                       {stat.value}
                     </span>
+                    <span 
+                      className="text-[9px] pixel-font mt-2 uppercase tracking-widest" 
+                      style={{ color: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.5)' }}
+                    >
+                      {stat.title}
+                    </span>
                   </div>
-                  <span className="text-[10px] text-black/40 dark:text-white/40">
-                    {stat.subtitle}
-                  </span>
                 </div>
               ))}
             </div>
 
-            {/* Middle Section: Daily Challenge & Mini Leaderboard */}
+            {/* Middle Section: Daily Challenge & Mini Leaderboard - UNTOUCHED (Matches overall app feel) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               
               {/* Daily Challenge Highlight (Spans 2 columns) */}
               <div className="lg:col-span-2 relative bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px] overflow-hidden group">
-                {/* Background Decoration */}
                 <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transition-transform duration-700 group-hover:scale-110">
                   <FiStar className="w-64 h-64" />
                 </div>
@@ -281,7 +332,7 @@ export default function Dashboard() {
                           '6890c2acbc09eb4b5c346b9b', // C Programming
                           '6890ec81950225df57310f52', // Python  
                           '6890f09830551d88a325f623'  // Core Java
-                        ]; // Actual working course IDs
+                        ]; 
                         const randomCourseId = courseIds[Math.floor(Math.random() * courseIds.length)];
                         navigate(`/learn/exercises/${randomCourseId}`);
                       }}
@@ -332,7 +383,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Bottom Section: Recent Exercises */}
+            {/* Bottom Section: Recent Exercises - UNTOUCHED */}
             <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
               <div className="flex items-center justify-between mb-6 shrink-0">
                 <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
