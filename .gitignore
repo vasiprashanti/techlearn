@@ -4,3 +4,6 @@ document.txt
 backend/.env
 frontend/.env
 frontend/.env.local
+
+# Local agent artifacts
+.pi/
