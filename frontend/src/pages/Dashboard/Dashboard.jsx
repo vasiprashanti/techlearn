@@ -117,10 +117,14 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Retro Styles Scoped to the Widget */}
+      {/* Retro Styles Scoped to the Widget - Importing BOTH fonts */}
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        .pixel-font { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
+        @import url('https://cdn.jsdelivr.net/gh/neodbg/neodunggeunmo/build/webfont/neodunggeunmo.css');
+        
+        .font-press-start { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
+        .font-arcade { font-family: 'NeoDunggeunmo', monospace; line-height: 1.5; }
+        
         .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
         .pixel-container.dark-mode {
           background: #050a18;
@@ -135,13 +139,13 @@ export default function Dashboard() {
       `}} />
 
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        {/* Unified Background matches Admin */}
+        {/* Unified Background */}
         <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${
             isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"
           }`}
         />
 
-        {/* SIDEBAR - UNTOUCHED */}
+        {/* SIDEBAR */}
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 transition-all duration-300 ease-in-out z-10 
@@ -151,12 +155,13 @@ export default function Dashboard() {
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
             
-            {/* HEADER - UNTOUCHED */}
+            {/* HEADER */}
             <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
-                  Welcome back, {userName}.
-                </h1>
+                {/* Header now uses Press Start 2P - Adjusted text sizes to fit the wider font natively */}
+               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
+  Welcome back, {userName}.
+</h1>
                 <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
                   Student Overview
                 </p>
@@ -265,15 +270,17 @@ export default function Dashboard() {
                 <div key={i} className="flex items-center gap-6 group hover:translate-x-1 transition-transform">
                   <div className="shrink-0">{stat.icon}</div>
                   <div className="flex flex-col mt-1">
+                    {/* Numbers use Press Start 2P */}
                     <span 
-                      className="pixel-font text-xl md:text-2xl" 
+                      className="font-press-start text-lg md:text-xl" 
                       style={{ color: isDarkMode ? stat.color : '#0f172a' }}
                     >
                       {stat.value}
                     </span>
+                    {/* Labels use Arcade font */}
                     <span 
-                      className="text-[9px] pixel-font mt-2 uppercase tracking-widest" 
-                      style={{ color: isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.5)' }}
+                      className="text-[12px] font-arcade mt-2 uppercase tracking-widest" 
+                      style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}
                     >
                       {stat.title}
                     </span>
@@ -282,7 +289,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Middle Section: Daily Challenge & Mini Leaderboard - UNTOUCHED (Matches overall app feel) */}
+            {/* Middle Section: Daily Challenge & Mini Leaderboard */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               
               {/* Daily Challenge Highlight (Spans 2 columns) */}
@@ -383,7 +390,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Bottom Section: Recent Exercises - UNTOUCHED */}
+            {/* Bottom Section: Recent Exercises */}
             <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
               <div className="flex items-center justify-between mb-6 shrink-0">
                 <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
