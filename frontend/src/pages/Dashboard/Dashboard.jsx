@@ -5,7 +5,10 @@ import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
-import { FiChevronRight, FiClock, FiStar, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import { FiChevronRight, FiClock, FiStar, FiTrendingUp } from 'react-icons/fi';
+
+// --- BACKGROUND ASSET ---
+import heroBg from '../../assets/hero-bg.jpg';
 
 // --- CUSTOM RETRO PIXEL SVGs ---
 const PixelStar = () => (
@@ -45,6 +48,9 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [modalStep, setModalStep] = useState('email'); 
 
   const {
     user,
@@ -73,21 +79,12 @@ export default function Dashboard() {
     };
   }, [contextProgress, xp]);
 
-  // --- RETRO DATA CONFIG ---
   const retroStats = [
-    { title: "Course Progress", value: "68%", icon: <PixelDiamond />, color: "#00E5FF" },
-    { title: "Total Solved", value: progress.completed.toString(), icon: <PixelQuestion />, color: "#50E3C2" },
-    { title: "Total XP", value: progress.xp.toLocaleString(), icon: <PixelStar />, color: "#FFD700" },
-    { title: "Day Streak", value: "12", icon: <PixelFlame />, color: "#FF8C00" }
+    { title: "Total XP", value: progress.xp.toLocaleString(), icon: <PixelStar /> },
+    { title: "Total Solved", value: progress.completed.toString(), icon: <PixelQuestion /> },
+    { title: "Progress", value: "68%", icon: <PixelDiamond /> },
+    { title: "Day Streak", value: "12", icon: <PixelFlame /> }
   ];
-
-  const dailyChallenge = {
-    title: "Reverse Nodes in k-Group",
-    difficulty: "Hard",
-    topic: "Linked Lists",
-    xpReward: 250,
-    timeEstimate: "45 mins"
-  };
 
   const leaderboardMock = [
     { rank: 1, name: "Alex Chen", score: "14,250", isUser: false },
@@ -117,37 +114,27 @@ export default function Dashboard() {
   const userName = user?.firstName ? user.firstName : 'Student';
   const userInitial = userName.charAt(0).toUpperCase();
 
+  // Date formatted without the weekday
+  const todayFormatted = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+
   return (
     <>
-      {/* Retro Styles Scoped to the Widget - Importing BOTH fonts */}
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        @import url('https://cdn.jsdelivr.net/gh/neodbg/neodunggeunmo/build/webfont/neodunggeunmo.css');
-        
         .font-press-start { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
-        .font-arcade { font-family: 'NeoDunggeunmo', monospace; line-height: 1.5; }
-        
         .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
-        .pixel-container.dark-mode {
-          background: #050a18;
-          border: 4px solid #1a2b6d;
-          box-shadow: 8px 8px 0px rgba(0,0,0,0.5);
-        }
-        .pixel-container.light-mode {
-          background: #ffffff;
-          border: 4px solid #3C83F6;
-          box-shadow: 8px 8px 0px rgba(60, 131, 246, 0.2);
-        }
       `}} />
 
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        {/* Unified Background */}
         <div className={`fixed inset-0 -z-10 transition-colors duration-300 ${
             isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"
           }`}
         />
 
-        {/* SIDEBAR */}
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main className={`flex-1 transition-all duration-300 ease-in-out z-10 
@@ -160,95 +147,50 @@ export default function Dashboard() {
             {/* HEADER */}
             <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
-                {/* Header now uses Press Start 2P - Adjusted text sizes to fit the wider font natively */}
-               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
-  Welcome back, {userName}.
-</h1>
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
+                  Welcome back, {userName}.
+                </h1>
               </div>
 
-              {/* Right Side Header Controls */}
               <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0">
-                
-                {/* Theme Toggle */}
-                <button
-                  onClick={toggleTheme}
-                  className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap"
-                >
+                <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap">
                   {isDarkMode ? "Light" : "Dark"}
                 </button>
 
-                {/* Profile Dropdown */}
                 <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
-                  >
+                  <button onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20">
                     {userInitial}
                   </button>
 
-                  {/* Dropdown Menu */}
                   {profileDropdownOpen && (
                     <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setProfileDropdownOpen(false)}
-                      />
+                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
                       <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        {/* Profile Header */}
                         <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
                               {userInitial}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">
-                                {userName}
-                              </h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">
-                                {user?.email || 'student@techlearn.com'}
-                              </p>
-                              <div className="mt-1">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white border border-[#3C83F6]/20 dark:border-white/20">
-                                  Student
-                                </span>
-                              </div>
+                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{userName}</h3>
+                              <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'student@techlearn.com'}</p>
                             </div>
                           </div>
                         </div>
-
-                        {/* Menu Items */}
                         <div className="py-2">
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              navigate('/profile');
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
-                          >
+                          <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
                             <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                             </div>
                             <div>
                               <div className="font-medium">My Profile</div>
                               <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
                             </div>
                           </button>
-
                           <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10"></div>
-
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              logout();
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group"
-                          >
+                          <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
                             <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                              </svg>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                             </div>
                             <div>
                               <div className="font-medium">Log Out</div>
@@ -263,174 +205,118 @@ export default function Dashboard() {
               </div>
             </header>
 
-            {/* --- REPLACED: NEW RETRO KPI GRID --- */}
-            <div className={`pixel-container p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 rounded-xl transition-colors duration-300 ${isDarkMode ? 'dark-mode' : 'light-mode'}`}>
-              {retroStats.map((stat, i) => (
-                <div key={i} className="flex items-center gap-6 group hover:translate-x-1 transition-transform">
-                  <div className="shrink-0">{stat.icon}</div>
-                  <div className="flex flex-col mt-1">
-                    {/* Numbers use Press Start 2P */}
-                    <span 
-                      className="font-press-start text-lg md:text-xl" 
-                      style={{ color: isDarkMode ? stat.color : '#0f172a' }}
-                    >
-                      {stat.value}
-                    </span>
-                    {/* Labels use Arcade font */}
-                    <span 
-                      className="text-[12px] font-arcade mt-2 uppercase tracking-widest" 
-                      style={{ color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)' }}
-                    >
-                      {stat.title}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Middle Section: Daily Challenge & Mini Leaderboard */}
+            {/* MAIN CONTENT GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               
-              {/* Daily Challenge Highlight (Spans 2 columns) */}
-              <div className="lg:col-span-2 relative bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px] overflow-hidden group">
-                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transition-transform duration-700 group-hover:scale-110">
-                  <FiStar className="w-64 h-64" />
-                </div>
-                
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50 shrink-0">
-                      Daily Challenge
+              {/* HERO BANNER: Bigger on Mobile (45vh) */}
+              <div className="lg:col-span-2 rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[45vh] md:min-h-[350px] shadow-sm">
+                <div 
+                  className="absolute inset-0 z-0"
+                  style={{
+                    backgroundImage: `url(${heroBg})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: '65% center',
+                  }}
+                />
+                <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+
+                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1 md:mb-2">
+                    <span className="text-[10px] sm:text-xs font-semibold text-white/95 bg-white/20 backdrop-blur-md px-3 sm:px-4 py-1.5 border border-white/30 rounded-full flex items-center gap-1.5 sm:gap-2">
+                      <FiClock className="w-3.5 h-3.5 shrink-0" /> 
+                      <span className="whitespace-nowrap">{todayFormatted}</span>
+                      <span className="opacity-70 text-[9px] sm:text-[10px] tracking-widest uppercase font-bold shrink-0">IST</span>
                     </span>
-                    <div className="h-[1px] flex-1 bg-black/5 dark:bg-white/5"></div>
+                    <span className="text-[9px] sm:text-[10px] tracking-widest uppercase font-bold text-white bg-rose-500/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap">
+                      Resets in 14h 22m
+                    </span>
                   </div>
+                  
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
+                    Daily Challenge
+                  </h1>
+                  
+                  <p className="text-xs sm:text-sm md:text-base text-white/80 max-w-xl line-clamp-2 pb-1 md:pb-2 drop-shadow-sm">
+                    Gear up for today's algorithmic puzzle. Submit your solution within the time limit to earn bonus XP and maintain your streak.
+                  </p>
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5 rounded-sm">
-                        {dailyChallenge.difficulty}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-[#3C83F6]/20 text-[#3C83F6] dark:text-blue-400 bg-[#3C83F6]/5 rounded-sm">
-                        {dailyChallenge.topic}
-                      </span>
-                    </div>
-                    
-                    <h2 className="text-2xl md:text-3xl font-medium text-black dark:text-white mb-2">
-                      {dailyChallenge.title}
-                    </h2>
-                    
-                    <div className="flex items-center gap-6 mt-6">
-                      <div className="flex items-center gap-2 text-sm text-black/60 dark:text-white/60">
-                        <FiStar className="text-amber-500" />
-                        <span>+{dailyChallenge.xpReward} XP</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-black/60 dark:text-white/60">
-                        <FiClock className="text-[#3C83F6] dark:text-white" />
-                        <span>~{dailyChallenge.timeEstimate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 flex items-center justify-between">
-                    <button 
-                      onClick={() => {
-                        const courseIds = [
-                          '6890c2acbc09eb4b5c346b9b', // C Programming
-                          '6890ec81950225df57310f52', // Python  
-                          '6890f09830551d88a325f623'  // Core Java
-                        ]; 
-                        const randomCourseId = courseIds[Math.floor(Math.random() * courseIds.length)];
-                        navigate(`/learn/exercises/${randomCourseId}`);
-                      }}
-                      className="bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-                    >
-                      Start Challenge <FiChevronRight />
-                    </button>
-                    <span className="text-xs text-black/40 dark:text-white/40">Resets in 14h 22m</span>
-                  </div>
+                  <button 
+                    onClick={() => { setModalStep('email'); setIsChallengeModalOpen(true); }}
+                    className="mt-1 md:mt-2 bg-white text-black px-6 sm:px-8 py-3 md:py-3.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 sm:gap-3 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgb(255,255,255,0.2)] hover:-translate-y-1 hover:bg-gray-50 active:translate-y-0"
+                  >
+                    Start Challenge <FiChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Leaderboard Snippet */}
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col min-h-[300px]">
-                <div className="flex items-center justify-between mb-6 shrink-0">
-                  <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
-                    Leaderboard
-                  </h3>
-                  <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    View Full
-                  </button>
-                </div>
-                
-                <div className="flex-1 flex flex-col justify-between gap-2">
-                  {leaderboardMock.map((student) => (
-                    <div
-                      key={student.rank}
-                      className={`flex items-center gap-4 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                        student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
-                    >
-                      <div className={`w-5 text-sm font-medium text-right shrink-0 ${
-                        student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/30 dark:text-white/30'
-                      }`}>
-                        #{student.rank}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`text-sm font-medium truncate ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
-                          {student.name}
-                        </h4>
-                      </div>
-                      <div className="text-xs font-semibold text-black/70 dark:text-white/70 shrink-0">
-                        {student.score}
-                      </div>
+              {/* RIGHT COLUMN */}
+              <div className="flex flex-col gap-6 lg:col-span-1">
+                {/* Profile & Retro Stats Card: Smaller on mobile (p-4) */}
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col gap-4 md:gap-6">
+                  <div className="flex flex-col text-center sm:text-left">
+                    <div className="flex justify-center sm:justify-between items-start">
+                      <h2 className="font-press-start text-sm md:text-base text-black dark:text-white truncate">{userName.toLowerCase()}</h2>
                     </div>
-                  ))}
+                    <p className="text-xs text-black/50 dark:text-white/50 mt-2">{user?.school || "University"}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-4 md:gap-y-6 gap-x-2">
+                    {retroStats.map((stat, i) => (
+                      <div key={i} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
+                          <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
+                        </div>
+                        <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => navigate('/profile')} className="w-full py-2 mt-2 border border-black/10 dark:border-white/10 rounded-lg text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-black dark:text-white">View profile</button>
+                </div>
+
+                {/* Leaderboard Card: Smaller on mobile (p-4) */}
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
+                  <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
+                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-around gap-2">
+                    {leaderboardMock.map((student) => (
+                      <div key={student.rank} className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}>
+                        <div className={`w-6 font-press-start text-[10px] text-right shrink-0 ${student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'}`}>#{student.rank}</div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>{student.name}</h4>
+                        </div>
+                        <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">{student.score}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Bottom Section: Recent Exercises */}
-            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 rounded-xl flex flex-col">
+            {/* BOTTOM SECTION */}
+            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-8 rounded-xl flex flex-col">
               <div className="flex items-center justify-between mb-6 shrink-0">
-                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
-                  Recent Activity & Exercises
-                </h3>
-                <button onClick={() => navigate('/learn/exercises')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
-                  View All History
-                </button>
+                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Recent Activity & Exercises</h3>
+                <button onClick={() => navigate('/learn/exercises')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">View All History</button>
               </div>
-
               {(!recentExercises || recentExercises.length === 0) ? (
                  <div className="py-12 flex flex-col items-center justify-center border border-black/5 dark:border-white/5 rounded-lg border-dashed">
-                    <p className="text-xs tracking-widest uppercase text-black/30 dark:text-white/30">
-                      No recent activity recorded
-                    </p>
+                    <p className="text-xs tracking-widest uppercase text-black/30 dark:text-white/30">No recent activity recorded</p>
                  </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {recentExercises.slice(0, 3).map((exercise, i) => (
-                    <div 
-                      key={i} 
-                      className="p-5 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-xl cursor-pointer group flex flex-col justify-between min-h-[140px]"
-                      onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}
-                    >
+                    <div key={i} className="p-5 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 hover:bg-white/40 dark:hover:bg-black/40 transition-colors rounded-xl cursor-pointer group flex flex-col justify-between min-h-[140px]" onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}>
                       <div>
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">
-                            {exercise.courseTitle || 'Course'}
-                          </span>
-                          <span className="text-[10px] uppercase font-medium text-[#3C83F6] dark:text-white">
-                            +{exercise.xp || 0} XP
-                          </span>
+                          <span className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">{exercise.courseTitle || 'Course'}</span>
+                          <span className="text-[10px] uppercase font-medium text-[#3C83F6] dark:text-white">+{exercise.xp || 0} XP</span>
                         </div>
-                        <h4 className="text-sm font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors line-clamp-2">
-                          {exercise.title || 'Untitled Exercise'}
-                        </h4>
+                        <h4 className="text-sm font-medium text-black dark:text-white group-hover:text-[#3C83F6] transition-colors line-clamp-2">{exercise.title || 'Untitled Exercise'}</h4>
                       </div>
                       <div className="flex items-center justify-between mt-4 border-t border-black/5 dark:border-white/5 pt-3">
-                        <span className="text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
-                          <FiTrendingUp /> Completed
-                        </span>
+                        <span className="text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1"><FiTrendingUp /> Completed</span>
                         <FiChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
                       </div>
                     </div>
@@ -438,9 +324,104 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-
           </div>
         </main>
+
+        {/* MODAL SYSTEM */}
+        {isChallengeModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#0a1128] border-2 border-black/10 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] w-full max-w-6xl max-h-[90vh] flex flex-col relative overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
+                <span className="text-sm font-semibold tracking-wider uppercase text-black/70 dark:text-white/70">{modalStep === 'editor' ? 'Daily Assessment' : 'Authentication Needed'}</span>
+                <button onClick={() => setIsChallengeModalOpen(false)} className="p-2 rounded-lg text-black/50 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-black dark:hover:text-white transition-colors"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                {modalStep === 'email' && (
+                  <div className="max-w-md mx-auto my-12 text-center space-y-8 animate-in slide-in-from-bottom-4">
+                    <div>
+                      <h3 className="text-2xl font-semibold mb-2">Verify your identity</h3>
+                      <p className="text-sm text-black/60 dark:text-white/60">Enter your registered email address for today's challenge.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <input type="email" placeholder="student@techlearn.com" defaultValue={user?.email || ''} className="w-full p-4 rounded-xl border-2 border-black/10 dark:border-white/10 bg-transparent focus:border-[#3C83F6] dark:focus:border-white outline-none transition-colors text-center" />
+                      <button onClick={() => setModalStep('otp')} className="w-full bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:hover:bg-gray-200 dark:text-black text-white py-4 rounded-xl font-medium transition-colors">Send OTP Code</button>
+                    </div>
+                  </div>
+                )}
+
+                {modalStep === 'otp' && (
+                  <div className="max-w-md mx-auto my-12 text-center space-y-8 animate-in slide-in-from-bottom-4">
+                    <div>
+                      <h3 className="text-2xl font-semibold mb-2">Check your inbox</h3>
+                      <p className="text-sm text-black/60 dark:text-white/60">We've sent a 6-digit code to your email.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <input type="text" placeholder="• • • • • •" maxLength={6} className="w-full p-4 rounded-xl border-2 border-black/10 dark:border-white/10 bg-transparent focus:border-[#3C83F6] dark:focus:border-white outline-none transition-colors text-center tracking-[1em] text-xl font-mono" />
+                      <button onClick={() => setModalStep('instructions')} className="w-full bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:hover:bg-gray-200 dark:text-black text-white py-4 rounded-xl font-medium transition-colors">Verify & Continue</button>
+                    </div>
+                  </div>
+                )}
+
+                {modalStep === 'instructions' && (
+                  <div className="max-w-2xl mx-auto my-8 space-y-8 animate-in slide-in-from-bottom-4">
+                    <div className="text-center">
+                      <h3 className="text-3xl font-semibold mb-4">Guidelines & Rules</h3>
+                      <p className="text-black/60 dark:text-white/60">Please read carefully before starting the timer.</p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl p-8 space-y-4">
+                      <ul className="space-y-4 text-black/80 dark:text-white/80 list-disc list-inside marker:text-[#3C83F6] dark:marker:text-white">
+                        <li>You have exactly <strong>45 minutes</strong> to complete the solution.</li>
+                        <li>Do not switch tabs or windows during the assessment.</li>
+                        <li>Your code will be evaluated against hidden test cases.</li>
+                      </ul>
+                    </div>
+                    <button onClick={() => setModalStep('editor')} className="w-full bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-400 dark:hover:bg-emerald-500 dark:text-black text-white py-4 rounded-xl font-medium transition-colors shadow-lg">Begin Challenge</button>
+                  </div>
+                )}
+
+                {modalStep === 'editor' && (
+                  <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[60vh] animate-in fade-in">
+                    <div className="flex flex-col border border-black/10 dark:border-white/10 rounded-xl overflow-hidden bg-white/50 dark:bg-black/50 p-6 overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-2xl font-semibold">Reverse Nodes in k-Group</h3>
+                          <span className="text-xs uppercase tracking-widest px-2 py-1 border border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5 rounded-md">Hard</span>
+                        </div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none text-black/80 dark:text-white/80 space-y-4">
+                          <p>Given the head of a linked list, reverse the nodes of the list k at a time, and return the modified list.</p>
+                          <div className="mt-8 bg-black/5 dark:bg-white/5 p-4 rounded-lg font-mono text-sm">
+                            <p className="mb-2"><strong className="text-black dark:text-white">Input:</strong> head = [1,2,3,4,5], k = 2</p>
+                            <p><strong className="text-black dark:text-white">Output:</strong> [2,1,4,3,5]</p>
+                          </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 h-[60vh] lg:h-auto">
+                      <div className="flex-1 border border-black/10 dark:border-white/10 rounded-xl bg-[#1e1e1e] overflow-hidden flex flex-col">
+                        <div className="px-4 py-2 bg-[#2d2d2d] border-b border-black/20 flex items-center gap-2"><span className="text-xs text-white/50 font-mono">JavaScript</span></div>
+                        <div className="p-4 font-mono text-sm text-[#d4d4d4] flex-1 overflow-y-auto">
+                          <div><span className="text-[#569cd6]">var</span> <span className="text-[#dcdcaa]">reverseKGroup</span> = <span className="text-[#569cd6]">function</span>(head, k) {'{'}</div>
+                          <div className="pl-4 mt-2"></div>
+                          <div>{'}'};</div>
+                        </div>
+                      </div>
+                      <div className="h-1/3 border border-black/10 dark:border-white/10 rounded-xl bg-black overflow-hidden flex flex-col">
+                        <div className="px-4 py-2 bg-white/10 border-b border-white/5 flex items-center justify-between">
+                          <span className="text-xs text-white/70 font-mono">Console</span>
+                          <div className="flex gap-2">
+                            <button className="text-xs px-3 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">Run</button>
+                            <button className="text-xs px-3 py-1 rounded bg-[#3C83F6] text-white hover:bg-blue-500 transition-colors">Submit</button>
+                          </div>
+                        </div>
+                        <div className="p-4 font-mono text-sm text-green-400 overflow-y-auto">&gt; Output console ready...</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

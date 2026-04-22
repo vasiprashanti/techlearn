@@ -3,7 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { 
   FiX, FiSidebar, FiGrid, FiBook, 
-  FiAward, FiBriefcase, FiCheckSquare 
+  FiAward, FiBriefcase, FiCheckSquare, 
+  FiSun, FiMoon
 } from "react-icons/fi";
 
 const menuGroups = [
@@ -52,7 +53,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-black/30 dark:text-white/30 px-4">
+          <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-black/30 dark:text-white/60 px-4">
             {group.title}
           </h4>
           <div className="space-y-0.5">
@@ -66,7 +67,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                   ${
                     isActive
                       ? "bg-white text-[#020b23] dark:bg-[#1a2b6d] dark:text-white font-semibold shadow-lg border border-white/20 dark:border-white/10"
-                      : "text-[#020b23]/50 dark:text-white/40 hover:text-[#020b23] hover:bg-white/95 hover:shadow-md hover:border hover:border-[#3C83F6]/20 dark:hover:text-white dark:hover:bg-[#1a2b6d]/95 dark:hover:shadow-lg dark:hover:border dark:hover:border-white/20 font-normal border border-transparent dark:border-transparent"
+                      : "text-[#020b23]/50 dark:text-white/70 hover:text-[#020b23] hover:bg-white/95 hover:shadow-md hover:border hover:border-[#3C83F6]/20 dark:hover:text-white dark:hover:bg-[#1a2b6d]/95 dark:hover:shadow-lg dark:hover:border dark:hover:border-white/20 font-normal border border-transparent dark:border-transparent"
                   }`
                 }
               >
@@ -143,11 +144,11 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               animate={{ x: 0 }} 
               exit={{ x: "-100%" }} 
               transition={{ type: "spring", damping: 30, stiffness: 200 }} 
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-80 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
             >
               {/* Sidebar Header with Close Button */}
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+                <span className="text-sm font-semibold text-black/70 dark:text-white/90">Menu</span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
