@@ -5,12 +5,16 @@ import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import { FiChevronRight, FiClock, FiStar, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import leaderboardApi from '../../services/leaderboardApi';
+import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState([]);
+  const [activeChallenge, setActiveChallenge] = useState(null);
 
   const {
     user,
@@ -45,21 +49,42 @@ export default function Dashboard() {
     { title: "Course Progress", value: "68%", subtitle: "Data Structures Track" }
   ];
 
-  const dailyChallenge = {
-    title: "Reverse Nodes in k-Group",
-    difficulty: "Hard",
-    topic: "Linked Lists",
-    xpReward: 250,
-    timeEstimate: "45 mins"
-  };
+  useEffect(() => {
+    let cancelled = false;
 
-  const leaderboardMock = [
-    { rank: 1, name: "Alex Chen", score: "14,250", isUser: false },
-    { rank: 2, name: "Sarah Jenkins", score: "13,900", isUser: false },
-    { rank: 3, name: "Michael Ross", score: "13,120", isUser: false },
-    { rank: 4, name: user?.firstName || "You", score: progress.xp.toLocaleString(), isUser: true },
-    { rank: 5, name: "David Kim", score: "11,800", isUser: false },
-  ];
+    const loadDashboardHighlights = async () => {
+      try {
+        const [leaderboardResponse, challengeResponse] = await Promise.all([
+          leaderboardApi.getLeaderboard(5),
+          dailyChallengeAPI.getActive(),
+        ]);
+
+        if (cancelled) return;
+
+        setLeaderboardEntries(leaderboardResponse?.entries || []);
+        setActiveChallenge(challengeResponse?.data || null);
+      } catch (err) {
+        if (!cancelled) {
+          setLeaderboardEntries([]);
+          setActiveChallenge(null);
+        }
+      }
+    };
+
+    loadDashboardHighlights();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dailyChallenge = {
+    title: activeChallenge?.questionTitle || activeChallenge?.title || "No active challenge yet",
+    difficulty: activeChallenge?.difficulty || "Daily",
+    topic: activeChallenge?.trackType || "Challenge",
+    xpReward: activeChallenge?.xpReward || activeChallenge?.points || 0,
+    timeEstimate: activeChallenge?.durationMinutes ? `${activeChallenge.durationMinutes} mins` : "--"
+  };
 
   if (isLoading || !isReady) {
     return <LoadingScreen showMessage={true} fullScreen={true} size={40} duration={800} />;
@@ -197,11 +222,16 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="flex-1 flex flex-col justify-between gap-2">
-                  {leaderboardMock.map((student) => (
+                  {(leaderboardEntries.length ? leaderboardEntries : [{
+                    rank: '--',
+                    name: 'Leaderboard will update once learners earn XP',
+                    totalXp: 0,
+                    userId: 'empty'
+                  }]).map((student) => (
                     <div
-                      key={student.rank}
+                      key={student.userId || student.rank}
                       className={`flex items-center gap-4 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                        student.isUser ? 'bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#86c4ff]/40 dark:border-[#6fbfff]/30' : 'hover:bg-[#edf7ff]/75 dark:hover:bg-[#0a2f6f]/55'
+                        student.name === (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name) ? 'bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#86c4ff]/40 dark:border-[#6fbfff]/30' : 'hover:bg-[#edf7ff]/75 dark:hover:bg-[#0a2f6f]/55'
                       }`}
                     >
                       <div className={`w-5 text-sm font-medium text-right shrink-0 ${
@@ -210,12 +240,12 @@ export default function Dashboard() {
                         #{student.rank}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`text-sm font-medium truncate ${student.isUser ? 'text-[#2d7fe8] dark:text-[#8fd9ff]' : 'text-[#0d2a57] dark:text-[#8fd9ff]'}`}>
+                        <h4 className={`text-sm font-medium truncate ${student.name === (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name) ? 'text-[#2d7fe8] dark:text-[#8fd9ff]' : 'text-[#0d2a57] dark:text-[#8fd9ff]'}`}>
                           {student.name}
                         </h4>
                       </div>
                       <div className="text-xs font-semibold text-[#4c6f9a] dark:text-[#7fb8e2] shrink-0">
-                        {student.score}
+                        {Number(student.totalXp || 0).toLocaleString()}
                       </div>
                     </div>
                   ))}
