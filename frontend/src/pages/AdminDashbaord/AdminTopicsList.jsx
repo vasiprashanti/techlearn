@@ -193,10 +193,10 @@ const handleCourseTitleUpdate = async (e) => {
               <div className="block text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
                 {topic.topicName}
               </div>
-              <div className="block text-xs sm:text-xs font-normal mb-2 text-light-text/80 dark:text-dark-text/70">
+              <div className="block text-xs sm:text-xs font-medium mb-2 text-light-text/80 dark:text-dark-text/70">
                 Slug: {topic.topicSlug}
               </div>
-              <div className="block text-xs sm:text-xs font-normal mb-2 text-light-text/80 dark:text-dark-text/70">
+              <div className="block text-xs sm:text-xs font-medium mb-2 text-light-text/80 dark:text-dark-text/70">
                 ID: {topic.topicId}
               </div>
             </div>

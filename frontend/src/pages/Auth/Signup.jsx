@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { register, googleLogin } from '../../api/authService';
+import { useAuthModalContext } from '../../context/AuthModalContext';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ export default function Signup() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { openLogin } = useAuthModalContext();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -225,9 +227,12 @@ export default function Signup() {
 
           <p className={`text-center mt-4 text-xs ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
             Already have an account?{' '}
-            <Link to="/login" className={`font-medium hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+            <button 
+              onClick={openLogin}
+              className={`font-medium hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} bg-transparent border-none cursor-pointer`}
+            >
               Sign in
-            </Link>
+            </button>
           </p>
         </form>
       </div>

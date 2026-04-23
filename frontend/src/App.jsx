@@ -30,7 +30,6 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
 
 // Auth pages
-import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Performance from './pages/Dashboard/Performance'
@@ -694,7 +693,7 @@ function LayoutWrapper() {
 
       <main className="flex-grow">
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Navigate to="/signup" replace />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           

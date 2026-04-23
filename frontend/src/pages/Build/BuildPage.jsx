@@ -3,16 +3,26 @@ import MiniProjectCard from "../../components/Build/MiniProjectCard";
 import MajorProjectCard from "../../components/Build/MajorProjectCard";
 import MidLevelProjectsAnimatedLayout from "../../components/Build/MidLevelProjectsAnimatedLayout";
 import { useNavigate } from "react-router-dom";
-import AccessPopup from "../../utils/accessPopup.jsx";
+import { useParams } from "react-router-dom";
 import useMiniProjects from "../../hooks/useMiniProjects";
 import useMidProjects from "../../hooks/useMidProjects";
-import useMajorProjects from "../../hooks/useMajorProjects";
 import LoadingScreen from "../../components/Loader/Loader3D";
+import useMajorProjects from "../../hooks/useMajorProjects";
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import Sidebar from '../../components/Dashboard/Sidebar';
 
 const BuildPage = () => {
+  const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [showPopup, setShowPopup] = useState(false);
   const [currentMiniProjectIndex, setCurrentMiniProjectIndex] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
+  
+  const isDarkMode = theme === 'dark';
+  const userInitial = user?.firstName?.charAt(0)?.toUpperCase() || 'S';
 
   const { miniProjects, loading, error } = useMiniProjects();
   const { midProjects, loading: loadingMid, error: errorMid } = useMidProjects();
@@ -52,19 +62,99 @@ const BuildPage = () => {
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 pb-16" style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
+    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+      {/* Unified Background */}
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+
+      {/* Sidebar */}
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
+
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          
+          {/* Header */}
+          <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
+                Projects.
+              </h1>
+              <p className="text-[9px] sm:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
+                Build amazing projects
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0 relative z-50">
+              <button onClick={toggleTheme} className="text-[10px] tracking-widest uppercase text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white transition-colors whitespace-nowrap">
+                {isDarkMode ? "Light" : "Dark"}
+              </button>
+
+              <div className="relative">
+                <button 
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)} 
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
+                >
+                  {userInitial}
+                </button>
+                {profileDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                      <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
+                            {userInitial}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-black dark:text-white truncate">
+                              {user?.firstName || 'Student'}
+                            </h3>
+                            <p className="text-xs text-black/60 dark:text-white/60 truncate">
+                              {user?.email || 'student@techlearn.com'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2">
+                        <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                          </div>
+                          <div>
+                            <div className="font-medium">My Profile</div>
+                            <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
+                          </div>
+                        </button>
+                        <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10"></div>
+                        <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                          </div>
+                          <div>
+                            <div className="font-medium">Log Out</div>
+                            <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </header>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-8 pb-16" style={{ fontFamily: "system-ui, 'Inter', sans-serif" }}>
       {/* Hero Section */}
-      <div className="block md:hidden" style={{ height: "120px" }} />
       <div className="pt-0 md:pt-0">
-        <div className="w-full flex flex-col md:flex-row items-start md:items-center justify-between min-h-screen px-1 sm:px-4">
+        <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between min-h-screen px-1 sm:px-4">
           {/* Left: Headings */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1
               className="
                 brand-heading-primary hover-gradient-text
-                mb-2 md:mb-4 lowercase
+                mb-2 sm:mb-4 lowercase
                 font-medium italic
-                text-6xl md:text-7xl lg:text-8xl xl:text-9xl
+                text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl truncate
               "
               style={{
                 fontFamily: "'Poppins', sans-serif",
@@ -76,9 +166,9 @@ const BuildPage = () => {
             <h1
               className="
                 brand-heading-primary hover-gradient-text
-                mt-2 md:mt-4 uppercase
+                mt-2 sm:mt-4 uppercase
                 font-medium
-                text-6xl md:text-7xl lg:text-8xl xl:text-9xl
+                text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl truncate
               "
               style={{
                 fontFamily: "'Poppins', sans-serif",
@@ -89,9 +179,9 @@ const BuildPage = () => {
             </h1>
             <p
               className="
-                mt-6 mb-3 sm:mb-6
-                text-sm sm:text-base md:text-lg lg:text-xl
-                font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text
+                mt-4 sm:mt-6 mb-3 sm:mb-6 hidden sm:block
+                text-sm md:text-base lg:text-xl
+                font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text truncate
               "
               style={{ fontFamily: "system-ui, 'Inter', sans-serif"}}>
               Whoa! You're dangerously close to becoming a real coder
@@ -416,7 +506,9 @@ const BuildPage = () => {
       </section>
 
       <AccessPopup open={showPopup} onClose={() => setShowPopup(false)} />
-    </main>
+        </div>
+      </main>
+    </div>
   );
 };
 
