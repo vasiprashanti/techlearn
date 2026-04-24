@@ -4,7 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/Loader/Loader3D';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyColleges } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
 
@@ -60,7 +61,8 @@ const Colleges = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [colleges, setColleges] = useState(emptyColleges);
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('colleges', emptyColleges));
+  const [isLoadingColleges, setIsLoadingColleges] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('colleges', emptyColleges)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -88,12 +90,19 @@ const Colleges = () => {
       .getColleges()
       .then((remoteColleges) => {
         if (!cancelled) {
-          setColleges(preferRemoteData(remoteColleges, emptyColleges));
+          const normalized = preferRemoteData(remoteColleges, emptyColleges);
+          setColleges(normalized);
+          writeAdminSessionCache('colleges', normalized);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setColleges(emptyColleges);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingColleges(false);
         }
       });
 
@@ -401,6 +410,16 @@ const Colleges = () => {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            {isLoadingColleges ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading colleges..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
             {/* Top Section */}
             <section className="space-y-4 sm:space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
@@ -551,6 +570,8 @@ const Colleges = () => {
               })}
             </div>
 
+            </>
+            )}
           </div>
         </main>
       </div>

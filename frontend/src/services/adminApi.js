@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const GET_RETRY_ATTEMPTS = 2;
 const GET_RETRY_DELAY_MS = 250;
 const requestCache = new Map();
+const SESSION_CACHE_PREFIX = 'techlearn-admin-cache:';
 
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken');
 
@@ -35,6 +36,26 @@ export const hasMeaningfulAdminData = (value) => {
 
 export const preferRemoteData = (remoteValue, fallbackValue) =>
   hasMeaningfulAdminData(remoteValue) ? remoteValue : fallbackValue;
+
+export const readAdminSessionCache = (key, fallbackValue) => {
+  if (typeof window === 'undefined') return fallbackValue;
+  try {
+    const raw = window.sessionStorage.getItem(`${SESSION_CACHE_PREFIX}${key}`);
+    if (!raw) return fallbackValue;
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+};
+
+export const writeAdminSessionCache = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(`${SESSION_CACHE_PREFIX}${key}`, JSON.stringify(value));
+  } catch {
+    // Ignore quota/serialization errors and continue without session cache.
+  }
+};
 
 const unwrapData = (payload) => {
   if (payload && typeof payload === 'object' && 'data' in payload) {

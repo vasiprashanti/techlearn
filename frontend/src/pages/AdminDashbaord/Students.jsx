@@ -5,7 +5,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/Loader/Loader3D';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyStudents } from '../../data/adminEmptyStates';
 
 const searchRoutes = [
@@ -113,9 +114,10 @@ const Students = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [students, setStudents] = useState(emptyStudents);
-  const [colleges, setColleges] = useState([]);
-  const [batches, setBatches] = useState([]);
+  const [students, setStudents] = useState(() => readAdminSessionCache('students', emptyStudents));
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('students-colleges', []));
+  const [batches, setBatches] = useState(() => readAdminSessionCache('students-batches', []));
+  const [isLoadingStudents, setIsLoadingStudents] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('students', emptyStudents)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -145,9 +147,15 @@ const Students = () => {
       adminAPI.getColleges(),
       adminAPI.getBatches(),
     ]);
-    setStudents(preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent));
-    setColleges(preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' })));
-    setBatches(preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' })));
+    const normalizedStudents = preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent);
+    const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
+    const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' }));
+    setStudents(normalizedStudents);
+    setColleges(normalizedColleges);
+    setBatches(normalizedBatches);
+    writeAdminSessionCache('students', normalizedStudents);
+    writeAdminSessionCache('students-colleges', normalizedColleges);
+    writeAdminSessionCache('students-batches', normalizedBatches);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -159,6 +167,10 @@ const Students = () => {
         setStudents(emptyStudents);
         setColleges([]);
         setBatches([]);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setIsLoadingStudents(false);
       }
     });
     return () => { cancelled = true; };
@@ -630,6 +642,16 @@ const Students = () => {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            {isLoadingStudents ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading students..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(250px,320px)_150px_150px_150px_160px] gap-2.5 items-center mt-1 justify-end">
               <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
@@ -757,6 +779,8 @@ const Students = () => {
                 <button onClick={downloadBulkTemplate} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
               </div>
             </div>
+            </>
+            )}
           </div>
         </main>
       </div>
