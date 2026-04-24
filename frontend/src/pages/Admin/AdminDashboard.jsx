@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import LoadingScreen from '../../components/Loader/Loader3D';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 
 const AdminDashboard = () => {
   const { theme } = useTheme();

@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
-import LoadingScreen from '../../components/Loader/Loader3D';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import {
   FiArrowLeft,

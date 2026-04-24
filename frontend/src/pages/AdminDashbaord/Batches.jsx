@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
-import LoadingScreen from '../../components/Loader/Loader3D';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyBatches } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';

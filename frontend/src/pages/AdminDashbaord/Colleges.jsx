@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import LoadingScreen from '../../components/Loader/Loader3D';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyColleges } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';

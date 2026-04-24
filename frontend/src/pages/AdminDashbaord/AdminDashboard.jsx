@@ -10,7 +10,7 @@ import { adminAPI, preferRemoteData } from "../../services/adminApi";
 // Components
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin// <-- FIXED: Now using the exact Dashboard Sidebar
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import LoadingScreen from "../../components/Loader/Loader3D"; 
+import LoadingScreen from "../../components/AdminDashbaord/AdminPageLoader"; 
 
 // Icons
 import { FiSearch, FiClock, FiTrendingUp, FiAward } from "react-icons/fi";
