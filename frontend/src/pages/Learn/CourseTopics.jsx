@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
-import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
@@ -19,6 +19,7 @@ const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   
+  const [courseSidebarCollapsed, setCourseSidebarCollapsed] = useState(false);
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState(0);
@@ -76,6 +77,7 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
+  const courseSidebarWidthClass = courseSidebarCollapsed ? "md:w-20" : "md:w-72";
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
@@ -177,13 +179,77 @@ const CourseTopics = () => {
           <div className="flex items-center gap-4 sm:gap-6 relative z-50">
             <button 
               onClick={() => setIsSyllabusOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+              className="md:hidden flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
             >
               <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
               <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Syllabus</span>
             </button>
           </div>
         </header>
+
+        <aside
+          className={`hidden md:flex fixed z-30 left-0 top-[112px] h-[calc(100vh-112px)] flex-col border-r border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/25 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out ${courseSidebarWidthClass}`}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
+            <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
+              <span className="block text-[10px] uppercase tracking-[0.22em] font-semibold text-black/35 dark:text-white/55">
+                Course Topics
+              </span>
+              <span className="block mt-1 text-xs font-medium text-black/55 dark:text-white/60">
+                {totalTopics} modules
+              </span>
+            </div>
+            <button
+              onClick={() => setCourseSidebarCollapsed((prev) => !prev)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 text-black/55 dark:text-white/70 transition-all hover:bg-white hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label={courseSidebarCollapsed ? "Expand course topics sidebar" : "Collapse course topics sidebar"}
+            >
+              {courseSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="space-y-2">
+              {currentCourse.topics.map((topic, index) => {
+                const isActive = selectedTopic === index;
+
+                return (
+                  <button
+                    key={topic.id}
+                    onClick={() => setSelectedTopic(index)}
+                    className={`group flex w-full items-center rounded-2xl border px-3 py-3 text-left transition-all duration-300 ${
+                      isActive
+                        ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                        : "border-transparent text-black/60 hover:border-[#3C83F6]/15 hover:bg-white/90 hover:text-black dark:text-white/65 dark:hover:border-white/10 dark:hover:bg-white/10 dark:hover:text-white"
+                    } ${courseSidebarCollapsed ? "justify-center" : "gap-3"}`}
+                    title={courseSidebarCollapsed ? topic.title : undefined}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold transition-colors ${
+                        isActive
+                          ? "bg-gradient-to-br from-[#3C83F6] to-[#2563eb] text-white shadow-md dark:from-white dark:to-gray-200 dark:text-black"
+                          : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+
+                    {!courseSidebarCollapsed && (
+                      <div className="min-w-0 flex-1">
+                        <span className="block text-[10px] uppercase tracking-[0.18em] font-semibold text-black/35 dark:text-white/45">
+                          Module {index + 1}
+                        </span>
+                        <span className="mt-1 block text-sm font-medium leading-snug line-clamp-2">
+                          {topic.title}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
 
         {/* Syllabus Drawer */}
         <AnimatePresence>
@@ -197,7 +263,7 @@ const CourseTopics = () => {
               <motion.div 
                 initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl"
+                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl md:hidden"
               >
                 <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
                   <div>
@@ -205,7 +271,7 @@ const CourseTopics = () => {
                     <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Modules Total</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                    <X className="w-4 h-4 text-black/60 dark:text-white/60" />
+                    <PanelLeftClose className="w-4 h-4 text-black/60 dark:text-white/60" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -230,7 +296,9 @@ const CourseTopics = () => {
         {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
         <div 
           ref={scrollContainerRef} 
-          className="flex-1 overflow-y-auto px-4 md:px-8 py-10 relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className={`flex-1 overflow-y-auto px-4 md:px-8 py-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+            courseSidebarCollapsed ? "md:pl-28" : "md:pl-80"
+          }`}
         >
           <div className="max-w-[800px] mx-auto pb-20">
 
