@@ -11,11 +11,44 @@ import {
   CarouselItem,
 } from "../../components/ui/carousel";
 
+const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
+const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readCachedCourses = () => {
+  try {
+    const raw = sessionStorage.getItem(COURSES_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || !Array.isArray(parsed?.courses)) return null;
+    if (Date.now() - parsed.timestamp > COURSES_CACHE_TTL_MS) return null;
+
+    return parsed.courses;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedCourses = (courses) => {
+  try {
+    sessionStorage.setItem(
+      COURSES_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        courses,
+      })
+    );
+  } catch {
+    // Ignore cache write failures and continue with live data only.
+  }
+};
+
 export default function Courses() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const onlineCoursesSectionRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const cachedCourses = readCachedCourses();
 
   const levelTagStyles = {
     Beginner: 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]',
@@ -29,8 +62,8 @@ export default function Courses() {
     'from-[#94d8ff] via-[#79c8ff] to-[#5d99ff]',
   ];
 
-  const [coursesData, setCoursesData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [coursesData, setCoursesData] = useState(cachedCourses || []);
+  const [loading, setLoading] = useState(!cachedCourses);
   const [error, setError] = useState(null);
 
   const mockCoursesData = [
@@ -51,21 +84,26 @@ export default function Courses() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        setLoading(true);
+        if (!cachedCourses) {
+          setLoading(true);
+        }
         const backendCourses = await courseAPI.getAllCourses();
         const adaptedCourses = backendCourses.map(course => dataAdapters.adaptCourse(course));
         setCoursesData(adaptedCourses);
+        writeCachedCourses(adaptedCourses);
         setError(null);
       } catch (fetchError) {
         setError(fetchError.message);
-        setCoursesData(mockCoursesData);
+        if (!cachedCourses) {
+          setCoursesData(mockCoursesData);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cachedCourses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const shouldScrollToOnlineCourses = sessionStorage.getItem('returnToOnlineCourses');
