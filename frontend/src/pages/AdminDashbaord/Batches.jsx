@@ -10,6 +10,20 @@ import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCac
 import { emptyBatches } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
 
+const DEFAULT_TRACK_OPTIONS = [
+  { value: 'DSA', label: 'DSA' },
+  { value: 'Core', label: 'Core CS' },
+  { value: 'SQL', label: 'SQL' },
+];
+
+const getTodayIsoDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
   { id: "analytics", title: "Analytics", category: "Overview" },
@@ -104,7 +118,6 @@ const Batches = () => {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
-  const [trackOptions, setTrackOptions] = useState(() => readAdminSessionCache('batches-track-options', []));
   const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -129,6 +142,7 @@ const Batches = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const todayIsoDate = getTodayIsoDate();
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const batchFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
@@ -148,19 +162,6 @@ const Batches = () => {
     setColleges(normalizedColleges);
     writeAdminSessionCache('batches', normalizedBatches);
     writeAdminSessionCache('batches-colleges', normalizedColleges);
-  }, []);
-
-  const loadTrackOptions = useCallback(async () => {
-    const remoteTrackTemplates = await adminAPI.getTrackTemplates();
-    const normalizedTrackOptions = Array.from(
-      new Set(
-        preferRemoteData(remoteTrackTemplates, [])
-          .map((template) => String(template?.name || '').trim())
-          .filter(Boolean)
-      )
-    );
-    setTrackOptions(normalizedTrackOptions);
-    writeAdminSessionCache('batches-track-options', normalizedTrackOptions);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -238,9 +239,6 @@ const Batches = () => {
       batchSize: '',
       status: 'Draft',
     });
-    if (trackOptions.length === 0) {
-      loadTrackOptions().catch(() => {});
-    }
     setIsCreateFormOpen(true);
   };
 
@@ -256,9 +254,6 @@ const Batches = () => {
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
     });
-    if (trackOptions.length === 0) {
-      loadTrackOptions().catch(() => {});
-    }
     setIsCreateFormOpen(true);
   };
 
@@ -273,6 +268,10 @@ const Batches = () => {
     }
     if (!createBatchForm.startDate || !createBatchForm.endDate) {
       setCreateError('Start date and end date are required');
+      return;
+    }
+    if (createBatchForm.startDate < todayIsoDate) {
+      setCreateError('Start date must be today or a future date');
       return;
     }
     if (createBatchForm.startDate > createBatchForm.endDate) {
@@ -314,7 +313,7 @@ const Batches = () => {
       setIsCreateFormOpen(false);
       setEditingBatchId(null);
     } catch (error) {
-      setCreateError(error.message || 'Failed to save batch');
+      setCreateError(error.message || (editingBatchId ? 'Failed to update batch.' : 'Failed to create batch.'));
     } finally {
       setIsSavingBatch(false);
     }
@@ -395,9 +394,13 @@ const Batches = () => {
                         setCreateBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                          endDate:
+                            prev.endDate && nextDate && prev.endDate < nextDate
+                              ? ''
+                              : prev.endDate,
                         }))
                       }
+                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -414,7 +417,7 @@ const Batches = () => {
                           endDate: nextDate,
                         }))
                       }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
@@ -429,12 +432,11 @@ const Batches = () => {
                     <select
                       value={createBatchForm.assignedTrack}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
-                      disabled={trackOptions.length === 0}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Optional track template' : 'No tracks available'}</option>
-                      {trackOptions.map((trackName) => (
-                        <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
+                      <option className={dropdownOptionClass} value="">Optional track</option>
+                      {DEFAULT_TRACK_OPTIONS.map((track) => (
+                        <option className={dropdownOptionClass} key={track.value} value={track.value}>{track.label}</option>
                       ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />

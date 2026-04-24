@@ -21,6 +21,20 @@ import {
   FiChevronDown,
 } from 'react-icons/fi';
 
+const DEFAULT_TRACK_OPTIONS = [
+  { value: 'DSA', label: 'DSA' },
+  { value: 'Core', label: 'Core CS' },
+  { value: 'SQL', label: 'SQL' },
+];
+
+const getTodayIsoDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const statusPillClass = (status) =>
   status === 'Active'
     ? 'bg-[#16a34a] text-white'
@@ -59,11 +73,11 @@ const CollegeDetails = () => {
   const [isBatchFormOpen, setIsBatchFormOpen] = useState(false);
   const [editingBatchId, setEditingBatchId] = useState(null);
   const [pendingDeleteBatch, setPendingDeleteBatch] = useState(null);
-  const [trackOptions, setTrackOptions] = useState([]);
   const [batchFormError, setBatchFormError] = useState('');
   const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [batchForm, setBatchForm] = useState(emptyBatchForm);
+  const todayIsoDate = getTodayIsoDate();
 
   useEffect(() => {
     setMounted(true);
@@ -129,35 +143,17 @@ const CollegeDetails = () => {
     };
   }, [loadCollegeDetail]);
 
-  const loadTrackOptions = useCallback(async () => {
-    const remoteTrackTemplates = await adminAPI.getTrackTemplates();
-    const normalizedTrackOptions = Array.from(
-      new Set(
-        preferRemoteData(remoteTrackTemplates, [])
-          .map((template) => String(template?.name || '').trim())
-          .filter(Boolean)
-      )
-    );
-    setTrackOptions(normalizedTrackOptions);
-  }, []);
-
   const openCreateBatch = async () => {
     setEditingBatchId(null);
     setBatchFormError('');
     setBatchForm(emptyBatchForm);
     setIsBatchFormOpen(true);
-    if (trackOptions.length === 0) {
-      loadTrackOptions().catch(() => {});
-    }
   };
 
   const openEditBatch = async (batchId) => {
     setBatchFormError('');
     setEditingBatchId(batchId);
     setIsBatchFormOpen(true);
-    if (trackOptions.length === 0) {
-      loadTrackOptions().catch(() => {});
-    }
 
     try {
       const batchDetailResponse = await adminAPI.getBatch(batchId);
@@ -184,6 +180,10 @@ const CollegeDetails = () => {
     }
     if (!batchForm.startDate || !batchForm.endDate) {
       setBatchFormError('Start date and end date are required');
+      return;
+    }
+    if (batchForm.startDate < todayIsoDate) {
+      setBatchFormError('Start date must be today or a future date');
       return;
     }
     if (batchForm.startDate > batchForm.endDate) {
@@ -220,7 +220,7 @@ const CollegeDetails = () => {
       setEditingBatchId(null);
       setBatchForm(emptyBatchForm);
     } catch (error) {
-      setBatchFormError(error.message || 'Failed to save batch');
+      setBatchFormError(error.message || (editingBatchId ? 'Failed to update batch.' : 'Failed to create batch.'));
     } finally {
       setIsSavingBatch(false);
     }
@@ -297,9 +297,13 @@ const CollegeDetails = () => {
                         setBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                          endDate:
+                            prev.endDate && nextDate && prev.endDate < nextDate
+                              ? ''
+                              : prev.endDate,
                         }))
                       }
+                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -311,7 +315,7 @@ const CollegeDetails = () => {
                     <ModernDatePicker
                       value={batchForm.endDate}
                       onChange={(nextDate) => setBatchForm((prev) => ({ ...prev, endDate: nextDate }))}
-                      minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : undefined}
+                      minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
@@ -326,14 +330,11 @@ const CollegeDetails = () => {
                     <select
                       value={batchForm.assignedTrack}
                       onChange={(e) => setBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
-                      disabled={trackOptions.length === 0}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="">
-                        {trackOptions.length ? 'Optional track template' : 'No tracks available'}
-                      </option>
-                      {trackOptions.map((trackName) => (
-                        <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
+                      <option className={dropdownOptionClass} value="">Optional track</option>
+                      {DEFAULT_TRACK_OPTIONS.map((track) => (
+                        <option className={dropdownOptionClass} key={track.value} value={track.value}>{track.label}</option>
                       ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />

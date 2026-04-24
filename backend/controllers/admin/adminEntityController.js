@@ -423,7 +423,11 @@ export const createBatchAdmin = async (req, res) => {
     return res.status(201).json({ success: true, data: batch });
   } catch (error) {
     console.error("createBatchAdmin error:", error);
-    return res.status(500).json({ success: false, message: "Failed to create batch.", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error?.message ? `Failed to create batch: ${error.message}` : "Failed to create batch.",
+      error: error.message,
+    });
   }
 };
 
@@ -564,7 +568,11 @@ export const updateBatchAdmin = async (req, res) => {
     return res.status(200).json({ success: true, data: batch });
   } catch (error) {
     console.error("updateBatchAdmin error:", error);
-    return res.status(500).json({ success: false, message: "Failed to update batch.", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error?.message ? `Failed to update batch: ${error.message}` : "Failed to update batch.",
+      error: error.message,
+    });
   }
 };
 
