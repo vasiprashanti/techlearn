@@ -61,7 +61,7 @@ const CourseTopics = () => {
           return {
             id: topicId,
             title: cleanTitle,
-            description: `Learn about ${cleanTitle} concepts and applications.`,
+            description: `Learn about ${cleanTitle} chapter concepts and applications.`,
             completed: false,
             hasNotes: !!topic.notesId,
             notesContent: topic.notes,
@@ -171,7 +171,7 @@ const CourseTopics = () => {
                 Course Player.
               </h1>
               <p className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-1 line-clamp-1 font-semibold">
-                {currentCourse.title}
+                {currentCourse.title} Chapters
               </p>
             </div>
           </div>
@@ -182,7 +182,7 @@ const CourseTopics = () => {
               className="md:hidden flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
             >
               <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Syllabus</span>
+              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Chapters</span>
             </button>
           </div>
         </header>
@@ -193,10 +193,10 @@ const CourseTopics = () => {
           <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
               <span className="block text-[10px] uppercase tracking-[0.22em] font-semibold text-black/35 dark:text-white/55">
-                Course Topics
+                Course Chapters
               </span>
               <span className="block mt-1 text-xs font-medium text-black/55 dark:text-white/60">
-                {totalTopics} modules
+                {totalTopics} chapters
               </span>
             </div>
             <button
@@ -217,15 +217,15 @@ const CourseTopics = () => {
                   <button
                     key={topic.id}
                     onClick={() => setSelectedTopic(index)}
-                    className={`group flex w-full items-center rounded-2xl border px-3 py-3 text-left transition-all duration-300 ${
+                    className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                       isActive
                         ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                        : "border-transparent text-black/60 hover:border-[#3C83F6]/15 hover:bg-white/90 hover:text-black dark:text-white/65 dark:hover:border-white/10 dark:hover:bg-white/10 dark:hover:text-white"
-                    } ${courseSidebarCollapsed ? "justify-center" : "gap-3"}`}
+                        : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                    } ${courseSidebarCollapsed ? "justify-center px-2" : ""}`}
                     title={courseSidebarCollapsed ? topic.title : undefined}
                   >
                     <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold transition-colors ${
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold transition-colors ${
                         isActive
                           ? "bg-gradient-to-br from-[#3C83F6] to-[#2563eb] text-white shadow-md dark:from-white dark:to-gray-200 dark:text-black"
                           : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
@@ -237,9 +237,9 @@ const CourseTopics = () => {
                     {!courseSidebarCollapsed && (
                       <div className="min-w-0 flex-1">
                         <span className="block text-[10px] uppercase tracking-[0.18em] font-semibold text-black/35 dark:text-white/45">
-                          Module {index + 1}
+                          Chapter {index + 1}
                         </span>
-                        <span className="mt-1 block text-sm font-medium leading-snug line-clamp-2">
+                        <span className="mt-0.5 block text-sm font-medium leading-snug line-clamp-2">
                           {topic.title}
                         </span>
                       </div>
@@ -267,8 +267,8 @@ const CourseTopics = () => {
               >
                 <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus Drawer</span>
-                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Modules Total</span>
+                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Chapter List</span>
+                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Chapters Total</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
                     <PanelLeftClose className="w-4 h-4 text-black/60 dark:text-white/60" />
@@ -310,7 +310,7 @@ const CourseTopics = () => {
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#3C83F6]/10 dark:bg-white/5 rounded-full mb-6 border border-[#3C83F6]/20 dark:border-white/10">
                   <div className="w-2 h-2 rounded-full bg-[#3C83F6] dark:bg-white animate-pulse"></div>
                   <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-bold">
-                    Module {selectedTopic + 1}
+                    Chapter {selectedTopic + 1}
                   </span>
                 </div>
                 

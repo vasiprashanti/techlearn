@@ -113,9 +113,6 @@ export default function Courses() {
                 <h2 className="font-poppins tracking-tight leading-[0.92]">
                   <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
                 </h2>
-                <p className="text-sm sm:text-base md:text-lg text-[#6f8fb8] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">
-                  Fundamentals first. Brilliance next.
-                </p>
                 <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">
                   Pick a track and start building skills
                 </p>
@@ -153,7 +150,7 @@ export default function Courses() {
                     </div>
 
                     <div className="relative z-10 mt-auto">
-                      <h3 className="text-lg md:text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[56px] leading-snug flex items-start">
+                      <h3 className="text-2xl md:text-[1.9rem] font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
                         {course.title}
                       </h3>
                       <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 font-light min-h-[46px]">
@@ -176,15 +173,10 @@ export default function Courses() {
             className="pb-4"
           >
             <div className="mb-8">
-              <div className="flex items-center gap-3">
-                <h2 className="brand-heading-secondary font-poppins text-sm tracking-[0.16em] uppercase font-semibold">
+              <div className="flex items-center">
+                <h2 className="brand-heading-primary font-poppins text-4xl sm:text-5xl md:text-6xl tracking-tight leading-[0.92]">
                   Online Courses
                 </h2>
-                <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ea3ff]/55 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3C83F6]"></span>
-                </span>
               </div>
             </div>
 
