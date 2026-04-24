@@ -261,10 +261,6 @@ const Batches = () => {
       setCreateError('End date must be after start date');
       return;
     }
-    if (trackOptions.length > 0 && !createBatchForm.assignedTrack) {
-      setCreateError('Assigned track is required');
-      return;
-    }
     if (createBatchForm.batchSize && (!/^\d+$/.test(createBatchForm.batchSize) || Number(createBatchForm.batchSize) <= 0)) {
       setCreateError('Batch size must be a positive number');
       return;
@@ -410,7 +406,7 @@ const Batches = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track*</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createBatchForm.assignedTrack}
@@ -418,7 +414,7 @@ const Batches = () => {
                       className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
                       disabled={trackOptions.length === 0}
                     >
-                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Select track' : 'No tracks available'}</option>
+                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Optional track template' : 'No tracks available'}</option>
                       {trackOptions.map((trackName) => (
                         <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
                       ))}

@@ -9,6 +9,37 @@ import Track from "../../models/Track.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
 
+const DEFAULT_BATCH_TRACK_TYPES = ["Core", "DSA", "SQL"];
+
+const ensureDefaultBatchTracks = async (batchId, session) => {
+  let existingTracksQuery = Track.find({ batchId }).select("trackType");
+  if (session) {
+    existingTracksQuery = existingTracksQuery.session(session);
+  }
+  const existingTracks = await existingTracksQuery.lean();
+
+  const existingTrackTypes = new Set(existingTracks.map((track) => track.trackType));
+  const missingTrackDocs = DEFAULT_BATCH_TRACK_TYPES
+    .filter((trackType) => !existingTrackTypes.has(trackType))
+    .map((trackType) => ({
+      batchId,
+      trackType,
+      durationDays: 0,
+      orderedQuestionIds: [],
+    }));
+
+  if (missingTrackDocs.length === 0) {
+    return existingTracks;
+  }
+
+  if (session) {
+    await Track.create(missingTrackDocs, { session });
+  } else {
+    await Track.create(missingTrackDocs);
+  }
+  return [...existingTracks, ...missingTrackDocs];
+};
+
 export const listColleges = async (req, res) => {
   try {
     const colleges = await College.find().sort({ createdAt: -1 }).lean();
@@ -370,27 +401,7 @@ export const createBatchAdmin = async (req, res) => {
         );
 
         batch = createdBatch;
-
-        const normalizedTrackType = String(assignedTrack || "").trim().toUpperCase();
-        const allowedTrackType = {
-          CORE: "Core",
-          DSA: "DSA",
-          SQL: "SQL",
-        }[normalizedTrackType] || null;
-
-        if (allowedTrackType) {
-          await Track.create(
-            [
-              {
-                batchId: batch._id,
-                trackType: allowedTrackType,
-                durationDays: 0,
-                orderedQuestionIds: [],
-              },
-            ],
-            { session }
-          );
-        }
+        await ensureDefaultBatchTracks(batch._id, session);
       });
     } finally {
       await session.endSession();
@@ -536,6 +547,8 @@ export const updateBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
+    await ensureDefaultBatchTracks(batchId);
+
     await writeAuditLog({
       verb: "Updated",
       entityType: "Batch",
@@ -611,6 +624,7 @@ export const activateBatchAdmin = async (req, res) => {
 
     batch.status = BATCH_STATUS.ACTIVE;
     await batch.save();
+    await ensureDefaultBatchTracks(batchId);
     await Track.updateMany({ batchId }, { $set: { isLockedAfterActivation: true } });
 
     await writeAuditLog({
