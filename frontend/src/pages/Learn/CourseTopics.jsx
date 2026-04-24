@@ -157,7 +157,7 @@ const CourseTopics = () => {
       <main className="flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
         {/* Top Header */}
-        <header className="flex-shrink-0 flex items-center justify-between pt-4 pb-4 px-6 md:px-12 border-b border-black/5 dark:border-white/5">
+        <header className="flex-shrink-0 flex items-center justify-between pt-4 pb-4 px-6 md:px-12">
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
@@ -192,8 +192,8 @@ const CourseTopics = () => {
         >
           <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
-              <span className="block text-[10px] uppercase tracking-[0.22em] font-semibold text-black/35 dark:text-white/55">
-                Course Chapters
+              <span className="block text-sm uppercase tracking-[0.18em] font-semibold text-black/55 dark:text-white/80">
+                Chapters
               </span>
               <span className="block mt-1 text-xs font-medium text-black/55 dark:text-white/60">
                 {totalTopics} chapters
@@ -225,7 +225,7 @@ const CourseTopics = () => {
                     title={courseSidebarCollapsed ? topic.title : undefined}
                   >
                     <div
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold transition-colors ${
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
                         isActive
                           ? "bg-gradient-to-br from-[#3C83F6] to-[#2563eb] text-white shadow-md dark:from-white dark:to-gray-200 dark:text-black"
                           : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
@@ -235,11 +235,11 @@ const CourseTopics = () => {
                     </div>
 
                     {!courseSidebarCollapsed && (
-                      <div className="min-w-0 flex-1">
-                        <span className="block text-[10px] uppercase tracking-[0.18em] font-semibold text-black/35 dark:text-white/45">
+                      <div className="min-w-0 flex-1 self-center">
+                        <span className="block text-[9px] uppercase tracking-[0.16em] font-semibold text-black/35 dark:text-white/45 leading-none">
                           Chapter {index + 1}
                         </span>
-                        <span className="mt-0.5 block text-sm font-medium leading-snug line-clamp-2">
+                        <span className="mt-1 block text-sm font-medium leading-tight line-clamp-2">
                           {topic.title}
                         </span>
                       </div>
@@ -296,7 +296,7 @@ const CourseTopics = () => {
         {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
         <div 
           ref={scrollContainerRef} 
-          className={`flex-1 overflow-y-auto px-4 md:px-8 py-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+          className={`flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
             courseSidebarCollapsed ? "md:pl-28" : "md:pl-80"
           }`}
         >
@@ -310,7 +310,7 @@ const CourseTopics = () => {
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#3C83F6]/10 dark:bg-white/5 rounded-full mb-6 border border-[#3C83F6]/20 dark:border-white/10">
                   <div className="w-2 h-2 rounded-full bg-[#3C83F6] dark:bg-white animate-pulse"></div>
                   <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-bold">
-                    Chapter {selectedTopic + 1}
+                    Chapters
                   </span>
                 </div>
                 
