@@ -57,6 +57,17 @@ export const writeAdminSessionCache = (key, value) => {
   }
 };
 
+const invalidateAdminSessionCache = (keys = []) => {
+  if (typeof window === 'undefined') return;
+  for (const key of keys) {
+    try {
+      window.sessionStorage.removeItem(`${SESSION_CACHE_PREFIX}${key}`);
+    } catch {
+      // Ignore session storage errors and continue.
+    }
+  }
+};
+
 const unwrapData = (payload) => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
     return payload.data;
@@ -86,6 +97,40 @@ const invalidateCacheForPath = (path) => {
         break;
       }
     }
+  }
+};
+
+const invalidateAdminSessionCacheForPath = (path) => {
+  const basePath = path.split('?')[0];
+
+  if (basePath.startsWith('/admin/batches')) {
+    invalidateAdminSessionCache([
+      'batches',
+      'batches-colleges',
+      'batches-track-options',
+      'students-batches',
+      'colleges',
+    ]);
+    return;
+  }
+
+  if (basePath.startsWith('/admin/colleges')) {
+    invalidateAdminSessionCache([
+      'colleges',
+      'batches-colleges',
+      'students-colleges',
+    ]);
+    return;
+  }
+
+  if (basePath.startsWith('/admin/students')) {
+    invalidateAdminSessionCache([
+      'students',
+      'students-batches',
+      'students-colleges',
+      'colleges',
+      'batches',
+    ]);
   }
 };
 
@@ -120,7 +165,10 @@ async function request(path, options = {}) {
       }
 
       if (response.status === 204) {
-        if (!isGet) invalidateCacheForPath(path);
+        if (!isGet) {
+          invalidateCacheForPath(path);
+          invalidateAdminSessionCacheForPath(path);
+        }
         return null;
       }
 
@@ -131,6 +179,7 @@ async function request(path, options = {}) {
         requestCache.set(path, unwrapped);
       } else {
         invalidateCacheForPath(path);
+        invalidateAdminSessionCacheForPath(path);
       }
 
       return unwrapped;
