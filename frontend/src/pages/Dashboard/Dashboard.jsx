@@ -5,15 +5,11 @@ import {
   FiClock,
   FiStar,
   FiTrendingUp,
-  FiTarget,
-  FiSun,
-  FiMoon,
 } from 'react-icons/fi';
 import Sidebar from '../../components/Dashboard/Sidebar';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-import { useAuth } from '../../context/AuthContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 import heroBg from '../../assets/hero-bg.jpg';
@@ -50,12 +46,10 @@ const PixelFlame = () => (
 );
 
 export default function Dashboard() {
-  const { theme, toggleTheme } = useTheme();
-  const { logout } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [activeChallenge, setActiveChallenge] = useState(null);
 
@@ -114,10 +108,7 @@ export default function Dashboard() {
   }, []);
 
   const userName = user?.firstName ? user.firstName : 'Student';
-  const userInitial = userName.charAt(0).toUpperCase();
-  const userDisplayName = user?.firstName
-    ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : user?.name || 'Student';
+  const userDisplayName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Student';
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -137,9 +128,7 @@ export default function Dashboard() {
   ];
 
   const dailyChallenge = {
-    title: activeChallenge?.questionTitle || activeChallenge?.title || 'No active challenge yet',
-    difficulty: activeChallenge?.difficulty || 'Daily',
-    topic: activeChallenge?.trackType || 'Challenge',
+    title: 'Daily Challenge',
     xpReward: activeChallenge?.xpReward || activeChallenge?.points || 0,
     timeEstimate: activeChallenge?.durationMinutes ? `${activeChallenge.durationMinutes} mins` : '--',
     prompt:
@@ -208,7 +197,7 @@ export default function Dashboard() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
@@ -221,77 +210,6 @@ export default function Dashboard() {
                 <p className="text-[10px] tracking-[0.25em] uppercase text-black/40 dark:text-white/40 mt-2">
                   Student Overview
                 </p>
-              </div>
-
-              <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0">
-                <button
-                  onClick={toggleTheme}
-                  className="p-2 rounded-lg text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-300 flex items-center justify-center"
-                  aria-label="Toggle theme"
-                >
-                  {isDarkMode ? <FiSun className="w-5 h-5" /> : <FiMoon className="w-5 h-5" />}
-                </button>
-
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdownOpen((open) => !open)}
-                    className="w-10 h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20"
-                  >
-                    {userInitial}
-                  </button>
-
-                  {profileDropdownOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md">
-                              {userInitial}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-black dark:text-white truncate">{userDisplayName}</h3>
-                              <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'student@techlearn.com'}</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="py-2">
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              navigate('/dashboard/profile');
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                              <FiTarget className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="font-medium">My Profile</div>
-                              <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
-                            </div>
-                          </button>
-                          <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                          <button
-                            onClick={() => {
-                              setProfileDropdownOpen(false);
-                              logout();
-                            }}
-                            className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                              <FiChevronRight className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="font-medium">Log Out</div>
-                              <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             </header>
 
@@ -316,15 +234,6 @@ export default function Dashboard() {
                     </span>
                     <span className="text-[9px] sm:text-[10px] tracking-widest uppercase font-bold text-white bg-rose-500/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap">
                       Resets in 14h 22m
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-white/25 text-white bg-white/10 rounded-sm">
-                      {dailyChallenge.difficulty}
-                    </span>
-                    <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-sky-300/40 text-sky-100 bg-sky-400/15 rounded-sm">
-                      {dailyChallenge.topic}
                     </span>
                   </div>
 

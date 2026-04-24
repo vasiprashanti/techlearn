@@ -148,7 +148,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         }
       `}</style>
 
-      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-11 border-r border-black/5 dark:border-white/5">
+      <div className="hidden lg:flex flex-col fixed left-0 top-20 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-[calc(100vh-5rem)] overflow-hidden w-64 pt-6 border-r border-black/5 dark:border-white/5">
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
           <style>{`
             .custom-scrollbar::-webkit-scrollbar {
@@ -173,7 +173,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
       <button
         onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-7 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+        className="lg:hidden fixed top-24 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
       >
         <FiSidebar className="w-[22px] h-[22px]" />
       </button>
