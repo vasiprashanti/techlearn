@@ -227,7 +227,7 @@ const CourseTopics = () => {
                     <div
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
                         isActive
-                          ? "bg-gradient-to-br from-[#3C83F6] to-[#2563eb] text-white shadow-md dark:from-white dark:to-gray-200 dark:text-black"
+                          ? "border border-black/10 bg-white text-[#020b23] shadow-md dark:border-white/10 dark:bg-black/30 dark:text-white"
                           : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
                       }`}
                     >
