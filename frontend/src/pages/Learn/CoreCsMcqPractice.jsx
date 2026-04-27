@@ -118,7 +118,7 @@ export default function CoreCsMcqPractice() {
   return (
     <UserSidebarLayout maxWidthClass="max-w-5xl">
       <div className="space-y-4">
-        <div className="dashboard-surface p-5">
+        <div className="px-1 py-2">
           <button
             type="button"
             onClick={() => navigate(backPath)}
