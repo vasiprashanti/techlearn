@@ -157,8 +157,8 @@ export default function CoreCsMcqPractice() {
               onClick={() => setSelectedTag('All')}
               className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                 selectedTag === 'All'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
-                  : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#0d366f]/58 dark:text-[#9cd6ff] dark:hover:bg-[#13427f]/72'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/28 dark:bg-[#0b3b35] dark:text-[#d7fff2]'
+                  : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#081a3e] dark:text-[#9cd6ff] dark:hover:bg-[#0d366f]/72'
               }`}
             >
               All Topics
@@ -172,8 +172,8 @@ export default function CoreCsMcqPractice() {
                   onClick={() => setSelectedTag(tag)}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                     active
-                      ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
-                      : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#0d366f]/58 dark:text-[#9cd6ff] dark:hover:bg-[#13427f]/72'
+                      ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-[#6bb8ec]/30 dark:bg-[#0d366f]/72 dark:text-[#d7efff]'
+                      : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#081a3e] dark:text-[#9cd6ff] dark:hover:bg-[#0d366f]/72'
                   }`}
                 >
                   {tag}
