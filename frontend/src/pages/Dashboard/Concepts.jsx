@@ -44,18 +44,25 @@ const Concepts = () => {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
+          className="px-1 py-2"
+        >
+          <div>
+            <h1 className="dashboard-page-title">
+              Important Concepts
+            </h1>
+            <p className="dashboard-page-subtitle max-w-2xl">
+              Strengthen your interview foundations with structured deep-dives into OS, DBMS, Networks, OOD, and system design essentials.
+            </p>
+          </div>
+        </motion.section>
+
+        <motion.section
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.04 }}
           className="dashboard-surface dashboard-surface-strong p-8"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="dashboard-page-title">
-                Important Concepts
-              </h1>
-              <p className="dashboard-page-subtitle max-w-2xl">
-                Strengthen your interview foundations with structured deep-dives into OS, DBMS, Networks, OOD, and system design essentials.
-              </p>
-            </div>
-
+          <div className="flex justify-end">
             <div className="relative w-full max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f82ac] dark:text-[#81bde6]" />
               <input

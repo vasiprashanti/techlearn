@@ -229,7 +229,7 @@ export default function CompanyQuestions() {
                   <div className="dashboard-icon-badge shadow-md">
                     <Rocket className="h-5 w-5" />
                   </div>
-                  <h1 className="dashboard-page-title sm:text-[2.4rem]">
+                  <h1 className="dashboard-page-title">
                     {detailCompany} Prep
                   </h1>
                 </div>
@@ -327,7 +327,7 @@ export default function CompanyQuestions() {
               <div className="dashboard-icon-badge shadow-md">
                 <Rocket className="h-5 w-5" />
               </div>
-              <h1 className="dashboard-page-title sm:text-[2.4rem]">
+              <h1 className="dashboard-page-title">
                 SPRINT - Company Preparation
               </h1>
             </div>

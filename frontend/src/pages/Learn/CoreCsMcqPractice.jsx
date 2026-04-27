@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle, ChevronDown, X } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { CheckCircle, ChevronDown, X } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { coreCsMcqs } from '../../data/coreCsMcqs';
 
@@ -53,7 +53,6 @@ function DifficultyDropdown({ value, onChange, isOpen, onToggle }) {
 }
 
 export default function CoreCsMcqPractice() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [selectedDifficulty, setSelectedDifficulty] = useState('All Difficulty');
   const [selectedTag, setSelectedTag] = useState('All');
@@ -108,27 +107,12 @@ export default function CoreCsMcqPractice() {
   const nextDisabled = !current || currentIndex >= filtered.length - 1;
   const sourceParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/core-cs');
-  const coreSourcePath = sourceParams.get('from');
-  const backPath = isDashboardContext
-    ? coreSourcePath === '/dashboard/practice' || coreSourcePath === '/dashboard/practice/core-cs'
-      ? coreSourcePath
-      : '/dashboard/practice/core-cs'
-    : '/learn/interview-questions';
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-5xl">
       <div className="space-y-4">
         <div className="px-1 py-2">
-          <button
-            type="button"
-            onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <h1 className="dashboard-page-title mt-3">
+          <h1 className="dashboard-page-title">
             Core CS MCQ Practice
           </h1>
           <div className="dashboard-page-subtitle">

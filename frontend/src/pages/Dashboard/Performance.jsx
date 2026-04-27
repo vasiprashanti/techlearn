@@ -64,7 +64,7 @@ export default function Performance() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
-          className="dashboard-surface dashboard-surface-strong p-8"
+          className="px-1 py-2"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -84,8 +84,15 @@ export default function Performance() {
               <BarChart3 className="h-4 w-4" />
             </button>
           </div>
+        </motion.section>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <motion.section
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.04 }}
+          className="dashboard-surface p-8"
+        >
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map((item) => {
               const Icon = item.icon;
               return (

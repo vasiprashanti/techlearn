@@ -5,7 +5,6 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
-  LayoutGrid
 } from 'lucide-react';
 import ScrollProgress from '../../components/ScrollProgress';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
@@ -75,21 +74,13 @@ const ResumeTemplates = () => {
     <UserSidebarLayout maxWidthClass="max-w-7xl">
       <ScrollProgress />
       <div className="space-y-6">
-          <section className="dashboard-surface dashboard-surface-strong p-6 md:p-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
-                  <LayoutGrid className="h-4 w-4" />
-                  Resume Templates
-                </div>
-                <h1 className="dashboard-page-title text-3xl md:text-5xl">
-                  Browse polished resume layouts.
-                </h1>
-                <p className="dashboard-page-subtitle mt-4 max-w-2xl leading-8 md:text-lg">
-                  This grid is designed to feel like a document shelf: fast to scan, visually tidy, and still consistent with the existing TechLearn dashboard styling.
-                </p>
-              </div>
-            </div>
+          <section className="px-1 py-2">
+            <h1 className="dashboard-page-title">
+              Resume Templates
+            </h1>
+            <p className="dashboard-page-subtitle max-w-2xl">
+              Browse polished resume layouts.
+            </p>
           </section>
 
           {loading ? (
