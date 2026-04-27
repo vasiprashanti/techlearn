@@ -348,12 +348,12 @@ export default function CompanyQuestions() {
                   type="button"
                   onClick={() => {
                     setSelectedCompany(company.name);
-                      setDetailCompany(company.name);
+                    setDetailCompany(company.name);
                   }}
-                    className={`rounded-[1.75rem] border px-6 py-6 text-left shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition duration-300 ${
+                  className={`dashboard-surface px-6 py-6 text-left transition duration-300 ${
                     isSelected
-                        ? 'border-[#86c4ff]/50 bg-[rgba(231,246,255,0.94)] dark:border-[#6fbfff]/24 dark:bg-[rgba(6,26,66,0.94)]'
-                        : 'border-[#86c4ff]/40 bg-[rgba(223,241,251,0.9)] hover:-translate-y-1 dark:border-[#6fbfff]/18 dark:bg-[rgba(5,23,58,0.9)]'
+                      ? 'border-[#86c4ff]/50 dark:border-[#6fbfff]/24'
+                      : 'border-[#86c4ff]/35 hover:-translate-y-1 dark:border-white/5'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -455,7 +455,7 @@ export default function CompanyQuestions() {
                     </button>
                   ))
                 ) : (
-                  <div className="rounded-[1.5rem] border border-dashed border-[#86c4ff]/45 bg-[#e7f6ff] px-5 py-8 text-sm text-[#4c6f9a] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:bg-[#0d366f]/65 dark:text-[#7fb8e2] md:col-span-2">
+                  <div className="dashboard-inner-surface rounded-[1.5rem] border-dashed px-5 py-8 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] md:col-span-2">
                     No company-specific question cards are added for {selectedCompany} yet. The layout is
                     ready, and we can plug in the full company bank next.
                   </div>
