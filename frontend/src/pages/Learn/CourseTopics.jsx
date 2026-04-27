@@ -94,8 +94,8 @@ const CourseTopics = () => {
       <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
          <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
         <div className="flex-1 flex items-center justify-center relative z-10">
-          <div className="text-center bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-12 rounded-3xl shadow-sm">
-            <h1 className="text-xl font-medium tracking-tight text-black dark:text-white mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
+          <div className="dashboard-surface text-center p-12 shadow-sm">
+            <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
             <button onClick={() => navigate('/learn')} className="text-[10px] uppercase tracking-widest font-semibold text-[#3C83F6] hover:underline">
               Back to Learn
             </button>
@@ -167,10 +167,10 @@ const CourseTopics = () => {
                 <span>Back to Learn</span>
             </button>
             <div>
-              <h1 className="brand-heading-primary font-poppins text-2xl md:text-3xl font-medium tracking-tight leading-none">
-                Course Player.
+              <h1 className="dashboard-page-title">
+                Course Player
               </h1>
-              <p className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-1 line-clamp-1 font-semibold">
+              <p className="dashboard-page-subtitle mt-1 line-clamp-1">
                 {currentCourse.title} Chapters
               </p>
             </div>
@@ -188,7 +188,7 @@ const CourseTopics = () => {
         </header>
 
         <aside
-          className={`hidden md:flex fixed z-30 left-0 top-[112px] h-[calc(100vh-112px)] flex-col border-r border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/25 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out ${courseSidebarWidthClass}`}
+          className={`hidden md:flex fixed z-30 left-0 top-[112px] h-[calc(100vh-112px)] flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out ${courseSidebarWidthClass}`}
         >
           <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
@@ -201,7 +201,7 @@ const CourseTopics = () => {
             </div>
             <button
               onClick={() => setCourseSidebarCollapsed((prev) => !prev)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-black/5 dark:border-white/10 bg-white/70 dark:bg-white/5 text-black/55 dark:text-white/70 transition-all hover:bg-white hover:text-black dark:hover:bg-white/10 dark:hover:text-white"
+              className="dashboard-inner-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-black/55 dark:text-white/70 transition-all hover:text-black dark:hover:text-white"
               aria-label={courseSidebarCollapsed ? "Expand course topics sidebar" : "Collapse course topics sidebar"}
             >
               {courseSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -303,7 +303,7 @@ const CourseTopics = () => {
           <div className="max-w-[800px] mx-auto pb-20">
 
             {/* Reading Container Card */}
-            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-3xl border border-black/5 dark:border-white/5 rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
+            <div className="dashboard-surface rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
@@ -351,7 +351,7 @@ const CourseTopics = () => {
             </div>
 
             {/* Premium Navigation Footer */}
-            <div className="flex items-center justify-between mt-8 bg-white/70 dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 p-4 rounded-[1.5rem] shadow-sm">
+            <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
                 <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
@@ -363,11 +363,11 @@ const CourseTopics = () => {
               </span>
 
               {!isLastTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="flex items-center gap-2 px-8 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
                   Complete <CheckCircle className="w-4 h-4" />
                 </button>
               )}

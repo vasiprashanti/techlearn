@@ -148,10 +148,10 @@ export default function Courses() {
           <section className="pt-6">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
               <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-                <h2 className="font-poppins tracking-tight leading-[0.92]">
-                  <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
+                <h2 className="dashboard-page-title">
+                  Courses
                 </h2>
-                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">
+                <p className="dashboard-page-subtitle mt-2">
                   Pick a track and start building skills
                 </p>
               </motion.div>
@@ -177,21 +177,21 @@ export default function Courses() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: index * 0.1 }}
                     onClick={() => handleCourseClick(course.id)}
-                    className="group p-6 md:p-8 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 transition-all duration-500 rounded-2xl cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden shadow-[0_12px_34px_rgba(60,131,246,0.12)]"
+                    className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1"
                   >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/35 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
 
                     <div className="relative z-10 flex items-start justify-between mb-5 min-h-[52px]">
-                      <div className="p-3 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                      <div className="dashboard-icon-badge group-hover:scale-110 transition-transform duration-500">
                         <Code className="w-5 h-5 text-[#3C83F6] dark:text-[#8fd9ff]" />
                       </div>
                     </div>
 
                     <div className="relative z-10 mt-auto">
-                      <h3 className="text-2xl md:text-[1.9rem] font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
+                      <h3 className="text-2xl md:text-[1.9rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
                         {course.title}
                       </h3>
-                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 font-light min-h-[46px]">
+                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
                         {course.description}
                       </p>
                     </div>
@@ -212,7 +212,7 @@ export default function Courses() {
           >
             <div className="mb-8">
               <div className="flex items-center">
-                <h2 className="brand-heading-primary font-poppins text-4xl sm:text-5xl md:text-6xl tracking-tight leading-[0.92]">
+                <h2 className="dashboard-page-title">
                   Online Courses
                 </h2>
               </div>
@@ -234,7 +234,7 @@ export default function Courses() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, amount: 0.2 }}
                         transition={{ duration: 0.5, delay: index * 0.05 }}
-                        className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] shadow-[0_12px_34px_rgba(60,131,246,0.12)]"
+                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
                       >
                         <div className="flex justify-between items-center mb-6">
                           <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
@@ -274,7 +274,7 @@ export default function Courses() {
 
                         <button
                           onClick={() => handleWhatsAppClick(batch.title)}
-                          className="mt-auto w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] rounded-xl text-[10px] uppercase tracking-widest font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]"
+                          className="dashboard-primary-btn mt-auto w-full py-3"
                         >
                           Join Waitlist <ArrowRight className="w-4 h-4" />
                         </button>
