@@ -225,14 +225,14 @@ export default function Dashboard() {
                 />
                 <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4">
+                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4 text-white">
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
-                    <span className="text-[9px] sm:text-[10px] font-semibold text-white/90 bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
                       <FiClock className="w-3.5 h-3.5 shrink-0" />
                       <span className="whitespace-nowrap">{todayFormatted}</span>
                       <span className="opacity-65 text-[8px] sm:text-[9px] tracking-[0.22em] uppercase font-bold shrink-0">IST</span>
                     </span>
-                    <span className="text-[8px] sm:text-[9px] tracking-[0.24em] uppercase font-bold text-white/92 bg-rose-500/72 backdrop-blur-md px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+                    <span className="text-[8px] sm:text-[9px] tracking-[0.24em] uppercase font-bold text-white bg-rose-500/72 backdrop-blur-md px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
                       Resets in 14h 22m
                     </span>
                   </div>
@@ -241,16 +241,16 @@ export default function Dashboard() {
                     {dailyChallenge.title}
                   </h1>
 
-                  <p className="text-[13px] sm:text-sm text-white/78 max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
+                  <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
                     {dailyChallenge.prompt}
                   </p>
 
                   <div className="flex items-center gap-5 mt-1.5">
-                    <div className="flex items-center gap-2 text-sm text-white/74">
+                    <div className="flex items-center gap-2 text-sm text-white">
                       <FiStar className="text-amber-400" />
                       <span>+{dailyChallenge.xpReward} XP</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-white/74">
+                    <div className="flex items-center gap-2 text-sm text-white">
                       <FiClock className="text-sky-300" />
                       <span>~{dailyChallenge.timeEstimate}</span>
                     </div>
