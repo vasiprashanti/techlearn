@@ -197,7 +197,7 @@ export default function Dashboard() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
@@ -226,13 +226,13 @@ export default function Dashboard() {
                 <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
                 <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4">
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1 md:mb-2">
-                    <span className="text-[10px] sm:text-xs font-semibold text-white/95 bg-white/20 backdrop-blur-md px-3 sm:px-4 py-1.5 border border-white/30 rounded-full flex items-center gap-1.5 sm:gap-2">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+                    <span className="text-[9px] sm:text-[10px] font-semibold text-white/90 bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
                       <FiClock className="w-3.5 h-3.5 shrink-0" />
                       <span className="whitespace-nowrap">{todayFormatted}</span>
-                      <span className="opacity-70 text-[9px] sm:text-[10px] tracking-widest uppercase font-bold shrink-0">IST</span>
+                      <span className="opacity-65 text-[8px] sm:text-[9px] tracking-[0.22em] uppercase font-bold shrink-0">IST</span>
                     </span>
-                    <span className="text-[9px] sm:text-[10px] tracking-widest uppercase font-bold text-white bg-rose-500/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm whitespace-nowrap">
+                    <span className="text-[8px] sm:text-[9px] tracking-[0.24em] uppercase font-bold text-white/92 bg-rose-500/72 backdrop-blur-md px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
                       Resets in 14h 22m
                     </span>
                   </div>
@@ -241,16 +241,16 @@ export default function Dashboard() {
                     {dailyChallenge.title}
                   </h1>
 
-                  <p className="text-xs sm:text-sm md:text-base text-white/80 max-w-xl line-clamp-3 pb-1 md:pb-2 drop-shadow-sm">
+                  <p className="text-[13px] sm:text-sm text-white/78 max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
                     {dailyChallenge.prompt}
                   </p>
 
-                  <div className="flex items-center gap-6 mt-2">
-                    <div className="flex items-center gap-2 text-sm text-white/80">
+                  <div className="flex items-center gap-5 mt-1.5">
+                    <div className="flex items-center gap-2 text-sm text-white/74">
                       <FiStar className="text-amber-400" />
                       <span>+{dailyChallenge.xpReward} XP</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-white/80">
+                    <div className="flex items-center gap-2 text-sm text-white/74">
                       <FiClock className="text-sky-300" />
                       <span>~{dailyChallenge.timeEstimate}</span>
                     </div>
@@ -265,50 +265,59 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
-                <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
-                  <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
-                  <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    View Full
-                  </button>
-                </div>
-                <div className="flex-1 flex flex-col justify-around gap-2">
-                  {featuredLeaderboard.map((student) => (
-                    <div
-                      key={student.userId}
-                      className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                        student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
-                    >
+              <div className="flex flex-col gap-4 h-full">
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
+                  <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
+                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
+                    <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
+                      View Full
+                    </button>
+                  </div>
+                  <div className="flex-1 flex flex-col justify-around gap-2">
+                    {featuredLeaderboard.map((student) => (
                       <div
-                        className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
-                          student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
+                        key={student.userId}
+                        className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
+                          student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
                         }`}
                       >
-                        #{student.rank}
+                        <div
+                          className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
+                            student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
+                          }`}
+                        >
+                          #{student.rank}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
+                            {student.name}
+                          </h4>
+                        </div>
+                        <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
+                          {student.totalXp.toLocaleString()}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
-                          {student.name}
-                        </h4>
-                      </div>
-                      <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
-                        {student.totalXp.toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-4 md:gap-y-6 gap-x-2 mt-6">
-                  {retroStats.map((stat) => (
-                    <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
-                        <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col">
+                  <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
+                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
+                    <span className="font-press-start text-[9px] tracking-widest text-black/35 dark:text-white/45">OVERVIEW</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-4 md:gap-y-5 gap-x-2">
+                    {retroStats.map((stat) => (
+                      <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
+                          <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
+                        </div>
+                        <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
                       </div>
-                      <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
