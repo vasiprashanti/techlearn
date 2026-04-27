@@ -104,7 +104,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-[#17386c]/45 dark:text-white/48 px-4">
+          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/45 dark:text-white/34 px-4">
             {group.title}
           </h4>
           <div className="space-y-0.5">
@@ -118,8 +118,8 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                   `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
                   ${
                     isActive
-                      ? "bg-white/90 text-[#020b23] dark:bg-[#23357f] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#4f6db8]/60"
-                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#152653] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#36508f]/70 font-normal border border-transparent dark:border-transparent"
+                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
+                      : "text-[#17386c]/78 dark:text-white/58 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white/86 dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
                   }`
                 }
               >
@@ -148,7 +148,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         }
       `}</style>
 
-      <div className="hidden lg:flex flex-col fixed left-4 top-24 bg-[#daf0fa]/88 dark:bg-[#041634]/96 backdrop-blur-xl z-40 h-[calc(100vh-7rem)] overflow-hidden w-[17rem] pt-6 border border-white/35 dark:border-[#173a72]/65 rounded-[28px] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_18px_45px_rgba(0,0,0,0.34)]">
+      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-[#031027]/98 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-[#16386b]/45 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
           <style>{`
             .custom-scrollbar::-webkit-scrollbar {
@@ -193,7 +193,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#041634] border-r border-black/5 dark:border-[#173a72]/65 z-50 shadow-2xl flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#031027] border-r border-black/5 dark:border-[#16386b]/45 z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
                 <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
