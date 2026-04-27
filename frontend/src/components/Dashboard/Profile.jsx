@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
+import UserSidebarLayout from "./UserSidebarLayout";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
@@ -101,14 +102,10 @@ const Profile = () => {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <>
       <ScrollProgress />
-      
-      {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
-
-      <main className="flex-1 transition-all duration-700 ease-in-out z-10 pt-24 pb-12 px-6 md:px-12 lg:px-16">
-        <div className="max-w-[1280px] mx-auto space-y-8">
+      <UserSidebarLayout maxWidthClass="max-w-[1280px]">
+        <div className="space-y-8">
           
           {/* Top Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
@@ -280,9 +277,8 @@ const Profile = () => {
             </motion.div>
           </div>
         </div>
-      </main>
+      </UserSidebarLayout>
 
-      {/* Avatar Selection Modal (Glassmorphism UI) */}
       <AnimatePresence>
         {isSelectingAvatar && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -370,7 +366,7 @@ const Profile = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
 

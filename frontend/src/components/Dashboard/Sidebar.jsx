@@ -104,7 +104,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/45 dark:text-white/56 px-4">
+          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:text-white/72 px-4">
             {group.title}
           </h4>
           <div className="space-y-0.5">
@@ -119,7 +119,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                   ${
                     isActive
                       ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
-                      : "text-[#17386c]/78 dark:text-white/58 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white/86 dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
+                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
                   }`
                 }
               >
