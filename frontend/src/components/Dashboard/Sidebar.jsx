@@ -148,7 +148,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         }
       `}</style>
 
-      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-[#06142f]/98 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-[#173a72]/42 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
+      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-[#071327]/95 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-white/[0.06] rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
           <style>{`
             .custom-scrollbar::-webkit-scrollbar {
@@ -193,7 +193,7 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#06142f] border-r border-black/5 dark:border-[#173a72]/42 z-50 shadow-2xl flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#071327] border-r border-black/5 dark:border-white/[0.06] z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
                 <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
