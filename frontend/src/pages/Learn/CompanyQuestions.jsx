@@ -226,14 +226,14 @@ export default function CompanyQuestions() {
 
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 text-[#2d7fe8] shadow-md backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:text-[#8fd9ff]">
+                  <div className="dashboard-icon-badge shadow-md">
                     <Rocket className="h-5 w-5" />
                   </div>
-                  <h1 className="text-3xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] sm:text-[2.4rem]">
+                  <h1 className="dashboard-page-title sm:text-[2.4rem]">
                     {detailCompany} Prep
                   </h1>
                 </div>
-                <p className="mt-2 text-lg text-[#4c6f9a] dark:text-[#7fb8e2]">
+                <p className="dashboard-page-subtitle text-lg">
                   {detailConfig.subtitle}
                 </p>
               </div>
@@ -246,7 +246,7 @@ export default function CompanyQuestions() {
                 return (
                   <div
                     key={topic.title}
-                    className="rounded-[1.5rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 px-5 py-6 text-left shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+                    className="dashboard-surface px-5 py-6 text-left"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <h2 className="text-[1.35rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{topic.title}</h2>
@@ -263,7 +263,7 @@ export default function CompanyQuestions() {
               })}
             </div>
 
-            <div className="mt-7 rounded-[1.625rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 sm:p-6">
+            <div className="dashboard-surface mt-7 p-5 sm:p-6">
               <div>
                 <h2 className="text-2xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Practice Questions</h2>
                 <p className="mt-1 text-base text-[#4c6f9a] dark:text-[#7fb8e2]">
@@ -290,7 +290,7 @@ export default function CompanyQuestions() {
 
                       navigate(`/learn/interview-questions/company/mock/${encodedCompany}/${question.id}?${query.toString()}`);
                     }}
-                    className="flex w-full items-center gap-4 rounded-[1.375rem] border border-[#86c4ff]/35 bg-gradient-to-br from-[#f0f9ff]/90 to-[#dff1ff]/85 px-4 py-4 text-left transition hover:-translate-y-0.5 hover:from-[#f5fbff] hover:to-[#e8f5ff] dark:border-[#6fbfff]/30 dark:from-[#0a2f6f]/75 dark:to-[#0b3677]/70 dark:hover:from-[#103b86]/85 dark:hover:to-[#0f3f8f]/80"
+                    className="dashboard-inner-surface flex w-full items-center gap-4 px-4 py-4 text-left transition hover:-translate-y-0.5"
                   >
                     <div className="shrink-0">
                       {question.solved ? (
@@ -324,14 +324,14 @@ export default function CompanyQuestions() {
         <section>
           <div className="mb-8">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/40 text-blue-600 backdrop-blur-xl border border-white/25 shadow-md dark:bg-white/10 dark:text-blue-300 dark:border-white/10">
+              <div className="dashboard-icon-badge shadow-md">
                 <Rocket className="h-5 w-5" />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-[2.4rem]">
+              <h1 className="dashboard-page-title sm:text-[2.4rem]">
                 SPRINT - Company Preparation
               </h1>
             </div>
-            <p className="mt-2 text-lg text-slate-600 dark:text-slate-300">
+            <p className="dashboard-page-subtitle text-lg">
               Target your preparation for specific companies
             </p>
           </div>
@@ -352,8 +352,8 @@ export default function CompanyQuestions() {
                   }}
                     className={`rounded-[1.75rem] border px-6 py-6 text-left shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition duration-300 ${
                     isSelected
-                        ? 'border-[#86c4ff]/50 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 dark:border-[#6fbfff]/35 dark:from-[#052152]/85 dark:to-[#072b63]/80'
-                        : 'border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 hover:-translate-y-1 hover:from-[#ecf8ff] hover:to-[#deefff] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80'
+                        ? 'border-[#86c4ff]/50 bg-[rgba(231,246,255,0.94)] dark:border-[#6fbfff]/24 dark:bg-[rgba(6,26,66,0.94)]'
+                        : 'border-[#86c4ff]/40 bg-[rgba(223,241,251,0.9)] hover:-translate-y-1 dark:border-[#6fbfff]/18 dark:bg-[rgba(5,23,58,0.9)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -393,7 +393,7 @@ export default function CompanyQuestions() {
           </div>
 
           {selectedCompany && selectedCard && (
-            <div className="mt-8 rounded-[1.875rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 sm:p-7">
+            <div className="dashboard-surface mt-8 p-6 sm:p-7">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6f8fb7] dark:text-[#78b3de]">
@@ -408,7 +408,7 @@ export default function CompanyQuestions() {
                   </p>
                 </div>
 
-                <div className="rounded-[1.5rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#f0f9ff]/90 to-[#dff1ff]/85 px-5 py-4 text-left shadow-md backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#0a2f6f]/75 dark:to-[#0b3677]/70 lg:min-w-[11.25rem]">
+                <div className="dashboard-inner-surface px-5 py-4 text-left shadow-md lg:min-w-[11.25rem]">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6f8fb7] dark:text-[#78b3de]">
                     Progress
                   </p>
@@ -432,7 +432,7 @@ export default function CompanyQuestions() {
 
                         navigate(`/learn/interview-questions/company/${question.id}`);
                       }}
-                      className="rounded-[1.5rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#f0f9ff]/90 to-[#dff1ff]/85 p-5 text-left shadow-md backdrop-blur-xl transition hover:-translate-y-0.5 hover:from-[#f5fbff] hover:to-[#e8f5ff] dark:border-[#6fbfff]/30 dark:from-[#0a2f6f]/75 dark:to-[#0b3677]/70 dark:hover:from-[#103b86]/85 dark:hover:to-[#0f3f8f]/80"
+                      className="dashboard-inner-surface rounded-[1.5rem] p-5 text-left shadow-md transition hover:-translate-y-0.5"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>

@@ -75,17 +75,17 @@ const ResumeTemplates = () => {
     <UserSidebarLayout maxWidthClass="max-w-7xl">
       <ScrollProgress />
       <div className="space-y-6">
-          <section className="rounded-[2rem] border border-white/60 bg-white/70 p-6 shadow-[0_24px_80px_-40px_rgba(37,99,235,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:shadow-[0_24px_80px_-40px_rgba(15,23,42,0.9)] md:p-8">
+          <section className="dashboard-surface dashboard-surface-strong p-6 md:p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-3xl">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
                   <LayoutGrid className="h-4 w-4" />
                   Resume Templates
                 </div>
-                <h1 className="brand-heading-primary font-poppins text-3xl font-semibold tracking-tight md:text-5xl">
+                <h1 className="dashboard-page-title text-3xl md:text-5xl">
                   Browse polished resume layouts.
                 </h1>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-[#4c6f9a] dark:text-[#7fb8e2] md:text-lg">
+                <p className="dashboard-page-subtitle mt-4 max-w-2xl leading-8 md:text-lg">
                   This grid is designed to feel like a document shelf: fast to scan, visually tidy, and still consistent with the existing TechLearn dashboard styling.
                 </p>
               </div>
@@ -97,7 +97,7 @@ const ResumeTemplates = () => {
               {Array.from({ length: 8 }).map((_, index) => (
                 <div
                   key={index}
-                  className="overflow-hidden rounded-[1.75rem] border border-white/60 bg-white/70 p-4 backdrop-blur-xl dark:border-white/10 dark:bg-white/5"
+                  className="dashboard-surface overflow-hidden p-4"
                 >
                   <div className="aspect-[0.75] animate-pulse rounded-[1.2rem] bg-slate-200/80 dark:bg-white/10" />
                   <div className="mt-4 h-4 w-2/3 animate-pulse rounded-full bg-slate-200/80 dark:bg-white/10" />
@@ -122,7 +122,7 @@ const ResumeTemplates = () => {
                 return (
                   <article
                     key={template.id || href || title}
-                    className="group flex h-full flex-col overflow-hidden rounded-[1.8rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:from-[#ecf8ff] hover:to-[#deefff] hover:shadow-[0_28px_80px_-40px_rgba(37,99,235,0.35)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80"
+                    className="dashboard-surface group flex h-full flex-col overflow-hidden p-4 transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_-40px_rgba(37,99,235,0.35)]"
                   >
                     <a
                       href={isLinkValid ? href : undefined}
@@ -191,7 +191,7 @@ const ResumeTemplates = () => {
                           href={isLinkValid ? href : undefined}
                           target={isLinkValid ? '_blank' : undefined}
                           rel={isLinkValid ? 'noreferrer' : undefined}
-                          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#082a5d] transition hover:brightness-105"
+                          className="dashboard-primary-btn rounded-full px-4 py-2 text-xs tracking-[0.18em]"
                         >
                           <FolderOpen className="h-3.5 w-3.5" />
                           Open
@@ -199,7 +199,7 @@ const ResumeTemplates = () => {
                         <a
                           href={isLinkValid ? href : undefined}
                           download={isLinkValid ? '' : undefined}
-                          className="inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/45 bg-[#f5fbff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4c6f9a] transition hover:border-[#5da8f0] hover:text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#7fb8e2] dark:hover:border-[#8fd9ff]/60 dark:hover:text-[#a8e6ff]"
+                          className="dashboard-secondary-btn rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]"
                         >
                           <Download className="h-3.5 w-3.5" />
                           Download
@@ -211,7 +211,7 @@ const ResumeTemplates = () => {
               })}
             </section>
           ) : (
-            <section className="rounded-[2rem] border border-dashed border-[#86c4ff]/45 bg-[#e7f6ff] p-8 text-left shadow-sm backdrop-blur-xl dark:border-[#6fbfff]/35 dark:bg-[#0d366f]/65">
+            <section className="dashboard-surface rounded-[2rem] border-dashed p-8 text-left shadow-sm">
               <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2d7fe8] text-white dark:bg-[#8fd9ff] dark:text-[#0a2f6f]">
                 <FileText className="h-5 w-5" />
               </div>

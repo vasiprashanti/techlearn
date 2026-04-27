@@ -89,7 +89,7 @@ const Profile = () => {
   
   const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
   const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
-  const dashboardCardClass = "rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-12";
+  const dashboardCardClass = "dashboard-surface p-8 md:p-12";
 
   if (isLoading) {
     return (
@@ -122,7 +122,7 @@ const Profile = () => {
                 Back to Dashboard
               </button>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
                   My Profile.
                 </span>
               </h1>
@@ -272,7 +272,7 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard/profile/edit')}
-                  className="relative z-10 mt-5 inline-flex items-center rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg"
+                  className="dashboard-primary-btn relative z-10 mt-5"
                 >
                   Edit Profile
                 </button>

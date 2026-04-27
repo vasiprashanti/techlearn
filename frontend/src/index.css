@@ -31,6 +31,151 @@
   .input-field {
     @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
+
+  .dashboard-page-title {
+    @apply text-2xl font-semibold tracking-tight sm:text-[2rem];
+    color: #0d2a57;
+  }
+
+  .dark .dashboard-page-title {
+    color: #8fd9ff;
+  }
+
+  .dashboard-page-subtitle {
+    @apply mt-1 text-sm md:text-base;
+    color: #4c6f9a;
+  }
+
+  .dark .dashboard-page-subtitle {
+    color: #7fb8e2;
+  }
+
+  .dashboard-micro-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em];
+    color: #5f82ac;
+  }
+
+  .dark .dashboard-micro-label {
+    color: #81bde6;
+  }
+
+  .dashboard-surface {
+    @apply rounded-[1.75rem] border backdrop-blur-xl;
+    border-color: rgba(134, 196, 255, 0.4);
+    background: rgba(223, 241, 251, 0.9);
+    box-shadow: 0 12px 34px rgba(60, 131, 246, 0.12);
+  }
+
+  .dark .dashboard-surface {
+    border-color: rgba(111, 191, 255, 0.18);
+    background: rgba(5, 23, 58, 0.9);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+  }
+
+  .dashboard-surface-strong {
+    background: rgba(231, 246, 255, 0.94);
+  }
+
+  .dark .dashboard-surface-strong {
+    background: rgba(6, 26, 66, 0.94);
+  }
+
+  .dashboard-inner-surface {
+    @apply rounded-2xl border;
+    border-color: rgba(159, 207, 255, 0.45);
+    background: rgba(213, 236, 249, 0.88);
+  }
+
+  .dark .dashboard-inner-surface {
+    border-color: rgba(107, 184, 236, 0.2);
+    background: rgba(15, 49, 97, 0.78);
+  }
+
+  .dashboard-input-surface {
+    @apply h-11 w-full rounded-[1.1rem] border px-4 text-sm outline-none transition;
+    border-color: rgba(134, 196, 255, 0.4);
+    background: rgba(242, 250, 255, 0.92);
+    color: #0d2a57;
+  }
+
+  .dashboard-input-surface::placeholder {
+    color: #6f8fb7;
+  }
+
+  .dashboard-input-surface:focus {
+    border-color: rgba(45, 127, 232, 0.7);
+    box-shadow: 0 0 0 4px rgba(118, 199, 255, 0.22);
+  }
+
+  .dark .dashboard-input-surface {
+    border-color: rgba(107, 184, 236, 0.22);
+    background: rgba(10, 47, 111, 0.64);
+    color: #9cd6ff;
+  }
+
+  .dark .dashboard-input-surface::placeholder {
+    color: #77afd8;
+  }
+
+  .dark .dashboard-input-surface:focus {
+    border-color: rgba(143, 217, 255, 0.72);
+    box-shadow: 0 0 0 4px rgba(76, 143, 208, 0.26);
+  }
+
+  .dashboard-primary-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[11px] font-semibold uppercase tracking-widest transition;
+    background: #020b23;
+    color: #daf0fa;
+    box-shadow: 0 12px 30px rgba(2, 11, 35, 0.22);
+  }
+
+  .dashboard-primary-btn:hover {
+    background: #071a42;
+  }
+
+  .dark .dashboard-primary-btn {
+    background: #0c1f4d;
+    color: #daf0fa;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .dark .dashboard-primary-btn:hover {
+    background: #142b67;
+  }
+
+  .dashboard-secondary-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition;
+    border-color: rgba(159, 207, 255, 0.65);
+    background: rgba(219, 241, 255, 0.9);
+    color: #17457e;
+  }
+
+  .dashboard-secondary-btn:hover {
+    background: rgba(203, 233, 255, 0.95);
+  }
+
+  .dark .dashboard-secondary-btn {
+    border-color: rgba(107, 184, 236, 0.32);
+    background: rgba(13, 54, 111, 0.78);
+    color: #9cd6ff;
+  }
+
+  .dark .dashboard-secondary-btn:hover {
+    background: rgba(19, 66, 127, 0.82);
+  }
+
+  .dashboard-icon-badge {
+    @apply flex h-10 w-10 items-center justify-center rounded-2xl border;
+    border-color: rgba(134, 196, 255, 0.4);
+    background: rgba(228, 244, 255, 0.9);
+    color: #2d7fe8;
+  }
+
+  .dark .dashboard-icon-badge {
+    border-color: rgba(111, 191, 255, 0.24);
+    background: rgba(16, 51, 95, 0.84);
+    color: #8fd9ff;
+  }
 }
 
 /* Custom utility styles */

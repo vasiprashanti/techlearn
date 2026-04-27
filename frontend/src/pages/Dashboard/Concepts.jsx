@@ -44,14 +44,14 @@ const Concepts = () => {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
-          className="rounded-3xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+          className="dashboard-surface dashboard-surface-strong p-8"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="brand-heading-primary font-poppins text-3xl tracking-tight md:text-4xl">
+              <h1 className="dashboard-page-title">
                 Important Concepts
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-[#4c6f9a] dark:text-[#7fb8e2] md:text-base">
+              <p className="dashboard-page-subtitle max-w-2xl">
                 Strengthen your interview foundations with structured deep-dives into OS, DBMS, Networks, OOD, and system design essentials.
               </p>
             </div>
@@ -63,14 +63,14 @@ const Concepts = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search concepts..."
-                className="h-11 w-full rounded-xl border border-[#86c4ff]/40 bg-[#f2faff] pl-10 pr-3 text-sm text-[#0d2a57] outline-none transition focus:border-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0a2f6f]/55 dark:text-[#8fd9ff]"
+                className="dashboard-input-surface rounded-xl pl-10 pr-3"
               />
             </div>
           </div>
         </motion.section>
 
         {loading ? (
-          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 text-[#4c6f9a] shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:text-[#7fb8e2]">
+          <div className="dashboard-surface p-6 text-[#4c6f9a] dark:text-[#7fb8e2]">
             Loading concepts...
           </div>
         ) : null}
@@ -94,7 +94,7 @@ const Concepts = () => {
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: index * 0.05 }}
-                  className="flex h-full flex-col rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+                  className="dashboard-surface flex h-full flex-col p-5"
                 >
                   <div className="flex items-start gap-4">
                     <div

@@ -64,21 +64,21 @@ export default function Performance() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
-          className="rounded-3xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+          className="dashboard-surface dashboard-surface-strong p-8"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="brand-heading-primary font-poppins text-3xl tracking-tight md:text-4xl">
+              <h1 className="dashboard-page-title">
                 Performance Overview
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-[#4c6f9a] dark:text-[#7fb8e2] md:text-base">
+              <p className="dashboard-page-subtitle max-w-2xl">
                 Track your consistency, accuracy, and growth across all practice tracks with a single student performance snapshot.
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigate('/dashboard/leaderboard')}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg"
+              className="dashboard-primary-btn"
             >
               View Leaderboard
               <BarChart3 className="h-4 w-4" />
@@ -91,7 +91,7 @@ export default function Performance() {
               return (
                 <div
                   key={item.label}
-                  className="rounded-2xl border border-[#9fcfff]/45 bg-[#dbf1ff] px-4 py-4 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]"
+                  className="dashboard-inner-surface px-4 py-4"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">{item.label}</p>
@@ -110,15 +110,15 @@ export default function Performance() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.05 }}
-            className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 lg:col-span-3 flex min-h-[34rem] flex-col"
+            className="dashboard-surface p-6 lg:col-span-3 flex min-h-[34rem] flex-col"
           >
-            <h2 className="text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Weekly Consistency</h2>
-            <p className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">Daily completion score out of 100</p>
+            <h2 className="dashboard-page-title text-xl sm:text-xl">Weekly Consistency</h2>
+            <p className="dashboard-page-subtitle">Daily completion score out of 100</p>
 
             <div className="mt-6 grid w-full flex-1 grid-cols-7 gap-2 sm:gap-3">
               {weeklyConsistency.map((entry) => (
                 <div key={entry.day} className="flex h-full w-full flex-col gap-2">
-                  <div className="flex h-full min-h-[24rem] w-full flex-1 items-end rounded-xl border border-[#9fcfff]/50 bg-[#dbf1ff] p-2 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]">
+                  <div className="dashboard-inner-surface flex h-full min-h-[24rem] w-full flex-1 items-end p-2">
                     <div
                       className="w-full rounded-lg bg-gradient-to-t from-[#3c83f6] via-[#45a2ff] to-[#53b6ff]"
                       style={{ height: `${entry.score}%` }}
@@ -134,14 +134,14 @@ export default function Performance() {
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 lg:col-span-2"
+            className="dashboard-surface p-6 lg:col-span-2"
           >
-            <h2 className="text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Track Breakdown</h2>
-            <p className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">Solved vs accuracy by track</p>
+            <h2 className="dashboard-page-title text-xl sm:text-xl">Track Breakdown</h2>
+            <p className="dashboard-page-subtitle">Solved vs accuracy by track</p>
 
             <div className="mt-5 space-y-4">
               {trackBreakdown.map((track) => (
-                <div key={track.track} className="rounded-xl border border-[#9fcfff]/50 bg-[#dbf1ff] p-4 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]">
+                <div key={track.track} className="dashboard-inner-surface p-4">
                   <div className="flex items-center justify-between text-sm">
                     <p className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{track.track}</p>
                     <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">{track.solved} solved</p>
@@ -163,16 +163,16 @@ export default function Performance() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.12 }}
-          className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+          className="dashboard-surface p-6"
         >
-          <h2 className="text-xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Recent Practice Sessions</h2>
-          <p className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">Latest attempts and XP earned</p>
+          <h2 className="dashboard-page-title text-xl sm:text-xl">Recent Practice Sessions</h2>
+          <p className="dashboard-page-subtitle">Latest attempts and XP earned</p>
 
           <div className="mt-5 space-y-3">
             {recentSessions.map((session) => (
               <div
                 key={session.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#9fcfff]/50 bg-[#dbf1ff] px-4 py-3 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]"
+                className="dashboard-inner-surface flex flex-wrap items-center justify-between gap-3 px-4 py-3"
               >
                 <div>
                   <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{session.title}</p>

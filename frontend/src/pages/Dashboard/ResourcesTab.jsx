@@ -73,17 +73,17 @@ export default function ResourcesTab({ category }) {
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-2xl font-semibold text-[#1a202c] dark:text-white">{category}</h1>
-          <p className="mt-1 text-sm text-[#5f7592] dark:text-slate-300">Learning resources uploaded by admins</p>
+          <h1 className="dashboard-page-title">{category}</h1>
+          <p className="dashboard-page-subtitle">Learning resources uploaded by admins</p>
 
-          <div className="mt-4">
+          <div className="dashboard-surface dashboard-surface-strong mt-4 p-4">
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={`Search ${category.toLowerCase()}...`}
-              className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none"
+              className="dashboard-input-surface"
             />
           </div>
 
@@ -103,9 +103,9 @@ export default function ResourcesTab({ category }) {
             {!loading && !error && filteredEntries.map((entry) => {
               const TypeIcon = typeIconMap[entry.type] || FiFileText;
               return (
-                <article key={entry._id || entry.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] px-4 py-3 flex items-center justify-between gap-3">
+                <article key={entry._id || entry.id} className="dashboard-surface px-4 py-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
+                    <div className="dashboard-icon-badge h-8 w-8 rounded-lg shrink-0">
                       <TypeIcon className="w-3.5 h-3.5 text-[#6e809b] dark:text-slate-300" />
                     </div>
                     <div className="min-w-0">

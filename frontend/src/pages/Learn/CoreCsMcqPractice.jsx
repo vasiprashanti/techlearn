@@ -18,14 +18,14 @@ function DifficultyDropdown({ value, onChange, isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-12 min-w-[14rem] items-center justify-between gap-2 rounded-full border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 px-5 text-base font-medium text-[#0d2a57] shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl transition hover:from-[#ecf8ff] hover:to-[#deefff] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:text-[#8fd9ff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80"
+        className="dashboard-inner-surface flex h-12 min-w-[14rem] items-center justify-between gap-2 rounded-full px-5 text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff]"
       >
         <span className="flex items-center gap-2">{value}</span>
         <ChevronDown className={`h-4 w-4 transition ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-[9999] mt-3 w-64 overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/85 dark:to-[#072b63]/80">
+        <div className="dashboard-surface dashboard-surface-strong absolute right-0 z-[9999] mt-3 w-64 overflow-hidden">
           <div className="max-h-72 overflow-auto py-2">
             {difficultyOptions.map((option) => {
               const selected = value === option;
@@ -118,7 +118,7 @@ export default function CoreCsMcqPractice() {
   return (
     <UserSidebarLayout maxWidthClass="max-w-5xl">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+        <div className="dashboard-surface p-5">
           <button
             type="button"
             onClick={() => navigate(backPath)}
@@ -128,15 +128,15 @@ export default function CoreCsMcqPractice() {
             Back
           </button>
 
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
+          <h1 className="dashboard-page-title mt-3">
             Core CS MCQ Practice
           </h1>
-          <div className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
+          <div className="dashboard-page-subtitle">
             Select an answer to see the explanation instantly.
           </div>
         </div>
 
-        <div className="relative z-30 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+        <div className="dashboard-surface relative z-30 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <DifficultyDropdown
               value={selectedDifficulty}
@@ -158,7 +158,7 @@ export default function CoreCsMcqPractice() {
               className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                 selectedTag === 'All'
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
-                  : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                  : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#0d366f]/58 dark:text-[#9cd6ff] dark:hover:bg-[#13427f]/72'
               }`}
             >
               All Topics
@@ -173,7 +173,7 @@ export default function CoreCsMcqPractice() {
                   className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                     active
                       ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
-                      : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                      : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#0d366f]/58 dark:text-[#9cd6ff] dark:hover:bg-[#13427f]/72'
                   }`}
                 >
                   {tag}
@@ -184,11 +184,11 @@ export default function CoreCsMcqPractice() {
         </div>
 
         {!current ? (
-          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 text-[#0d2a57] shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 dark:text-[#8fd9ff]">
+          <div className="dashboard-surface p-6 text-[#0d2a57] dark:text-[#8fd9ff]">
             No questions match the selected filters.
           </div>
         ) : (
-          <div className="relative z-0 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+          <div className="dashboard-surface relative z-0 p-6">
             <div className="flex items-center justify-between gap-3 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
               <div>
                 Question {currentIndex + 1} of {filtered.length}

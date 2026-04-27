@@ -76,14 +76,14 @@ export default function DailyChallenge() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="rounded-3xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+          className="dashboard-surface dashboard-surface-strong p-8"
         >
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
-              <h1 className="brand-heading-primary font-poppins text-3xl md:text-4xl tracking-tight leading-none">
+              <h1 className="dashboard-page-title">
                 Daily Challenge
               </h1>
-              <p className="mt-3 max-w-2xl text-sm md:text-base text-[#4c6f9a] dark:text-[#7fb8e2]">
+              <p className="dashboard-page-subtitle mt-3 max-w-2xl">
                 Start today&apos;s challenge and follow the full flow: Entry → OTP → Instructions → Test → Result.
               </p>
             </div>
@@ -91,7 +91,7 @@ export default function DailyChallenge() {
               type="button"
               onClick={startChallengeFlow}
               disabled={loadingChallenge || starting}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-3 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg disabled:opacity-60"
+              className="dashboard-primary-btn disabled:opacity-60"
             >
               {starting ? 'Opening...' : 'Start Daily Challenge'}
               <ArrowRight className="h-4 w-4" />
@@ -99,22 +99,22 @@ export default function DailyChallenge() {
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-[#9fcfff]/45 bg-[#dbf1ff] px-4 py-4 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+            <div className="dashboard-inner-surface px-4 py-4">
+              <div className="dashboard-micro-label flex items-center gap-2">
                 <Flame className="h-4 w-4" />
                 Current Streak
               </div>
               <p className="mt-1 text-2xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Track in Result</p>
             </div>
-            <div className="rounded-2xl border border-[#9fcfff]/45 bg-[#dbf1ff] px-4 py-4 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+            <div className="dashboard-inner-surface px-4 py-4">
+              <div className="dashboard-micro-label flex items-center gap-2">
                 <Target className="h-4 w-4" />
                 Today Goal
               </div>
               <p className="mt-1 text-2xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">1 Challenge</p>
             </div>
-            <div className="rounded-2xl border border-[#9fcfff]/45 bg-[#dbf1ff] px-4 py-4 dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]">
-              <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+            <div className="dashboard-inner-surface px-4 py-4">
+              <div className="dashboard-micro-label flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
                 XP Reward
               </div>
@@ -129,7 +129,7 @@ export default function DailyChallenge() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, delay: 0.08 }}
-          className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70"
+          className="dashboard-surface p-6"
         >
           {loadingChallenge ? (
             <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">Loading active challenge...</p>

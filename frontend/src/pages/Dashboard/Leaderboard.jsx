@@ -160,14 +160,14 @@ const Leaderboard = () => {
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-8 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <header className="flex items-center justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-3 sm:gap-4">
+          <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
+              <h1 className="dashboard-page-title md:text-4xl truncate">
                 Leaderboard.
               </h1>
-              <p className="hidden sm:block text-[9px] md:text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2 truncate">
+              <p className="dashboard-page-subtitle hidden sm:block truncate">
                 Global Rankings & Achievements
               </p>
             </motion.div>
@@ -254,7 +254,7 @@ const Leaderboard = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="bg-white/60 dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 rounded-2xl p-4 md:p-6 mb-8 md:mb-12 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6"
+              className="dashboard-surface p-4 md:p-6 mb-8 md:mb-12 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6"
             >
               <div className="flex items-center gap-4 w-full sm:w-auto">
                 <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-[#3C83F6] dark:border-white overflow-hidden p-0.5 shrink-0">
@@ -286,7 +286,7 @@ const Leaderboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
-              className="bg-white/40 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm"
+              className="dashboard-surface overflow-hidden"
             >
               <div className="grid grid-cols-12 gap-2 md:gap-4 px-4 md:px-8 py-4 md:py-5 border-b border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5">
                 <div className="col-span-2 md:col-span-1 text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold text-center md:text-left">Rank</div>

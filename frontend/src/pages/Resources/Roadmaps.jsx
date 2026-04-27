@@ -172,31 +172,31 @@ export default function Roadmaps() {
       <ScrollProgress />
 
       <div className="space-y-6">
-        <section className="overflow-hidden rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-8 lg:p-10">
+        <section className="dashboard-surface dashboard-surface-strong overflow-hidden p-6 md:p-8 lg:p-10">
           <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-[#8ec8ff] bg-[#e4f4ff] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#10335f] dark:text-[#9cd6ff]">
                 <Compass className="h-4 w-4" />
                 Learning Roadmaps
               </div>
 
-              <h1 className="mt-5 text-3xl font-bold leading-tight tracking-tight text-[#0f2d5d] dark:text-[#dff3ff] sm:text-4xl md:text-5xl">
+              <h1 className="dashboard-page-title mt-5 max-w-4xl text-3xl sm:text-4xl md:text-5xl">
                 Plan clearly, track faster, and read your roadmap without visual noise.
               </h1>
 
-              <p className="mt-4 max-w-3xl text-base leading-8 text-[#2f588c] dark:text-[#afcff1] md:text-lg">
+              <p className="dashboard-page-subtitle mt-4 max-w-3xl leading-8 md:text-lg">
                 This page is rebuilt from scratch with high-clarity cards, stronger borders, and a markdown stage tuned for both light and dark mode readability.
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                <div className="dashboard-inner-surface px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Sections</p>
                   <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.sections}</p>
                 </div>
-                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                <div className="dashboard-inner-surface px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Words</p>
                   <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.words}</p>
                 </div>
-                <div className="rounded-2xl border border-[#9fd2ff] bg-[#edf8ff] px-4 py-4 dark:border-[#3f74ac] dark:bg-[#10335f]">
+                <div className="dashboard-inner-surface px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Checkpoints</p>
                   <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.checkboxes}</p>
                 </div>
@@ -205,7 +205,7 @@ export default function Roadmaps() {
         </section>
 
         <section>
-          <article className="rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-8 lg:p-10 xl:flex xl:h-[40rem] xl:flex-col">
+          <article className="dashboard-surface p-6 md:p-8 lg:p-10 xl:flex xl:h-[40rem] xl:flex-col">
             {loading ? (
               <div className="flex min-h-[360px] items-center justify-center xl:flex-1">
                 <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-[#dbf1ff] px-5 py-3 text-sm font-medium text-[#2d7fe8] dark:border-[#6fbfff]/35 dark:bg-[#0d366f] dark:text-[#8fd9ff]">

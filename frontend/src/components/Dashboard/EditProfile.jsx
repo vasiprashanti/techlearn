@@ -42,8 +42,7 @@ export default function EditProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState({ type: "", message: "" });
 
-  const inputClass =
-    "mt-2 w-full rounded-xl border border-[#9fcfff]/60 bg-[#edf8ff] px-3.5 py-2.5 text-sm text-[#173f73] outline-none transition placeholder:text-[#7aa1c8] focus:border-[#65b8ff] focus:ring-4 focus:ring-[#76c7ff]/30 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]/70 dark:text-[#a9dcff] dark:placeholder:text-[#77afd8] dark:focus:border-[#8fd9ff] dark:focus:ring-[#4c8fd0]/30";
+  const inputClass = "dashboard-input-surface mt-2";
 
   const handleChange = (field) => (event) => {
     setFormData((prev) => ({ ...prev, [field]: event.target.value }));
@@ -125,7 +124,7 @@ export default function EditProfile() {
                 Back to Profile
               </button>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">Edit Profile.</span>
+                <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">Edit Profile.</span>
               </h1>
               <p className="mt-2 text-xs uppercase tracking-widest text-black/40 dark:text-white/40">
                 Update your personal details
@@ -137,7 +136,7 @@ export default function EditProfile() {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65, delay: 0.08 }}
-            className="rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-12"
+            className="dashboard-surface p-8 md:p-12"
           >
             <form onSubmit={handleSubmit} className="space-y-7">
               <div className="grid gap-6 sm:grid-cols-2">
@@ -194,14 +193,14 @@ export default function EditProfile() {
                 <button
                   type="button"
                   onClick={() => navigate("/dashboard/profile")}
-                  className="rounded-xl border border-[#9fcfff]/70 bg-[#dbf1ff] px-5 py-2.5 text-sm font-semibold text-[#1f4e86] transition hover:bg-[#cbe9ff] dark:border-[#6bb8ec]/45 dark:bg-[#0d366f] dark:text-[#9dd7ff] dark:hover:bg-[#13427f]"
+                  className="dashboard-secondary-btn"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+                  className="dashboard-primary-btn disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save Changes"}
