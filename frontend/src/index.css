@@ -528,6 +528,144 @@
     color: rgba(241, 245, 249, 0.94);
   }
 
+  .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    padding: 0.25rem 0.25rem 0.5rem !important;
+    backdrop-filter: none !important;
+  }
+
+  .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] h2 {
+    font-size: 2rem !important;
+    line-height: 1.05 !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.03em !important;
+    color: #0d2a57 !important;
+  }
+
+  .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] p {
+    font-size: 0.95rem !important;
+    line-height: 1.55 !important;
+    color: #4c6f9a !important;
+  }
+
+  .dark .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] h2 {
+    color: #8fd9ff !important;
+  }
+
+  .dark .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] p {
+    color: #7fb8e2 !important;
+  }
+
+  .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"],
+  .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"] {
+    border-radius: 1.75rem !important;
+    backdrop-filter: blur(24px);
+  }
+
+  .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"]:not(button),
+  .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"]:not(button) {
+    border-radius: 1.1rem !important;
+  }
+
+  .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+  .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+  .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"],
+  .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"] {
+    border-color: rgba(0, 0, 0, 0.05) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 12px 34px rgba(60, 131, 246, 0.08);
+  }
+
+  .dark .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+  .dark .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"],
+  .dark .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"],
+  .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"] {
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+  }
+
+  .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,
+  .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,
+  .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover,
+  .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover {
+    background: rgba(255, 255, 255, 0.5) !important;
+  }
+
+  .dark .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,
+  .dark .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,
+  .dark .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover,
+  .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"]:hover {
+    background: rgba(10, 31, 77, 0.56) !important;
+  }
+
+  .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .admin-dashboard-typography textarea,
+  .admin-dashboard-typography select {
+    border-color: rgba(134, 196, 255, 0.4) !important;
+    background: rgba(242, 250, 255, 0.92) !important;
+    color: #0d2a57 !important;
+    border-radius: 1.1rem !important;
+  }
+
+  .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"])::placeholder,
+  .admin-dashboard-typography textarea::placeholder {
+    color: #6f8fb7 !important;
+  }
+
+  .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+  .admin-dashboard-typography textarea:focus,
+  .admin-dashboard-typography select:focus {
+    border-color: rgba(45, 127, 232, 0.7) !important;
+    box-shadow: 0 0 0 4px rgba(118, 199, 255, 0.22) !important;
+  }
+
+  .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  .dark .admin-dashboard-typography textarea,
+  .dark .admin-dashboard-typography select {
+    border-color: rgba(107, 184, 236, 0.22) !important;
+    background: rgba(10, 47, 111, 0.64) !important;
+    color: #9cd6ff !important;
+  }
+
+  .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"])::placeholder,
+  .dark .admin-dashboard-typography textarea::placeholder {
+    color: #77afd8 !important;
+  }
+
+  .dark .admin-dashboard-typography input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+  .dark .admin-dashboard-typography textarea:focus,
+  .dark .admin-dashboard-typography select:focus {
+    border-color: rgba(143, 217, 255, 0.72) !important;
+    box-shadow: 0 0 0 4px rgba(76, 143, 208, 0.26) !important;
+  }
+
+  .admin-dashboard-typography button[class*="bg-[#3C83F6]"],
+  .admin-dashboard-typography a[class*="bg-[#3C83F6]"] {
+    background: #020b23 !important;
+    color: #daf0fa !important;
+    border-color: rgba(2, 11, 35, 0.28) !important;
+    box-shadow: 0 12px 30px rgba(2, 11, 35, 0.22);
+  }
+
+  .admin-dashboard-typography button[class*="bg-[#3C83F6]"]:hover,
+  .admin-dashboard-typography a[class*="bg-[#3C83F6]"]:hover {
+    background: #071a42 !important;
+  }
+
+  .dark .admin-dashboard-typography button[class*="bg-[#3C83F6]"],
+  .dark .admin-dashboard-typography a[class*="bg-[#3C83F6]"] {
+    background: #0c1f4d !important;
+    color: #daf0fa !important;
+  }
+
+  .dark .admin-dashboard-typography button[class*="bg-[#3C83F6]"]:hover,
+  .dark .admin-dashboard-typography a[class*="bg-[#3C83F6]"]:hover {
+    background: #142b67 !important;
+  }
+
   .admin-dashboard-typography h2,
   .admin-dashboard-typography h3,
   .admin-dashboard-typography h4 {
