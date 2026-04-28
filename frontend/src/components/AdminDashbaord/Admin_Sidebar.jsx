@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext";
 import {
   FiX, FiSidebar, FiGrid, FiBarChart2, FiActivity,
   FiHome, FiBookOpen, FiUsers, FiCode, FiGitCommit,
@@ -56,8 +57,25 @@ const SCROLL_KEY = 'sidebar-scroll';
 export const OPEN_ADMIN_SIDEBAR_EVENT = 'admin-sidebar:open-mobile';
 
 const Sidebar = ({ showMobileMenuButton = true }) => {
+  const { theme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
+  const isDarkMode = theme === "dark";
+
+  const sectionHeadingClass = isDarkMode
+    ? "text-[10px] uppercase tracking-[0.22em] font-semibold text-white/72 px-4"
+    : "text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 px-4";
+
+  const getNavClass = (isActive) =>
+    `sidebar-button flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out ${
+      isActive
+        ? isDarkMode
+          ? "bg-[#263a86] !text-white font-semibold shadow-lg border border-[#5574c7]/55"
+          : "bg-white/90 text-[#020b23] font-semibold shadow-lg border border-white/25"
+        : isDarkMode
+          ? "!text-[#dbeaff] hover:!text-white hover:bg-[#1a2f67] hover:shadow-lg hover:border hover:border-[#5f7fda]/35 font-normal border border-transparent"
+          : "!text-[#17386c]/78 hover:!text-[#020b23] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 font-normal border border-transparent"
+    }`;
 
   useEffect(() => {
     if (desktopNavRef.current) {
@@ -82,7 +100,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:!text-white/72 px-4">
+          <h4 className={sectionHeadingClass}>
             {group.title}
           </h4>
           <div className="space-y-0.5">
@@ -91,14 +109,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
                 key={item.id}
                 to={`/${item.id}`}
                 onClick={onClickAction}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
-                  ${
-                    isActive
-                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:!text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
-                      : "!text-[#17386c]/78 dark:!text-[#d7e9ff] hover:!text-[#020b23] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 dark:hover:!text-white dark:hover:bg-[#1a2f67] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#5f7fda]/35 font-normal border border-transparent dark:border-transparent"
-                  }`
-                }
+                className={({ isActive }) => getNavClass(isActive)}
               >
                 {item.icon}
                 <span>{item.title}</span>
@@ -112,14 +123,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
         <NavLink
           to={`/${settingsItem.id}`}
           onClick={onClickAction}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
-            ${
-              isActive
-                ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:!text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
-                : "!text-[#17386c]/78 dark:!text-[#d7e9ff] hover:!text-[#020b23] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 dark:hover:!text-white dark:hover:bg-[#1a2f67] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#5f7fda]/35 font-normal border border-transparent dark:border-transparent"
-            }`
-          }
+          className={({ isActive }) => getNavClass(isActive)}
         >
           {settingsItem.icon}
           <span>{settingsItem.title}</span>
@@ -130,7 +134,11 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-black/40 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-white/5 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
+      <div className={`sidebar-container hidden lg:flex flex-col fixed left-3 top-20 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 rounded-[2rem] ${
+        isDarkMode
+          ? "bg-black/40 border border-white/5 shadow-[0_14px_34px_rgba(0,0,0,0.28)]"
+          : "bg-[#daf0fa]/88 border border-white/35 shadow-[0_18px_45px_rgba(34,119,255,0.12)]"
+      }`}>
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
           <style>{`
             .admin-custom-scrollbar::-webkit-scrollbar {
@@ -153,7 +161,11 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
       {showMobileMenuButton && (
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className="lg:hidden fixed top-7 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+          className={`lg:hidden fixed top-7 left-5 z-[45] p-2 rounded-md transition-all ${
+            isDarkMode
+              ? "text-white/60 hover:text-white hover:bg-white/10"
+              : "text-black/60 hover:text-black hover:bg-black/5"
+          }`}
           aria-label="Open sidebar"
         >
           <FiSidebar className="w-[22px] h-[22px]" />
@@ -175,13 +187,21 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-black/40 border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+              className={`lg:hidden fixed left-0 top-0 bottom-0 w-72 z-50 shadow-2xl flex flex-col ${
+                isDarkMode
+                  ? "bg-black/40 border-r border-white/5"
+                  : "bg-[#daf0fa] border-r border-black/5"
+              }`}
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? "text-white/70" : "text-black/70"}`}>Menu</span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+                  className={`p-2 rounded-md transition-all ${
+                    isDarkMode
+                      ? "text-white/60 hover:text-white hover:bg-white/10"
+                      : "text-black/60 hover:text-black hover:bg-black/5"
+                  }`}
                   aria-label="Close sidebar"
                 >
                   <FiX className="w-5 h-5" />
