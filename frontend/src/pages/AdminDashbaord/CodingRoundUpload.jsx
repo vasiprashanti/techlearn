@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import AdminHeaderControls from "../../components/AdminDashbaord/AdminHeaderControls";
+import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 const getTodayDate = () => {
   // Get current date in IST (Indian Standard Time)
@@ -32,6 +35,8 @@ const parseISTDateTime = (utcDateString) => {
 };
 
 export default function CodingRoundForm() {
+  const { theme } = useTheme();
+  const { user, logout } = useAuth();
   const [college, setCollege] = useState("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(getTodayDate());
@@ -66,9 +71,18 @@ export default function CodingRoundForm() {
   //report
   const [reports, setReports] = useState({});
   const [loadingReports, setLoadingReports] = useState({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isPageScrolled, setIsPageScrolled] = useState(false);
 
   // Get base URL from environment variables
   const BASE_URL = import.meta.env.VITE_API_URL;
+  const isDarkMode = theme === "dark";
+  const formFieldClass =
+    "dashboard-input-surface w-full rounded-xl px-3 py-2.5";
+  const formSelectClass =
+    "dashboard-input-surface w-full rounded-xl px-3 py-2.5";
+  const textareaClass =
+    "dashboard-input-surface w-full rounded-xl px-3 py-2.5 min-h-[7rem]";
 
   // Fixed: Get token inside functions to ensure fresh token
   const getToken = () => localStorage.getItem("token");
@@ -447,25 +461,41 @@ setExpanded(new Array(round.problems.length).fill(true));
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      <Sidebar />
-      <div className="flex-1 flex flex-col items-center min-h-screen px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-10 pt-28 lg:pt-32">
+    <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
+      <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
+
+      <main
+        onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
+      >
+        <div className="max-w-[1600px] mx-auto space-y-8">
+          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
+            <div className="flex-1" />
+            <AdminHeaderControls user={user} logout={logout} />
+          </header>
+
+          <section className="max-w-6xl mx-auto space-y-2 px-1 py-2">
+            <h1 className="dashboard-page-title">Coding Round</h1>
+            <p className="dashboard-page-subtitle max-w-3xl">
+              Create and manage manual coding rounds with timing, test cases, and reporting in the same dark dashboard style.
+            </p>
+          </section>
+
+          <div className="space-y-10">
         {/* Coding Round Creation Form */}
-        <div className="bg-white/50 dark:bg-gray-800/70 rounded-2xl shadow-xl p-6 w-full max-w-4xl">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-6">
-            Coding Round
-          </h1>
+        <div className="dashboard-surface p-6 w-full max-w-6xl mx-auto">
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* College */}
             <div>
-              <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+              <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                 College *
               </label>
               <select
                 value={college}
                 onChange={(e) => setCollege(e.target.value)}
-                className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className={formSelectClass}
               >
                 <option value="">Select college</option>
                 <option value="VNR">VNR</option>
@@ -479,14 +509,14 @@ setExpanded(new Array(round.problems.length).fill(true));
 
             {/* Test Title */}
             <div>
-              <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+              <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                 Test Title *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className={formFieldClass}
                 placeholder="Enter test title"
               />
               {errors.title && (
@@ -497,14 +527,14 @@ setExpanded(new Array(round.problems.length).fill(true));
             {/* Date & Time */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+                <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                   Test Date *
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={formFieldClass}
                 />
                 {errors.date && (
                   <p className="text-red-600 text-sm font-medium mt-1">
@@ -514,14 +544,14 @@ setExpanded(new Array(round.problems.length).fill(true));
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+                <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                   Start Time *
                 </label>
                 <input
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={formFieldClass}
                 />
                 {errors.startTime && (
                   <p className="text-red-500 text-sm">{errors.startTime}</p>
@@ -529,14 +559,14 @@ setExpanded(new Array(round.problems.length).fill(true));
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+                <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                   End Time *
                 </label>
                 <input
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  className={formFieldClass}
                 />
                 {errors.endTime && (
                   <p className="text-red-500 text-sm">{errors.endTime}</p>
@@ -546,7 +576,7 @@ setExpanded(new Array(round.problems.length).fill(true));
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+              <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                 Duration (minutes) *
               </label>
               <input
@@ -554,7 +584,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                 min="1"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className={formFieldClass}
                 placeholder="e.g. 120"
               />
               {errors.duration && (
@@ -564,7 +594,7 @@ setExpanded(new Array(round.problems.length).fill(true));
 
             {/* Number of Problems */}
             <div>
-              <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+              <label className="block text-sm font-semibold mb-2 text-[#0d2a57] dark:text-[#8fd9ff]">
                 Number of Problems *
               </label>
               <input
@@ -572,7 +602,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                 min="1"
                 value={numQuestions}
                 onChange={handleNumQuestionsChange}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                className={formFieldClass}
               />
             </div>
 
@@ -580,7 +610,7 @@ setExpanded(new Array(round.problems.length).fill(true));
             {problems.map((p, i) => (
               <div
                 key={i}
-                className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40 space-y-4"
+                className="dashboard-inner-surface rounded-[1.4rem] p-4 space-y-4"
               >
                 <button
                   type="button"
@@ -591,7 +621,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                       return updated;
                     })
                   }
-                  className="w-full text-left font-semibold text-blue-600"
+                  className="w-full text-left font-semibold text-[#2d7fe8] dark:text-[#8fd9ff]"
                 >
                   {expanded[i] ? `▼ Problem ${i + 1}` : `▶ Problem ${i + 1}`}
                 </button>
@@ -605,7 +635,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                         handleProblemChange(i, "problemTitle", e.target.value)
                       }
                       placeholder={`Problem ${i + 1} Title`}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      className={formFieldClass}
                     />
                     {errors[`p-${i}-title`] && (
                       <p className="text-red-500 text-sm">
@@ -618,7 +648,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                       onChange={(e) =>
                         handleProblemChange(i, "difficulty", e.target.value)
                       }
-                      className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      className={formSelectClass}
                     >
                       <option value="">Select difficulty</option>
                       <option value="Easy">Easy</option>
@@ -638,7 +668,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                       }
                       placeholder="Problem description"
                       rows="3"
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      className={textareaClass}
                     />
                     {errors[`p-${i}-description`] && (
                       <p className="text-red-500 text-sm">
@@ -649,7 +679,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                     {/* Input/Output Descriptions */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-sm font-medium mb-1 text-[#0d2a57] dark:text-[#8fd9ff]">
                           Input Description
                         </label>
                         <textarea
@@ -663,11 +693,11 @@ setExpanded(new Array(round.problems.length).fill(true));
                           }
                           placeholder="Describe the input format"
                           rows="2"
-                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                          className={`${textareaClass} text-sm min-h-[5.5rem]`}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-sm font-medium mb-1 text-[#0d2a57] dark:text-[#8fd9ff]">
                           Output Description
                         </label>
                         <textarea
@@ -681,20 +711,20 @@ setExpanded(new Array(round.problems.length).fill(true));
                           }
                           placeholder="Describe the output format"
                           rows="2"
-                          className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                          className={`${textareaClass} text-sm min-h-[5.5rem]`}
                         />
                       </div>
                     </div>
 
                     {/* Visible Test Cases Section */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">
+                      <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                         Visible Test Cases:
                       </h4>
                       {p.visibleTestCases.map((testCase, tcIndex) => (
                         <div
                           key={tcIndex}
-                          className="border rounded-md p-3 bg-white dark:bg-gray-600 space-y-2"
+                          className="dashboard-surface-strong rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"
                         >
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium">
@@ -724,7 +754,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                             }
                             placeholder="Input (e.g., '9\n2 7 11 15')"
                             rows="2"
-                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
                           />
                           <textarea
                             value={testCase.expectedOutput}
@@ -738,14 +768,14 @@ setExpanded(new Array(round.problems.length).fill(true));
                             }
                             placeholder="Expected Output (e.g., '0 1')"
                             rows="2"
-                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
                           />
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addVisibleTestCase(i)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] text-sm font-medium"
                       >
                         + Add Visible Test Case
                       </button>
@@ -753,13 +783,13 @@ setExpanded(new Array(round.problems.length).fill(true));
 
                     {/* Hidden Test Cases Section */}
                     <div className="space-y-3">
-                      <h4 className="font-semibold text-gray-700 dark:text-gray-300">
+                      <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                         Hidden Test Cases:
                       </h4>
                       {p.hiddenTestCases.map((testCase, tcIndex) => (
                         <div
                           key={tcIndex}
-                          className="border rounded-md p-3 bg-white dark:bg-gray-600 space-y-2"
+                          className="dashboard-surface-strong rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"
                         >
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium">
@@ -787,7 +817,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                             }
                             placeholder="Input (e.g., '6\n3 3')"
                             rows="2"
-                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
                           />
                           <textarea
                             value={testCase.expectedOutput}
@@ -801,14 +831,14 @@ setExpanded(new Array(round.problems.length).fill(true));
                             }
                             placeholder="Expected Output (e.g., '0 1')"
                             rows="2"
-                            className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
                           />
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addHiddenTestCase(i)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] text-sm font-medium"
                       >
                         + Add Hidden Test Case
                       </button>
@@ -826,12 +856,9 @@ setExpanded(new Array(round.problems.length).fill(true));
             {/* Submit button */}
             <button
               type="submit"
-              className={`px-6 py-2 rounded-lg font-semibold transition w-full sm:w-auto
-    ${
-      submitting
-        ? "bg-gray-400 cursor-not-allowed"
-        : "bg-blue-600 hover:bg-blue-700 text-white"
-    }`}
+              className={`dashboard-primary-btn w-full sm:w-auto px-6 py-2.5 text-sm ${
+                submitting ? "cursor-not-allowed opacity-70" : ""
+              }`}
             >
               {submitting
                 ? "Submitting..."
@@ -843,21 +870,19 @@ setExpanded(new Array(round.problems.length).fill(true));
         </div>
 
         {/* Previous Coding Rounds */}
-        <div className="bg-white/50 dark:bg-gray-800/70 rounded-2xl shadow-xl p-6 w-full max-w-4xl">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-6">
-            Previous Coding Rounds
-          </h2>
+        <div className="dashboard-surface p-6 w-full max-w-6xl mx-auto">
+          <h2 className="dashboard-page-title text-[2rem] mb-6">Previous Coding Rounds</h2>
 
           {loadingRounds ? (
-            <p className="text-gray-500">Loading...</p>
+            <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">Loading...</p>
           ) : previousRounds.length === 0 ? (
-            <p className="text-gray-500">No previous coding rounds found.</p>
+            <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">No previous coding rounds found.</p>
           ) : (
             <div className="space-y-4">
               {previousRounds.map((round, i) => (
                 <div
                   key={round._id || i}
-                  className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40 space-y-3"
+                  className="dashboard-inner-surface rounded-[1.4rem] p-4 space-y-3"
                 >
                   <button
                     type="button"
@@ -868,35 +893,35 @@ setExpanded(new Array(round.problems.length).fill(true));
                         return updated;
                       })
                     }
-                    className="w-full text-left font-semibold text-blue-600"
+                    className="w-full text-left font-semibold text-[#2d7fe8] dark:text-[#8fd9ff]"
                   >
                     {roundExpanded[i] ? `▼ ${round.title}` : `▶ ${round.title}`}
                   </button>
 
                   {roundExpanded[i] && (
                     <div className="space-y-2 pl-3">
-                      <p className="text-sm">College: {round.college}</p>
-                      <p className="text-sm">Title: {round.title}</p>
-                      <p className="text-sm">Link ID: {round.linkId}</p>
-                      <p className="text-sm">
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">College: {round.college}</p>
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">Title: {round.title}</p>
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">Link ID: {round.linkId}</p>
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">
                         Date:{" "}
                         {new Date(round.date).toLocaleString("en-IN", {
                           timeZone: "Asia/Kolkata",
                         })}
                       </p>
-                      <p className="text-sm">
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">
                         Duration: {round.duration} minutes
                       </p>
-                      <p className="text-sm">
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">
                         Status: {round.isActive ? "Active" : "Inactive"}
                       </p>
-                      <p className="text-sm">
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">
                         Created At:{" "}
                         {new Date(round.createdAt).toLocaleString("en-IN", {
                           timeZone: "Asia/Kolkata",
                         })}
                       </p>
-                      <p className="text-sm">
+                      <p className="text-sm text-[#0d2a57] dark:text-[#dff3ff]">
                         Updated At:{" "}
                         {new Date(round.updatedAt).toLocaleString("en-IN", {
                           timeZone: "Asia/Kolkata",
@@ -907,21 +932,21 @@ setExpanded(new Array(round.problems.length).fill(true));
                       <div className="flex gap-3 mt-3">
                         <button
                           onClick={() => handleUpdate(round)}
-                          className="px-3 py-1 text-white bg-blue-600 rounded-md hover:bg-blue-700 text-sm"
+                          className="dashboard-primary-btn px-3 py-1.5 text-xs"
                         >
                           Update
                         </button>
 
                         <button
                           onClick={() => handleDelete(round._id)}
-                          className="px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700 text-sm"
+                          className="px-3 py-1.5 text-white bg-red-600 rounded-xl hover:bg-red-700 text-xs font-semibold"
                         >
                           Delete
                         </button>
 
                         <button
                           onClick={() => fetchReport(round._id)}
-                          className="px-3 py-1 text-white bg-green-600 rounded-md hover:bg-green-700 text-sm"
+                          className="dashboard-secondary-btn px-3 py-1.5 text-xs"
                         >
                           View Report
                         </button>
@@ -929,12 +954,12 @@ setExpanded(new Array(round.problems.length).fill(true));
 
                       {/* Report Section */}
                       {loadingReports[round._id] ? (
-                        <p className="text-gray-500">Loading scores...</p>
+                        <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">Loading scores...</p>
                       ) : reports[round._id] &&
                         reports[round._id].length > 0 ? (
-                        <table className="w-full border mt-2 text-sm text-left">
+                        <table className="w-full border mt-2 text-sm text-left border-black/10 dark:border-white/10">
                           <thead>
-                            <tr className="bg-gray-200 dark:bg-gray-600">
+                            <tr className="bg-white/45 dark:bg-[#0b214d]/65">
                               <th className="p-2 border">Rank</th>
                               <th className="p-2 border">Email</th>
                               <th className="p-2 border">Score</th>
@@ -947,7 +972,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                               .map((user, idx) => (
                                 <tr
                                   key={idx}
-                                  className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="hover:bg-white/32 dark:hover:bg-[#0f2c60]/44"
                                 >
                                   <td className="p-2 border">{idx + 1}</td>
                                   <td className="p-2 border">
@@ -969,7 +994,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                           </tbody>
                         </table>
                       ) : (
-                        <p className="text-gray-500">No scores available</p>
+                        <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">No scores available</p>
                       )}
                     </div>
                   )}
@@ -979,6 +1004,8 @@ setExpanded(new Array(round.problems.length).fill(true));
           )}
         </div>
       </div>
+        </div>
+      </main>
     </div>
   );
 }
