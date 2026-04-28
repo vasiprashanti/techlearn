@@ -204,8 +204,13 @@ const Analytics = () => {
             </header>
 
             {/* Platform Overview */}
-            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 rounded-xl p-4 md:p-5">
-              <h2 className="admin-section-heading mb-3">Platform Overview</h2>
+            <section className="space-y-3">
+              <div className="space-y-1 px-1">
+                <h2 className="dashboard-page-title text-[2rem]">Platform Overview</h2>
+                <p className="dashboard-page-subtitle">
+                  Track platform health, engagement, and learning metrics across colleges, batches, and students.
+                </p>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
                 {analyticsState.platformOverview.map((kpi, i) => {
                   const Icon = platformOverviewIconMap[kpi.label] || FiBarChart2;
