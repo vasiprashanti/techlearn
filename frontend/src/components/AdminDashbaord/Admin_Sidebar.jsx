@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import {
   FiX, FiSidebar, FiGrid, FiBarChart2, FiActivity,
   FiHome, FiBookOpen, FiUsers, FiCode, FiGitCommit,
-  FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings
+  FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings, FiTerminal
 } from "react-icons/fi";
 
 const menuGroups = [
@@ -28,6 +28,7 @@ const menuGroups = [
     title: "LEARNING",
     items: [
       { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-4 h-4" /> },
+      { id: "admin/codingroundupload", title: "Coding Rounds", icon: <FiTerminal className="w-4 h-4" /> },
       { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
       { id: "resources", title: "Resources", icon: <FiFileText className="w-4 h-4" /> },
       { id: "certificates", title: "Certificates", icon: <FiAward className="w-4 h-4" /> },

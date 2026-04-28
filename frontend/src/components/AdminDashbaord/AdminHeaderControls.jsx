@@ -11,6 +11,7 @@ const quickActions = [
   { label: 'Create student', path: '/students' },
   { label: 'Create Batch', path: '/batches' },
   { label: 'Create Question', path: '/question-bank' },
+  { label: 'Create Coding Round', path: '/admin/codingroundupload' },
 ];
 
 const navigateItems = [
@@ -19,6 +20,7 @@ const navigateItems = [
   { label: 'Go to batches', path: '/batches' },
   { label: 'Go to students', path: '/students' },
   { label: 'Go to question bank', path: '/question-bank' },
+  { label: 'Go to coding rounds', path: '/admin/codingroundupload' },
   { label: 'Go to analytics', path: '/analytics' },
 ];
 
