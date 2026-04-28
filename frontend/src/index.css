@@ -513,15 +513,15 @@
   }
 
   .admin-dashboard-typography header.sticky.top-0 {
-    background-color: rgba(255, 255, 255, 0.96);
-    border-bottom-color: rgba(15, 23, 42, 0.08);
+    background-color: rgba(218, 240, 250, 0.9) !important;
+    border-bottom-color: rgba(15, 23, 42, 0.08) !important;
     height: 3.5rem;
     min-height: 3.5rem;
   }
 
   .dark .admin-dashboard-typography header.sticky.top-0 {
-    background-color: rgba(0, 18, 51, 0.9);
-    border-bottom-color: rgba(248, 250, 252, 0.12);
+    background-color: rgba(2, 11, 35, 0.9) !important;
+    border-bottom-color: rgba(248, 250, 252, 0.08) !important;
   }
 
   .dark .admin-dashboard-typography .admin-section-heading {
