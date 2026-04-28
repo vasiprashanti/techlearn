@@ -82,7 +82,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-black/30 dark:text-white/30 px-4">
+          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:text-white/72 px-4">
             {group.title}
           </h4>
           <div className="space-y-0.5">
@@ -95,8 +95,8 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
                   `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
                   ${
                     isActive
-                      ? "bg-white text-[#020b23] dark:bg-[#1a2b6d] dark:text-white font-semibold shadow-lg border border-white/20 dark:border-white/10"
-                      : "text-[#020b23]/50 dark:text-white/40 hover:text-[#020b23] hover:bg-white/95 hover:shadow-md hover:border hover:border-[#3C83F6]/20 dark:hover:text-white dark:hover:bg-[#1a2b6d]/95 dark:hover:shadow-lg dark:hover:border dark:hover:border-white/20 font-normal border border-transparent dark:border-transparent"
+                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
+                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
                   }`
                 }
               >
@@ -116,8 +116,8 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
             `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
             ${
               isActive
-                ? "bg-white text-[#020b23] dark:bg-[#1a2b6d] dark:text-white font-semibold shadow-lg border border-white/20 dark:border-white/10"
-                : "text-[#020b23]/50 dark:text-white/40 hover:text-[#020b23] hover:bg-white/95 hover:shadow-md hover:border hover:border-[#3C83F6]/20 dark:hover:text-white dark:hover:bg-[#1a2b6d]/95 dark:hover:shadow-lg dark:hover:border dark:hover:border-white/20 font-normal border border-transparent dark:border-transparent"
+                ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
+                : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
             }`
           }
         >
@@ -130,7 +130,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-11 border-r border-black/5 dark:border-white/5">
+      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-[#daf0fa]/88 dark:bg-black/40 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-11 border-r border-white/35 dark:border-white/5 shadow-[0_14px_34px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
         <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
           <style>{`
             .admin-custom-scrollbar::-webkit-scrollbar {
@@ -175,7 +175,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-black/40 border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
                 <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>

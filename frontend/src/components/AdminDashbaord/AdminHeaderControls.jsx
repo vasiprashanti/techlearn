@@ -126,7 +126,7 @@ export default function AdminHeaderControls({ user, logout }) {
   const commandModal = isCommandOpen ? (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsCommandOpen(false)} />
-      <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-2xl bg-[#f8fcff]/95 dark:bg-black/40 border border-white/35 dark:border-white/5 rounded-[1.75rem] shadow-2xl overflow-hidden backdrop-blur-xl">
         <div className="px-5 py-4 border-b border-black/10 dark:border-white/10 flex items-center gap-3">
           <FiSearch className="w-4 h-4 text-black/35 dark:text-white/35" />
           <input
@@ -162,7 +162,7 @@ export default function AdminHeaderControls({ user, logout }) {
                 <button
                   key={item.label}
                   onClick={() => handleNavigate(item.path)}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-white/60 dark:hover:bg-[#122449] transition-colors"
                 >
                   {item.label}
                 </button>
@@ -177,7 +177,7 @@ export default function AdminHeaderControls({ user, logout }) {
                 <button
                   key={item.label}
                   onClick={() => handleNavigate(item.path)}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-white/60 dark:hover:bg-[#122449] transition-colors"
                 >
                   {item.label}
                 </button>
@@ -192,7 +192,7 @@ export default function AdminHeaderControls({ user, logout }) {
                 <button
                   key={student.name}
                   onClick={() => handleNavigate('/students')}
-                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                  className="w-full text-left px-3 py-2 rounded-xl text-sm text-black/75 dark:text-white/80 hover:bg-white/60 dark:hover:bg-[#122449] transition-colors"
                 >
                   {student.name} - {student.college}
                 </button>
@@ -216,7 +216,7 @@ export default function AdminHeaderControls({ user, logout }) {
       <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
         <button
           onClick={() => setIsCommandOpen(true)}
-          className="relative inline-flex items-center justify-center sm:justify-start h-9 w-9 sm:w-40 md:w-48 lg:w-[15.5rem] bg-white/55 dark:bg-white/[0.06] border border-black/10 dark:border-white/12 py-2 sm:pl-9 sm:pr-10 rounded-xl backdrop-blur-md hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors text-left group"
+          className="relative inline-flex items-center justify-center sm:justify-start h-9 w-9 sm:w-40 md:w-48 lg:w-[15.5rem] bg-white/65 dark:bg-black/40 border border-white/35 dark:border-white/5 py-2 sm:pl-9 sm:pr-10 rounded-xl backdrop-blur-md hover:bg-white/80 dark:hover:bg-[#122449] transition-colors text-left group"
         >
           <FiSearch className="sm:absolute sm:left-3 w-3.5 h-3.5 text-black/45 dark:text-white/45" />
           <span className="hidden sm:inline text-xs text-black/45 dark:text-white/45">Search...</span>
@@ -231,7 +231,7 @@ export default function AdminHeaderControls({ user, logout }) {
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
             }}
-            className="relative w-9 h-9 inline-flex items-center justify-center text-black/60 dark:text-white/65 hover:text-black dark:hover:text-white rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] transition-colors"
+            className="relative w-9 h-9 inline-flex items-center justify-center text-black/60 dark:text-white/65 hover:text-black dark:hover:text-white rounded-xl border border-white/35 dark:border-white/5 bg-white/65 dark:bg-black/40 hover:bg-white/80 dark:hover:bg-[#122449] transition-colors"
           >
             <FiBell className="w-4 h-4" />
             {notificationEntries.length > 0 && (
@@ -240,7 +240,7 @@ export default function AdminHeaderControls({ user, logout }) {
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-1.5rem))] sm:w-80 bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl p-3 z-50">
+            <div className="absolute right-0 top-full mt-2 w-[min(20rem,calc(100vw-1.5rem))] sm:w-80 bg-[#f8fcff]/95 dark:bg-black/40 border border-white/35 dark:border-white/5 rounded-[1.75rem] shadow-2xl p-3 z-50 backdrop-blur-xl">
               <div className="flex items-center justify-between px-2 py-1">
                 <p className="text-sm font-semibold text-black/75 dark:text-white/80">Notifications</p>
                 <button
@@ -274,7 +274,7 @@ export default function AdminHeaderControls({ user, logout }) {
 
         <button
           onClick={toggleTheme}
-          className="shrink-0 w-9 h-9 rounded-xl border border-black/10 dark:border-white/12 bg-white/55 dark:bg-white/[0.06] hover:bg-white/70 dark:hover:bg-white/[0.1] inline-flex items-center justify-center text-black/60 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors"
+          className="shrink-0 w-9 h-9 rounded-xl border border-white/35 dark:border-white/5 bg-white/65 dark:bg-black/40 hover:bg-white/80 dark:hover:bg-[#122449] inline-flex items-center justify-center text-black/60 dark:text-white/70 hover:text-black dark:hover:text-white transition-colors"
           aria-label="Toggle dark mode"
           title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
