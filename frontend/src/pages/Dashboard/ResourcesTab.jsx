@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from '../../components/Dashboard/Sidebar';
 import { resourceAPI } from '../../services/api';
-import { FiDownload, FiEye, FiFileText, FiVideo, FiLink2 } from 'react-icons/fi';
+import { FiDownload, FiEye, FiFileText, FiVideo, FiLink2, FiSearch } from 'react-icons/fi';
 
 const typeIconMap = {
   PDF: FiFileText,
@@ -79,12 +79,15 @@ export default function ResourcesTab({ category }) {
           <p className="dashboard-page-subtitle">Learning resources uploaded by admins</p>
 
           <div className="dashboard-surface dashboard-surface-strong mt-4 p-4">
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={`Search ${category.toLowerCase()}...`}
-              className="dashboard-input-surface"
-            />
+            <label className="relative block">
+              <FiSearch className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f82ac] dark:text-[#81bde6]" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={`Search ${category.toLowerCase()}...`}
+                className="dashboard-input-surface rounded-full pl-11 pr-4"
+              />
+            </label>
           </div>
 
           <div className="mt-5 space-y-3">

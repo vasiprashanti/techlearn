@@ -465,11 +465,11 @@ export default function Resources() {
                   placeholder="Search resources..."
                   value={tableSearch}
                   onChange={e => setTableSearch(e.target.value)}
-                  className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  className="dashboard-input-surface h-10 rounded-full pl-11 pr-4 text-[13px] sm:text-sm leading-none"
                 />
               </div>
 
-              <button onClick={openAddResourceModal} className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5">
+              <button onClick={openAddResourceModal} className="dashboard-primary-btn w-full sm:w-auto h-10 px-4 text-xs">
                 <FiPlus className="w-3.5 h-3.5" />
                 Add Resource
               </button>

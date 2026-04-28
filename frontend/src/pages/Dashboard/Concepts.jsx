@@ -60,7 +60,7 @@ const Concepts = () => {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.04 }}
-          className="dashboard-surface dashboard-surface-strong p-8"
+          className="dashboard-surface dashboard-surface-strong p-6 sm:p-8"
         >
           <div className="flex justify-end">
             <div className="relative w-full max-w-md">
@@ -70,7 +70,7 @@ const Concepts = () => {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search concepts..."
-                className="dashboard-input-surface rounded-xl pl-10 pr-3"
+                className="dashboard-input-surface rounded-full pl-10 pr-4"
               />
             </div>
           </div>
@@ -139,7 +139,7 @@ const Concepts = () => {
                   <button
                     type="button"
                     onClick={() => goToConceptDetail(concept.id)}
-                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-4 py-2.5 text-xs font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.01] hover:shadow-lg"
+                    className="dashboard-primary-btn mt-5 w-full px-4 py-2.5 text-xs"
                   >
                     <BookOpen className="h-4 w-4" />
                     {concept.progress > 0 ? 'Continue' : 'Start Learning'}

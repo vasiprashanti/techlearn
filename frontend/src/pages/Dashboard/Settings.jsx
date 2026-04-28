@@ -44,7 +44,7 @@ export default function DashboardSettings() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55 }}
-          className="dashboard-surface dashboard-surface-strong p-8"
+          className="px-1 py-2"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -117,7 +117,7 @@ export default function DashboardSettings() {
                   type="text"
                   value="Anike"
                   readOnly
-                  className="mt-2 w-full rounded-lg border border-[#9fcfff]/70 bg-[#eaf7ff] px-3 py-2 text-sm text-[#234d81] outline-none dark:border-[#6bb8ec]/40 dark:bg-[#0a2f6f] dark:text-[#9cd6ff]"
+                  className="dashboard-input-surface mt-2 h-10 rounded-xl px-3 py-2"
                 />
               </div>
             </div>
