@@ -71,8 +71,26 @@ export default function DailyChallengeInstructions() {
 
   const timerLimitMinutes = Number(challenge?.duration || rules.timerLimitMinutes || 30);
 
-  const startTest = () => {
-    navigate(`/daily-challenge/${linkId}/test`);
+  const startTest = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await dailyChallengeAPI.start(linkId, session?.studentEmail);
+      const challengePayload = response?.data?.codingRound || challenge;
+      const attempt = response?.data?.attempt || null;
+
+      setDailyChallengeSession(linkId, {
+        challenge: challengePayload,
+        attempt,
+      });
+
+      navigate(`/daily-challenge/${linkId}/test`);
+    } catch (err) {
+      setError(err.message || "Unable to start the Daily Challenge.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -108,9 +126,10 @@ export default function DailyChallengeInstructions() {
               <button
                 type="button"
                 onClick={startTest}
+                disabled={loading}
                 className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
-                Start Daily Challenge
+                {loading ? "Preparing..." : "Start Daily Challenge"}
               </button>
             </div>
           </>

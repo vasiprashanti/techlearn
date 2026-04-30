@@ -6,6 +6,7 @@ import Submission from "../../models/Submission.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
 import Track from "../../models/Track.js";
+import User from "../../models/User.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
 
@@ -717,12 +718,32 @@ export const createStudentAdmin = async (req, res) => {
     }
     if (!assertObjectId(collegeId, "collegeId", res) || !assertObjectId(batchId, "batchId", res)) return;
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const [batch, existingStudent, linkedUser] = await Promise.all([
+      Batch.findById(batchId).lean(),
+      Student.findOne({ email: normalizedEmail }).lean(),
+      User.findOne({ email: normalizedEmail }).select("_id").lean(),
+    ]);
+
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    if (String(batch.collegeId) !== String(collegeId)) {
+      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
+    }
+
+    if (existingStudent) {
+      return res.status(409).json({ success: false, message: "A student with this email already exists." });
+    }
+
     const student = await Student.create({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       rollNo: rollNo?.trim() || "",
       collegeId,
       batchId,
+      userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
       status: status || "Active",
     });
@@ -795,6 +816,10 @@ export const updateStudentAdmin = async (req, res) => {
   try {
     const { studentId } = req.params;
     if (!assertObjectId(studentId, "studentId", res)) return;
+    const existingStudent = await Student.findById(studentId);
+    if (!existingStudent) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
 
     const update = {
       name: req.body.name?.trim(),
@@ -813,10 +838,31 @@ export const updateStudentAdmin = async (req, res) => {
       update.batchId = req.body.batchId;
     }
 
-    const student = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true, runValidators: true });
-    if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found." });
+    const nextCollegeId = update.collegeId || existingStudent.collegeId;
+    const nextBatchId = update.batchId || existingStudent.batchId;
+    const nextEmail = update.email || existingStudent.email;
+
+    const [batch, duplicateStudent, linkedUser] = await Promise.all([
+      Batch.findById(nextBatchId).lean(),
+      Student.findOne({ _id: { $ne: studentId }, email: nextEmail }).select("_id").lean(),
+      User.findOne({ email: nextEmail }).select("_id").lean(),
+    ]);
+
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
     }
+
+    if (String(batch.collegeId) !== String(nextCollegeId)) {
+      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
+    }
+
+    if (duplicateStudent) {
+      return res.status(409).json({ success: false, message: "A student with this email already exists." });
+    }
+
+    update.userId = linkedUser?._id || existingStudent.userId || null;
+
+    const student = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true, runValidators: true });
 
     await writeAuditLog({
       verb: "Updated",

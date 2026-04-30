@@ -27,6 +27,18 @@ const submissionSchema = new mongoose.Schema(
       required: true,
     },
 
+    codingRoundId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CodingRound",
+      default: null,
+    },
+
+    attemptId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DailyChallengeAttempt",
+      default: null,
+    },
+
     workingDay: Number,
 
     runCount: {
@@ -44,7 +56,13 @@ const submissionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Passed", "Failed", "Timeout", "Error"],
+      enum: ["Passed", "Failed", "Timeout", "Error", "Pending"],
+    },
+
+    challengeType: {
+      type: String,
+      enum: ["track_question", "daily_challenge"],
+      default: "track_question",
     },
 
     submittedAt: Date,
@@ -56,6 +74,7 @@ const submissionSchema = new mongoose.Schema(
 submissionSchema.index({ studentId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, trackId: 1 });
+submissionSchema.index({ attemptId: 1 }, { unique: true, sparse: true });
 
 // Standalone indexes for sort and single-field filters
 // Note: { batchId: 1 } is intentionally omitted — the compound index above

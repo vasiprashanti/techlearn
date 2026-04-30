@@ -35,6 +35,11 @@ export const dailyChallengeAPI = {
       method: "POST",
       body: { email, otp },
     }),
+  start: (linkId, email) =>
+    request(`/daily-challenge/${linkId}/start`, {
+      method: "POST",
+      body: { email },
+    }),
   run: (linkId, payload) =>
     request(`/daily-challenge/${linkId}/run`, {
       method: "POST",

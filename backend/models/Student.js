@@ -2,6 +2,13 @@ import mongoose from "mongoose";
 
 const studentSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
+
     collegeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "College",
@@ -55,6 +62,11 @@ const studentSchema = new mongoose.Schema(
     testsTaken: {
       type: Number,
       default: 0,
+    },
+
+    isGuest: {
+      type: Boolean,
+      default: false,
     },
 
     lastActiveAt: {

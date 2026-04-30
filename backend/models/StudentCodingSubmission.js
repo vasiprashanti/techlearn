@@ -7,6 +7,31 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       ref: "CodingRound",
       required: true,
     },
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      default: null,
+    },
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+    },
+    trackId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Track",
+      default: null,
+    },
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
+      default: null,
+    },
+    attemptId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DailyChallengeAttempt",
+      default: null,
+    },
     studentEmail: {
       type: String,
       required: true,

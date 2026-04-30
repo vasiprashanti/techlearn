@@ -101,6 +101,7 @@ export default function DailyChallengeAccess() {
       setDailyChallengeSession(linkId, {
         studentEmail: email.trim().toLowerCase(),
         challenge: response?.codingRound || existingSession?.challenge,
+        attempt: response?.attempt || null,
         isVerified: true,
         verifiedAt: new Date().toISOString(),
       });

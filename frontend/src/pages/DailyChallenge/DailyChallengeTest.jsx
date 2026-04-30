@@ -49,6 +49,7 @@ export default function DailyChallengeTest() {
   const session = useMemo(() => getDailyChallengeSession(linkId), [linkId]);
   const [challenge, setChallenge] = useState(session?.challenge || null);
   const [studentEmail, setStudentEmail] = useState(session?.studentEmail || "");
+  const [attempt, setAttempt] = useState(session?.attempt || null);
   const [selectedLanguage, setSelectedLanguage] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.starter);
   const [output, setOutput] = useState("Output will appear here...");
@@ -74,18 +75,18 @@ export default function DailyChallengeTest() {
 
     const loadChallenge = async () => {
       try {
-        const response = await dailyChallengeAPI.getByLink(linkId);
+        const response = await dailyChallengeAPI.start(linkId, session.studentEmail);
         if (cancelled) return;
 
-        const responseChallenge = response?.data || null;
+        const responseChallenge = response?.data?.codingRound || null;
+        const attemptPayload = response?.data?.attempt || null;
         setChallenge(responseChallenge);
-
-        const durationMinutes = Number(responseChallenge?.duration || 30);
-        setTimeLeft(Math.max(1, durationMinutes) * 60);
+        setAttempt(attemptPayload);
+        setTimeLeft(Math.max(0, Number(attemptPayload?.secondsRemaining || 0)));
 
         setDailyChallengeSession(linkId, {
           challenge: responseChallenge,
-          instructions: responseChallenge?.instructions,
+          attempt: attemptPayload,
         });
       } catch (error) {
         if (!cancelled) {
@@ -153,6 +154,7 @@ export default function DailyChallengeTest() {
     try {
       const response = await dailyChallengeAPI.run(linkId, {
         studentEmail,
+        attemptId: attempt?.id,
         solutions: [
           {
             problemIndex: 0,
@@ -164,6 +166,10 @@ export default function DailyChallengeTest() {
 
       const result = response?.data?.results?.[0];
       setRunsLeft(typeof result?.runsLeft === "number" ? result.runsLeft : runsLeft);
+      if (response?.data?.attempt) {
+        setAttempt(response.data.attempt);
+        setDailyChallengeSession(linkId, { attempt: response.data.attempt });
+      }
 
       const outputLines = [
         result?.compileSuccess ? "✅ Code executed successfully." : "❌ Execution failed.",
@@ -199,6 +205,7 @@ export default function DailyChallengeTest() {
     try {
       const response = await dailyChallengeAPI.submit(linkId, {
         studentEmail,
+        attemptId: attempt?.id,
         solutions: [
           {
             problemIndex: 0,
@@ -209,6 +216,10 @@ export default function DailyChallengeTest() {
       });
 
       const data = response?.data || {};
+      if (data?.attempt) {
+        setAttempt(data.attempt);
+        setDailyChallengeSession(linkId, { attempt: data.attempt });
+      }
       const summary = [
         data.feedback || "Submission completed.",
         typeof data.problemScore === "number" ? `Score: ${data.problemScore}` : "",
@@ -230,7 +241,7 @@ export default function DailyChallengeTest() {
     setSubmitting(true);
 
     try {
-      const response = await dailyChallengeAPI.end(linkId, { studentEmail });
+      const response = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: attempt?.id });
       moveToResult(response?.data || {});
     } catch (error) {
       setOutput(error.message || "Unable to end challenge.");
@@ -243,7 +254,7 @@ export default function DailyChallengeTest() {
     if (!studentEmail) return;
 
     try {
-      const response = await dailyChallengeAPI.autoSubmit(linkId, { studentEmail });
+      const response = await dailyChallengeAPI.autoSubmit(linkId, { studentEmail, attemptId: attempt?.id });
       moveToResult(response?.data || {});
     } catch (error) {
       setOutput(error.message || "Auto-submit failed.");
