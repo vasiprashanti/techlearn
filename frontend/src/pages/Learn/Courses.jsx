@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Clock, Calendar, ArrowRight, Code } from "lucide-react";
 import LoadingScreen from "../../components/LoadingScreen";
@@ -147,22 +146,17 @@ export default function Courses() {
 
           <section className="pt-6">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+              <div>
                 <h2 className="dashboard-page-title">
                   Courses
                 </h2>
                 <p className="dashboard-page-subtitle mt-2">
                   Pick a track and start building skills
                 </p>
-              </motion.div>
+              </div>
             </header>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mb-8 mt-6"
-            >
+            <div className="mb-8 mt-6">
               {error && (
                 <div className="text-left py-2 mb-4">
                   <p className="text-sm text-red-500 dark:text-red-400">Failed to load courses: {error}. Showing fallback data.</p>
@@ -170,12 +164,9 @@ export default function Courses() {
               )}
 
               <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 md:gap-6">
-                {coursesData.map((course, index) => (
-                  <motion.div
+                {coursesData.map((course) => (
+                  <div
                     key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
                     onClick={() => handleCourseClick(course.id)}
                     className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1"
                   >
@@ -195,19 +186,15 @@ export default function Courses() {
                         {course.description}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
 
-            </motion.div>
+            </div>
           </section>
 
-          <motion.section
+          <section
             ref={onlineCoursesSectionRef}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.8 }}
             className="pb-4"
           >
             <div className="mb-8">
@@ -229,11 +216,7 @@ export default function Courses() {
                       key={batch.id}
                       className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                     >
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.2 }}
-                        transition={{ duration: 0.5, delay: index * 0.05 }}
+                      <div
                         className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
                       >
                         <div className="flex justify-between items-center mb-6">
@@ -278,13 +261,13 @@ export default function Courses() {
                         >
                           Join Waitlist <ArrowRight className="w-4 h-4" />
                         </button>
-                      </motion.div>
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
               </Carousel>
             </div>
-          </motion.section>
+          </section>
         </div>
       </main>
     </div>
