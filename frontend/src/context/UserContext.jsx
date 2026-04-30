@@ -102,13 +102,19 @@ export const UserProvider = ({ children }) => {
   // Initialize user data
   useEffect(() => {
     const initializeUser = async () => {
+      const hasToken = Boolean(localStorage.getItem('token'));
       const hasLocalUser = loadUserFromStorage();
-      if (localStorage.getItem('token')) {
-        await fetchUserData(); // Sync with backend
-      } else if (!hasLocalUser) {
+
+      if (!hasToken && !hasLocalUser) {
         setUser({ firstName: 'Guest', lastName: '', email: '' });
+        setIsLoading(false);
       }
+
       setIsReady(true);
+
+      if (hasToken) {
+        fetchUserData(); // Sync in the background after the shell becomes ready
+      }
     };
 
     initializeUser();

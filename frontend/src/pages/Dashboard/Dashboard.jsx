@@ -7,7 +7,6 @@ import {
   FiTrendingUp,
 } from 'react-icons/fi';
 import Sidebar from '../../components/Dashboard/Sidebar';
-import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
@@ -45,6 +44,13 @@ const PixelFlame = () => (
   </svg>
 );
 
+const PlaceholderBar = ({ className = '' }) => (
+  <div
+    className={`animate-pulse rounded-full bg-white/20 dark:bg-white/10 ${className}`}
+    aria-hidden="true"
+  />
+);
+
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -52,6 +58,8 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [activeChallenge, setActiveChallenge] = useState(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [challengeLoading, setChallengeLoading] = useState(true);
 
   const {
     user,
@@ -82,22 +90,42 @@ export default function Dashboard() {
     let cancelled = false;
 
     const loadDashboardHighlights = async () => {
-      try {
-        const [leaderboardResponse, challengeResponse] = await Promise.all([
-          leaderboardApi.getLeaderboard(5),
-          dailyChallengeAPI.getActive(),
-        ]);
-
-        if (cancelled) return;
-
-        setLeaderboardEntries(leaderboardResponse?.entries || []);
-        setActiveChallenge(challengeResponse?.data || null);
-      } catch (loadError) {
-        if (!cancelled) {
-          setLeaderboardEntries([]);
-          setActiveChallenge(null);
+      const loadLeaderboard = async () => {
+        try {
+          const leaderboardResponse = await leaderboardApi.getLeaderboard(5);
+          if (!cancelled) {
+            setLeaderboardEntries(leaderboardResponse?.entries || []);
+          }
+        } catch {
+          if (!cancelled) {
+            setLeaderboardEntries([]);
+          }
+        } finally {
+          if (!cancelled) {
+            setLeaderboardLoading(false);
+          }
         }
-      }
+      };
+
+      const loadChallenge = async () => {
+        try {
+          const challengeResponse = await dailyChallengeAPI.getActive();
+          if (!cancelled) {
+            setActiveChallenge(challengeResponse?.data || null);
+          }
+        } catch {
+          if (!cancelled) {
+            setActiveChallenge(null);
+          }
+        } finally {
+          if (!cancelled) {
+            setChallengeLoading(false);
+          }
+        }
+      };
+
+      loadLeaderboard();
+      loadChallenge();
     };
 
     loadDashboardHighlights();
@@ -155,11 +183,13 @@ export default function Dashboard() {
         },
       ];
 
-  if (isLoading || !isReady) {
-    return <LoadingScreen showMessage={true} fullScreen={true} size={40} duration={800} />;
+  if (!isReady) {
+    return null;
   }
 
-  if (error && !error.includes('authentication')) {
+  const showBlockingError = error && !error.includes('authentication') && !user;
+
+  if (showBlockingError) {
     return (
       <div className="flex items-center justify-center h-screen bg-transparent">
         <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl">
@@ -202,6 +232,12 @@ export default function Dashboard() {
           }`}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
+            {error && !error.includes('authentication') ? (
+              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+                Some dashboard details are still syncing. You can keep using the page while we retry in the background.
+              </div>
+            ) : null}
+
             <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
@@ -241,27 +277,41 @@ export default function Dashboard() {
                     {dailyChallenge.title}
                   </h1>
 
-                  <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
-                    {dailyChallenge.prompt}
-                  </p>
-
-                  <div className="flex items-center gap-5 mt-1.5">
-                    <div className="flex items-center gap-2 text-sm text-white">
-                      <FiStar className="text-amber-400" />
-                      <span>+{dailyChallenge.xpReward} XP</span>
+                  {challengeLoading ? (
+                    <div className="w-full max-w-xl space-y-3 pt-1">
+                      <PlaceholderBar className="h-4 w-full" />
+                      <PlaceholderBar className="h-4 w-5/6" />
+                      <div className="flex items-center gap-5 pt-2">
+                        <PlaceholderBar className="h-4 w-24" />
+                        <PlaceholderBar className="h-4 w-20" />
+                      </div>
+                      <PlaceholderBar className="mt-4 h-11 w-40 rounded-lg bg-white/25 dark:bg-white/15" />
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-white">
-                      <FiClock className="text-sky-300" />
-                      <span>~{dailyChallenge.timeEstimate}</span>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
+                        {dailyChallenge.prompt}
+                      </p>
 
-                  <button
-                    onClick={() => navigate('/dashboard/daily-challenge')}
-                    className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
-                  >
-                    Start Challenge <FiChevronRight />
-                  </button>
+                      <div className="flex items-center gap-5 mt-1.5">
+                        <div className="flex items-center gap-2 text-sm text-white">
+                          <FiStar className="text-amber-400" />
+                          <span>+{dailyChallenge.xpReward} XP</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-white">
+                          <FiClock className="text-sky-300" />
+                          <span>~{dailyChallenge.timeEstimate}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => navigate('/dashboard/daily-challenge')}
+                        className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
+                      >
+                        Start Challenge <FiChevronRight />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -274,30 +324,41 @@ export default function Dashboard() {
                     </button>
                   </div>
                   <div className="flex-1 flex flex-col justify-around gap-2">
-                    {featuredLeaderboard.map((student) => (
-                      <div
-                        key={student.userId}
-                        className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                          student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        <div
-                          className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
-                            student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
-                          }`}
-                        >
-                          #{student.rank}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
-                            {student.name}
-                          </h4>
-                        </div>
-                        <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
-                          {student.totalXp.toLocaleString()}
-                        </div>
-                      </div>
-                    ))}
+                    {leaderboardLoading
+                      ? Array.from({ length: 5 }).map((_, index) => (
+                          <div
+                            key={`leaderboard-loading-${index}`}
+                            className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg"
+                          >
+                            <PlaceholderBar className="h-3 w-7" />
+                            <PlaceholderBar className="h-4 flex-1 rounded-md" />
+                            <PlaceholderBar className="h-3 w-16" />
+                          </div>
+                        ))
+                      : featuredLeaderboard.map((student) => (
+                          <div
+                            key={student.userId}
+                            className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
+                              student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                            }`}
+                          >
+                            <div
+                              className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
+                                student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
+                              }`}
+                            >
+                              #{student.rank}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
+                                {student.name}
+                              </h4>
+                            </div>
+                            <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
+                              {student.totalXp.toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
                   </div>
                 </div>
 
@@ -330,7 +391,23 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              {!recentExercises || recentExercises.length === 0 ? (
+              {isLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={`exercise-loading-${index}`}
+                      className="p-5 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 rounded-xl min-h-[140px] animate-pulse"
+                    >
+                      <PlaceholderBar className="h-3 w-20" />
+                      <PlaceholderBar className="mt-4 h-4 w-full rounded-md" />
+                      <PlaceholderBar className="mt-2 h-4 w-4/5 rounded-md" />
+                      <div className="mt-8 border-t border-black/5 dark:border-white/5 pt-3">
+                        <PlaceholderBar className="h-3 w-24" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : !recentExercises || recentExercises.length === 0 ? (
                 <div className="py-12 flex flex-col items-center justify-center border border-black/5 dark:border-white/5 rounded-lg border-dashed">
                   <p className="text-xs tracking-widest uppercase text-black/30 dark:text-white/30">No recent activity recorded</p>
                 </div>
