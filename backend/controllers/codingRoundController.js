@@ -460,8 +460,11 @@ export const sendCodingRoundOTP = async (req, res) => {
 
     res.json({ success: true, message: "OTP sent to email" });
   } catch (error) {
-    console.error("Error sending OTP for Coding Round:", error);
-    res.status(500).json({ success: false, message: "Failed to send OTP" });
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error sending OTP for Coding Round:", error);
+    }
+    res.status(statusCode).json({ success: false, message: error.message || "Failed to send OTP" });
   }
 };
 
@@ -572,8 +575,11 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       note: "This is your only attempt. Make sure to complete it before the time limit.",
     });
   } catch (error) {
-    console.error("Error verifying OTP for Coding Round:", error);
-    res.status(500).json({ success: false, message: "Failed to verify OTP" });
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error verifying OTP for Coding Round:", error);
+    }
+    res.status(statusCode).json({ success: false, message: error.message || "Failed to verify OTP" });
   }
 };
 
@@ -617,6 +623,18 @@ export const startDailyChallengeAttempt = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "This Daily Challenge attempt has already ended.",
+      });
+    }
+
+    if (attempt && isAttemptExpired(attempt)) {
+      attempt.status = "expired";
+      attempt.endedAt = attempt.endedAt || new Date();
+      attempt.lastActiveAt = new Date();
+      await attempt.save();
+      return res.status(403).json({
+        success: false,
+        message: "Time is up for this Daily Challenge attempt.",
+        expired: true,
       });
     }
 
@@ -875,10 +893,13 @@ export const submitCodingRoundAnswers = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error submitting coding round answers:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error submitting coding round answers:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to submit solution",
+      message: error.message || "Failed to submit solution",
     });
   }
 };
@@ -1280,10 +1301,13 @@ export const runCodingRoundAnswers = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error running coding round answers:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error running coding round answers:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Internal server error",
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -1416,10 +1440,13 @@ export const endCodingRound = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error ending coding round:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error ending coding round:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to end coding round",
+      message: error.message || "Failed to end coding round",
     });
   }
 };
@@ -1559,10 +1586,13 @@ export const autoSubmitRound = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error auto-submitting coding round:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error auto-submitting coding round:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to auto-submit coding round",
+      message: error.message || "Failed to auto-submit coding round",
     });
   }
 };

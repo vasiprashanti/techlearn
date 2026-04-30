@@ -327,57 +327,6 @@ const Students = () => {
     URL.revokeObjectURL(url);
   };
 
-  const parseCsvRows = (text) => {
-    const rows = [];
-    let current = '';
-    let row = [];
-    let inQuotes = false;
-
-    for (let i = 0; i < text.length; i += 1) {
-      const char = text[i];
-      const next = text[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && next === '"') {
-          current += '"';
-          i += 1;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        row.push(current.trim());
-        current = '';
-      } else if ((char === '\n' || char === '\r') && !inQuotes) {
-        if (char === '\r' && next === '\n') i += 1;
-        if (current.length > 0 || row.length > 0) {
-          row.push(current.trim());
-          rows.push(row);
-          row = [];
-          current = '';
-        }
-      } else {
-        current += char;
-      }
-    }
-
-    if (current.length > 0 || row.length > 0) {
-      row.push(current.trim());
-      rows.push(row);
-    }
-
-    return rows;
-  };
-
-  const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '');
-
-  const toEmailSlug = (value) =>
-    String(value || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '.')
-      .replace(/^\.+|\.+$/g, '')
-      .replace(/\.{2,}/g, '.');
-
   const handleBulkImportSelection = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -401,94 +350,30 @@ const Students = () => {
       if (!bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack) {
         throw new Error('Select college, batch, and track before uploading CSV.');
       }
+      const result = await adminAPI.bulkUploadStudents({
+        file,
+        collegeId: bulkImportCollegeId,
+        batchId: bulkImportBatchId,
+        primaryTrack: bulkImportTrack,
+        status: 'Active',
+      });
 
-      const rawText = await file.text();
-      const parsedRows = parseCsvRows(rawText);
+      const imported = Number(result?.imported || 0);
+      const failed = Number(result?.failed || 0);
+      const failures = Array.isArray(result?.failedRows)
+        ? result.failedRows.map((entry) => `Row ${entry.row}: ${entry.reason}`)
+        : [];
 
-      if (parsedRows.length < 2) {
-        throw new Error('CSV must include a header and at least one data row.');
-      }
-
-      const [headerRow, ...dataRows] = parsedRows;
-      const headerMap = new Map(headerRow.map((header, index) => [normalizeHeader(header), index]));
-
-      const getCell = (row, ...keys) => {
-        for (const key of keys) {
-          const index = headerMap.get(normalizeHeader(key));
-          if (index !== undefined) return String(row[index] || '').trim();
-        }
-        return '';
-      };
-
-      let successCount = 0;
-      const failures = [];
-
-      for (let rowIndex = 0; rowIndex < dataRows.length; rowIndex += 1) {
-        const row = dataRows[rowIndex];
-        const displayRow = rowIndex + 2;
-
-        const name = getCell(row, 'name', 'studentname');
-        const email = getCell(row, 'email', 'studentemail');
-        const registrationNumber = getCell(row, 'registrationnumber', 'registrationno', 'regno', 'rollno', 'rollnumber');
-        const track = getCell(row, 'track', 'primarytrack');
-        const status = getCell(row, 'status');
-
-        const rowHasAnyIdentifier = Boolean(name || email || registrationNumber);
-        if (!rowHasAnyIdentifier) {
-          const isCompletelyBlank = row.every((cell) => !String(cell || '').trim());
-          if (isCompletelyBlank) continue;
-          failures.push(`Row ${displayRow}: provide at least one of name, email, or registration number.`);
-          continue;
-        }
-
-        const resolvedName =
-          name ||
-          (email.includes('@') ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
-          (registrationNumber ? `Student ${registrationNumber}` : '');
-
-        if (!resolvedName) {
-          failures.push(`Row ${displayRow}: could not derive a valid name.`);
-          continue;
-        }
-
-        const generatedEmailSeed = toEmailSlug(email || registrationNumber || resolvedName) || `student.${displayRow}`;
-        const resolvedEmail = email || `${generatedEmailSeed}.${displayRow}@import.techlearn.local`;
-
-        try {
-          await adminAPI.createStudent({
-            name: resolvedName,
-            email: resolvedEmail.toLowerCase(),
-            rollNo: registrationNumber,
-            collegeId: bulkImportCollegeId,
-            batchId: bulkImportBatchId,
-            primaryTrack: track || bulkImportTrack || 'General Track',
-            status: status || 'Active',
-          });
-          successCount += 1;
-        } catch (error) {
-          failures.push(`Row ${displayRow}: ${error?.message || 'failed to import.'}`);
-        }
-      }
-
-      if (successCount > 0) {
+      if (imported > 0) {
         await loadStudentsData();
       }
 
-      if (failures.length > 0) {
-        setBulkImportReport({
-          type: successCount > 0 ? 'partial' : 'failed',
-          imported: successCount,
-          failed: failures.length,
-          failures,
-        });
-      } else {
-        setBulkImportReport({
-          type: 'success',
-          imported: successCount,
-          failed: 0,
-          failures: [],
-        });
-      }
+      setBulkImportReport({
+        type: failed > 0 ? (imported > 0 ? 'partial' : 'failed') : 'success',
+        imported,
+        failed,
+        failures,
+      });
     } catch (error) {
       setFormError(error?.message || 'Bulk import failed.');
       setBulkImportReport({
@@ -510,7 +395,7 @@ const Students = () => {
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
       <StudentModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
-      <input ref={bulkImportInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleBulkImportSelection} />
+      <input ref={bulkImportInputRef} type="file" accept=".csv" className="hidden" onChange={handleBulkImportSelection} />
 
       {pendingDeleteStudent && (
         <div className="fixed inset-0 z-[135] flex items-center justify-center px-4">

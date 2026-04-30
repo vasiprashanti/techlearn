@@ -12,6 +12,11 @@ const buildHeaders = (extraHeaders = {}) => ({
   ...extraHeaders,
 });
 
+const buildAuthHeaders = (extraHeaders = {}) => ({
+  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+  ...extraHeaders,
+});
+
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 export const hasMeaningfulAdminData = (value) => {
@@ -224,6 +229,29 @@ export const adminAPI = {
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
+  bulkUploadStudents: async ({ file, collegeId, batchId, primaryTrack, status = 'Active' }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collegeId', collegeId);
+    formData.append('batchId', batchId);
+    formData.append('primaryTrack', primaryTrack || 'General Track');
+    formData.append('status', status);
+
+    const response = await fetch(`${API_BASE}/admin/students/bulk-upload`, {
+      method: 'POST',
+      headers: buildAuthHeaders(),
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || 'Bulk student import failed.');
+    }
+
+    invalidateCacheForPath('/admin/students');
+    invalidateAdminSessionCacheForPath('/admin/students');
+    return unwrapData(payload);
+  },
 
   getQuestionCategories: () => request('/admin/questions/categories'),
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
