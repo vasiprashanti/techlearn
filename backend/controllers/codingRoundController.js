@@ -22,7 +22,25 @@ import {
   startOfDay,
 } from "../utils/dailyChallengeUtils.js";
 
-const buildRateLimiter = (windowMs, max, message) =>
+const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
+  const email =
+    req.body?.studentEmail ||
+    req.body?.email ||
+    req.query?.email ||
+    req.user?.email ||
+    req.user?._id?.toString() ||
+    req.ip;
+
+  const normalizedEmail = String(email || req.ip)
+    .trim()
+    .toLowerCase();
+  const linkId = String(req.params?.linkId || "daily-challenge").trim().toLowerCase();
+  const attemptId = includeAttempt ? String(req.body?.attemptId || "no-attempt").trim().toLowerCase() : "";
+
+  return [normalizedEmail, linkId, attemptId].filter(Boolean).join(":");
+};
+
+const buildRateLimiter = (windowMs, max, message, keyGenerator) =>
   rateLimit({
     windowMs,
     max,
@@ -32,18 +50,21 @@ const buildRateLimiter = (windowMs, max, message) =>
     },
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator,
   });
 
 export const dailyChallengeOtpRateLimit = buildRateLimiter(
   60 * 1000,
   3,
-  "Too many OTP requests. Please wait a minute before trying again."
+  "Too many OTP requests. Please wait a minute before trying again.",
+  (req) => buildChallengeRateLimitKey(req)
 );
 
 export const dailyChallengeAccessRateLimit = buildRateLimiter(
   10 * 1000,
   5,
-  "Please wait a few seconds before retrying this Daily Challenge action."
+  "Please wait a few seconds before retrying this Daily Challenge action.",
+  (req) => buildChallengeRateLimitKey(req)
 );
 
 export const codingRateLimit = rateLimit({
@@ -55,6 +76,7 @@ export const codingRateLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => buildChallengeRateLimitKey(req, true),
 });
 
 // Helper function to convert IST to UTC
@@ -458,7 +480,11 @@ export const sendCodingRoundOTP = async (req, res) => {
     storeOTP(`${linkId}:${normalizedEmail}`, otp);
     await sendOTPEmail(normalizedEmail, otp, codingRound.challengeType === "daily_challenge" ? "Daily Challenge" : "Coding Round");
 
-    res.json({ success: true, message: "OTP sent to email" });
+    res.json({
+      success: true,
+      message: "OTP sent to email",
+      ...(process.env.NODE_ENV === "development" ? { debugOtp: otp } : {}),
+    });
   } catch (error) {
     const statusCode = error.statusCode || 500;
     if (statusCode === 500) {

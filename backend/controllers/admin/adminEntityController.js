@@ -34,7 +34,7 @@ const ensureDefaultBatchTracks = async (batchId, session) => {
   }
 
   if (session) {
-    await Track.create(missingTrackDocs, { session });
+    await Track.create(missingTrackDocs, { session, ordered: true });
   } else {
     await Track.create(missingTrackDocs);
   }
@@ -398,7 +398,7 @@ export const createBatchAdmin = async (req, res) => {
               status: status || BATCH_STATUS.DRAFT,
             },
           ],
-          { session }
+          { session, ordered: true }
         );
 
         batch = createdBatch;

@@ -164,7 +164,8 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  const normalizedTrackType = normalizeTrackType(trackType);
+  const requestedTrackType = String(trackType || "").trim();
+  const normalizedTrackType = requestedTrackType ? normalizeTrackType(requestedTrackType) : "";
 
   if (user || email) {
     studentContext = await resolveChallengeStudent({ user, email, allowGuestFallback: true });
