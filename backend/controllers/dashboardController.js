@@ -36,6 +36,28 @@ const setCachedDashboard = (userId, payload) => {
   });
 };
 
+const buildDashboardUserPayload = (user, linkedStudent) => {
+  const studentName = String(linkedStudent?.name || "").trim();
+  const fullName = String(
+    user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ")
+  ).trim();
+  const displayName = studentName || fullName || String(user?.email || "").split("@")[0];
+
+  const [fallbackFirstName = "Student", ...remainingParts] = displayName
+    .split(/\s+/)
+    .filter(Boolean);
+  const fallbackLastName = remainingParts.join(" ");
+
+  return {
+    id: user?._id || null,
+    firstName: String(user?.firstName || "").trim() || fallbackFirstName,
+    lastName: String(user?.lastName || "").trim() || fallbackLastName,
+    name: displayName || "Student",
+    email: user?.email || "",
+    avatar: user?.avatar || "",
+  };
+};
+
 export const invalidateDashboardCache = (userId) => {
   if (!userId) return;
   dashboardCache.delete(String(userId));
@@ -86,8 +108,9 @@ export const getDashboardData = async (req, res) => {
       .trim()
       .toLowerCase();
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id").lean()
+      ? await Student.findOne({ email: normalizedEmail }).select("_id name").lean()
       : null;
+    const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
     const latestDailyChallenge = linkedStudent?._id
       ? await Submission.findOne({
           studentId: linkedStudent._id,
@@ -128,6 +151,7 @@ export const getDashboardData = async (req, res) => {
           completedExercises: 0,
           progressPercent: 0,
         },
+        user: dashboardUser,
         avatar: user?.avatar || "",
         mcqProgress: {
           totalMcqs: 0,
@@ -230,6 +254,7 @@ export const getDashboardData = async (req, res) => {
       calendarActivity,
       answeredCheckpointMcqs,
       totalCourseProgress: { progressPercent: courseProgressPercent },
+      user: dashboardUser,
       mcqProgress: {
         totalMcqs,
         answeredMcqs,

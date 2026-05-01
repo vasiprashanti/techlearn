@@ -136,8 +136,11 @@ export default function Dashboard() {
     };
   }, []);
 
-  const userName = user?.firstName ? user.firstName : 'Student';
-  const userDisplayName = user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.name || 'Student';
+  const userDisplayName =
+    user?.name?.trim() ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
+    user?.email?.split('@')[0] ||
+    'Student';
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -246,7 +249,7 @@ export default function Dashboard() {
             <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
-                  Welcome back, {userName}.
+                  Welcome back, {userDisplayName}.
                 </h1>
                 <p className="text-[10px] tracking-[0.25em] uppercase text-black/40 dark:text-white/40 mt-2">
                   Student Overview
