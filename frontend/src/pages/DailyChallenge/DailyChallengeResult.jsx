@@ -25,6 +25,16 @@ export default function DailyChallengeResult() {
   const result = session?.result || {};
   const metrics = result?.challengeMetrics || {};
 
+  const accuracy = typeof metrics.accuracy === "number"
+    ? metrics.accuracy
+    : typeof result?.accuracy === "number"
+      ? result.accuracy
+      : 0;
+  const evaluationStatus =
+    result?.evaluationStatus ||
+    metrics.evaluationStatus ||
+    result?.status ||
+    "Completed";
   const score = typeof result?.totalScore === "number" ? result.totalScore : metrics.score || 0;
   const xpGained = typeof metrics.xpGained === "number" ? metrics.xpGained : score;
   const streak = typeof metrics.streak === "number" ? metrics.streak : "-";
@@ -44,23 +54,30 @@ export default function DailyChallengeResult() {
       <div className="w-full max-w-xl rounded-2xl border border-white/30 bg-white/80 p-8 shadow-lg backdrop-blur-xl dark:border-gray-700/30 dark:bg-gray-900/70">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Daily Challenge Result</h1>
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">You’ll be redirected to Dashboard shortly.</p>
+        <p className="mt-3 inline-flex rounded-full border border-gray-300 bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+          Evaluation Status: {evaluationStatus}
+        </p>
 
         <div className="mt-6 grid grid-cols-2 gap-4">
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
-            <p className="text-xs uppercase tracking-wider text-blue-700 dark:text-blue-200">Score</p>
-            <p className="mt-2 text-2xl font-semibold text-blue-800 dark:text-blue-100">{score}</p>
+            <p className="text-xs uppercase tracking-wider text-blue-700 dark:text-blue-200">Accuracy</p>
+            <p className="mt-2 text-2xl font-semibold text-blue-800 dark:text-blue-100">{accuracy}%</p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-900/20">
             <p className="text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-200">XP Gained</p>
             <p className="mt-2 text-2xl font-semibold text-emerald-800 dark:text-emerald-100">+{xpGained}</p>
           </div>
           <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-900/40 dark:bg-orange-900/20">
-            <p className="text-xs uppercase tracking-wider text-orange-700 dark:text-orange-200">Streak</p>
-            <p className="mt-2 text-2xl font-semibold text-orange-800 dark:text-orange-100">{streak}</p>
+            <p className="text-xs uppercase tracking-wider text-orange-700 dark:text-orange-200">Score</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-800 dark:text-orange-100">{score}</p>
           </div>
           <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 dark:border-purple-900/40 dark:bg-purple-900/20">
-            <p className="text-xs uppercase tracking-wider text-purple-700 dark:text-purple-200">Time Taken</p>
-            <p className="mt-2 text-2xl font-semibold text-purple-800 dark:text-purple-100">{timeTaken}</p>
+            <p className="text-xs uppercase tracking-wider text-purple-700 dark:text-purple-200">Streak</p>
+            <p className="mt-2 text-2xl font-semibold text-purple-800 dark:text-purple-100">{streak}</p>
+          </div>
+          <div className="rounded-xl border border-fuchsia-200 bg-fuchsia-50 p-4 dark:border-fuchsia-900/40 dark:bg-fuchsia-900/20 col-span-2">
+            <p className="text-xs uppercase tracking-wider text-fuchsia-700 dark:text-fuchsia-200">Time Taken</p>
+            <p className="mt-2 text-2xl font-semibold text-fuchsia-800 dark:text-fuchsia-100">{timeTaken}</p>
           </div>
         </div>
 

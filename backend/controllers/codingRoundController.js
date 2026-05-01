@@ -21,6 +21,7 @@ import {
   resolveDailyChallengeParticipant,
   startOfDay,
 } from "../utils/dailyChallengeUtils.js";
+import { invalidateDashboardCache } from "./dashboardController.js";
 
 const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
   const email =
@@ -137,7 +138,15 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       streak,
       timeTakenSeconds,
       timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
+      accuracy: submission.totalScore || 0,
       score: submission.totalScore || 0,
+      evaluationStatus: submission.autoEnded
+        ? "Timeout"
+        : submission.isRoundEnded
+          ? submission.totalScore === 100
+            ? "Passed"
+            : "Failed"
+          : "Pending",
       correctSolutions,
       totalProblems,
     },
@@ -180,6 +189,7 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
         challengeType: "daily_challenge",
         workingDay: codingRound.dayNumber,
         runCount: Array.from(submission.problemRuns?.values?.() || []).reduce((sum, value) => sum + Number(value || 0), 0),
+        accuracyScore: totalScore,
         totalScore,
         status: nextStatus,
         submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
@@ -202,6 +212,7 @@ const updateStudentChallengeStats = async ({ student, submission }) => {
       testsTaken: currentTestsTaken + 1,
     },
   });
+  invalidateDashboardCache(student.userId);
 };
 
 const finalizeDailyChallengeAttempt = async ({
@@ -847,7 +858,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
       }
     }
 
-    const problemScore = Math.round((testsPassed / totalTests) * 100);
+    const accuracy = Math.round((testsPassed / totalTests) * 100);
+    const problemScore = accuracy;
     const isCorrect = testsPassed === totalTests;
 
     if (!submission) {
@@ -907,10 +919,13 @@ export const submitCodingRoundAnswers = async (req, res) => {
         submissionId: submission._id,
         problemIndex,
         problemScore,
+        accuracy,
         isCorrect,
         currentTotalScore: submission.totalScore,
-        failedTestCases: testsFailed, 
-        totalTestCases: totalTests, 
+        testsPassed,
+        failedTestCases: testsFailed,
+        totalTestCases: totalTests,
+        evaluationStatus: isCorrect ? "Passed" : "Failed",
         feedback: isCorrect
           ? "Perfect! All test cases passed."
           : `Partial Correctness! Score: ${problemScore}. Failed: ${testsFailed}/${totalTests} test cases.`,
@@ -1457,6 +1472,8 @@ export const endCodingRound = async (req, res) => {
         linkedSubmissionId: linkedSubmission?._id || null,
         roundEndedAt: submission.roundEndedAt,
         problemResults,
+        accuracy: submission.totalScore,
+        evaluationStatus: linkedSubmission?.status || (submission.totalScore === 100 ? "Passed" : "Pending"),
         totalScore: submission.totalScore,
         maxPossibleScore: codingRound.problems.length * 100,
         totalProblems: codingRound.problems.length,
@@ -1602,6 +1619,8 @@ export const autoSubmitRound = async (req, res) => {
         submissionId: submission._id,
         attemptId: challengeAttempt?._id || null,
         linkedSubmissionId: linkedSubmission?._id || null,
+        accuracy: submission.totalScore,
+        evaluationStatus: linkedSubmission?.status || "Timeout",
         totalScore: submission.totalScore,
         endedAt: submission.roundEndedAt,
         autoEnded: true,

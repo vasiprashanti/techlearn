@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import { Play, SendHorizontal } from "lucide-react";
@@ -61,7 +61,12 @@ export default function DailyChallengeTest() {
   const [timerWarning, setTimerWarning] = useState(false);
 
   const autoSubmitTriggered = useRef(false);
+  const editorCleanupRef = useRef(null);
   const problem = challenge?.problems?.[0];
+
+  const announceClipboardBlocked = useCallback((actionLabel) => {
+    setOutput(`${actionLabel} is disabled during the Daily Challenge.`);
+  }, []);
 
   useEffect(() => {
     if (!session?.isVerified || !session?.studentEmail) {
@@ -131,6 +136,13 @@ export default function DailyChallengeTest() {
 
     document.addEventListener("visibilitychange", visibilityHandler);
     return () => document.removeEventListener("visibilitychange", visibilityHandler);
+  }, []);
+
+  useEffect(() => () => {
+    if (typeof editorCleanupRef.current === "function") {
+      editorCleanupRef.current();
+      editorCleanupRef.current = null;
+    }
   }, []);
 
   const moveToResult = (resultPayload) => {
@@ -221,7 +233,9 @@ export default function DailyChallengeTest() {
         setDailyChallengeSession(linkId, { attempt: data.attempt });
       }
       const summary = [
+        data.evaluationStatus ? `Evaluation Status: ${data.evaluationStatus}` : "",
         data.feedback || "Submission completed.",
+        typeof data.accuracy === "number" ? `Accuracy: ${data.accuracy}%` : "",
         typeof data.problemScore === "number" ? `Score: ${data.problemScore}` : "",
       ]
         .filter(Boolean)
@@ -344,11 +358,64 @@ export default function DailyChallengeTest() {
 
           <div className="h-[340px] overflow-hidden rounded-lg border border-gray-300 dark:border-gray-700">
             <Editor
+              onMount={(editor) => {
+                if (typeof editorCleanupRef.current === "function") {
+                  editorCleanupRef.current();
+                }
+
+                const editorNode = editor.getDomNode();
+                if (!editorNode) return;
+
+                const blockClipboardEvent = (event) => {
+                  event.preventDefault();
+
+                  if (event.type === "paste") {
+                    announceClipboardBlocked("Paste");
+                  } else if (event.type === "copy") {
+                    announceClipboardBlocked("Copy");
+                  } else if (event.type === "cut") {
+                    announceClipboardBlocked("Cut");
+                  }
+                };
+
+                const blockShortcut = (event) => {
+                  const pressedKey = String(event.key || "").toLowerCase();
+                  const isClipboardShortcut =
+                    ((event.ctrlKey || event.metaKey) &&
+                      ["c", "v", "x", "insert"].includes(pressedKey)) ||
+                    (event.shiftKey && pressedKey === "insert");
+
+                  if (!isClipboardShortcut) return;
+
+                  event.preventDefault();
+
+                  if (pressedKey === "v" || (event.shiftKey && pressedKey === "insert")) {
+                    announceClipboardBlocked("Paste");
+                  } else if (pressedKey === "x") {
+                    announceClipboardBlocked("Cut");
+                  } else {
+                    announceClipboardBlocked("Copy");
+                  }
+                };
+
+                editorNode.addEventListener("copy", blockClipboardEvent, true);
+                editorNode.addEventListener("cut", blockClipboardEvent, true);
+                editorNode.addEventListener("paste", blockClipboardEvent, true);
+                editorNode.addEventListener("keydown", blockShortcut, true);
+
+                editorCleanupRef.current = () => {
+                  editorNode.removeEventListener("copy", blockClipboardEvent, true);
+                  editorNode.removeEventListener("cut", blockClipboardEvent, true);
+                  editorNode.removeEventListener("paste", blockClipboardEvent, true);
+                  editorNode.removeEventListener("keydown", blockShortcut, true);
+                };
+              }}
               language={LANGUAGES[selectedLanguage].monacoLanguage}
               value={code}
               onChange={(value) => setCode(value || "")}
               theme={theme === "dark" ? "vs-dark" : "light"}
               options={{
+                contextmenu: false,
                 minimap: { enabled: false },
                 wordWrap: "on",
                 fontSize: 14,

@@ -102,6 +102,7 @@ export const listColleges = async (req, res) => {
       status: college.status || "Active",
       contactPerson: college.contactPerson || "",
       contactEmail: college.contactEmail || "",
+      accuracy: Number((submissionMap[String(college._id)]?.avgScore || 0).toFixed(0)),
       avgScore: Number((submissionMap[String(college._id)]?.avgScore || 0).toFixed(0)),
       activeStudents: studentMap[String(college._id)]?.activeStudents || 0,
       totalStudents: studentMap[String(college._id)]?.totalStudents || 0,
@@ -210,6 +211,7 @@ export const getCollegeDetail = async (req, res) => {
         totalStudents: students.length,
         activeStudents,
         activeBatches: batches.filter((batch) => batch.status === BATCH_STATUS.ACTIVE).length,
+        accuracy: Number((submissions[0]?.avgScore || 0).toFixed(0)),
         avgScore: Number((submissions[0]?.avgScore || 0).toFixed(0)),
         submissionRate:
           students.length > 0 ? Number(((activeStudents / students.length) * 100).toFixed(0)) : 0,
@@ -217,6 +219,7 @@ export const getCollegeDetail = async (req, res) => {
           id: batch._id,
           name: batch.name,
           students: batchStudentMap[String(batch._id)] || 0,
+          accuracy: Number((batchScoreMap[String(batch._id)] || 0).toFixed(0)),
           avgScore: Number((batchScoreMap[String(batch._id)] || 0).toFixed(0)),
           status: batch.status,
         })),
@@ -359,6 +362,7 @@ export const listBatches = async (req, res) => {
       start: formatDateLabel(batch.startDate),
       end: formatDateLabel(batch.expiryDate),
       students: studentMap[String(batch._id)] || 0,
+      accuracy: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
       avgScore: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
     }));
 
@@ -477,6 +481,7 @@ export const getBatchDetail = async (req, res) => {
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
         expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
         students: students.length,
+        accuracy: avgScore,
         avgScore,
         avgStreakDays: avgStreak,
         tracks: tracks.length > 0
@@ -513,6 +518,7 @@ export const getBatchDetail = async (req, res) => {
             id: student._id,
             name: student.name,
             email: student.email,
+            accuracy: score,
             score,
             streak: `${student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
           };
@@ -695,6 +701,7 @@ export const listStudentsAdmin = async (req, res) => {
       college: student.collegeId?.name || "Unknown College",
       batch: student.batchId?.name || "Unknown Batch",
       track: student.primaryTrack || "General Track",
+      accuracy: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       score: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       streak: student.streak || 0,
       status: student.status,
@@ -798,6 +805,7 @@ export const getStudentDetailAdmin = async (req, res) => {
         college: student.collegeId?.name || "Unknown College",
         batch: student.batchId?.name || "Unknown Batch",
         track: student.primaryTrack || "General Track",
+        accuracy: score,
         score,
         streak: student.streak || 0,
         testsTaken: submissions.length,

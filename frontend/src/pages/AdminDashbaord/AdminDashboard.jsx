@@ -245,7 +245,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">
-                  College Performance Ranking
+                  College Accuracy Ranking
                 </h3>
                 <div className="flex-1 flex flex-col justify-between gap-6 relative">
                   <div className="absolute top-0 bottom-0 left-[180px] right-0 flex justify-between px-2 text-[10px] text-black/20 dark:text-white/20 pointer-events-none -z-10 items-end pb-[-20px]">
@@ -267,7 +267,7 @@ export default function AdminDashboard() {
                           style={{ width: `${college.score}%` }}
                         >
                           <span className="text-[10px] font-bold text-white dark:text-black opacity-0 group-hover:opacity-100 transition-opacity">
-                            {college.score}%
+                            {college.accuracy ?? college.score}%
                           </span>
                         </div>
                       </div>
@@ -311,7 +311,7 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div className="text-sm font-light text-[#3C83F6] dark:text-white shrink-0 pl-2">
-                        {student.score}
+                        {student.accuracy ? `${student.accuracy}% accuracy` : student.score}
                       </div>
                     </div>
                   ))}

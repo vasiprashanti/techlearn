@@ -19,6 +19,7 @@ export const UserProvider = ({ children }) => {
   });
   const [activities, setActivities] = useState({});
   const [isReady, setIsReady] = useState(false);
+  const [latestDailyChallenge, setLatestDailyChallenge] = useState(null);
 
   // Load user data from localStorage and validate structure
   const loadUserFromStorage = () => {
@@ -90,6 +91,7 @@ export const UserProvider = ({ children }) => {
         completedExercises: data.exerciseProgress?.completedExercises || 0,
         exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0
       });
+      setLatestDailyChallenge(data.latestDailyChallenge || null);
 
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -131,6 +133,7 @@ export const UserProvider = ({ children }) => {
         progress,
         activities,
         isReady,
+        latestDailyChallenge,
         updateXp: (newXp) => setXp(newXp),
         markActivity: (date, status) =>
           setActivities((prev) => ({ ...prev, [date]: status })),

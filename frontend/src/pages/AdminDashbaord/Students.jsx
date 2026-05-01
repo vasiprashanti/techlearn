@@ -34,6 +34,7 @@ const normalizeStudent = (student) => ({
   college: student.college || '',
   batch: student.batch || '',
   track: student.track || 'General Track',
+  accuracy: Number(student.accuracy ?? student.score ?? 0),
   score: Number(student.score || 0),
   streak: Number(student.streak || 0),
   status: student.status || 'Active',
@@ -96,7 +97,7 @@ const StudentModal = ({ student, onClose }) => {
           <div><span className="text-slate-500 dark:text-white/55">College:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.college || 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Batch:</span> <span className="font-medium break-words text-slate-900 dark:text-white">{student.batch || 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Track:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.track || 'Not available'}</span></div>
-          <div><span className="text-slate-500">Score:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.score}%</span></div>
+          <div><span className="text-slate-500">Accuracy:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.accuracy}%</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Streak:</span> <span className="font-medium text-slate-900 dark:text-white">{student.streak} days</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Tests Taken:</span> <span className="font-medium text-slate-900 dark:text-white">{student.testsTaken ?? 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Last Active:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.lastActive)}</span></div>
@@ -612,7 +613,7 @@ const Students = () => {
                     <div><p className="text-black/45 dark:text-white/45">College</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.college || 'Not available'}</p></div>
                     <div><p className="text-black/45 dark:text-white/45">Batch</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.batch || 'Not available'}</p></div>
                     <div className="col-span-2"><p className="text-black/45 dark:text-white/45">Track</p><p className="mt-1 font-medium text-black/75 dark:text-white/70 break-words">{student.track}</p></div>
-                    <div><p className="text-black/45 dark:text-white/45">Score</p><p className="mt-1 font-medium">{student.score}%</p></div>
+                    <div><p className="text-black/45 dark:text-white/45">Accuracy</p><p className="mt-1 font-medium">{student.accuracy}%</p></div>
                     <div><p className="text-black/45 dark:text-white/45">Streak</p><p className="mt-1 font-medium">{student.streak} days</p></div>
                   </div>
                   <div className="mt-4 flex items-center justify-end gap-2">
@@ -629,7 +630,7 @@ const Students = () => {
               <table className="w-full min-w-[1180px] table-fixed">
                 <thead className="border-b-2 border-black/12 dark:border-white/12">
                   <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-                    {['Name', 'Email', 'College', 'Batch', 'Track', 'Score', 'Streak', 'Status', 'Actions'].map((col) => <th key={col} className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">{col}</th>)}
+                    {['Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => <th key={col} className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">{col}</th>)}
                   </tr>
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
@@ -640,7 +641,7 @@ const Students = () => {
                       <td className="px-4 py-3 text-sm truncate">{student.college || 'Not available'}</td>
                       <td className="px-4 py-3 text-sm truncate">{student.batch || 'Not available'}</td>
                       <td className="px-4 py-3 text-sm truncate">{student.track}</td>
-                      <td className="px-4 py-3 text-sm">{student.score}%</td>
+                      <td className="px-4 py-3 text-sm">{student.accuracy}%</td>
                       <td className="px-4 py-3 text-sm">{student.streak} days</td>
                       <td className="px-4 py-3 text-sm">{student.status}</td>
                       <td className="px-4 py-3">

@@ -4,10 +4,12 @@ import { ArrowRight, Clock, Flame, Target, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
+import { useUser } from '../../context/UserContext';
 import heroBg from '../../assets/hero-bg.jpg';
 
 export default function DailyChallenge() {
   const navigate = useNavigate();
+  const { latestDailyChallenge } = useUser();
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [loadingChallenge, setLoadingChallenge] = useState(true);
   const [starting, setStarting] = useState(false);
@@ -119,9 +121,11 @@ export default function DailyChallenge() {
             <div className="dashboard-inner-surface px-4 py-4">
               <div className="dashboard-micro-label flex items-center gap-2">
                 <Flame className="h-4 w-4" />
-                Current Streak
+                Latest Accuracy
               </div>
-              <p className="mt-1 text-2xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Track in Result</p>
+              <p className="mt-1 text-2xl font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
+                {latestDailyChallenge ? `${latestDailyChallenge.accuracy || 0}%` : '--'}
+              </p>
             </div>
             <div className="dashboard-inner-surface px-4 py-4">
               <div className="dashboard-micro-label flex items-center gap-2">

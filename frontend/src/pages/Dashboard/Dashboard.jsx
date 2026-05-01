@@ -69,6 +69,7 @@ export default function Dashboard() {
     recentExercises,
     progress: contextProgress,
     isReady,
+    latestDailyChallenge,
   } = useUser();
 
   const isDarkMode = theme === 'dark';
@@ -152,7 +153,11 @@ export default function Dashboard() {
       value: `${progress.total ? Math.round((progress.completed / progress.total) * 100) : 0}%`,
       icon: <PixelDiamond />,
     },
-    { title: 'Day Streak', value: activeChallenge ? 'Live' : '12', icon: <PixelFlame /> },
+    {
+      title: 'Last Accuracy',
+      value: latestDailyChallenge ? `${latestDailyChallenge.accuracy || 0}%` : '--',
+      icon: <PixelFlame />,
+    },
   ];
 
   const dailyChallenge = {
@@ -302,6 +307,12 @@ export default function Dashboard() {
                           <FiClock className="text-sky-300" />
                           <span>~{dailyChallenge.timeEstimate}</span>
                         </div>
+                        {latestDailyChallenge ? (
+                          <div className="flex items-center gap-2 text-sm text-white">
+                            <FiTrendingUp className="text-emerald-300" />
+                            <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       <button

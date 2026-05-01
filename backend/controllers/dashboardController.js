@@ -4,6 +4,8 @@ import Exercise from "../models/Exercise.js";
 import Notes from "../models/Notes.js";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
+import Student from "../models/Student.js";
+import Submission from "../models/Submission.js";
 import mongoose from "mongoose";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
@@ -34,6 +36,11 @@ const setCachedDashboard = (userId, payload) => {
   });
 };
 
+export const invalidateDashboardCache = (userId) => {
+  if (!userId) return;
+  dashboardCache.delete(String(userId));
+};
+
 export const getDashboardData = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -43,7 +50,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar").lean(),
+      User.findById(userId).select("avatar email firstName lastName name").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -75,6 +82,37 @@ export const getDashboardData = async (req, res) => {
       ]),
     ]);
 
+    const normalizedEmail = String(user?.email || req.user?.email || "")
+      .trim()
+      .toLowerCase();
+    const linkedStudent = normalizedEmail
+      ? await Student.findOne({ email: normalizedEmail }).select("_id").lean()
+      : null;
+    const latestDailyChallenge = linkedStudent?._id
+      ? await Submission.findOne({
+          studentId: linkedStudent._id,
+          challengeType: "daily_challenge",
+        })
+          .sort({ submittedAt: -1, createdAt: -1 })
+          .populate("questionId", "title")
+          .lean()
+      : null;
+
+    const latestDailyChallengePayload = latestDailyChallenge
+      ? {
+          id: latestDailyChallenge._id,
+          accuracy: Number(
+            latestDailyChallenge.accuracyScore ??
+              latestDailyChallenge.totalScore ??
+              0
+          ),
+          score: Number(latestDailyChallenge.totalScore || 0),
+          status: latestDailyChallenge.status || "Pending",
+          submittedAt: latestDailyChallenge.submittedAt || latestDailyChallenge.createdAt,
+          questionTitle: latestDailyChallenge.questionId?.title || "",
+        }
+      : null;
+
     if (!progress) {
       const emptyPayload = {
         courseXP: {},
@@ -96,6 +134,7 @@ export const getDashboardData = async (req, res) => {
           answeredMcqs: 0,
           progressPercent: 0,
         },
+        latestDailyChallenge: latestDailyChallengePayload,
       };
       setCachedDashboard(userId, emptyPayload);
       return res.status(200).json(emptyPayload);
@@ -202,6 +241,7 @@ export const getDashboardData = async (req, res) => {
         progressPercent: exercisePercent,
       },
       avatar: user?.avatar || "",
+      latestDailyChallenge: latestDailyChallengePayload,
     };
 
     setCachedDashboard(userId, payload);
