@@ -40,6 +40,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+    },
+    startDate: {
+      type: Date,
+      default: null,
+    },
 
     resetPasswordToken: String,
     resetPasswordExpires: Date,

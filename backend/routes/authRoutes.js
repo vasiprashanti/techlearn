@@ -7,6 +7,7 @@ import nodemailer from "nodemailer";
 import admin from "../utils/firebaseAdmin.js";
 
 import User from "../models/User.js";
+import Student from "../models/Student.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -129,15 +130,43 @@ router.post("/google", async function googleLogin(req, res) {
     });
 
     const { email, name } = ticket.getPayload();
+    const formattedEmail = email.trim().toLowerCase();
 
-    let user = await User.findOne({ email });
+    // Cohort Mapping: Strict check against the Student database
+    const studentRecord = await Student.findOne({ email: formattedEmail }).populate("batchId");
+    
+    if (!studentRecord || !studentRecord.batchId) {
+      return res.status(403).json({ message: "Google login failed, user not found in cohort" });
+    }
+
+    // Check if User already exists to prevent duplicates
+    let user = await User.findOne({ email: formattedEmail });
+    
     if (!user) {
+      // Create user if new, securely attaching the cohort properties
       user = await User.create({
         firstName: name.split(" ")[0],
         lastName: name.split(" ")[1] || "",
-        email,
+        email: formattedEmail,
         password: "",
+        batchId: studentRecord.batchId._id,
+        startDate: studentRecord.batchId.startDate,
       });
+    } else {
+      // Log in user if existing, but ensure cohort properties are synced if they were missing
+      let isModified = false;
+      if (!user.batchId || user.batchId.toString() !== studentRecord.batchId._id.toString()) {
+        user.batchId = studentRecord.batchId._id;
+        isModified = true;
+      }
+      if (!user.startDate || user.startDate.getTime() !== new Date(studentRecord.batchId.startDate).getTime()) {
+        user.startDate = studentRecord.batchId.startDate;
+        isModified = true;
+      }
+      
+      if (isModified) {
+        await user.save();
+      }
     }
 
     const jwtToken = generateToken(user._id);
@@ -149,6 +178,8 @@ router.post("/google", async function googleLogin(req, res) {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        batchId: user.batchId,
+        startDate: user.startDate,
       },
     });
   } catch (err) {
