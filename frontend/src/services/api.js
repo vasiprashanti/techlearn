@@ -303,6 +303,24 @@ export const compilerAPI = {
   },
 };
 
+// Practice API
+export const practiceAPI = {
+  getStats: async () => {
+    const response = await fetch(`${API_BASE}/practice/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+  submitAttempt: async (payload) => {
+    const response = await fetch(`${API_BASE}/practice/submit`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleResponse(response);
+  },
+};
+
 export const resourceAPI = {
   getResources: async (category) => {
     const suffix = category ? `?category=${encodeURIComponent(category)}` : '';
@@ -516,6 +534,7 @@ export default {
   exerciseAPI,
   paymentAPI,
   compilerAPI,
+  practiceAPI,
   resourceAPI,
   dataAdapters,
   apiStatus,

@@ -3,6 +3,7 @@ import { CheckCircle, ChevronDown, X } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { coreCsMcqs } from '../../data/coreCsMcqs';
+import { practiceAPI } from '../../services/api';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 
@@ -60,6 +61,7 @@ export default function CoreCsMcqPractice() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [openMenu, setOpenMenu] = useState(false);
+  const canTrack = Boolean(localStorage.getItem('token') || localStorage.getItem('authToken'));
 
   const tags = useMemo(() => {
     return Array.from(new Set(coreCsMcqs.map((q) => q.tag))).sort((a, b) => a.localeCompare(b));
@@ -83,6 +85,20 @@ export default function CoreCsMcqPractice() {
   const current = filtered[currentIndex] || null;
 
   const isCorrect = showFeedback && current && selectedOption === current.correctIndex;
+
+  const recordPracticeAttempt = async (optionIndex) => {
+    if (!canTrack || !current) return;
+
+    try {
+      await practiceAPI.submitAttempt({
+        questionId: current.id,
+        track: 'Core CS',
+        isCorrect: optionIndex === current.correctIndex,
+      });
+    } catch (error) {
+      console.error('Failed to record practice attempt:', error);
+    }
+  };
 
   const getOptionStyle = (index) => {
     if (!current) return '';
@@ -221,6 +237,7 @@ export default function CoreCsMcqPractice() {
                   onClick={() => {
                     setSelectedOption(idx);
                     setShowFeedback(true);
+                    recordPracticeAttempt(idx);
                   }}
                   className={`w-full rounded-xl border-2 p-4 text-left text-sm transition ${getOptionStyle(idx)} ${
                     showFeedback ? 'cursor-default' : 'cursor-pointer'

@@ -39,6 +39,7 @@ import adminPortalRoutes from "./routes/adminPortalRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import leaderboardRoutes from "./routes/leaderboardRoutes.js";
+import practiceRoutes from "./routes/practiceRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -108,6 +109,7 @@ app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/practice", practiceRoutes);
 
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);

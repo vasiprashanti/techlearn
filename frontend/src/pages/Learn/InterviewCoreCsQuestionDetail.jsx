@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { coreCsMcqs } from '../../data/coreCsMcqs';
+import { practiceAPI } from '../../services/api';
 
 const difficultyPillClass = {
   Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
@@ -28,6 +29,7 @@ export default function InterviewCoreCsQuestionDetail() {
 
   const [selectedOption, setSelectedOption] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const canTrack = Boolean(localStorage.getItem('token') || localStorage.getItem('authToken'));
 
   if (!question) {
     return (
@@ -48,6 +50,20 @@ export default function InterviewCoreCsQuestionDetail() {
   }
 
   const isCorrect = showFeedback && selectedOption === question.correctIndex;
+
+  const recordPracticeAttempt = async (optionIndex) => {
+    if (!canTrack || !question) return;
+
+    try {
+      await practiceAPI.submitAttempt({
+        questionId: question.id,
+        track: 'Core CS',
+        isCorrect: optionIndex === question.correctIndex,
+      });
+    } catch (error) {
+      console.error('Failed to record practice attempt:', error);
+    }
+  };
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-5xl">
@@ -100,6 +116,7 @@ export default function InterviewCoreCsQuestionDetail() {
                   onClick={() => {
                     setSelectedOption(idx);
                     setShowFeedback(true);
+                    recordPracticeAttempt(idx);
                   }}
                   className={`w-full rounded-xl border-2 p-4 text-left text-sm transition ${optionClass}`}
                 >

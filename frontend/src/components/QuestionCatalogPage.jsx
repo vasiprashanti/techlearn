@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Filter, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
+import { getPercentTone } from '../lib/progressTone';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
@@ -71,6 +72,9 @@ export default function QuestionCatalogPage({
   questions,
   lockedTopic = null,
   showTopicFilter = true,
+  practiceStats = null,
+  practiceStatsLoading = false,
+  practiceStatsError = '',
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -132,6 +136,9 @@ export default function QuestionCatalogPage({
       return matchesSearch && matchesDifficulty && matchesTopic && matchesTag;
     });
   }, [questions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
+
+  const getProgressPercent = (attempted, total) =>
+    total > 0 ? Math.round((attempted / total) * 1000) / 10 : 0;
 
   const visibleTags = useMemo(() => {
     if (showAllTags) return availableTags;
@@ -204,6 +211,71 @@ export default function QuestionCatalogPage({
               {pageSubtitle}
             </p>
           </div>
+
+          {(practiceStatsLoading || practiceStats || practiceStatsError) && (
+            <div className="dashboard-surface dashboard-surface-strong mb-5 p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="dashboard-micro-label">Practice overview</p>
+                  <h2 className="text-lg font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
+                    Track-wise progress and streak
+                  </h2>
+                </div>
+                {practiceStats?.streak && (
+                  <div className="rounded-2xl border border-[#d6e9ff] bg-white/60 px-4 py-3 text-sm text-[#0d2a57] dark:border-[#2a4f87] dark:bg-[#0b214d]/65 dark:text-[#8fd9ff]">
+                    <div className="text-xs uppercase tracking-[0.2em] text-[#6f8fb7] dark:text-[#7fb8e2]">Practice streak</div>
+                    <div className="mt-1 text-2xl font-semibold">
+                      {practiceStats.streak.current || 0} days
+                    </div>
+                    <div className="mt-1 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
+                      Last active: {practiceStats.streak.lastActivityDate || 'Not yet'}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {practiceStatsLoading ? (
+                <div className="mt-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">Loading stats...</div>
+              ) : practiceStatsError ? (
+                <div className="mt-4 text-sm text-rose-600 dark:text-rose-300">{practiceStatsError}</div>
+              ) : practiceStats?.tracks?.length ? (
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {practiceStats.tracks.map((track) => {
+                    const progressPercent = getProgressPercent(track.attempted, track.total);
+                    const accuracyTone = getPercentTone(track.accuracy);
+
+                    return (
+                      <div
+                        key={track.track}
+                        className="dashboard-inner-surface rounded-2xl border border-white/40 bg-white/70 p-4 dark:border-[#1e3f73]/38 dark:bg-[#0b214d]/55"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <p className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{track.track}</p>
+                          <p className={`text-xs font-semibold ${accuracyTone.text}`}>{track.accuracy}% accuracy</p>
+                        </div>
+                        <div className="mt-2 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
+                          {track.attempted}/{track.total} attempted • {track.correct} correct
+                        </div>
+                        <div className="mt-3 h-2 rounded-full bg-[#cfe6ff] dark:bg-[#0a2f6f]/55">
+                          <div
+                            className="h-2 rounded-full bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6]"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 text-[11px] uppercase tracking-[0.2em] text-[#6f8fb7] dark:text-[#7fb8e2]">
+                          {progressPercent}% completed
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
+                  No practice stats yet. Start solving to see progress here.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="dashboard-surface dashboard-surface-strong relative z-30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
