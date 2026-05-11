@@ -680,10 +680,12 @@ function LayoutWrapper() {
 
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
+                     !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute;
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
+                     !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 

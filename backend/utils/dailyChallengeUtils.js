@@ -177,6 +177,23 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     ? await Batch.findById(studentContext.student.batchId)
     : await ensureDemoBatch();
 
+  console.log("[DAILY_CHALLENGE_DEBUG] Student Context:", {
+    studentId: studentContext.student?._id,
+    studentEmail: studentContext.studentEmail,
+    studentBatchId: studentContext.student?.batchId,
+    accessSource: studentContext.accessSource,
+  });
+
+  console.log("[DAILY_CHALLENGE_DEBUG] Batch Resolved:", {
+    batchId: batch?._id,
+    batchName: batch?.name,
+    status: batch?.status,
+    startDate: batch?.startDate,
+    expiryDate: batch?.expiryDate,
+    releaseTime: batch?.releaseTime,
+    assignedTrack: batch?.assignedTrack,
+  });
+
   if (!batch) {
     const error = new Error("No batch is assigned for this Daily Challenge access.");
     error.statusCode = 404;
@@ -209,6 +226,14 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     normalizedTrackType || studentContext.student?.primaryTrack || batch.assignedTrack || "DSA"
   );
 
+  console.log("[DAILY_CHALLENGE_DEBUG] Track Search:", {
+    batchId: batch._id,
+    desiredTrackType,
+    requestedTrackType,
+    studentPrimaryTrack: studentContext.student?.primaryTrack,
+    batchAssignedTrack: batch.assignedTrack,
+  });
+
   let track = await Track.findOne({
     batchId: batch._id,
     trackType: desiredTrackType,
@@ -216,10 +241,22 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     .populate("orderedQuestionIds")
     .lean();
 
+  console.log("[DAILY_CHALLENGE_DEBUG] Track Found (by desired type):", {
+    trackId: track?._id,
+    trackType: track?.trackType,
+    orderedQuestionIdsCount: track?.orderedQuestionIds?.length || 0,
+  });
+
   if (!track) {
     track = await Track.findOne({ batchId: batch._id })
       .populate("orderedQuestionIds")
       .lean();
+
+    console.log("[DAILY_CHALLENGE_DEBUG] Track Found (fallback - any type):", {
+      trackId: track?._id,
+      trackType: track?.trackType,
+      orderedQuestionIdsCount: track?.orderedQuestionIds?.length || 0,
+    });
   }
 
   if (!track) {
@@ -232,9 +269,44 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   const orderedQuestions = track.orderedQuestionIds || [];
   const resolvedQuestion = orderedQuestions[dayNumber - 1];
   const resolvedQuestionId = resolvedQuestion?._id || resolvedQuestion;
+  const durationMinutes = DAILY_CHALLENGE_RULES.timerLimitMinutes;
+
+  console.log("[DAILY_CHALLENGE_DEBUG] Question Resolution:", {
+    dayNumber,
+    totalQuestionsInTrack: orderedQuestions.length,
+    resolvedQuestionId,
+    resolvedQuestionTitle: resolvedQuestion?.title,
+    orderedQuestionsInfo: orderedQuestions.map((q, idx) => ({
+      index: idx,
+      id: q?._id || q,
+      title: q?.title,
+    })),
+  });
 
   if (!resolvedQuestionId) {
-    const error = new Error("No Daily Challenge question is configured for today.");
+    console.log("[DAILY_CHALLENGE_DEBUG] No question for today in track, attempting fallback...");
+    
+    // Fallback: Try to use any available question from the database
+    const fallbackQuestion = await Question.findOne({}).lean();
+    if (fallbackQuestion) {
+      console.log("[DAILY_CHALLENGE_DEBUG] Using fallback question:", {
+        questionId: fallbackQuestion._id,
+        questionTitle: fallbackQuestion.title,
+      });
+      
+      return {
+        student: studentContext.student,
+        studentEmail: studentContext.studentEmail,
+        accessSource: studentContext.accessSource,
+        batch,
+        track,
+        question: fallbackQuestion,
+        dayNumber,
+        durationMinutes,
+      };
+    }
+
+    const error = new Error(`No Daily Challenge question is configured for today. Admin needs to configure questions for ${track.trackType} track in ${batch.name} batch.`);
     error.statusCode = 404;
     throw error;
   }
@@ -245,12 +317,32 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
       : await Question.findById(resolvedQuestionId).lean();
 
   if (!question) {
-    const error = new Error("The configured Daily Challenge question could not be found.");
+    console.log("[DAILY_CHALLENGE_DEBUG] Question not found by ID, attempting fallback...");
+    
+    // Fallback: If question doesn't exist, use any available question
+    const fallbackQuestion = await Question.findOne({}).lean();
+    if (fallbackQuestion) {
+      console.log("[DAILY_CHALLENGE_DEBUG] Using fallback question:", {
+        questionId: fallbackQuestion._id,
+        questionTitle: fallbackQuestion.title,
+      });
+      
+      return {
+        student: studentContext.student,
+        studentEmail: studentContext.studentEmail,
+        accessSource: studentContext.accessSource,
+        batch,
+        track,
+        question: fallbackQuestion,
+        dayNumber,
+        durationMinutes,
+      };
+    }
+
+    const error = new Error("The configured Daily Challenge question could not be found, and no fallback question is available.");
     error.statusCode = 404;
     throw error;
   }
-
-  const durationMinutes = DAILY_CHALLENGE_RULES.timerLimitMinutes;
 
   return {
     student: studentContext.student,

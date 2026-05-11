@@ -438,6 +438,8 @@ export const sendCodingRoundOTP = async (req, res) => {
       });
     }
 
+    
+
     let existingAttempt = null;
     if (codingRound.challengeType === "daily_challenge") {
       await resolveDailyChallengeParticipant({
@@ -489,7 +491,11 @@ export const sendCodingRoundOTP = async (req, res) => {
 
     const otp = generateOTP();
     storeOTP(`${linkId}:${normalizedEmail}`, otp);
-    await sendOTPEmail(normalizedEmail, otp, codingRound.challengeType === "daily_challenge" ? "Daily Challenge" : "Coding Round");
+    await sendOTPEmail(
+      normalizedEmail,
+      otp,
+      codingRound.challengeType === "daily_challenge" ? "Daily Challenge" : "Coding Round"
+    );
 
     res.json({
       success: true,
@@ -524,6 +530,13 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Coding round not found",
+      });
+    }
+
+    if (codingRound.challengeType === "daily_challenge" && isUnlimitedDailyChallengeAccessEnabled) {
+      await resetDailyChallengeProgressForTesting({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
       });
     }
 
@@ -650,6 +663,8 @@ export const startDailyChallengeAttempt = async (req, res) => {
       user: req.user,
       email: normalizedEmail,
     });
+
+    
 
     let attempt = await getDailyChallengeAttempt({
       codingRoundId: codingRound._id,
@@ -1388,7 +1403,6 @@ export const endCodingRound = async (req, res) => {
         codingRoundId: codingRound._id,
         studentEmail: normalizedEmail,
       });
-
       if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
         return res.status(403).json({
           success: false,
@@ -1529,7 +1543,6 @@ export const autoSubmitRound = async (req, res) => {
         codingRoundId: codingRound._id,
         studentEmail: normalizedEmail,
       });
-
       if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
         return res.status(403).json({
           success: false,

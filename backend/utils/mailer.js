@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 
 // Create transporter using actual email credentials from .env
 const transporter = nodemailer.createTransport({
-  service: "gmail", // or your email service
+  service: "gmail",
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
