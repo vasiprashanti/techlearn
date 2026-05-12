@@ -1,6 +1,7 @@
 import CodingRound from "../models/CodingRound.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 import Student from "../models/Student.js";
+import User from "../models/User.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
 import Submission from "../models/Submission.js";
 import crypto from "crypto";
@@ -88,6 +89,34 @@ const convertISTToUTC = (istDateString) => {
   const utcDate = new Date(istWithTimezone);
 
   return utcDate;
+};
+
+const resolveCodingParticipant = async ({ user, email }) => {
+  const normalizedEmail = String(email || user?.email || "").trim().toLowerCase();
+  let student = null;
+  if (normalizedEmail) {
+    student = await Student.findOne({ email: normalizedEmail });
+  }
+
+  let userId = user?._id || student?.userId || null;
+  if (!userId && normalizedEmail) {
+    const matchedUser = await User.findOne({ email: normalizedEmail }).select("_id").lean();
+    userId = matchedUser?._id || null;
+  }
+
+  return {
+    student,
+    studentEmail: normalizedEmail,
+    userId,
+  };
+};
+
+const calculateRoundAccuracy = (codingRound, submission) => {
+  const totalProblems = codingRound?.problems?.length || 0;
+  const maxScore = totalProblems > 0 ? totalProblems * 100 : 100;
+  if (!maxScore) return 0;
+  const totalScore = Number(submission?.totalScore || 0);
+  return Math.max(0, Math.round((totalScore / maxScore) * 100));
 };
 
 const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, totalProblems, correctSolutions }) => {
@@ -200,6 +229,52 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
   );
 };
 
+const upsertTrackQuestionSubmissionRecord = async ({ codingRound, student, submission }) => {
+  if (!student?._id || !codingRound?.questionId || !codingRound?.batchId || !codingRound?.trackId) {
+    return null;
+  }
+
+  const totalScore = Number(submission.totalScore || 0);
+  const accuracyScore = calculateRoundAccuracy(codingRound, submission);
+  const maxScore = (codingRound?.problems?.length || 1) * 100;
+  const nextStatus = submission.autoEnded
+    ? "Timeout"
+    : submission.isRoundEnded
+      ? totalScore >= maxScore
+        ? "Passed"
+        : "Failed"
+      : "Pending";
+
+  return Submission.findOneAndUpdate(
+    {
+      codingRoundId: codingRound._id,
+      studentId: student._id,
+    },
+    {
+      $set: {
+        studentId: student._id,
+        batchId: codingRound.batchId,
+        trackId: codingRound.trackId,
+        questionId: codingRound.questionId,
+        codingRoundId: codingRound._id,
+        challengeType: "track_question",
+        runCount: Array.from(submission.problemRuns?.values?.() || []).reduce(
+          (sum, value) => sum + Number(value || 0),
+          0
+        ),
+        accuracyScore,
+        totalScore,
+        status: nextStatus,
+        submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
+        startedAt: submission.startedAt || submission.submittedAt || new Date(),
+        endedAt: submission.endedAt || submission.roundEndedAt || null,
+        executionTime: 0,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+};
+
 const updateStudentChallengeStats = async ({ student, submission }) => {
   if (!student?._id) return;
 
@@ -246,6 +321,10 @@ const finalizeDailyChallengeAttempt = async ({
   submission.autoEnded = autoEnded;
   submission.roundEndedAt = submission.roundEndedAt || new Date();
   submission.lastSubmissionAt = submission.lastSubmissionAt || new Date();
+  submission.endedAt = submission.endedAt || submission.roundEndedAt || new Date();
+  submission.startedAt = submission.startedAt || submission.submittedAt || new Date();
+  submission.attemptStatus = finalStatus || submission.attemptStatus || "ended";
+  submission.accuracy = calculateRoundAccuracy(codingRound, submission);
   await submission.save();
 
   attempt.codingSubmissionId = submission._id;
@@ -541,6 +620,11 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
+    const resolvedParticipant = await resolveCodingParticipant({
+      user: req.user,
+      email: normalizedEmail,
+    });
+
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: normalizedEmail,
@@ -576,7 +660,8 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
     if (!submission) {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
+        studentId: participant?.student?._id || resolvedParticipant.student?._id || null,
+        userId: resolvedParticipant.userId || participant?.student?.userId || null,
         batchId: codingRound.batchId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
@@ -586,7 +671,14 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
         isRoundEnded: false,
         submittedAt: new Date(),
         lastSubmissionAt: new Date(),
+        startedAt: new Date(),
+        attemptStatus: "started",
       });
+    } else {
+      submission.studentId = submission.studentId || participant?.student?._id || resolvedParticipant.student?._id || null;
+      submission.userId = submission.userId || resolvedParticipant.userId || participant?.student?.userId || null;
+      submission.startedAt = submission.startedAt || new Date();
+      submission.attemptStatus = submission.attemptStatus || "started";
     }
 
     await submission.save();
@@ -807,6 +899,26 @@ export const submitCodingRoundAnswers = async (req, res) => {
       }
     }
 
+    const resolvedParticipant = await resolveCodingParticipant({
+      user: req.user,
+      email: normalizedEmail,
+    });
+
+    const resolvedParticipant = await resolveCodingParticipant({
+      user: req.user,
+      email: normalizedEmail,
+    });
+
+    const resolvedParticipant = await resolveCodingParticipant({
+      user: req.user,
+      email: normalizedEmail,
+    });
+
+    const resolvedParticipant = await resolveCodingParticipant({
+      user: req.user,
+      email: normalizedEmail,
+    });
+
     let submission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
       studentEmail: normalizedEmail,
@@ -871,7 +983,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
+        studentId: participant?.student?._id || resolvedParticipant.student?._id || null,
+        userId: resolvedParticipant.userId || participant?.student?.userId || null,
         batchId: codingRound.batchId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
@@ -880,13 +993,17 @@ export const submitCodingRoundAnswers = async (req, res) => {
         problemScores,
         problemSubmitted,
         totalScore: problemScore,
+        accuracy: calculateRoundAccuracy(codingRound, { totalScore: problemScore }),
         lastSubmissionAt: new Date(),
+        startedAt: new Date(),
+        attemptStatus: "submitted",
       });
     } else {
       if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
       submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
-      submission.studentId = submission.studentId || participant?.student?._id || null;
+      submission.studentId = submission.studentId || participant?.student?._id || resolvedParticipant.student?._id || null;
+      submission.userId = submission.userId || resolvedParticipant.userId || participant?.student?.userId || null;
       submission.batchId = submission.batchId || codingRound.batchId || null;
       submission.trackId = submission.trackId || codingRound.trackId || null;
       submission.questionId = submission.questionId || codingRound.questionId || null;
@@ -897,7 +1014,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
         totalScore += score;
       }
       submission.totalScore = totalScore;
+      submission.accuracy = calculateRoundAccuracy(codingRound, submission);
       submission.lastSubmissionAt = new Date();
+      submission.startedAt = submission.startedAt || new Date();
+      submission.attemptStatus = "submitted";
     }
 
     await submission.save();
@@ -1223,13 +1343,16 @@ export const runCodingRoundAnswers = async (req, res) => {
     if (!submission) {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
+        studentId: participant?.student?._id || resolvedParticipant.student?._id || null,
+        userId: resolvedParticipant.userId || participant?.student?.userId || null,
         batchId: codingRound.batchId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
         studentEmail: normalizedEmail,
         totalScore: 0,
+        startedAt: new Date(),
+        attemptStatus: "started",
       });
     }
 
@@ -1317,12 +1440,15 @@ export const runCodingRoundAnswers = async (req, res) => {
       }
     }
 
-    submission.studentId = submission.studentId || participant?.student?._id || null;
+    submission.studentId = submission.studentId || participant?.student?._id || resolvedParticipant.student?._id || null;
+    submission.userId = submission.userId || resolvedParticipant.userId || participant?.student?.userId || null;
     submission.batchId = submission.batchId || codingRound.batchId || null;
     submission.trackId = submission.trackId || codingRound.trackId || null;
     submission.questionId = submission.questionId || codingRound.questionId || null;
     submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
     submission.lastSubmissionAt = new Date();
+    submission.startedAt = submission.startedAt || new Date();
+    submission.attemptStatus = submission.attemptStatus || "started";
     await submission.save();
 
     if (challengeAttempt) {
@@ -1405,7 +1531,8 @@ export const endCodingRound = async (req, res) => {
     if (!submission) {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
+        studentId: participant?.student?._id || resolvedParticipant.student?._id || null,
+        userId: resolvedParticipant.userId || participant?.student?.userId || null,
         batchId: codingRound.batchId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
@@ -1416,11 +1543,21 @@ export const endCodingRound = async (req, res) => {
         isRoundEnded: true,
         roundEndedAt: new Date(),
         lastSubmissionAt: new Date(),
+        startedAt: new Date(),
+        endedAt: new Date(),
+        attemptStatus: "ended",
       });
     } else {
       submission.isRoundEnded = true;
       submission.roundEndedAt = new Date();
+      submission.endedAt = submission.endedAt || submission.roundEndedAt;
+      submission.attemptStatus = "ended";
     }
+
+    submission.studentId = submission.studentId || participant?.student?._id || resolvedParticipant.student?._id || null;
+    submission.userId = submission.userId || resolvedParticipant.userId || participant?.student?.userId || null;
+    submission.startedAt = submission.startedAt || submission.submittedAt || new Date();
+    submission.accuracy = calculateRoundAccuracy(codingRound, submission);
 
     let linkedSubmission = null;
     if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
@@ -1436,6 +1573,14 @@ export const endCodingRound = async (req, res) => {
       linkedSubmission = finalized.linkedSubmission;
     } else {
       await submission.save();
+    }
+
+    if (codingRound.challengeType === "track_question") {
+      await upsertTrackQuestionSubmissionRecord({
+        codingRound,
+        student: participant?.student || resolvedParticipant.student,
+        submission,
+      });
     }
 
     const problemResults = codingRound.problems.map((problem, index) => {
@@ -1546,7 +1691,8 @@ export const autoSubmitRound = async (req, res) => {
     if (!submission) {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
+        studentId: participant?.student?._id || resolvedParticipant.student?._id || null,
+        userId: resolvedParticipant.userId || participant?.student?.userId || null,
         batchId: codingRound.batchId || null,
         trackId: codingRound.trackId || null,
         questionId: codingRound.questionId || null,
@@ -1558,11 +1704,16 @@ export const autoSubmitRound = async (req, res) => {
         autoEnded: true,
         roundEndedAt: new Date(),
         lastSubmissionAt: new Date(),
+        startedAt: new Date(),
+        endedAt: new Date(),
+        attemptStatus: "auto_submitted",
       });
     } else if (!submission.isRoundEnded) {
       submission.isRoundEnded = true;
       submission.autoEnded = true;
       submission.roundEndedAt = new Date();
+      submission.endedAt = submission.endedAt || submission.roundEndedAt;
+      submission.attemptStatus = "auto_submitted";
     } else {
       return res.status(200).json({
         success: true,
@@ -1575,6 +1726,11 @@ export const autoSubmitRound = async (req, res) => {
         },
       });
     }
+
+    submission.studentId = submission.studentId || participant?.student?._id || resolvedParticipant.student?._id || null;
+    submission.userId = submission.userId || resolvedParticipant.userId || participant?.student?.userId || null;
+    submission.startedAt = submission.startedAt || submission.submittedAt || new Date();
+    submission.accuracy = calculateRoundAccuracy(codingRound, submission);
 
     let linkedSubmission = null;
     if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
@@ -1590,6 +1746,14 @@ export const autoSubmitRound = async (req, res) => {
       linkedSubmission = finalized.linkedSubmission;
     } else {
       await submission.save();
+    }
+
+    if (codingRound.challengeType === "track_question") {
+      await upsertTrackQuestionSubmissionRecord({
+        codingRound,
+        student: participant?.student || resolvedParticipant.student,
+        submission,
+      });
     }
 
     const problemResults = codingRound.problems.map((problem, index) => {

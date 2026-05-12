@@ -31,6 +31,7 @@ const codingRoundSchema = new mongoose.Schema(
         },
         inputDescription: { type: String, required: true },
         outputDescription: { type: String, required: true },
+        constraints: { type: String, default: "" },
         visibleTestCases: [
           {
             input: { type: String, required: true },
@@ -43,6 +44,9 @@ const codingRoundSchema = new mongoose.Schema(
             expectedOutput: { type: String, required: true },
           },
         ],
+        timeLimit: { type: Number, default: null },
+        memoryLimit: { type: Number, default: null },
+        starterCode: { type: String, default: "" },
         fileUrl: { type: String }, // For optional file upload
       },
     ],
@@ -65,7 +69,7 @@ const codingRoundSchema = new mongoose.Schema(
     },
     challengeType: {
       type: String,
-      enum: ["coding_round", "daily_challenge"],
+      enum: ["coding_round", "daily_challenge", "track_question"],
       default: "coding_round",
       index: true,
     },
@@ -89,6 +93,15 @@ const codingRoundSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Question",
       default: null,
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "QuestionCategory",
+      default: null,
+    },
+    categoryType: {
+      type: String,
+      default: "coding",
     },
     dayNumber: {
       type: Number,

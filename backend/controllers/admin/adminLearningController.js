@@ -25,6 +25,7 @@ const normalizeTrackType = (value = "") => {
   const normalized = String(value).trim().toLowerCase();
   if (normalized.includes("dsa")) return "DSA";
   if (normalized.includes("sql")) return "SQL";
+  if (normalized.includes("java")) return "JAVA";
   return "Core";
 };
 
@@ -112,6 +113,25 @@ const ensureTrackExists = async (trackType) => {
   return Boolean(track);
 };
 
+const normalizeCategoryType = (value, fallback = "coding") => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "mcq") return "mcq";
+  if (normalized === "coding") return "coding";
+  return fallback;
+};
+
+const resolveQuestionCategory = async ({ categorySlug, categoryTitle }) => {
+  if (categorySlug) {
+    return QuestionCategory.findOne({ slug: categorySlug }).lean();
+  }
+
+  if (categoryTitle) {
+    return QuestionCategory.findOne({ title: categoryTitle }).lean();
+  }
+
+  return null;
+};
+
 export const listQuestionCategories = async (req, res) => {
   try {
     const grouped = await Question.aggregate([
@@ -137,6 +157,7 @@ export const listQuestionCategories = async (req, res) => {
       slug: category.slug,
       title: category.title,
       subtitle: category.subtitle,
+      categoryType: category.categoryType || "coding",
       total: groupMap[category.slug]?.total || 0,
       active: groupMap[category.slug]?.active || 0,
       icon: category.icon,
@@ -151,7 +172,7 @@ export const listQuestionCategories = async (req, res) => {
 
 export const createQuestionCategory = async (req, res) => {
   try {
-    const { title, subtitle, icon } = req.body;
+    const { title, subtitle, icon, categoryType } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Category title is required." });
@@ -172,6 +193,7 @@ export const createQuestionCategory = async (req, res) => {
       title: title.trim(),
       subtitle: subtitle?.trim() || "Custom question category",
       icon: icon || "chart",
+      categoryType: normalizeCategoryType(categoryType, "coding"),
     });
 
     await writeAuditLog({
@@ -190,6 +212,7 @@ export const createQuestionCategory = async (req, res) => {
         slug: category.slug,
         title: category.title,
         subtitle: category.subtitle,
+        categoryType: category.categoryType || "coding",
         total: 0,
         active: 0,
         icon: category.icon,
@@ -214,6 +237,7 @@ export const updateQuestionCategory = async (req, res) => {
     const nextTitle = req.body.title?.trim() || category.title;
     const nextSubtitle = req.body.subtitle?.trim() || category.subtitle;
     const nextIcon = req.body.icon || category.icon;
+    const nextCategoryType = normalizeCategoryType(req.body.categoryType, category.categoryType || "coding");
 
     const nextSlug = slugifyCategory(nextTitle);
     if (!nextSlug) {
@@ -236,6 +260,7 @@ export const updateQuestionCategory = async (req, res) => {
     category.title = nextTitle;
     category.subtitle = nextSubtitle;
     category.icon = nextIcon;
+    category.categoryType = nextCategoryType;
     await category.save();
 
     await Question.updateMany(
@@ -246,6 +271,7 @@ export const updateQuestionCategory = async (req, res) => {
         $set: {
           categorySlug: category.slug,
           categoryTitle: category.title,
+          categoryType: category.categoryType || "coding",
           trackType: category.title,
         },
       }
@@ -267,6 +293,7 @@ export const updateQuestionCategory = async (req, res) => {
         slug: category.slug,
         title: category.title,
         subtitle: category.subtitle,
+        categoryType: category.categoryType || "coding",
         icon: category.icon,
       },
     });
@@ -334,6 +361,10 @@ export const listQuestionsAdmin = async (req, res) => {
       solutionCode: question.solutionCode || "",
       editorial: question.editorial || "",
       categorySlug: getCategorySlug(question),
+      categoryId: question.categoryId || null,
+      categoryType: question.categoryType || "coding",
+      constraints: question.constraints || "",
+      starterCode: question.starterCode || "",
     }));
 
     return res.status(200).json({ success: true, data });
@@ -351,14 +382,17 @@ export const createQuestionAdmin = async (req, res) => {
       trackType,
       categorySlug,
       categoryTitle,
+      categoryType,
       tags,
       description,
       inputFormat,
       outputFormat,
+      constraints,
       visibleTestCases,
       hiddenTestCases,
       timeLimit,
       memoryLimit,
+      starterCode,
       referenceLanguage,
       solutionCode,
       editorial,
@@ -382,16 +416,15 @@ export const createQuestionAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
     }
 
-    if (categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
-      }
+    const resolvedCategory = await resolveQuestionCategory({ categorySlug, categoryTitle });
+    if (categorySlug && !resolvedCategory) {
+      return res.status(400).json({ success: false, message: "Selected category does not exist." });
     }
 
-    const resolvedCategorySlug = categorySlug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "web-development";
+    const resolvedCategorySlug = categorySlug || resolvedCategory?.slug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "web-development";
     const resolvedCategoryTitle =
-      categoryTitle || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || trackType || "General";
+      categoryTitle || resolvedCategory?.title || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || trackType || "General";
+    const resolvedCategoryType = resolvedCategory?.categoryType || normalizeCategoryType(categoryType, "coding");
 
     const normalizedVisibleTestCases = normalizeTestCases(visibleTestCases);
     const normalizedHiddenTestCases = normalizeTestCases(hiddenTestCases);
@@ -400,16 +433,20 @@ export const createQuestionAdmin = async (req, res) => {
       title: title.trim(),
       difficulty: difficulty || "Easy",
       trackType: String(trackType).trim(),
+      categoryId: resolvedCategory?._id || null,
       categorySlug: resolvedCategorySlug,
       categoryTitle: resolvedCategoryTitle,
+      categoryType: resolvedCategoryType,
       tags: tags || [],
       description: String(description).trim(),
       inputFormat: inputFormat || "",
       outputFormat: outputFormat || "",
+      constraints: String(constraints || "").trim(),
       visibleTestCases: normalizedVisibleTestCases,
       hiddenTestCases: normalizedHiddenTestCases,
       timeLimit: parsePositiveNumber(timeLimit, 1),
       memoryLimit: parsePositiveNumber(memoryLimit, 256),
+      starterCode: String(starterCode || ""),
       referenceLanguage: referenceLanguage || "C++",
       solutionCode: solutionCode || "",
       editorial: editorial || "",
@@ -464,6 +501,10 @@ export const getQuestionDetailAdmin = async (req, res) => {
         solutionCode: question.solutionCode || "",
         editorial: question.editorial || "",
         categorySlug: getCategorySlug(question),
+        categoryId: question.categoryId || null,
+        categoryType: question.categoryType || "coding",
+        constraints: question.constraints || "",
+        starterCode: question.starterCode || "",
       },
     });
   } catch (error) {
@@ -498,15 +539,17 @@ export const updateQuestionAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
     }
 
-    if (req.body.categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: req.body.categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
-      }
+    const resolvedCategory = await resolveQuestionCategory({
+      categorySlug: req.body.categorySlug,
+      categoryTitle: req.body.categoryTitle,
+    });
+    if (req.body.categorySlug && !resolvedCategory) {
+      return res.status(400).json({ success: false, message: "Selected category does not exist." });
     }
 
     const resolvedCategorySlug =
-      req.body.categorySlug || CATEGORY_SLUG_BY_TITLE[req.body.categoryTitle] || slugifyCategory(req.body.categoryTitle) || undefined;
+      req.body.categorySlug || resolvedCategory?.slug || CATEGORY_SLUG_BY_TITLE[req.body.categoryTitle] || slugifyCategory(req.body.categoryTitle) || undefined;
+    const resolvedCategoryType = resolvedCategory?.categoryType || normalizeCategoryType(req.body.categoryType, "coding");
 
     const normalizedVisibleTestCases = normalizeTestCases(req.body.visibleTestCases);
     const normalizedHiddenTestCases = normalizeTestCases(req.body.hiddenTestCases);
@@ -518,16 +561,20 @@ export const updateQuestionAdmin = async (req, res) => {
           title: nextTitle,
           difficulty: req.body.difficulty,
           trackType: nextTrackType,
+          categoryId: resolvedCategory?._id || null,
           categorySlug: resolvedCategorySlug,
           categoryTitle: req.body.categoryTitle,
+          categoryType: resolvedCategoryType,
           tags: req.body.tags,
           description: nextDescription,
           inputFormat: req.body.inputFormat,
           outputFormat: req.body.outputFormat,
+          constraints: String(req.body.constraints || "").trim(),
           visibleTestCases: normalizedVisibleTestCases,
           hiddenTestCases: normalizedHiddenTestCases,
           timeLimit: parsePositiveNumber(req.body.timeLimit, 1),
           memoryLimit: parsePositiveNumber(req.body.memoryLimit, 256),
+          starterCode: String(req.body.starterCode || ""),
           referenceLanguage: req.body.referenceLanguage || "C++",
           solutionCode: req.body.solutionCode || "",
           editorial: req.body.editorial || "",

@@ -34,6 +34,11 @@ export const QUESTION_CATEGORY_META = {
     subtitle: "SQL and NoSQL databases",
     icon: "database",
   },
+  "java-programming": {
+    title: "JAVA",
+    subtitle: "Java programming fundamentals",
+    icon: "terminal",
+  },
   "machine-learning": {
     title: "Machine Learning",
     subtitle: "ML fundamentals and applications",
@@ -49,6 +54,7 @@ const QUESTION_CATEGORY_FALLBACKS = {
   DSA: "data-structures-algorithms",
   SQL: "database-management",
   Core: "web-development",
+  JAVA: "java-programming",
 };
 
 export const REPORT_TYPES = [
@@ -119,6 +125,7 @@ export const getCategoryTitle = (question) => {
 export const getTrackTemplateIconKey = (category) => {
   if (category === "Database Management") return "database";
   if (category === "Data Structures & Algorithms") return "code";
+  if (category === "JAVA") return "terminal";
   return "cpu";
 };
 
@@ -138,6 +145,7 @@ export const listKnownQuestionCategories = async () => {
     title: category.title,
     subtitle: category.subtitle || "",
     icon: category.icon || "chart",
+    categoryType: category.categoryType || "coding",
   }));
 };
 

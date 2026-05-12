@@ -37,6 +37,7 @@ export const normalizeTrackType = (value = "") => {
   const normalized = String(value).trim().toLowerCase();
   if (normalized.includes("dsa")) return "DSA";
   if (normalized.includes("sql")) return "SQL";
+  if (normalized.includes("java")) return "JAVA";
   return "Core";
 };
 
@@ -46,6 +47,7 @@ export const mapQuestionToProblem = (question) => ({
   difficulty: question.difficulty || "Medium",
   inputDescription: question.inputFormat || "Refer to the prompt for input details.",
   outputDescription: question.outputFormat || "Return the expected output for the given input.",
+  constraints: question.constraints || "",
   visibleTestCases: (question.visibleTestCases || []).map((testCase) => ({
     input: testCase.input || "",
     expectedOutput: testCase.output || "",
@@ -54,6 +56,9 @@ export const mapQuestionToProblem = (question) => ({
     input: testCase.input || "",
     expectedOutput: testCase.output || "",
   })),
+  timeLimit: Number.isFinite(Number(question.timeLimit)) ? Number(question.timeLimit) : null,
+  memoryLimit: Number.isFinite(Number(question.memoryLimit)) ? Number(question.memoryLimit) : null,
+  starterCode: question.starterCode || "",
 });
 
 const combineDateAndTime = (date, timeString = "00:00") => {
@@ -98,6 +103,7 @@ const ensureDemoBatch = async () => {
     { batchId: batch._id, trackType: "Core", durationDays: 1, orderedQuestionIds: [] },
     { batchId: batch._id, trackType: "DSA", durationDays: 1, orderedQuestionIds: [] },
     { batchId: batch._id, trackType: "SQL", durationDays: 1, orderedQuestionIds: [] },
+    { batchId: batch._id, trackType: "JAVA", durationDays: 1, orderedQuestionIds: [] },
   ]);
 
   return batch;
@@ -278,6 +284,8 @@ export const upsertDailyChallengeRound = async ({ batch, track, question, dayNum
     isActive: true,
     challengeType: "daily_challenge",
     questionId: question._id,
+    categoryId: question.categoryId || null,
+    categoryType: question.categoryType || "coding",
     dayNumber,
     trackType: normalizeTrackType(track.trackType),
   };

@@ -35,9 +35,31 @@ const LANGUAGES = {
   },
 };
 
-const CodingCompiler = ({ user, contestData }) => {
+const resolveStarterCode = (problem, languageId) => {
+  if (!problem?.starterCode) {
+    return LANGUAGES[languageId]?.defaultCode || "";
+  }
+
+  if (typeof problem.starterCode === "string") {
+    return problem.starterCode;
+  }
+
+  if (typeof problem.starterCode === "object") {
+    return (
+      problem.starterCode[languageId] ||
+      problem.starterCode.default ||
+      LANGUAGES[languageId]?.defaultCode ||
+      ""
+    );
+  }
+
+  return LANGUAGES[languageId]?.defaultCode || "";
+};
+
+const CodingCompiler = ({ user, contestData, linkId: linkIdOverride }) => {
   const { theme, toggleTheme } = useTheme();
-  const { linkId } = useParams();
+  const { linkId: routeLinkId } = useParams();
+  const linkId = linkIdOverride || routeLinkId;
   const [selectedLang, setSelectedLang] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.defaultCode);
   const [output, setOutput] = useState("");

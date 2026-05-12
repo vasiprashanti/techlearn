@@ -53,8 +53,10 @@ const createQuestionForm = (track = '') => ({
   problemDescription: '',
   inputFormat: '',
   outputFormat: '',
+  constraints: '',
   timeLimit: '1',
   memoryLimit: '256',
+  starterCode: '',
   visibleTestCases: [createTestCase()],
   hiddenTestCases: [createTestCase()],
   referenceLanguage: 'C++',
@@ -71,8 +73,10 @@ const formFromQuestion = (question) => ({
   problemDescription: question.description || '',
   inputFormat: question.inputFormat || '',
   outputFormat: question.outputFormat || '',
+  constraints: question.constraints || '',
   timeLimit: String(question.timeLimit || '1'),
   memoryLimit: String(question.memoryLimit || '256'),
+  starterCode: question.starterCode || '',
   visibleTestCases:
     Array.isArray(question.visibleTestCases) && question.visibleTestCases.length
       ? question.visibleTestCases
@@ -119,6 +123,10 @@ export default function QuestionCategoryDetails() {
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const category = remoteCategory || dynamicCategoryFallback(categorySlug);
+  const categoryLabel = `${category?.title || ''} ${category?.slug || ''}`.toLowerCase();
+  const isCodingCategory = (category?.categoryType || 'coding') === 'coding'
+    || categoryLabel.includes('dsa')
+    || categoryLabel.includes('java');
 
   const seedQuestions = useMemo(() => [], []);
 
@@ -295,10 +303,12 @@ export default function QuestionCategoryDetails() {
       description: questionForm.problemDescription.trim(),
       inputFormat: questionForm.inputFormat.trim(),
       outputFormat: questionForm.outputFormat.trim(),
+      constraints: questionForm.constraints.trim(),
       visibleTestCases: questionForm.visibleTestCases,
       hiddenTestCases: questionForm.hiddenTestCases,
       timeLimit: questionForm.timeLimit,
       memoryLimit: questionForm.memoryLimit,
+      starterCode: questionForm.starterCode,
       referenceLanguage: questionForm.referenceLanguage,
       solutionCode: questionForm.solutionCode,
       editorial: questionForm.editorial,
@@ -441,40 +451,67 @@ export default function QuestionCategoryDetails() {
                   />
                 </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Input format</label>
-                  <textarea
-                    value={questionForm.inputFormat}
-                    onChange={(e) => updateFormField('inputFormat', e.target.value)}
-                    rows={2}
-                    placeholder="Describe input format"
-                    className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
-                  />
-                </div>
+                {isCodingCategory && (
+                  <>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Input format</label>
+                      <textarea
+                        value={questionForm.inputFormat}
+                        onChange={(e) => updateFormField('inputFormat', e.target.value)}
+                        rows={2}
+                        placeholder="Describe input format"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Output format</label>
-                  <textarea
-                    value={questionForm.outputFormat}
-                    onChange={(e) => updateFormField('outputFormat', e.target.value)}
-                    rows={2}
-                    placeholder="Describe output format"
-                    className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
-                  />
-                </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Output format</label>
+                      <textarea
+                        value={questionForm.outputFormat}
+                        onChange={(e) => updateFormField('outputFormat', e.target.value)}
+                        rows={2}
+                        placeholder="Describe output format"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Time limit (seconds)</label>
-                  <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
-                </div>
+                    <div className="md:col-span-2">
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Constraints</label>
+                      <textarea
+                        value={questionForm.constraints}
+                        onChange={(e) => updateFormField('constraints', e.target.value)}
+                        rows={2}
+                        placeholder="Add constraints and limits"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Memory limit (MB)</label>
-                  <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
-                </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Time limit (seconds)</label>
+                      <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
+                    </div>
+
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Memory limit (MB)</label>
+                      <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Starter code</label>
+                      <textarea
+                        value={questionForm.starterCode}
+                        onChange={(e) => updateFormField('starterCode', e.target.value)}
+                        rows={4}
+                        placeholder="Starter code shown to students"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm font-mono"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
-              <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
+              {isCodingCategory && (
+                <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleFormSection('visible')}
@@ -513,9 +550,11 @@ export default function QuestionCategoryDetails() {
                     <button onClick={() => addTestCase('visibleTestCases')} className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Visible Test Case</button>
                   </div>
                 )}
-              </section>
+                </section>
+              )}
 
-              <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
+              {isCodingCategory && (
+                <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleFormSection('hidden')}
@@ -554,9 +593,11 @@ export default function QuestionCategoryDetails() {
                     <button onClick={() => addTestCase('hiddenTestCases')} className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 text-xs font-semibold text-black/80 dark:text-white/85 hover:bg-black/5 dark:hover:bg-white/10">+ Add Hidden Test Case</button>
                   </div>
                 )}
-              </section>
+                </section>
+              )}
 
-              <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
+              {isCodingCategory && (
+                <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => toggleFormSection('reference')}
@@ -591,7 +632,8 @@ export default function QuestionCategoryDetails() {
                     </div>
                   </div>
                 )}
-              </section>
+                </section>
+              )}
 
               <div className="flex items-center justify-end gap-2.5 pt-1.5">
                 <button onClick={closeQuestionModal} className="h-9 w-[120px] rounded-xl border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">Cancel</button>
@@ -648,6 +690,15 @@ export default function QuestionCategoryDetails() {
                 </div>
               </div>
 
+              {isCodingCategory && viewQuestion.constraints && (
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white">Constraints</h4>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                    {viewQuestion.constraints}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <h4 className="text-base font-semibold text-slate-900 dark:text-white">Test Cases</h4>
                 <div className="mt-2.5 space-y-2.5">
@@ -671,6 +722,15 @@ export default function QuestionCategoryDetails() {
               <p className="text-slate-500 dark:text-slate-300">Time Limit: <span className="font-semibold text-slate-900 dark:text-white">{viewQuestion.timeLimit}s</span></p>
               <p className="text-slate-500 dark:text-slate-300">Solved: <span className="font-semibold text-slate-900 dark:text-white">{viewQuestion.solved}</span></p>
             </div>
+
+            {isCodingCategory && viewQuestion.starterCode && (
+              <div className="mt-4 rounded-lg bg-white/45 dark:bg-white/10 p-3">
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white">Starter Code</h4>
+                <pre className="mt-2 text-xs text-slate-700 dark:text-slate-200 whitespace-pre-wrap font-mono">
+                  {viewQuestion.starterCode}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       )}

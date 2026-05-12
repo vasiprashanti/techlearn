@@ -54,6 +54,16 @@ const submissionSchema = new mongoose.Schema(
 
     executionTime: Number,
 
+    startedAt: {
+      type: Date,
+      default: null,
+    },
+
+    endedAt: {
+      type: Date,
+      default: null,
+    },
+
     status: {
       type: String,
       enum: ["Passed", "Failed", "Timeout", "Error", "Pending"],

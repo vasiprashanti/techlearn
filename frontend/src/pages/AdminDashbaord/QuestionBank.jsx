@@ -72,7 +72,7 @@ export default function QuestionBank() {
   const [mounted, setMounted] = useState(false);
   const [categoryState, setCategoryState] = useState(emptyQuestionCategories);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart' });
+  const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart', categoryType: 'coding' });
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -132,7 +132,7 @@ export default function QuestionBank() {
   const closeCategoryModal = () => {
     setIsCategoryModalOpen(false);
     setEditingCategoryId(null);
-    setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
+    setCategoryForm({ title: '', subtitle: '', icon: 'chart', categoryType: 'coding' });
     setCategoryError('');
     setIsSavingCategory(false);
   };
@@ -144,6 +144,7 @@ export default function QuestionBank() {
       title: category.title || '',
       subtitle: category.subtitle || '',
       icon: category.icon || 'chart',
+      categoryType: category.categoryType || 'coding',
     });
     setIsCategoryModalOpen(true);
   };
@@ -250,6 +251,21 @@ export default function QuestionBank() {
                     <option className={dropdownOptionClass} value="terminal">Terminal</option>
                     <option className={dropdownOptionClass} value="database">Database</option>
                     <option className={dropdownOptionClass} value="brain">Brain</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category Type</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={categoryForm.categoryType}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, categoryType: event.target.value }))}
+                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="coding">Coding</option>
+                    <option className={dropdownOptionClass} value="mcq">MCQ</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>

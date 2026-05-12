@@ -34,6 +34,13 @@ const questionSchema = new mongoose.Schema(
       trim: true,
     },
 
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "QuestionCategory",
+      default: null,
+      index: true,
+    },
+
     categorySlug: {
       type: String,
       trim: true,
@@ -45,6 +52,12 @@ const questionSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+    },
+
+    categoryType: {
+      type: String,
+      enum: ["coding", "mcq"],
+      default: "coding",
     },
 
     tags: [
@@ -64,6 +77,11 @@ const questionSchema = new mongoose.Schema(
       default: "",
     },
 
+    constraints: {
+      type: String,
+      default: "",
+    },
+
     visibleTestCases: [testCaseSchema],
 
     hiddenTestCases: [testCaseSchema],
@@ -71,6 +89,11 @@ const questionSchema = new mongoose.Schema(
     timeLimit: Number,
 
     memoryLimit: Number,
+
+    starterCode: {
+      type: String,
+      default: "",
+    },
 
     status: {
       type: String,

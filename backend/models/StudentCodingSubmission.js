@@ -12,6 +12,12 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       ref: "Student",
       default: null,
     },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
@@ -76,6 +82,23 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
     submittedAt: {
       type: Date,
       default: Date.now,
+    },
+    startedAt: {
+      type: Date,
+      default: null,
+    },
+    endedAt: {
+      type: Date,
+      default: null,
+    },
+    accuracy: {
+      type: Number,
+      default: 0,
+    },
+    attemptStatus: {
+      type: String,
+      enum: ["started", "submitted", "ended", "auto_submitted", "expired"],
+      default: "started",
     },
   },
   { timestamps: true }
