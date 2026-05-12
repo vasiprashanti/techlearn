@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
+import { useUser } from "../../context/UserContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "../../config/firebase"; // Your Firebase config file
@@ -14,7 +15,8 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
   const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [forgotPasswordMessage, setForgotPasswordMessage] = useState("");
-  const { login } = useAuth();
+  const { login, setSession } = useAuth();
+  const { refetchUserData } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -66,9 +68,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       const data = await response.json();
 
       if (response.ok && data.token) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userData", JSON.stringify(data.user));
         localStorage.setItem("isAdmin", data.user?.isAdmin ? "true" : "false");
+        setSession(data.user, data.token);
+        await refetchUserData();
 
         // Navigate based on user role
         navigateBasedOnRole(data.user);
