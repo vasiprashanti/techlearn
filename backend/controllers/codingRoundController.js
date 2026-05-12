@@ -533,13 +533,6 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
-    if (codingRound.challengeType === "daily_challenge" && isUnlimitedDailyChallengeAccessEnabled) {
-      await resetDailyChallengeProgressForTesting({
-        codingRoundId: codingRound._id,
-        studentEmail: normalizedEmail,
-      });
-    }
-
     let participant = null;
     let existingAttempt = null;
     if (codingRound.challengeType === "daily_challenge") {
