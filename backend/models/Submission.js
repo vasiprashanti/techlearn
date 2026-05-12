@@ -71,7 +71,7 @@ const submissionSchema = new mongoose.Schema(
 
     challengeType: {
       type: String,
-      enum: ["track_question", "daily_challenge"],
+      enum: ["track_question", "daily_challenge", "practice", "track_template"],
       default: "track_question",
     },
 
@@ -87,8 +87,6 @@ submissionSchema.index({ batchId: 1, trackId: 1 });
 submissionSchema.index({ attemptId: 1 }, { unique: true, sparse: true });
 
 // Standalone indexes for sort and single-field filters
-// Note: { batchId: 1 } is intentionally omitted — the compound index above
-// serves as a prefix cover for batchId-only queries.
 submissionSchema.index({ workingDay: 1 });
 submissionSchema.index({ submittedAt: -1 });
 

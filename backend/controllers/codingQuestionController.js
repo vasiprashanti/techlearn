@@ -154,7 +154,8 @@ export const createCodingQuestionSession = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track not found for coding session." });
     }
 
-    const linkId = `qb-${question._id}`;
+    // Dynamic compilation linking prevents batch data collisions
+    const linkId = `qb-${question._id}-batch-${batch._id}`;
     const durationMinutes = parsePositiveNumber(question.timeLimit, 30);
 
     const roundPayload = {

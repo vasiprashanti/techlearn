@@ -47,7 +47,7 @@ const codingRoundSchema = new mongoose.Schema(
         timeLimit: { type: Number, default: null },
         memoryLimit: { type: Number, default: null },
         starterCode: { type: String, default: "" },
-        fileUrl: { type: String }, // For optional file upload
+        fileUrl: { type: String },
       },
     ],
     isActive: {
@@ -69,7 +69,7 @@ const codingRoundSchema = new mongoose.Schema(
     },
     challengeType: {
       type: String,
-      enum: ["coding_round", "daily_challenge", "track_question"],
+      enum: ["coding_round", "daily_challenge", "track_question", "practice", "track_template"],
       default: "coding_round",
       index: true,
     },
