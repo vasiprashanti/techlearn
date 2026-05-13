@@ -11,8 +11,8 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-7xl
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
-    location.pathname === '/profile' ||
-    location.pathname.startsWith('/profile/');
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
   const isDashboardDetailRoute =
     /^\/dashboard\/practice\/dsa\/[^/]+$/.test(location.pathname) ||
     /^\/dashboard\/practice\/sql\/[^/]+$/.test(location.pathname) ||

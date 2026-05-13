@@ -177,7 +177,7 @@ const ResumeTemplates = () => {
                         </p>
                       ) : <div className="mt-3 min-h-[3.2rem]" />}
 
-                      <div className="mt-auto grid grid-cols-1 gap-2 pt-4 min-[420px]:grid-cols-2">
+                      <div className="mt-auto flex flex-col gap-2 pt-4">
                         <a
                           href={isLinkValid ? href : undefined}
                           target={isLinkValid ? '_blank' : undefined}

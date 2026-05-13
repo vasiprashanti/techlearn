@@ -110,20 +110,12 @@ const Profile = () => {
           {/* Top Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </button>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
                 <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
                   My Profile.
                 </span>
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
                 Manage your personal information
               </p>
             </motion.div>
@@ -136,7 +128,7 @@ const Profile = () => {
             {/* Left Column - Form/Info Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex-1 space-y-8"
+              className="flex-[1.25] space-y-8"
             >
               {/* Basic Info Card */}
               <div className={dashboardCardClass}>
@@ -229,7 +221,7 @@ const Profile = () => {
             {/* Right Column - Avatar Profile display */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full lg:w-96 flex flex-col"
+              className="w-full lg:w-80 flex flex-col"
             >
               <div className={`${dashboardCardClass} flex flex-1 flex-col items-center relative overflow-hidden`}>
                 
@@ -268,7 +260,7 @@ const Profile = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/profile/edit')}
+                  onClick={() => navigate('/dashboard/profile/edit')}
                   className="dashboard-primary-btn relative z-10 mt-5"
                 >
                   Edit Profile

@@ -366,7 +366,7 @@ const ExerciseDetail = () => {
                         <div className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email || 'student@techlearn.com'}</div>
                       </div>
                       <div className="p-1">
-                        <button onClick={() => { setProfileDropdownOpen(false); navigate('/profile'); }} className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors">Profile settings</button>
+                        <button onClick={() => { setProfileDropdownOpen(false); navigate('/dashboard/profile'); }} className="w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors">Profile settings</button>
                         <button onClick={() => { setProfileDropdownOpen(false); logout(); }} className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md transition-colors">Log out</button>
                       </div>
                     </motion.div>

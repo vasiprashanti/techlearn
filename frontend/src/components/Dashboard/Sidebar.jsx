@@ -61,7 +61,7 @@ const menuGroups = [
   {
     title: "ACCOUNT",
     items: [
-      { id: "profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
+      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
       { id: "dashboard/settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
     ]
   }
@@ -76,8 +76,8 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
-    location.pathname === '/profile' ||
-    location.pathname.startsWith('/profile/');
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
 
   useEffect(() => {
     if (desktopNavRef.current) {

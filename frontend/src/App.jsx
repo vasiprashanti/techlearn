@@ -677,8 +677,8 @@ function LayoutWrapper() {
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/courses') ||
     location.pathname.startsWith('/learn/exercises') ||
-    location.pathname === '/profile' ||
-    location.pathname.startsWith('/profile/');
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
 
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
@@ -728,7 +728,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
             <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
-            <Route path="/dashboard/account" element={<Navigate to="/profile" replace />} />
+            <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
@@ -756,8 +756,8 @@ function LayoutWrapper() {
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/edit" element={<EditProfile />} />
+          <Route path="/dashboard/profile" element={<Profile />} />
+          <Route path="/dashboard/profile/edit" element={<EditProfile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
