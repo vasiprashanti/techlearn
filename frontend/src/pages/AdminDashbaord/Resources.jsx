@@ -203,31 +203,13 @@ export default function Resources() {
 
     const fileType = detectResourceType(resourceForm.fileName || resourceForm.file?.name, resourceForm.file?.type);
 
-    const toDataUrl = (file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read uploaded file.'));
-      reader.readAsDataURL(file);
-    });
-
-    let uploadedUrl = '';
-    try {
-      if (resourceForm.file) {
-        uploadedUrl = await toDataUrl(resourceForm.file);
-      }
-    } catch (error) {
-      setResourceFormError(error?.message || 'Failed to process uploaded file.');
-      setIsSavingResource(false);
-      return;
-    }
-
     const newResource = {
       id: Date.now(),
       title: resourceForm.title.trim(),
       category: resourceForm.category,
       date: new Date().toISOString().slice(0, 10),
       type: fileType,
-      url: uploadedUrl,
+      url: '',
       views: 0,
     };
 
@@ -236,17 +218,17 @@ export default function Resources() {
         ? resourceEntries.find((entry) => String(entry.id) === String(editingResourceId))
         : null;
 
-      const payload = {
-        title: resourceForm.title.trim(),
-        category: resourceForm.category,
-        type: uploadedUrl ? fileType : (existingEntry?.type || fileType),
-        url: uploadedUrl || existingEntry?.url || '',
-      };
+      const payload = new FormData();
+      payload.append('title', resourceForm.title.trim());
+      payload.append('category', resourceForm.category);
+      payload.append('type', resourceForm.file ? fileType : (existingEntry?.type || fileType));
+      if (existingEntry?.url) payload.append('url', existingEntry.url);
+      if (resourceForm.file) payload.append('file', resourceForm.file);
 
       let created;
       if (editingResourceId && isPersistedResource(editingResourceId)) {
         created = await adminAPI.updateResource(editingResourceId, payload);
-        if (!uploadedUrl && existingEntry?.url) {
+        if (!resourceForm.file && existingEntry?.url) {
           created = { ...created, url: existingEntry.url, type: existingEntry.type || fileType };
         }
       } else if (editingResourceId) {
@@ -254,9 +236,9 @@ export default function Resources() {
           String(entry.id) === String(editingResourceId)
             ? normalizeResource({
                 ...entry,
-                ...payload,
-                url: uploadedUrl || existingEntry?.url || entry.url,
-                type: uploadedUrl ? fileType : (entry.type || fileType),
+                title: resourceForm.title.trim(),
+                category: resourceForm.category,
+                type: resourceForm.file ? fileType : (entry.type || fileType),
               })
             : entry
         )));
@@ -292,7 +274,7 @@ export default function Resources() {
   };
 
   const deleteResource = async (resource) => {
-    const confirmed = window.confirm(`Delete \"${resource.title}\"?`);
+    const confirmed = window.confirm(`Delete "${resource.title}"?`);
     if (!confirmed) return;
 
     try {

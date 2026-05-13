@@ -5,6 +5,7 @@ import TrackTemplate from "../../models/TrackTemplate.js";
 import Track from "../../models/Track.js";
 import Batch from "../../models/Batch.js";
 import Resource from "../../models/Resource.js";
+import { v2 as cloudinary } from "cloudinary";
 import FinalTest from "../../models/FinalTest.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import IssuedCertificate from "../../models/IssuedCertificate.js";
@@ -97,6 +98,47 @@ const normalizeTestCases = (value) => {
     output: String(testCase?.output || ""),
     explanation: String(testCase?.explanation || ""),
   }));
+};
+
+const detectResourceType = (file = {}) => {
+  const name = String(file.originalname || "").toLowerCase();
+  const mime = String(file.mimetype || "").toLowerCase();
+  if (mime.startsWith("video/") || /\.(mp4|mov|avi|mkv|webm)$/.test(name)) return "Video";
+  if (mime.includes("sheet") || /\.(xls|xlsx|csv)$/.test(name)) return "Sheet";
+  if (mime.includes("pdf") || /\.pdf$/.test(name)) return "PDF";
+  return "Link";
+};
+
+const uploadResourceFile = async (file) => {
+  if (!file?.buffer) return null;
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    return {
+      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`,
+    };
+  }
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          resource_type: "auto",
+          folder: "techlearn/resources",
+          use_filename: true,
+          unique_filename: true,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      )
+      .end(file.buffer);
+  });
 };
 
 const parsePositiveNumber = (value, fallback) => {
@@ -936,11 +978,12 @@ export const createResourceAdmin = async (req, res) => {
       });
     }
 
+    const uploaded = req.file ? await uploadResourceFile(req.file) : null;
     const resource = await Resource.create({
       title: title.trim(),
       category: category.trim(),
-      type,
-      url: url || "",
+      type: uploaded ? detectResourceType(req.file) : type,
+      url: uploaded?.secure_url || url || "",
       uploadedBy: req.user?._id || null,
     });
 
@@ -974,16 +1017,22 @@ export const updateResourceAdmin = async (req, res) => {
       });
     }
 
+    const uploaded = req.file ? await uploadResourceFile(req.file) : null;
+    const update = {
+      title: req.body.title?.trim(),
+      category: req.body.category?.trim(),
+      type: uploaded ? detectResourceType(req.file) : req.body.type,
+    };
+
+    if (uploaded?.secure_url || req.body.url !== undefined) {
+      update.url = uploaded?.secure_url || req.body.url || "";
+    }
+
+    Object.keys(update).forEach((key) => update[key] === undefined && delete update[key]);
+
     const resource = await Resource.findByIdAndUpdate(
       resourceId,
-      {
-        $set: {
-          title: req.body.title?.trim(),
-          category: req.body.category?.trim(),
-          type: req.body.type,
-          url: req.body.url || "",
-        },
-      },
+      { $set: update },
       { new: true, runValidators: true }
     );
 

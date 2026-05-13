@@ -755,6 +755,15 @@ export const createStudentAdmin = async (req, res) => {
       status: status || "Active",
     });
 
+    if (linkedUser?._id) {
+      await User.findByIdAndUpdate(linkedUser._id, {
+        $set: {
+          batchId,
+          startDate: batch.startDate,
+        },
+      });
+    }
+
     await writeAuditLog({
       verb: "Created",
       entityType: "Student",
@@ -871,6 +880,15 @@ export const updateStudentAdmin = async (req, res) => {
     update.userId = linkedUser?._id || existingStudent.userId || null;
 
     const student = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true, runValidators: true });
+
+    if (linkedUser?._id) {
+      await User.findByIdAndUpdate(linkedUser._id, {
+        $set: {
+          batchId: nextBatchId,
+          startDate: batch.startDate,
+        },
+      });
+    }
 
     await writeAuditLog({
       verb: "Updated",

@@ -276,10 +276,41 @@ export const adminAPI = {
   reorderTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}/reorder`, { method: 'PUT', body: JSON.stringify(body) }),
 
   getResources: () => request('/admin/resources'),
-  createResource: (body) => request('/admin/resources', { method: 'POST', body: JSON.stringify(body) }),
-  updateResource: (resourceId, body) => request(`/admin/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  createResource: async (body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/resources`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to create resource.');
+      invalidateCacheForPath('/admin/resources');
+      return unwrapData(payload);
+    }
+    return request('/admin/resources', { method: 'POST', body: JSON.stringify(body) });
+  },
+  updateResource: async (resourceId, body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/resources/${resourceId}`, {
+        method: 'PUT',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to update resource.');
+      invalidateCacheForPath('/admin/resources');
+      return unwrapData(payload);
+    }
+    return request(`/admin/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify(body) });
+  },
   deleteResource: (resourceId) => request(`/admin/resources/${resourceId}`, { method: 'DELETE' }),
   recordResourceView: (resourceId) => request(`/admin/resources/${resourceId}/view`, { method: 'POST' }),
+
+  getCourses: () => request('/courses'),
+  createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: JSON.stringify(body) }),
+  updateCourse: (courseId, body) => request(`/admin/${courseId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCourse: (courseId) => request(`/admin/${courseId}`, { method: 'DELETE' }),
 
   getCertificates: () => request('/admin/certificates'),
   issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),

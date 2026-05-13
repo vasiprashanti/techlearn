@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Filter, Search } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
+import { practiceAPI } from '../services/practiceApi';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
@@ -80,6 +81,8 @@ export default function QuestionCatalogPage({
   const [selectedTag, setSelectedTag] = useState('All');
   const [showAllTags, setShowAllTags] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [remoteQuestions, setRemoteQuestions] = useState([]);
+  const [practiceStats, setPracticeStats] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -90,6 +93,43 @@ export default function QuestionCatalogPage({
     setSelectedTag('All');
     setShowAllTags(false);
   }, [selectedTopic, lockedTopic]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/practice');
+
+    practiceAPI
+      .getQuestions(lockedTopic)
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setRemoteQuestions(data);
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteQuestions([]);
+      });
+
+    if (isDashboardPracticeRoute) {
+      practiceAPI
+        .getStats()
+        .then((data) => {
+          if (!cancelled) setPracticeStats(data);
+        })
+        .catch(() => {
+          if (!cancelled) setPracticeStats(null);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lockedTopic, location.pathname]);
+
+  const displayQuestions = useMemo(() => {
+    const merged = new Map();
+    [...questions, ...remoteQuestions].forEach((question) => {
+      if (question?.id) merged.set(String(question.id), question);
+    });
+    return [...merged.values()];
+  }, [questions, remoteQuestions]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -104,16 +144,16 @@ export default function QuestionCatalogPage({
 
   const availableTags = useMemo(() => {
     const pool = selectedTopic === 'All Topics'
-      ? questions
-      : questions.filter((question) => question.topic === selectedTopic);
+        ? displayQuestions
+        : displayQuestions.filter((question) => question.topic === selectedTopic);
 
     return Array.from(new Set(pool.map((question) => question.subtitle))).sort((a, b) =>
       a.localeCompare(b)
     );
-  }, [questions, selectedTopic]);
+  }, [displayQuestions, selectedTopic]);
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter((question) => {
+    return displayQuestions.filter((question) => {
       const matchesSearch =
         !searchTerm ||
         question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,12 +171,27 @@ export default function QuestionCatalogPage({
 
       return matchesSearch && matchesDifficulty && matchesTopic && matchesTag;
     });
-  }, [questions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
+  }, [displayQuestions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
 
   const visibleTags = useMemo(() => {
     if (showAllTags) return availableTags;
     return availableTags.slice(0, INITIAL_VISIBLE_TAGS);
   }, [availableTags, showAllTags]);
+
+  const effectivePracticeTracks = useMemo(() => {
+    if (!practiceStats?.tracks) return [];
+    const visibleTotals = displayQuestions.reduce((accumulator, question) => {
+      if (['DSA', 'Core CS', 'SQL', 'Aptitude'].includes(question.topic)) {
+        accumulator[question.topic] = (accumulator[question.topic] || 0) + 1;
+      }
+      return accumulator;
+    }, {});
+
+    return practiceStats.tracks.map((track) => ({
+      ...track,
+      total: Math.max(Number(track.total || 0), visibleTotals[track.track] || 0),
+    }));
+  }, [displayQuestions, practiceStats]);
 
   const handleRowOpen = (question) => {
     if (!question?.topic || !question?.id) return;
@@ -204,6 +259,28 @@ export default function QuestionCatalogPage({
               {pageSubtitle}
             </p>
           </div>
+
+          {practiceStats ? (
+            <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-5">
+              <div className="dashboard-surface dashboard-surface-strong p-4">
+                <p className="dashboard-micro-label">Practice Streak</p>
+                <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff]">{practiceStats.streak || 0}</p>
+              </div>
+              {effectivePracticeTracks.map((track) => (
+                <div key={track.track} className="dashboard-surface p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff]">{track.track}</p>
+                    <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8]">
+                      {track.accuracy || 0}%
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
+                    {track.attempted || 0}/{track.total || 0} attempted · {track.correct || 0} correct
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="dashboard-surface dashboard-surface-strong relative z-30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -362,7 +439,7 @@ export default function QuestionCatalogPage({
             </div>
 
             <div className="border-t border-white/10 bg-white/32 px-4 py-3 text-sm text-[#4c6f9a] dark:border-[#1e3f73]/38 dark:bg-[#0b214d]/58 dark:text-[#7fb8e2]">
-              Showing {filteredQuestions.length} of {questions.length} questions
+              Showing {filteredQuestions.length} of {displayQuestions.length} questions
             </div>
           </div>
         </section>

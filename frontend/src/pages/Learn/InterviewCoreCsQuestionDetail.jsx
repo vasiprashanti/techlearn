@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { coreCsMcqs } from '../../data/coreCsMcqs';
+import { practiceAPI } from '../../services/practiceApi';
 
 const difficultyPillClass = {
   Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
@@ -28,6 +29,7 @@ export default function InterviewCoreCsQuestionDetail() {
 
   const [selectedOption, setSelectedOption] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState('');
 
   if (!question) {
     return (
@@ -97,9 +99,21 @@ export default function InterviewCoreCsQuestionDetail() {
                   key={idx}
                   type="button"
                   disabled={showFeedback}
-                  onClick={() => {
+                  onClick={async () => {
                     setSelectedOption(idx);
                     setShowFeedback(true);
+                    if (isDashboardContext) {
+                      try {
+                        await practiceAPI.recordSubmission({
+                          questionId: question.id,
+                          track: 'Core CS',
+                          isCorrect: idx === question.correctIndex,
+                        });
+                        setSubmissionMessage('Practice progress saved.');
+                      } catch (error) {
+                        setSubmissionMessage(error?.message || 'Could not save practice progress.');
+                      }
+                    }
                   }}
                   className={`w-full rounded-xl border-2 p-4 text-left text-sm transition ${optionClass}`}
                 >
@@ -131,6 +145,9 @@ export default function InterviewCoreCsQuestionDetail() {
                 {question.explanation}
               </div>
             </div>
+          ) : null}
+          {submissionMessage ? (
+            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{submissionMessage}</p>
           ) : null}
         </div>
       </div>
