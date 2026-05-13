@@ -8,7 +8,11 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-7xl
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isDarkMode = theme === 'dark';
-  const isDashboardRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
+  const isDashboardRoute =
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/dashboard/') ||
+    location.pathname === '/profile' ||
+    location.pathname.startsWith('/profile/');
   const isDashboardDetailRoute =
     /^\/dashboard\/practice\/dsa\/[^/]+$/.test(location.pathname) ||
     /^\/dashboard\/practice\/sql\/[^/]+$/.test(location.pathname) ||

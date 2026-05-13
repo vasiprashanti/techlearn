@@ -93,7 +93,7 @@ export default function EditProfile() {
       }
 
       setStatus({ type: "success", message: "Profile updated successfully." });
-      navigate("/dashboard/profile");
+      navigate("/profile");
     } catch (error) {
       setStatus({ type: "error", message: error.message || "Unable to save profile." });
     } finally {
@@ -117,7 +117,7 @@ export default function EditProfile() {
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               <button
                 type="button"
-                onClick={() => navigate("/dashboard/profile")}
+                onClick={() => navigate("/profile")}
                 className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -192,7 +192,7 @@ export default function EditProfile() {
               <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#86c4ff]/30 pt-6 dark:border-[#6bb8ec]/30">
                 <button
                   type="button"
-                  onClick={() => navigate("/dashboard/profile")}
+                  onClick={() => navigate("/profile")}
                   className="dashboard-secondary-btn"
                 >
                   Cancel

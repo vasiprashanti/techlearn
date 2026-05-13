@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Trophy,
   Medal,
@@ -9,24 +8,19 @@ import {
   Minus,
   Star,
   Zap,
-  Sun,
-  Moon,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/Dashboard/Sidebar';
 import ScrollProgress from '../../components/ScrollProgress';
 import leaderboardApi from '../../services/leaderboardApi';
 
 const FALLBACK_AVATAR = '/profile_avatars/avatar1.png';
+const MotionDiv = motion.div;
 
 const Leaderboard = () => {
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
-  const { user, logout } = useAuth();
+  const { theme } = useTheme();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState({
     entries: [],
     currentUser: null,
@@ -68,10 +62,9 @@ const Leaderboard = () => {
   }, []);
 
   const storedUser = JSON.parse(localStorage.getItem('userData') || 'null');
-  const userAvatar = storedUser?.photoUrl || user?.avatar || FALLBACK_AVATAR;
-  const userName = user?.firstName || storedUser?.firstName || 'Student';
+  const userAvatar = storedUser?.photoUrl || storedUser?.avatar || FALLBACK_AVATAR;
 
-  const entries = leaderboardData.entries || [];
+  const entries = useMemo(() => leaderboardData.entries || [], [leaderboardData.entries]);
   const currentUser = leaderboardData.currentUser;
   const topThree = useMemo(() => entries.slice(0, 3), [entries]);
   const restOfList = useMemo(() => entries.slice(3), [entries]);
@@ -102,7 +95,7 @@ const Leaderboard = () => {
     const avatar = entry.avatar || entry.photoUrl || FALLBACK_AVATAR;
 
     return (
-      <motion.div
+      <MotionDiv
         key={entry.userId || `${entry.rank}-${entry.name}`}
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -149,7 +142,7 @@ const Leaderboard = () => {
             <Medal className={`w-4 h-4 md:w-6 md:h-6 ${rank === 2 ? 'text-slate-400' : 'text-amber-700'} opacity-50`} />
           )}
         </div>
-      </motion.div>
+      </MotionDiv>
     );
   };
 
@@ -162,85 +155,15 @@ const Leaderboard = () => {
 
       <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="flex-1 min-w-0">
+          <header className="flex items-center pb-6 gap-3 sm:gap-4">
+            <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="min-w-0">
               <h1 className="dashboard-page-title md:text-4xl truncate">
                 Leaderboard.
               </h1>
               <p className="dashboard-page-subtitle hidden sm:block truncate">
                 Global Rankings & Achievements
               </p>
-            </motion.div>
-
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-6 flex-shrink-0 relative z-30">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg text-black/40 hover:text-black dark:text-white/40 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-all duration-300 flex items-center justify-center"
-                aria-label="Toggle theme"
-              >
-                {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setProfileDropdownOpen((open) => !open)}
-                  className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-sm font-medium tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 border-2 border-white/20 dark:border-black/20 overflow-hidden"
-                >
-                  <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                </button>
-                {profileDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white/95 dark:bg-black/95 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                      <div className="p-4 border-b border-black/5 dark:border-white/5 bg-gradient-to-br from-[#3C83F6]/5 to-[#2563eb]/5 dark:from-white/5 dark:to-gray-200/5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black flex items-center justify-center text-lg font-medium tracking-wider shadow-md overflow-hidden">
-                            <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-black dark:text-white truncate">{userName}</h3>
-                            <p className="text-xs text-black/60 dark:text-white/60 truncate">{user?.email || 'student@techlearn.com'}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="py-2">
-                        <button
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            navigate('/dashboard/profile');
-                          }}
-                          className="w-full px-4 py-3 text-left text-sm text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex items-center gap-3 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center group-hover:bg-[#3C83F6]/10 group-hover:text-[#3C83F6] dark:group-hover:bg-white/10 dark:group-hover:text-white transition-colors">
-                            <Star className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="font-medium">My Profile</div>
-                            <div className="text-[10px] text-black/50 dark:text-white/50">Manage your account</div>
-                          </div>
-                        </button>
-                        <div className="mx-4 my-2 h-px bg-black/10 dark:bg-white/10" />
-                        <button
-                          onClick={() => {
-                            setProfileDropdownOpen(false);
-                            logout();
-                          }}
-                          className="w-full px-4 py-3 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-3 group"
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center group-hover:bg-red-100 dark:group-hover:bg-red-900/30 transition-colors">
-                            <Minus className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="font-medium">Log Out</div>
-                            <div className="text-[10px] text-red-500/70 dark:text-red-400/70">Sign out securely</div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            </MotionDiv>
           </header>
 
           <div className="max-w-5xl mx-auto pt-4 md:pt-10">
@@ -250,7 +173,7 @@ const Leaderboard = () => {
               {renderPodiumUser(topThree[2], 3, 0.4)}
             </div>
 
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}
@@ -280,9 +203,9 @@ const Leaderboard = () => {
                   <p className="text-base md:text-lg font-medium text-black dark:text-white">{Number(leaderboardData.totalParticipants || 0).toLocaleString()}</p>
                 </div>
               </div>
-            </motion.div>
+            </MotionDiv>
 
-            <motion.div
+            <MotionDiv
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
@@ -339,7 +262,7 @@ const Leaderboard = () => {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </MotionDiv>
           </div>
         </div>
       </main>

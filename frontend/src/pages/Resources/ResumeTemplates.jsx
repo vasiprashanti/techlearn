@@ -150,9 +150,9 @@ const ResumeTemplates = () => {
                       </div>
                     </a>
 
-                    <div className="flex flex-1 flex-col px-1 pb-1 pt-4">
+                    <div className="flex min-w-0 flex-1 flex-col px-1 pb-1 pt-4">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-h-[4.4rem] flex-1">
+                        <div className="min-h-[4.4rem] min-w-0 flex-1">
                           <h2 className="text-base font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
                             {title}
                           </h2>
@@ -177,23 +177,23 @@ const ResumeTemplates = () => {
                         </p>
                       ) : <div className="mt-3 min-h-[3.2rem]" />}
 
-                      <div className="mt-auto flex items-center gap-3 pt-4">
+                      <div className="mt-auto grid grid-cols-1 gap-2 pt-4 min-[420px]:grid-cols-2">
                         <a
                           href={isLinkValid ? href : undefined}
                           target={isLinkValid ? '_blank' : undefined}
                           rel={isLinkValid ? 'noreferrer' : undefined}
-                          className="dashboard-primary-btn rounded-full px-4 py-2 text-xs tracking-[0.18em]"
+                          className="dashboard-primary-btn min-w-0 justify-center rounded-full px-3 py-2 text-xs tracking-[0.12em] sm:tracking-[0.14em]"
                         >
                           <FolderOpen className="h-3.5 w-3.5" />
-                          Open
+                          <span className="truncate">Open</span>
                         </a>
                         <a
                           href={isLinkValid ? href : undefined}
                           download={isLinkValid ? '' : undefined}
-                          className="dashboard-secondary-btn rounded-full px-4 py-2 text-xs uppercase tracking-[0.18em]"
+                          className="dashboard-secondary-btn min-w-0 justify-center rounded-full px-3 py-2 text-xs uppercase tracking-[0.12em] sm:tracking-[0.14em]"
                         >
                           <Download className="h-3.5 w-3.5" />
-                          Download
+                          <span className="truncate">Download</span>
                         </a>
                       </div>
                     </div>

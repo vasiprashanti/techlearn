@@ -268,7 +268,7 @@ const Profile = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard/profile/edit')}
+                  onClick={() => navigate('/profile/edit')}
                   className="dashboard-primary-btn relative z-10 mt-5"
                 >
                   Edit Profile

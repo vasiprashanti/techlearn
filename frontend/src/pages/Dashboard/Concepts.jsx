@@ -62,8 +62,8 @@ const Concepts = () => {
           transition={{ duration: 0.55, delay: 0.04 }}
           className="dashboard-surface dashboard-surface-strong p-6 sm:p-8"
         >
-          <div className="flex justify-end">
-            <div className="relative w-full max-w-md">
+          <div className="w-full">
+            <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f82ac] dark:text-[#81bde6]" />
               <input
                 type="text"
