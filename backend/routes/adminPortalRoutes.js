@@ -32,6 +32,7 @@ import {
   createOrUpdateFinalTest,
   createQuestionCategory,
   createQuestionAdmin,
+  createQuestionNotesAdmin,
   createResourceAdmin,
   createTrackTemplate,
   deleteQuestionCategory,
@@ -102,6 +103,7 @@ router.put("/questions/categories/:categoryId", updateQuestionCategory);
 router.delete("/questions/categories/:categoryId", deleteQuestionCategory);
 router.get("/questions", listQuestionsAdmin);
 router.post("/questions", createQuestionAdmin);
+router.post("/questions/notes", upload.single("markdownFile"), createQuestionNotesAdmin);
 router.get("/questions/:questionId", getQuestionDetailAdmin);
 router.put("/questions/:questionId", updateQuestionAdmin);
 router.delete("/questions/:questionId", deleteQuestionAdmin);

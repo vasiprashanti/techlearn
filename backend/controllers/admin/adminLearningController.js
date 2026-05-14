@@ -474,6 +474,55 @@ export const createQuestionAdmin = async (req, res) => {
   }
 };
 
+export const createQuestionNotesAdmin = async (req, res) => {
+  try {
+    const { title, categorySlug, categoryTitle, description, editorial, status, trackType, tags } = req.body;
+
+    if (!title?.trim()) {
+      return res.status(400).json({ success: false, message: "Question title is required." });
+    }
+
+    let notesFilePath = "";
+    if (req.file) {
+      const uploadResult = await uploadResourceFile(req.file);
+      if (uploadResult && uploadResult.secure_url) {
+        notesFilePath = uploadResult.secure_url;
+      }
+    }
+
+    const resolvedCategorySlug = categorySlug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "notes-category";
+    const resolvedCategoryTitle = categoryTitle || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || trackType || "Notes";
+
+    const question = await Question.create({
+      title: title.trim(),
+      difficulty: "Easy",
+      trackType: String(trackType || resolvedCategoryTitle).trim(),
+      categorySlug: resolvedCategorySlug,
+      categoryTitle: resolvedCategoryTitle,
+      tags: tags || [],
+      description: String(description || "").trim(),
+      editorial: editorial || "",
+      status: status || "Active",
+      questionType: "Notes",
+      notesFilePath,
+    });
+
+    await writeAuditLog({
+      verb: "Created",
+      entityType: "Question",
+      entityId: question._id,
+      action: "Created Notes question",
+      detail: question.title,
+      actor: req.user,
+    });
+
+    return res.status(201).json({ success: true, data: question });
+  } catch (error) {
+    console.error("createQuestionNotesAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to create notes question.", error: error.message });
+  }
+};
+
 export const getQuestionDetailAdmin = async (req, res) => {
   try {
     const { questionId } = req.params;

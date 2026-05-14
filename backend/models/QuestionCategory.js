@@ -25,6 +25,11 @@ const questionCategorySchema = new mongoose.Schema(
       enum: ["code", "globe", "terminal", "database", "brain", "chart"],
       default: "chart",
     },
+    categoryType: {
+      type: String,
+      enum: ["Coding", "Notes", "MCQ"],
+      default: "Coding",
+    },
     status: {
       type: String,
       enum: ["Active", "Archived"],

@@ -28,6 +28,17 @@ const questionSchema = new mongoose.Schema(
       default: "Easy",
     },
 
+    questionType: {
+      type: String,
+      enum: ["Coding", "Notes"],
+      default: "Coding",
+    },
+
+    notesFilePath: {
+      type: String,
+      default: "",
+    },
+
     trackType: {
       type: String,
       default: "Core",
