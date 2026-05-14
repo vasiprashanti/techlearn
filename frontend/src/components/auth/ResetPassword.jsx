@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuthModalContext } from '../../context/AuthModalContext';
 
 export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { openLogin } = useAuthModalContext();
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -49,7 +51,9 @@ export default function ResetPassword() {
       if (response.ok) {
         setMessage('Password reset successfully. You can now login with your new password.');
         setTimeout(() => {
-          navigate('/login');
+          // Navigate to home and open login modal
+          navigate('/');
+          setTimeout(() => openLogin(), 100);
         }, 3000);
       } else {
         setError(data.message || 'Failed to reset password');

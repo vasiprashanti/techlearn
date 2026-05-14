@@ -63,12 +63,50 @@ const codingRoundSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    challengeType: {
+      type: String,
+      enum: ["coding_round", "daily_challenge"],
+      default: "coding_round",
+      index: true,
+    },
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+      index: true,
+    },
+    trackId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Track",
+      default: null,
+    },
+    trackTemplateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TrackTemplate",
+      default: null,
+    },
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
+      default: null,
+    },
+    dayNumber: {
+      type: Number,
+      default: null,
+    },
+    trackType: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { timestamps: true }
 );
 
 codingRoundSchema.index({ college: 1 });
 codingRoundSchema.index({ date: 1, duration: 1 });
+codingRoundSchema.index({ challengeType: 1, trackTemplateId: 1, dayNumber: 1 });
+codingRoundSchema.index({ challengeType: 1, batchId: 1, trackId: 1, dayNumber: 1 });
 
 const CodingRound = mongoose.model("CodingRound", codingRoundSchema);
 export default CodingRound;

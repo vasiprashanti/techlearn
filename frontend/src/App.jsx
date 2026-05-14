@@ -30,7 +30,6 @@ import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
 
 
 // Auth pages
-import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import Dashboard from './pages/Dashboard/Dashboard'
 import Performance from './pages/Dashboard/Performance'
@@ -46,6 +45,10 @@ import ResetPassword from './components/auth/ResetPassword';
 import Projects from '../src/components/Dashboard/Projects'
 import Leaderboard from './pages/Dashboard/Leaderboard'
 import UserCoding from './pages/Coding/UserCoding';
+import DailyChallengeAccess from './pages/DailyChallenge/DailyChallengeAccess';
+import DailyChallengeInstructions from './pages/DailyChallenge/DailyChallengeInstructions';
+import DailyChallengeTest from './pages/DailyChallenge/DailyChallengeTest';
+import DailyChallengeResult from './pages/DailyChallenge/DailyChallengeResult';
 
 // Learn components
 import LearnMain from './pages/Learn/LearnMain'
@@ -673,14 +676,18 @@ function LayoutWrapper() {
     location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname.startsWith('/resources/resume-templates') ||
     location.pathname.startsWith('/learn/courses') ||
-    location.pathname.startsWith('/learn/exercises');
+    location.pathname.startsWith('/learn/exercises') ||
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
 
   const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
+                     !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute;
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
+                     !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
@@ -690,13 +697,17 @@ function LayoutWrapper() {
 
       <main className="flex-grow">
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Navigate to="/signup" replace />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
+            <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
+            <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />
+            <Route path="/daily-challenge/:linkId/result" element={<DailyChallengeResult />} />
             <Route path="/dashboard/roadmap" element={<Roadmaps />} />
             <Route path="/dashboard/practice" element={<AllInterviewQuestions />} />
             <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
@@ -718,8 +729,6 @@ function LayoutWrapper() {
             <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
-            <Route path="/dashboard/profile" element={<Profile />} />
-            <Route path="/dashboard/profile/edit" element={<EditProfile />} />
             <Route path="/dashboard/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
@@ -747,7 +756,8 @@ function LayoutWrapper() {
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard/profile" element={<Profile />} />
+          <Route path="/dashboard/profile/edit" element={<EditProfile />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />

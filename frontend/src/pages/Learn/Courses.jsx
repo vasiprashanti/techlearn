@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Clock, Calendar, ArrowRight, Code } from "lucide-react";
 import LoadingScreen from "../../components/LoadingScreen";
@@ -11,11 +10,44 @@ import {
   CarouselItem,
 } from "../../components/ui/carousel";
 
+const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
+const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readCachedCourses = () => {
+  try {
+    const raw = sessionStorage.getItem(COURSES_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || !Array.isArray(parsed?.courses)) return null;
+    if (Date.now() - parsed.timestamp > COURSES_CACHE_TTL_MS) return null;
+
+    return parsed.courses;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedCourses = (courses) => {
+  try {
+    sessionStorage.setItem(
+      COURSES_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        courses,
+      })
+    );
+  } catch {
+    // Ignore cache write failures and continue with live data only.
+  }
+};
+
 export default function Courses() {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const onlineCoursesSectionRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const cachedCourses = readCachedCourses();
 
   const levelTagStyles = {
     Beginner: 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]',
@@ -29,8 +61,8 @@ export default function Courses() {
     'from-[#94d8ff] via-[#79c8ff] to-[#5d99ff]',
   ];
 
-  const [coursesData, setCoursesData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [coursesData, setCoursesData] = useState(cachedCourses || []);
+  const [loading, setLoading] = useState(!cachedCourses);
   const [error, setError] = useState(null);
 
   const mockCoursesData = [
@@ -51,21 +83,26 @@ export default function Courses() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        setLoading(true);
+        if (!cachedCourses) {
+          setLoading(true);
+        }
         const backendCourses = await courseAPI.getAllCourses();
         const adaptedCourses = backendCourses.map(course => dataAdapters.adaptCourse(course));
         setCoursesData(adaptedCourses);
+        writeCachedCourses(adaptedCourses);
         setError(null);
       } catch (fetchError) {
         setError(fetchError.message);
-        setCoursesData(mockCoursesData);
+        if (!cachedCourses) {
+          setCoursesData(mockCoursesData);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchCourses();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [cachedCourses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const shouldScrollToOnlineCourses = sessionStorage.getItem('returnToOnlineCourses');
@@ -109,25 +146,17 @@ export default function Courses() {
 
           <section className="pt-6">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
-              <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-                <h2 className="font-poppins tracking-tight leading-[0.92]">
-                  <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
+              <div>
+                <h2 className="dashboard-page-title">
+                  Courses
                 </h2>
-                <p className="text-sm sm:text-base md:text-lg text-[#6f8fb8] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">
-                  Fundamentals first. Brilliance next.
-                </p>
-                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">
+                <p className="dashboard-page-subtitle mt-2">
                   Pick a track and start building skills
                 </p>
-              </motion.div>
+              </div>
             </header>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="mb-8 mt-6"
-            >
+            <div className="mb-8 mt-6">
               {error && (
                 <div className="text-left py-2 mb-4">
                   <p className="text-sm text-red-500 dark:text-red-400">Failed to load courses: {error}. Showing fallback data.</p>
@@ -135,56 +164,44 @@ export default function Courses() {
               )}
 
               <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 md:gap-6">
-                {coursesData.map((course, index) => (
-                  <motion.div
+                {coursesData.map((course) => (
+                  <div
                     key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: index * 0.1 }}
                     onClick={() => handleCourseClick(course.id)}
-                    className="group p-6 md:p-8 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 transition-all duration-500 rounded-2xl cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden shadow-[0_12px_34px_rgba(60,131,246,0.12)]"
+                    className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1"
                   >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/35 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
 
                     <div className="relative z-10 flex items-start justify-between mb-5 min-h-[52px]">
-                      <div className="p-3 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                      <div className="dashboard-icon-badge group-hover:scale-110 transition-transform duration-500">
                         <Code className="w-5 h-5 text-[#3C83F6] dark:text-[#8fd9ff]" />
                       </div>
                     </div>
 
                     <div className="relative z-10 mt-auto">
-                      <h3 className="text-lg md:text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[56px] leading-snug flex items-start">
+                      <h3 className="text-2xl md:text-[1.9rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
                         {course.title}
                       </h3>
-                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 font-light min-h-[46px]">
+                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
                         {course.description}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
 
-            </motion.div>
+            </div>
           </section>
 
-          <motion.section
+          <section
             ref={onlineCoursesSectionRef}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.8 }}
             className="pb-4"
           >
             <div className="mb-8">
-              <div className="flex items-center gap-3">
-                <h2 className="brand-heading-secondary font-poppins text-sm tracking-[0.16em] uppercase font-semibold">
+              <div className="flex items-center">
+                <h2 className="dashboard-page-title">
                   Online Courses
                 </h2>
-                <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4ea3ff]/55 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#3C83F6]"></span>
-                </span>
               </div>
             </div>
 
@@ -199,12 +216,8 @@ export default function Courses() {
                       key={batch.id}
                       className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                     >
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.2 }}
-                        transition={{ duration: 0.5, delay: index * 0.05 }}
-                        className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] shadow-[0_12px_34px_rgba(60,131,246,0.12)]"
+                      <div
+                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
                       >
                         <div className="flex justify-between items-center mb-6">
                           <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
@@ -244,17 +257,17 @@ export default function Courses() {
 
                         <button
                           onClick={() => handleWhatsAppClick(batch.title)}
-                          className="mt-auto w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] rounded-xl text-[10px] uppercase tracking-widest font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02]"
+                          className="dashboard-primary-btn mt-auto w-full py-3"
                         >
                           Join Waitlist <ArrowRight className="w-4 h-4" />
                         </button>
-                      </motion.div>
+                      </div>
                     </CarouselItem>
                   ))}
                 </CarouselContent>
               </Carousel>
             </div>
-          </motion.section>
+          </section>
         </div>
       </main>
     </div>

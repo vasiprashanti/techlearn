@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
+import UserSidebarLayout from "./UserSidebarLayout";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
@@ -89,7 +90,7 @@ const Profile = () => {
   
   const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
   const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
-  const dashboardCardClass = "rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-12";
+  const dashboardCardClass = "dashboard-surface p-8 md:p-12";
 
   if (isLoading) {
     return (
@@ -101,32 +102,20 @@ const Profile = () => {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <>
       <ScrollProgress />
-      
-      {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
-
-      <main className="flex-1 transition-all duration-700 ease-in-out z-10 pt-24 pb-12 px-6 md:px-12 lg:px-16">
-        <div className="max-w-[1280px] mx-auto space-y-8">
+      <UserSidebarLayout maxWidthClass="max-w-[1280px]">
+        <div className="space-y-8">
           
           {/* Top Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </button>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
                   My Profile.
                 </span>
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
                 Manage your personal information
               </p>
             </motion.div>
@@ -139,7 +128,7 @@ const Profile = () => {
             {/* Left Column - Form/Info Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex-1 space-y-8"
+              className="flex-[1.25] space-y-8"
             >
               {/* Basic Info Card */}
               <div className={dashboardCardClass}>
@@ -232,7 +221,7 @@ const Profile = () => {
             {/* Right Column - Avatar Profile display */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full lg:w-96 flex flex-col"
+              className="w-full lg:w-80 flex flex-col"
             >
               <div className={`${dashboardCardClass} flex flex-1 flex-col items-center relative overflow-hidden`}>
                 
@@ -272,7 +261,7 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard/profile/edit')}
-                  className="relative z-10 mt-5 inline-flex items-center rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg"
+                  className="dashboard-primary-btn relative z-10 mt-5"
                 >
                   Edit Profile
                 </button>
@@ -280,9 +269,8 @@ const Profile = () => {
             </motion.div>
           </div>
         </div>
-      </main>
+      </UserSidebarLayout>
 
-      {/* Avatar Selection Modal (Glassmorphism UI) */}
       <AnimatePresence>
         {isSelectingAvatar && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -370,7 +358,7 @@ const Profile = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
 

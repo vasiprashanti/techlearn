@@ -165,8 +165,8 @@ const CourseDetails = () => {
       <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
          <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
         <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-          <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-12 rounded-2xl text-center">
-            <h1 className="text-2xl font-light text-black dark:text-white mb-4">{error ? 'Error Loading Course' : 'Course Not Found'}</h1>
+          <div className="dashboard-surface p-12 text-center">
+            <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading Course' : 'Course Not Found'}</h1>
             {error && <p className="text-sm text-red-500 mb-6">{error}</p>}
             <button onClick={() => navigate('/learn')} className="text-[10px] uppercase tracking-widest text-[#3C83F6] hover:underline">
               Back to Learn
@@ -208,18 +208,18 @@ const CourseDetails = () => {
                 <span>Back to Learn</span>
               </button>
               <div>
-                <h1 className="brand-heading-primary font-poppins text-3xl md:text-4xl font-normal tracking-tight leading-none">
-                  Course Details.
+                <h1 className="dashboard-page-title">
+                  Course Details
                 </h1>
-                <p className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">
-                  Explore The Curriculum
+                <p className="dashboard-page-subtitle mt-2">
+                  Explore the curriculum
                 </p>
               </div>
             </div>
           </header>
 
           {/* Hero Section */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 md:p-12 rounded-3xl relative overflow-hidden shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="dashboard-surface p-8 md:p-12 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#3C83F6]/10 to-transparent dark:from-white/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
             
             <div className="relative z-10 max-w-4xl">
@@ -254,7 +254,7 @@ const CourseDetails = () => {
 
               <button
                 onClick={handleStartCourse}
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] rounded-xl text-[10px] uppercase tracking-widest font-semibold transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] flex items-center justify-center gap-3 group"
+                className="dashboard-primary-btn w-full sm:w-auto px-8 py-4 flex items-center justify-center gap-3 group"
               >
                 <Play className="w-4 h-4" />
                 <span>Start Learning</span>
@@ -296,7 +296,7 @@ const CourseDetails = () => {
             >
               {activeTab === "overview" && (
                 <div className="grid md:grid-cols-2 gap-8 md:gap-16">
-                  <div className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-md border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 rounded-3xl shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
+                  <div className="dashboard-surface p-8">
                     <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-8">
                       What you'll learn
                     </h3>
@@ -310,7 +310,7 @@ const CourseDetails = () => {
                     </ul>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-md border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 rounded-3xl h-fit shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
+                  <div className="dashboard-surface p-8 h-fit">
                     <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-8">
                       Prerequisites
                     </h3>
@@ -331,7 +331,7 @@ const CourseDetails = () => {
                   {course.curriculum.map((module, index) => (
                     <div
                       key={module.id}
-                      className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl rounded-2xl p-6 md:p-8 border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 transition-all hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 group shadow-[0_12px_34px_rgba(60,131,246,0.12)]"
+                      className="dashboard-surface rounded-2xl p-6 md:p-8 transition-all hover:-translate-y-0.5 group"
                     >
                       <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-5">
@@ -367,7 +367,7 @@ const CourseDetails = () => {
               )}
 
               {activeTab === "instructor" && (
-                <div className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl rounded-3xl p-8 md:p-12 border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 max-w-3xl shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
+                <div className="dashboard-surface p-8 md:p-12 max-w-3xl">
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
                     <div className="w-24 h-24 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-4 border-[#d9efff] dark:border-[#0d366f]">
                       <span className="text-3xl font-medium text-[#082a5d]">
@@ -381,7 +381,7 @@ const CourseDetails = () => {
                       <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] mb-6 leading-relaxed font-light">
                         {course.instructor.bio}
                       </p>
-                      <div className="flex flex-wrap justify-center sm:justify-start gap-6 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 p-4 rounded-xl w-fit">
+                      <div className="dashboard-inner-surface flex flex-wrap justify-center sm:justify-start gap-6 text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] p-4 rounded-xl w-fit">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
                           <span>{course.students} students</span>

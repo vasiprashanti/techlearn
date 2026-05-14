@@ -6,7 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
-import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
@@ -19,6 +19,7 @@ const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   
+  const [courseSidebarCollapsed, setCourseSidebarCollapsed] = useState(false);
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState(0);
@@ -60,7 +61,7 @@ const CourseTopics = () => {
           return {
             id: topicId,
             title: cleanTitle,
-            description: `Learn about ${cleanTitle} concepts and applications.`,
+            description: `Learn about ${cleanTitle} chapter concepts and applications.`,
             completed: false,
             hasNotes: !!topic.notesId,
             notesContent: topic.notes,
@@ -76,6 +77,7 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
+  const courseSidebarWidthClass = courseSidebarCollapsed ? "md:w-20" : "md:w-72";
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
@@ -92,8 +94,8 @@ const CourseTopics = () => {
       <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
          <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
         <div className="flex-1 flex items-center justify-center relative z-10">
-          <div className="text-center bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-12 rounded-3xl shadow-sm">
-            <h1 className="text-xl font-medium tracking-tight text-black dark:text-white mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
+          <div className="dashboard-surface text-center p-12 shadow-sm">
+            <h1 className="dashboard-page-title mb-4">{error ? 'Error Loading' : 'Course Not Found'}</h1>
             <button onClick={() => navigate('/learn')} className="text-[10px] uppercase tracking-widest font-semibold text-[#3C83F6] hover:underline">
               Back to Learn
             </button>
@@ -155,7 +157,7 @@ const CourseTopics = () => {
       <main className="flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
         {/* Top Header */}
-        <header className="flex-shrink-0 flex items-center justify-between pt-4 pb-4 px-6 md:px-12 border-b border-black/5 dark:border-white/5">
+        <header className="flex-shrink-0 flex items-center justify-between pt-4 pb-4 px-6 md:px-12">
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
@@ -165,11 +167,11 @@ const CourseTopics = () => {
                 <span>Back to Learn</span>
             </button>
             <div>
-              <h1 className="brand-heading-primary font-poppins text-2xl md:text-3xl font-medium tracking-tight leading-none">
-                Course Player.
+              <h1 className="dashboard-page-title">
+                Course Player
               </h1>
-              <p className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-1 line-clamp-1 font-semibold">
-                {currentCourse.title}
+              <p className="dashboard-page-subtitle mt-1 line-clamp-1">
+                {currentCourse.title} Chapters
               </p>
             </div>
           </div>
@@ -177,13 +179,77 @@ const CourseTopics = () => {
           <div className="flex items-center gap-4 sm:gap-6 relative z-50">
             <button 
               onClick={() => setIsSyllabusOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
+              className="md:hidden flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
             >
               <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Syllabus</span>
+              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Chapters</span>
             </button>
           </div>
         </header>
+
+        <aside
+          className={`hidden md:flex fixed z-30 left-0 top-[112px] h-[calc(100vh-112px)] flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out ${courseSidebarWidthClass}`}
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
+            <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
+              <span className="block text-sm uppercase tracking-[0.18em] font-semibold text-black/55 dark:text-white/80">
+                Chapters
+              </span>
+              <span className="block mt-1 text-xs font-medium text-black/55 dark:text-white/60">
+                {totalTopics} chapters
+              </span>
+            </div>
+            <button
+              onClick={() => setCourseSidebarCollapsed((prev) => !prev)}
+              className="dashboard-inner-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-black/55 dark:text-white/70 transition-all hover:text-black dark:hover:text-white"
+              aria-label={courseSidebarCollapsed ? "Expand course topics sidebar" : "Collapse course topics sidebar"}
+            >
+              {courseSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="space-y-2">
+              {currentCourse.topics.map((topic, index) => {
+                const isActive = selectedTopic === index;
+
+                return (
+                  <button
+                    key={topic.id}
+                    onClick={() => setSelectedTopic(index)}
+                    className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                      isActive
+                        ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                        : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                    } ${courseSidebarCollapsed ? "justify-center px-2" : ""}`}
+                    title={courseSidebarCollapsed ? topic.title : undefined}
+                  >
+                    <div
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
+                        isActive
+                          ? "border border-black/10 bg-white text-[#020b23] shadow-md dark:border-white/10 dark:bg-black/30 dark:text-white"
+                          : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
+                      }`}
+                    >
+                      {index + 1}
+                    </div>
+
+                    {!courseSidebarCollapsed && (
+                      <div className="min-w-0 flex-1 self-center">
+                        <span className="block text-[9px] uppercase tracking-[0.16em] font-semibold text-black/35 dark:text-white/45 leading-none">
+                          Chapter {index + 1}
+                        </span>
+                        <span className="mt-1 block text-sm font-medium leading-tight line-clamp-2">
+                          {topic.title}
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </aside>
 
         {/* Syllabus Drawer */}
         <AnimatePresence>
@@ -197,15 +263,15 @@ const CourseTopics = () => {
               <motion.div 
                 initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl"
+                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl md:hidden"
               >
                 <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus Drawer</span>
-                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Modules Total</span>
+                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Chapter List</span>
+                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Chapters Total</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                    <X className="w-4 h-4 text-black/60 dark:text-white/60" />
+                    <PanelLeftClose className="w-4 h-4 text-black/60 dark:text-white/60" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -230,19 +296,21 @@ const CourseTopics = () => {
         {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
         <div 
           ref={scrollContainerRef} 
-          className="flex-1 overflow-y-auto px-4 md:px-8 py-10 relative [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className={`flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
+            courseSidebarCollapsed ? "md:pl-28" : "md:pl-80"
+          }`}
         >
           <div className="max-w-[800px] mx-auto pb-20">
 
             {/* Reading Container Card */}
-            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-3xl border border-black/5 dark:border-white/5 rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
+            <div className="dashboard-surface rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#3C83F6]/10 dark:bg-white/5 rounded-full mb-6 border border-[#3C83F6]/20 dark:border-white/10">
                   <div className="w-2 h-2 rounded-full bg-[#3C83F6] dark:bg-white animate-pulse"></div>
                   <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-bold">
-                    Module {selectedTopic + 1}
+                    Chapters
                   </span>
                 </div>
                 
@@ -283,7 +351,7 @@ const CourseTopics = () => {
             </div>
 
             {/* Premium Navigation Footer */}
-            <div className="flex items-center justify-between mt-8 bg-white/70 dark:bg-black/40 backdrop-blur-2xl border border-black/5 dark:border-white/5 p-4 rounded-[1.5rem] shadow-sm">
+            <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
                 <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
@@ -295,11 +363,11 @@ const CourseTopics = () => {
               </span>
 
               {!isLastTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="flex items-center gap-2 px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="flex items-center gap-2 px-8 py-3.5 bg-black dark:bg-white text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all">
+                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
                   Complete <CheckCircle className="w-4 h-4" />
                 </button>
               )}

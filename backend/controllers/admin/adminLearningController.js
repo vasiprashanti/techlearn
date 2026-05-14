@@ -2,8 +2,10 @@ import mongoose from "mongoose";
 import Question from "../../models/Questions.js";
 import QuestionCategory from "../../models/QuestionCategory.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
+import Track from "../../models/Track.js";
 import Batch from "../../models/Batch.js";
 import Resource from "../../models/Resource.js";
+import { v2 as cloudinary } from "cloudinary";
 import FinalTest from "../../models/FinalTest.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import IssuedCertificate from "../../models/IssuedCertificate.js";
@@ -20,6 +22,75 @@ import {
   slugifyCategory,
 } from "./adminCommon.js";
 
+const normalizeTrackType = (value = "") => {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized.includes("dsa")) return "DSA";
+  if (normalized.includes("sql")) return "SQL";
+  return "Core";
+};
+
+const resolveTemplateSchedule = ({ startDate, endDate, totalDays, durationDays }) => {
+  const parsedStartDate = startDate ? new Date(startDate) : null;
+  const parsedEndDate = endDate ? new Date(endDate) : null;
+  const requestedDuration = Number(durationDays || totalDays || 0);
+
+  if (!parsedStartDate || Number.isNaN(parsedStartDate.getTime())) {
+    return { error: "startDate must be a valid date." };
+  }
+
+  if (parsedEndDate && Number.isNaN(parsedEndDate.getTime())) {
+    return { error: "endDate must be a valid date." };
+  }
+
+  if (parsedEndDate && parsedEndDate < parsedStartDate) {
+    return { error: "endDate must be on or after startDate." };
+  }
+
+  if (!parsedEndDate && requestedDuration <= 0) {
+    return { error: "Provide either endDate or durationDays/totalDays." };
+  }
+
+  const effectiveEndDate = parsedEndDate
+    ? parsedEndDate
+    : new Date(parsedStartDate.getTime() + (requestedDuration - 1) * 24 * 60 * 60 * 1000);
+
+  const effectiveTotalDays = Math.max(
+    1,
+    parsedEndDate
+      ? Math.floor((effectiveEndDate.getTime() - parsedStartDate.getTime()) / (24 * 60 * 60 * 1000)) + 1
+      : requestedDuration,
+  );
+
+  return {
+    startDate: parsedStartDate,
+    endDate: effectiveEndDate,
+    totalDays: effectiveTotalDays,
+  };
+};
+
+const syncTemplateToTrack = async (template) => {
+  if (!template?.batchId) return;
+
+  const orderedQuestionIds = [...(template.dayAssignments || [])]
+    .sort((a, b) => a.dayNumber - b.dayNumber)
+    .map((assignment) => assignment.questionId)
+    .filter(Boolean);
+
+  await Track.findOneAndUpdate(
+    {
+      batchId: template.batchId,
+      trackType: normalizeTrackType(template.category),
+    },
+    {
+      $set: {
+        durationDays: Number(template.totalDays || orderedQuestionIds.length || 1),
+        orderedQuestionIds,
+      },
+    },
+    { new: true }
+  );
+};
+
 const normalizeTestCases = (value) => {
   if (!Array.isArray(value)) return [];
   return value.map((testCase) => ({
@@ -27,6 +98,47 @@ const normalizeTestCases = (value) => {
     output: String(testCase?.output || ""),
     explanation: String(testCase?.explanation || ""),
   }));
+};
+
+const detectResourceType = (file = {}) => {
+  const name = String(file.originalname || "").toLowerCase();
+  const mime = String(file.mimetype || "").toLowerCase();
+  if (mime.startsWith("video/") || /\.(mp4|mov|avi|mkv|webm)$/.test(name)) return "Video";
+  if (mime.includes("sheet") || /\.(xls|xlsx|csv)$/.test(name)) return "Sheet";
+  if (mime.includes("pdf") || /\.pdf$/.test(name)) return "PDF";
+  return "Link";
+};
+
+const uploadResourceFile = async (file) => {
+  if (!file?.buffer) return null;
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    return {
+      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`,
+    };
+  }
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          resource_type: "auto",
+          folder: "techlearn/resources",
+          use_filename: true,
+          unique_filename: true,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      )
+      .end(file.buffer);
+  });
 };
 
 const parsePositiveNumber = (value, fallback) => {
@@ -542,9 +654,11 @@ export const listTrackTemplates = async (req, res) => {
 
 export const createTrackTemplate = async (req, res) => {
   try {
-    const { name, description, category, totalDays, status, iconKey, startDate, endDate, batchId } = req.body;
-    if (!name?.trim() || !category?.trim() || !startDate || !endDate || !batchId) {
-      return res.status(400).json({ success: false, message: "Template name, category, startDate, endDate and batchId are required." });
+    const { name, description, status, iconKey, batchId } = req.body;
+    const category = req.body.category || req.body.trackType;
+
+    if (!name?.trim() || !category?.trim() || !req.body.startDate || !batchId) {
+      return res.status(400).json({ success: false, message: "Template name, category/trackType, startDate and batchId are required." });
     }
 
     if (!assertObjectId(batchId, "batchId", res)) return;
@@ -554,27 +668,25 @@ export const createTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Assigned batch not found." });
     }
 
-    const parsedStartDate = new Date(startDate);
-    const parsedEndDate = new Date(endDate);
-    if (Number.isNaN(parsedStartDate.getTime()) || Number.isNaN(parsedEndDate.getTime())) {
-      return res.status(400).json({ success: false, message: "startDate and endDate must be valid dates." });
-    }
-    if (parsedEndDate < parsedStartDate) {
-      return res.status(400).json({ success: false, message: "endDate must be on or after startDate." });
+    const schedule = resolveTemplateSchedule(req.body);
+    if (schedule.error) {
+      return res.status(400).json({ success: false, message: schedule.error });
     }
 
     const template = await TrackTemplate.create({
       name: name.trim(),
-      description: description?.trim() || `${totalDays || 30}-day ${category} track template`,
+      description: description?.trim() || `${schedule.totalDays}-day ${category} track template`,
       category: category.trim(),
-      startDate: parsedStartDate,
-      endDate: parsedEndDate,
+      startDate: schedule.startDate,
+      endDate: schedule.endDate,
       batchId,
-      totalDays: Number(totalDays || 30),
+      totalDays: schedule.totalDays,
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
       versionHistory: [{ version: 1, label: "v1 - Initial template", changedBy: getActorName(req.user) }],
     });
+
+    await syncTemplateToTrack(template);
 
     await writeAuditLog({
       verb: "Created",
@@ -658,24 +770,10 @@ export const updateTrackTemplate = async (req, res) => {
     }
 
     if (req.body.name) template.name = req.body.name.trim();
-    if (req.body.description !== undefined) template.description = req.body.description.trim();
+    if (req.body.description !== undefined) template.description = req.body.description?.trim() || "";
     if (req.body.category) {
       template.category = req.body.category.trim();
       template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
-    }
-    if (req.body.startDate) {
-      const parsedStartDate = new Date(req.body.startDate);
-      if (Number.isNaN(parsedStartDate.getTime())) {
-        return res.status(400).json({ success: false, message: "startDate must be a valid date." });
-      }
-      template.startDate = parsedStartDate;
-    }
-    if (req.body.endDate) {
-      const parsedEndDate = new Date(req.body.endDate);
-      if (Number.isNaN(parsedEndDate.getTime())) {
-        return res.status(400).json({ success: false, message: "endDate must be a valid date." });
-      }
-      template.endDate = parsedEndDate;
     }
     if (req.body.batchId) {
       if (!assertObjectId(req.body.batchId, "batchId", res)) return;
@@ -685,11 +783,25 @@ export const updateTrackTemplate = async (req, res) => {
       }
       template.batchId = req.body.batchId;
     }
-    if (req.body.totalDays) template.totalDays = Number(req.body.totalDays);
+    if (req.body.trackType && !req.body.category) {
+      template.category = req.body.trackType.trim();
+      template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
+    }
     if (req.body.status) template.status = req.body.status;
 
-    if (template.endDate && template.startDate && template.endDate < template.startDate) {
-      return res.status(400).json({ success: false, message: "endDate must be on or after startDate." });
+    if (req.body.startDate || req.body.endDate || req.body.totalDays || req.body.durationDays) {
+      const schedule = resolveTemplateSchedule({
+        startDate: req.body.startDate || template.startDate,
+        endDate: req.body.endDate || template.endDate,
+        totalDays: req.body.totalDays || template.totalDays,
+        durationDays: req.body.durationDays,
+      });
+      if (schedule.error) {
+        return res.status(400).json({ success: false, message: schedule.error });
+      }
+      template.startDate = schedule.startDate;
+      template.endDate = schedule.endDate;
+      template.totalDays = schedule.totalDays;
     }
 
     const nextVersion = (template.versionHistory?.length || 0) + 1;
@@ -704,6 +816,7 @@ export const updateTrackTemplate = async (req, res) => {
     ];
 
     await template.save();
+    await syncTemplateToTrack(template);
 
     await writeAuditLog({
       verb: "Updated",
@@ -780,6 +893,7 @@ export const assignTrackTemplateDay = async (req, res) => {
     ];
 
     await template.save();
+    await syncTemplateToTrack(template);
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
     console.error("assignTrackTemplateDay error:", error);
@@ -801,6 +915,7 @@ export const removeTrackTemplateDay = async (req, res) => {
       (assignment) => assignment.dayNumber !== Number(dayNumber)
     );
     await template.save();
+    await syncTemplateToTrack(template);
 
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
@@ -829,6 +944,7 @@ export const reorderTrackTemplateQuestions = async (req, res) => {
       questionId: assignment.questionId,
     }));
     await template.save();
+    await syncTemplateToTrack(template);
 
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
@@ -862,11 +978,12 @@ export const createResourceAdmin = async (req, res) => {
       });
     }
 
+    const uploaded = req.file ? await uploadResourceFile(req.file) : null;
     const resource = await Resource.create({
       title: title.trim(),
       category: category.trim(),
-      type,
-      url: url || "",
+      type: uploaded ? detectResourceType(req.file) : type,
+      url: uploaded?.secure_url || url || "",
       uploadedBy: req.user?._id || null,
     });
 
@@ -900,16 +1017,22 @@ export const updateResourceAdmin = async (req, res) => {
       });
     }
 
+    const uploaded = req.file ? await uploadResourceFile(req.file) : null;
+    const update = {
+      title: req.body.title?.trim(),
+      category: req.body.category?.trim(),
+      type: uploaded ? detectResourceType(req.file) : req.body.type,
+    };
+
+    if (uploaded?.secure_url || req.body.url !== undefined) {
+      update.url = uploaded?.secure_url || req.body.url || "";
+    }
+
+    Object.keys(update).forEach((key) => update[key] === undefined && delete update[key]);
+
     const resource = await Resource.findByIdAndUpdate(
       resourceId,
-      {
-        $set: {
-          title: req.body.title?.trim(),
-          category: req.body.category?.trim(),
-          type: req.body.type,
-          url: req.body.url || "",
-        },
-      },
+      { $set: update },
       { new: true, runValidators: true }
     );
 

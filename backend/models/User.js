@@ -21,7 +21,25 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required() {
+        return this.authProvider === "local";
+      },
+      default: "",
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "firebase"],
+      default: "local",
+    },
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+      index: true,
+    },
+    startDate: {
+      type: Date,
+      default: null,
     },
     role: {
       type: String,
@@ -40,14 +58,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    batchId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Batch",
-      default: null,
-    },
-    startDate: {
-      type: Date,
-      default: null,
+    photoUrl: {
+      type: String,
+      default: "",
     },
 
     resetPasswordToken: String,
@@ -59,6 +72,7 @@ const userSchema = new mongoose.Schema(
 // 🔐 Hash the password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
+  if (!this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

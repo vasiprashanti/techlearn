@@ -1,5 +1,8 @@
 import CodingRound from "../models/CodingRound.js";
+import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
+import Student from "../models/Student.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
+import Submission from "../models/Submission.js";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import {
@@ -7,23 +10,74 @@ import {
   storeOTP,
   verifyOTP,
   sendOTPEmail,
-  isRoundActive,
-  getRoundTimeStatus,
-  validateSubmission,
 } from "../utils/mcqCodingUtils.js";
 import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
+import {
+  DAILY_CHALLENGE_RULES,
+  ensureDailyChallengeAttempt,
+  getAttemptTimeRemainingSeconds,
+  getDailyChallengeAttempt,
+  isAttemptExpired,
+  resolveDailyChallengeParticipant,
+  startOfDay,
+} from "../utils/dailyChallengeUtils.js";
+import { invalidateDashboardCache } from "./dashboardController.js";
 
-// Simple rate limiter for coding operations (10 seconds)
+const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
+  const email =
+    req.body?.studentEmail ||
+    req.body?.email ||
+    req.query?.email ||
+    req.user?.email ||
+    req.user?._id?.toString() ||
+    req.ip;
+
+  const normalizedEmail = String(email || req.ip)
+    .trim()
+    .toLowerCase();
+  const linkId = String(req.params?.linkId || "daily-challenge").trim().toLowerCase();
+  const attemptId = includeAttempt ? String(req.body?.attemptId || "no-attempt").trim().toLowerCase() : "";
+
+  return [normalizedEmail, linkId, attemptId].filter(Boolean).join(":");
+};
+
+const buildRateLimiter = (windowMs, max, message, keyGenerator) =>
+  rateLimit({
+    windowMs,
+    max,
+    message: {
+      success: false,
+      message,
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator,
+  });
+
+export const dailyChallengeOtpRateLimit = buildRateLimiter(
+  60 * 1000,
+  3,
+  "Too many OTP requests. Please wait a minute before trying again.",
+  (req) => buildChallengeRateLimitKey(req)
+);
+
+export const dailyChallengeAccessRateLimit = buildRateLimiter(
+  10 * 1000,
+  5,
+  "Please wait a few seconds before retrying this Daily Challenge action.",
+  (req) => buildChallengeRateLimitKey(req)
+);
+
 export const codingRateLimit = rateLimit({
-  windowMs: 10 * 1000, // 10 seconds
-  max: 1, // 1 request per window per IP
+  windowMs: 10 * 1000,
+  max: 3,
   message: {
     success: false,
-    message: "Please wait 10 seconds before trying again",
+    message: "Please wait a few seconds before trying again.",
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // No custom keyGenerator - uses default IP-based limiting
+  keyGenerator: (req) => buildChallengeRateLimitKey(req, true),
 });
 
 // Helper function to convert IST to UTC
@@ -34,6 +88,179 @@ const convertISTToUTC = (istDateString) => {
   const utcDate = new Date(istWithTimezone);
 
   return utcDate;
+};
+
+const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, totalProblems, correctSolutions }) => {
+  if (codingRound.challengeType !== "daily_challenge") {
+    return {};
+  }
+
+  const completedRounds = await StudentCodingSubmission.find({
+    studentEmail: submission.studentEmail,
+    isRoundEnded: true,
+  })
+    .populate({
+      path: "codingRoundId",
+      select: "challengeType date",
+      match: { challengeType: "daily_challenge" },
+    })
+    .lean();
+
+  const distinctDates = [...new Set(
+    completedRounds
+      .filter((item) => item.codingRoundId?.date)
+      .map((item) => startOfDay(item.codingRoundId.date).toISOString())
+  )].sort();
+
+  let streak = 0;
+  if (distinctDates.length > 0) {
+    streak = 1;
+    for (let index = distinctDates.length - 1; index > 0; index -= 1) {
+      const current = new Date(distinctDates[index]);
+      const previous = new Date(distinctDates[index - 1]);
+      const diffDays = Math.round((current.getTime() - previous.getTime()) / (24 * 60 * 60 * 1000));
+      if (diffDays === 1) {
+        streak += 1;
+      } else {
+        break;
+      }
+    }
+  }
+
+  const startedAt = attempt?.startedAt || submission.submittedAt || submission.createdAt || new Date();
+  const endedAt = attempt?.endedAt || submission.roundEndedAt || new Date();
+  const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
+  const xpGained = Math.max(0, Math.round(submission.totalScore || 0));
+
+  return {
+    challengeMetrics: {
+      xpGained,
+      streak,
+      timeTakenSeconds,
+      timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
+      accuracy: submission.totalScore || 0,
+      score: submission.totalScore || 0,
+      evaluationStatus: submission.autoEnded
+        ? "Timeout"
+        : submission.isRoundEnded
+          ? submission.totalScore === 100
+            ? "Passed"
+            : "Failed"
+          : "Pending",
+      correctSolutions,
+      totalProblems,
+    },
+  };
+};
+
+const buildAttemptPayload = (attempt) => ({
+  id: attempt._id,
+  status: attempt.status,
+  startedAt: attempt.startedAt,
+  expiresAt: attempt.expiresAt,
+  secondsRemaining: getAttemptTimeRemainingSeconds(attempt),
+});
+
+const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, submission }) => {
+  if (codingRound.challengeType !== "daily_challenge" || !student?._id) {
+    return null;
+  }
+
+  const totalScore = Number(submission.totalScore || 0);
+  const nextStatus =
+    submission.isRoundEnded && totalScore === 100
+      ? "Passed"
+      : submission.isRoundEnded && submission.autoEnded
+        ? "Timeout"
+        : submission.isRoundEnded && totalScore > 0
+          ? "Failed"
+          : "Pending";
+
+  return Submission.findOneAndUpdate(
+    { attemptId: attempt._id },
+    {
+      $set: {
+        studentId: student._id,
+        batchId: attempt.batchId,
+        trackId: attempt.trackId,
+        questionId: attempt.questionId,
+        codingRoundId: codingRound._id,
+        attemptId: attempt._id,
+        challengeType: "daily_challenge",
+        workingDay: codingRound.dayNumber,
+        runCount: Array.from(submission.problemRuns?.values?.() || []).reduce((sum, value) => sum + Number(value || 0), 0),
+        accuracyScore: totalScore,
+        totalScore,
+        status: nextStatus,
+        submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
+        executionTime: 0,
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+};
+
+const updateStudentChallengeStats = async ({ student, submission }) => {
+  if (!student?._id) return;
+
+  const currentTestsTaken = Number(student.testsTaken || 0);
+  await Student.findByIdAndUpdate(student._id, {
+    $set: {
+      streak: Number(student.streak || 0),
+      longestStreak: Math.max(Number(student.longestStreak || 0), Number(student.streak || 0)),
+      lastActiveAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
+      testsTaken: currentTestsTaken + 1,
+    },
+  });
+  invalidateDashboardCache(student.userId);
+};
+
+const finalizeDailyChallengeAttempt = async ({
+  codingRound,
+  student,
+  attempt,
+  submission,
+  finalStatus,
+  autoEnded = false,
+  latestSolution = null,
+}) => {
+  if (!attempt) return { attempt: null, linkedSubmission: null };
+
+  attempt.status = finalStatus;
+  attempt.submittedAt = attempt.submittedAt || submission.lastSubmissionAt || new Date();
+  attempt.endedAt = attempt.endedAt || new Date();
+  attempt.lastActiveAt = new Date();
+  if (latestSolution?.language) {
+    attempt.finalLanguage = latestSolution.language;
+  }
+  if (latestSolution?.submittedCode) {
+    attempt.finalCode = latestSolution.submittedCode;
+  }
+
+  submission.studentId = submission.studentId || student?._id || null;
+  submission.batchId = submission.batchId || attempt.batchId;
+  submission.trackId = submission.trackId || attempt.trackId;
+  submission.questionId = submission.questionId || attempt.questionId;
+  submission.attemptId = submission.attemptId || attempt._id;
+  submission.isRoundEnded = true;
+  submission.autoEnded = autoEnded;
+  submission.roundEndedAt = submission.roundEndedAt || new Date();
+  submission.lastSubmissionAt = submission.lastSubmissionAt || new Date();
+  await submission.save();
+
+  attempt.codingSubmissionId = submission._id;
+  const linkedSubmission = await upsertChallengeSubmissionRecord({
+    codingRound,
+    student,
+    attempt,
+    submission,
+  });
+  attempt.finalSubmissionId = linkedSubmission?._id || attempt.finalSubmissionId;
+  await attempt.save();
+
+  await updateStudentChallengeStats({ student, submission });
+
+  return { attempt, linkedSubmission };
 };
 
 // Create a new coding round
@@ -194,8 +421,9 @@ export const sendCodingRoundOTP = async (req, res) => {
   try {
     const { linkId } = req.params;
     const { email } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return res.status(400).json({
         success: false,
         message: "Email is required",
@@ -210,26 +438,38 @@ export const sendCodingRoundOTP = async (req, res) => {
       });
     }
 
-    // Simple check - if round was created but student already ended, prevent OTP
+    
+
+    let existingAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+      existingAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+    }
+
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: email.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
-    // If student has ended the round, prevent further OTP access
-    if (existingSubmission?.isRoundEnded) {
+    if (existingSubmission?.isRoundEnded || ["ended", "auto_submitted", "expired"].includes(existingAttempt?.status)) {
       return res.status(403).json({
         success: false,
         message:
           "You have already ended this coding round and cannot access it again",
         alreadyEnded: true,
-        finalScore: existingSubmission.totalScore,
-        endedAt: existingSubmission.roundEndedAt,
+        finalScore: existingSubmission?.totalScore || 0,
+        endedAt: existingSubmission?.roundEndedAt || existingAttempt?.endedAt || null,
       });
     }
 
-    // If any submission record exists, prevent further OTP access
-    if (existingSubmission) {
+    if (existingSubmission && codingRound.challengeType !== "daily_challenge") {
       let message = "You have already attempted this coding round";
 
       if (existingSubmission.totalScore > 0) {
@@ -249,15 +489,25 @@ export const sendCodingRoundOTP = async (req, res) => {
       });
     }
 
-    // Generate OTP only if no submission record exists
     const otp = generateOTP();
-    storeOTP(`${linkId}:${email}`, otp);
-    await sendOTPEmail(email, otp, "Coding Round");
+    storeOTP(`${linkId}:${normalizedEmail}`, otp);
+    await sendOTPEmail(
+      normalizedEmail,
+      otp,
+      codingRound.challengeType === "daily_challenge" ? "Daily Challenge" : "Coding Round"
+    );
 
-    res.json({ success: true, message: "OTP sent to email" });
+    res.json({
+      success: true,
+      message: "OTP sent to email",
+      ...(process.env.NODE_ENV === "development" ? { debugOtp: otp } : {}),
+    });
   } catch (error) {
-    console.error("Error sending OTP for Coding Round:", error);
-    res.status(500).json({ success: false, message: "Failed to send OTP" });
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error sending OTP for Coding Round:", error);
+    }
+    res.status(statusCode).json({ success: false, message: error.message || "Failed to send OTP" });
   }
 };
 
@@ -266,8 +516,9 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
   try {
     const { linkId } = req.params;
     const { email, otp } = req.body;
+    const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !otp) {
+    if (!normalizedEmail || !otp) {
       return res.status(400).json({
         success: false,
         message: "Email and OTP are required",
@@ -282,31 +533,44 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
-    // Double-check for existing submission record
+    let participant = null;
+    let existingAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      participant = await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+      existingAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+    }
+
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: email.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
-    if (existingSubmission?.isRoundEnded) {
+    if (existingSubmission?.isRoundEnded || ["ended", "auto_submitted", "expired"].includes(existingAttempt?.status)) {
       return res.status(403).json({
         success: false,
         message:
           "You have already ended this coding round and cannot access it again",
         alreadyEnded: true,
-        finalScore: existingSubmission.totalScore,
-        endedAt: existingSubmission.roundEndedAt,
+        finalScore: existingSubmission?.totalScore || 0,
+        endedAt: existingSubmission?.roundEndedAt || existingAttempt?.endedAt || null,
       });
     }
 
-    if (existingSubmission) {
+    if (existingSubmission && codingRound.challengeType !== "daily_challenge") {
       return res.status(400).json({
         success: false,
         message: "You have already accessed this coding round",
         alreadyAttempted: true,
       });
     }
-    const valid = verifyOTP(`${linkId}:${email}`, otp);
+    const valid = verifyOTP(`${linkId}:${normalizedEmail}`, otp);
     if (!valid) {
       return res.status(400).json({
         success: false,
@@ -314,29 +578,138 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
-    // Create a submission record immediately upon successful OTP verification
-    // This prevents the student from getting OTP again
-    const newSubmission = new StudentCodingSubmission({
-      codingRoundId: codingRound._id,
-      studentEmail: email.toLowerCase(),
-      problemScores: new Map(),
-      totalScore: 0,
-      isRoundEnded: false,
-      submittedAt: new Date(),
-      lastSubmissionAt: new Date(),
-    });
+    let submission = existingSubmission;
+    if (!submission) {
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentId: participant?.student?._id || null,
+        batchId: codingRound.batchId || null,
+        trackId: codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        studentEmail: normalizedEmail,
+        problemScores: new Map(),
+        totalScore: 0,
+        isRoundEnded: false,
+        submittedAt: new Date(),
+        lastSubmissionAt: new Date(),
+      });
+    }
 
-    await newSubmission.save();
+    await submission.save();
+
+    let responseAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      responseAttempt = await ensureDailyChallengeAttempt({
+        codingRound,
+        student: participant.student,
+        studentEmail: participant.studentEmail,
+        accessSource: participant.accessSource,
+        markOtpVerified: true,
+      });
+      submission.attemptId = responseAttempt._id;
+      await submission.save();
+    }
 
     res.json({
       success: true,
       codingRound,
+      attempt: responseAttempt ? buildAttemptPayload(responseAttempt) : null,
       message: "Access granted. You can now attempt the coding round.",
       note: "This is your only attempt. Make sure to complete it before the time limit.",
     });
   } catch (error) {
-    console.error("Error verifying OTP for Coding Round:", error);
-    res.status(500).json({ success: false, message: "Failed to verify OTP" });
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error verifying OTP for Coding Round:", error);
+    }
+    res.status(statusCode).json({ success: false, message: error.message || "Failed to verify OTP" });
+  }
+};
+
+export const startDailyChallengeAttempt = async (req, res) => {
+  try {
+    const { linkId } = req.params;
+    const normalizedEmail = String(req.body?.email || req.body?.studentEmail || "").trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Student email is required to start the Daily Challenge.",
+      });
+    }
+
+    const codingRound = await CodingRound.findOne({
+      linkId,
+      challengeType: "daily_challenge",
+      isActive: true,
+    });
+
+    if (!codingRound) {
+      return res.status(404).json({
+        success: false,
+        message: "Daily Challenge not found.",
+      });
+    }
+
+    const participant = await resolveDailyChallengeParticipant({
+      codingRound,
+      user: req.user,
+      email: normalizedEmail,
+    });
+
+    
+
+    let attempt = await getDailyChallengeAttempt({
+      codingRoundId: codingRound._id,
+      studentEmail: normalizedEmail,
+    });
+
+    if (attempt?.status && ["ended", "auto_submitted", "expired"].includes(attempt.status)) {
+      return res.status(403).json({
+        success: false,
+        message: "This Daily Challenge attempt has already ended.",
+      });
+    }
+
+    if (attempt && isAttemptExpired(attempt)) {
+      attempt.status = "expired";
+      attempt.endedAt = attempt.endedAt || new Date();
+      attempt.lastActiveAt = new Date();
+      await attempt.save();
+      return res.status(403).json({
+        success: false,
+        message: "Time is up for this Daily Challenge attempt.",
+        expired: true,
+      });
+    }
+
+    attempt = await ensureDailyChallengeAttempt({
+      codingRound,
+      student: participant.student,
+      studentEmail: participant.studentEmail,
+      accessSource: participant.accessSource,
+      markOtpVerified: true,
+      startAttempt: true,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: attempt.startedAt ? "Daily Challenge session ready." : "Daily Challenge started.",
+      data: {
+        attempt: buildAttemptPayload(attempt),
+        codingRound,
+        instructions: DAILY_CHALLENGE_RULES,
+      },
+    });
+  } catch (error) {
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("startDailyChallengeAttempt error:", error);
+    }
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Failed to start Daily Challenge attempt.",
+    });
   }
 };
 
@@ -344,10 +717,10 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
 export const submitCodingRoundAnswers = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail, solutions } = req.body;
+    const { studentEmail, solutions, attemptId } = req.body;
+    const normalizedEmail = String(studentEmail || "").trim().toLowerCase();
 
-    // Validate input
-    if (!studentEmail || !solutions || !Array.isArray(solutions)) {
+    if (!normalizedEmail || !solutions || !Array.isArray(solutions)) {
       return res.status(400).json({
         success: false,
         message: "Student email and solutions are required",
@@ -364,7 +737,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
     const solution = solutions[0];
     const { problemIndex, language, submittedCode } = solution;
 
-    // Validate solution structure
     if (problemIndex === undefined || !language || !submittedCode) {
       return res.status(400).json({
         success: false,
@@ -372,7 +744,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Find coding round
     const codingRound = await CodingRound.findOne({ linkId });
     if (!codingRound) {
       return res.status(404).json({
@@ -381,7 +752,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Find the problem
     const problem = codingRound.problems[problemIndex];
     if (!problem) {
       return res.status(400).json({
@@ -390,7 +760,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Get language ID for Judge0
     const languageId = LANGUAGE_IDS[language?.toLowerCase()];
     if (!languageId) {
       return res.status(400).json({
@@ -399,13 +768,58 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Find or create submission record
+    let participant = null;
+    let challengeAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      participant = await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+
+      challengeAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+
+      if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
+        return res.status(403).json({
+          success: false,
+          message: "A valid Daily Challenge attempt is required before submitting.",
+        });
+      }
+
+      if (!challengeAttempt.startedAt) {
+        return res.status(403).json({
+          success: false,
+          message: "Start the Daily Challenge before submitting solutions.",
+        });
+      }
+
+      if (["ended", "auto_submitted", "expired"].includes(challengeAttempt.status)) {
+        return res.status(403).json({
+          success: false,
+          message: "This Daily Challenge attempt has already ended.",
+        });
+      }
+
+      if (isAttemptExpired(challengeAttempt)) {
+        challengeAttempt.status = "expired";
+        challengeAttempt.endedAt = challengeAttempt.endedAt || new Date();
+        await challengeAttempt.save();
+        return res.status(403).json({
+          success: false,
+          message: "Time is up for this Daily Challenge attempt.",
+          expired: true,
+        });
+      }
+    }
+
     let submission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: studentEmail.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
-    // Check if round has been ended by the student
     if (submission?.isRoundEnded) {
       return res.status(403).json({
         success: false,
@@ -417,7 +831,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Enforce Max 1 Submission Limitation per problem
     if (submission?.problemSubmitted && submission.problemSubmitted.get(problemIndex.toString())) {
       return res.status(403).json({
         success: false,
@@ -426,7 +839,6 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Test against all test cases (visible + hidden)
     let testsPassed = 0;
     let testsFailed = 0;
     const allTestCases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
@@ -454,12 +866,11 @@ export const submitCodingRoundAnswers = async (req, res) => {
       }
     }
 
-    // Calculate proportional score for this problem
-    const problemScore = Math.round((testsPassed / totalTests) * 100);
+    const accuracy = Math.round((testsPassed / totalTests) * 100);
+    const problemScore = accuracy;
     const isCorrect = testsPassed === totalTests;
 
-if (!submission) {
-      // Create new submission
+    if (!submission) {
       const problemScores = new Map();
       problemScores.set(problemIndex.toString(), problemScore);
 
@@ -468,19 +879,27 @@ if (!submission) {
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentEmail: studentEmail.toLowerCase(),
+        studentId: participant?.student?._id || null,
+        batchId: codingRound.batchId || null,
+        trackId: codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        attemptId: challengeAttempt?._id || null,
+        studentEmail: normalizedEmail,
         problemScores,
         problemSubmitted,
         totalScore: problemScore,
         lastSubmissionAt: new Date(),
       });
     } else {
-      // Update existing submission
       if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
       submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
+      submission.studentId = submission.studentId || participant?.student?._id || null;
+      submission.batchId = submission.batchId || codingRound.batchId || null;
+      submission.trackId = submission.trackId || codingRound.trackId || null;
+      submission.questionId = submission.questionId || codingRound.questionId || null;
+      submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
 
-      // Recalculate total score
       let totalScore = 0;
       for (const score of submission.problemScores.values()) {
         totalScore += score;
@@ -491,6 +910,16 @@ if (!submission) {
 
     await submission.save();
 
+    if (challengeAttempt) {
+      challengeAttempt.status = "submitted";
+      challengeAttempt.submittedAt = new Date();
+      challengeAttempt.lastActiveAt = new Date();
+      challengeAttempt.finalLanguage = language;
+      challengeAttempt.finalCode = submittedCode;
+      challengeAttempt.codingSubmissionId = submission._id;
+      await challengeAttempt.save();
+    }
+
     res.status(200).json({
       success: true,
       message: "Solution submitted and evaluated successfully",
@@ -498,21 +927,28 @@ if (!submission) {
         submissionId: submission._id,
         problemIndex,
         problemScore,
+        accuracy,
         isCorrect,
         currentTotalScore: submission.totalScore,
-        failedTestCases: testsFailed, 
-        totalTestCases: totalTests, 
+        testsPassed,
+        failedTestCases: testsFailed,
+        totalTestCases: totalTests,
+        evaluationStatus: isCorrect ? "Passed" : "Failed",
         feedback: isCorrect
           ? "Perfect! All test cases passed."
           : `Partial Correctness! Score: ${problemScore}. Failed: ${testsFailed}/${totalTests} test cases.`,
         submittedAt: new Date(),
+        attempt: challengeAttempt ? buildAttemptPayload(challengeAttempt) : null,
       },
     });
   } catch (error) {
-    console.error("Error submitting coding round answers:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error submitting coding round answers:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to submit solution",
+      message: error.message || "Failed to submit solution",
     });
   }
 };
@@ -660,9 +1096,11 @@ export const deleteCodingRound = async (req, res) => {
     }
 
     // Also delete related submissions
-    await StudentCodingSubmission.deleteMany({
-      codingRoundId: codingRound._id,
-    });
+    await Promise.all([
+      StudentCodingSubmission.deleteMany({ codingRoundId: codingRound._id }),
+      DailyChallengeAttempt.deleteMany({ codingRoundId: codingRound._id }),
+      Submission.deleteMany({ codingRoundId: codingRound._id }),
+    ]);
 
     res.status(200).json({
       success: true,
@@ -702,10 +1140,10 @@ export const getCodingRoundScores = async (req, res) => {
 export const runCodingRoundAnswers = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail, solutions } = req.body;
+    const { studentEmail, solutions, attemptId } = req.body;
+    const normalizedEmail = String(studentEmail || "").trim().toLowerCase();
 
-    // Basic validation
-    if (!studentEmail || !solutions || !Array.isArray(solutions)) {
+    if (!normalizedEmail || !solutions || !Array.isArray(solutions)) {
       return res.status(400).json({
         success: false,
         message: "Student email and solutions are required",
@@ -719,7 +1157,6 @@ export const runCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Find coding round
     const codingRound = await CodingRound.findOne({ linkId });
     if (!codingRound) {
       return res.status(404).json({
@@ -728,10 +1165,56 @@ export const runCodingRoundAnswers = async (req, res) => {
       });
     }
 
-    // Check if student has ended the round
+    let participant = null;
+    let challengeAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      participant = await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+
+      challengeAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+
+      if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
+        return res.status(403).json({
+          success: false,
+          message: "A valid Daily Challenge attempt is required before running code.",
+        });
+      }
+
+      if (!challengeAttempt.startedAt) {
+        return res.status(403).json({
+          success: false,
+          message: "Start the Daily Challenge before running code.",
+        });
+      }
+
+      if (["ended", "auto_submitted", "expired"].includes(challengeAttempt.status)) {
+        return res.status(403).json({
+          success: false,
+          message: "This Daily Challenge attempt has already ended.",
+        });
+      }
+
+      if (isAttemptExpired(challengeAttempt)) {
+        challengeAttempt.status = "expired";
+        challengeAttempt.endedAt = challengeAttempt.endedAt || new Date();
+        await challengeAttempt.save();
+        return res.status(403).json({
+          success: false,
+          message: "Time is up for this Daily Challenge attempt.",
+          expired: true,
+        });
+      }
+    }
+
     const existingSubmission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: studentEmail.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
     if (existingSubmission?.isRoundEnded) {
@@ -748,18 +1231,21 @@ export const runCodingRoundAnswers = async (req, res) => {
     if (!submission) {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentEmail: studentEmail.toLowerCase(),
+        studentId: participant?.student?._id || null,
+        batchId: codingRound.batchId || null,
+        trackId: codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        attemptId: challengeAttempt?._id || null,
+        studentEmail: normalizedEmail,
         totalScore: 0,
       });
     }
 
-    // Process solutions - validate each solution lightly
     const runResults = [];
 
     for (const solution of solutions) {
       const { problemIndex, language, submittedCode } = solution;
 
-      // Validate solution structure
       if (problemIndex === undefined || !language || !submittedCode) {
         return res.status(400).json({
           success: false,
@@ -768,7 +1254,6 @@ export const runCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Find the problem
       const problem = codingRound.problems[problemIndex];
       if (!problem) {
         return res.status(400).json({
@@ -777,7 +1262,6 @@ export const runCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Get language ID for Judge0
       const languageId = LANGUAGE_IDS[language?.toLowerCase()];
       if (!languageId) {
         return res.status(400).json({
@@ -786,24 +1270,24 @@ export const runCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      // Enforce 5 runs limit
       const runsCount = submission.problemRuns ? (submission.problemRuns.get(problemIndex.toString()) || 0) : 0;
-      if (runsCount >= 5) {
+      const maxRuns = codingRound.challengeType === "daily_challenge"
+        ? DAILY_CHALLENGE_RULES.runLimitPerQuestion
+        : 5;
+      if (runsCount >= maxRuns) {
         runResults.push({
           problemIndex,
           language,
           success: false,
           compileSuccess: false,
-          feedback: "Max runs exhausted (5/5) for this problem. Please submit."
+          feedback: `Max runs exhausted (${maxRuns}/${maxRuns}) for this problem. Please submit.`
         });
         continue;
       }
 
-      // Increment runs
       if (!submission.problemRuns) submission.problemRuns = new Map();
       submission.problemRuns.set(problemIndex.toString(), runsCount + 1);
 
-      // Lightweight run using the first visible test case input
       const simpleInput = problem.visibleTestCases?.length > 0 ? problem.visibleTestCases[0].input : "";
       
       try {
@@ -819,7 +1303,7 @@ export const runCodingRoundAnswers = async (req, res) => {
         runResults.push({
           problemIndex,
           language,
-          runsLeft: 4 - runsCount, // 5 max minus what they just used
+          runsLeft: maxRuns - (runsCount + 1),
           compileSuccess,
           actualOutput: result.actualOutput,
           error: result.error,
@@ -841,7 +1325,19 @@ export const runCodingRoundAnswers = async (req, res) => {
       }
     }
 
+    submission.studentId = submission.studentId || participant?.student?._id || null;
+    submission.batchId = submission.batchId || codingRound.batchId || null;
+    submission.trackId = submission.trackId || codingRound.trackId || null;
+    submission.questionId = submission.questionId || codingRound.questionId || null;
+    submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
+    submission.lastSubmissionAt = new Date();
     await submission.save();
+
+    if (challengeAttempt) {
+      challengeAttempt.lastActiveAt = new Date();
+      challengeAttempt.codingSubmissionId = submission._id;
+      await challengeAttempt.save();
+    }
 
     res.status(200).json({
       success: true,
@@ -850,13 +1346,17 @@ export const runCodingRoundAnswers = async (req, res) => {
         results: runResults,
         totalProblems: solutions.length,
         executedAt: new Date(),
+        attempt: challengeAttempt ? buildAttemptPayload(challengeAttempt) : null,
       },
     });
   } catch (error) {
-    console.error("Error running coding round answers:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error running coding round answers:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Internal server error",
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -865,17 +1365,16 @@ export const runCodingRoundAnswers = async (req, res) => {
 export const endCodingRound = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail } = req.body;
+    const { studentEmail, attemptId } = req.body;
+    const normalizedEmail = String(studentEmail || "").trim().toLowerCase();
 
-    // Validate input
-    if (!studentEmail) {
+    if (!normalizedEmail) {
       return res.status(400).json({
         success: false,
         message: "Student email is required",
       });
     }
 
-    // Find coding round
     const codingRound = await CodingRound.findOne({ linkId });
     if (!codingRound) {
       return res.status(404).json({
@@ -884,17 +1383,41 @@ export const endCodingRound = async (req, res) => {
       });
     }
 
-    // Find submission record
+    let participant = null;
+    let challengeAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      participant = await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+
+      challengeAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+      if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
+        return res.status(403).json({
+          success: false,
+          message: "A valid Daily Challenge attempt is required before ending the challenge.",
+        });
+      }
+    }
+
     let submission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: studentEmail.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
     if (!submission) {
-      // Create empty submission if student hasn't submitted anything
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentEmail: studentEmail.toLowerCase(),
+        studentId: participant?.student?._id || null,
+        batchId: codingRound.batchId || null,
+        trackId: codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        attemptId: challengeAttempt?._id || null,
+        studentEmail: normalizedEmail,
         problemScores: new Map(),
         totalScore: 0,
         isRoundEnded: true,
@@ -902,14 +1425,26 @@ export const endCodingRound = async (req, res) => {
         lastSubmissionAt: new Date(),
       });
     } else {
-      // Mark existing submission as ended
       submission.isRoundEnded = true;
       submission.roundEndedAt = new Date();
     }
 
-    await submission.save();
+    let linkedSubmission = null;
+    if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
+      const finalized = await finalizeDailyChallengeAttempt({
+        codingRound,
+        student: participant.student,
+        attempt: challengeAttempt,
+        submission,
+        finalStatus: "ended",
+        autoEnded: false,
+      });
+      challengeAttempt = finalized.attempt;
+      linkedSubmission = finalized.linkedSubmission;
+    } else {
+      await submission.save();
+    }
 
-    // Prepare problem results
     const problemResults = codingRound.problems.map((problem, index) => {
       const score = submission.problemScores.get(index.toString()) || 0;
       return {
@@ -927,26 +1462,41 @@ export const endCodingRound = async (req, res) => {
       (p) => p.attempted
     ).length;
     const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
+    const challengeOutcome = await buildDailyChallengeOutcome({
+      codingRound,
+      submission,
+      attempt: challengeAttempt,
+      totalProblems: codingRound.problems.length,
+      correctSolutions,
+    });
 
     res.status(200).json({
       success: true,
       message: "Coding round ended successfully",
       data: {
         submissionId: submission._id,
+        attemptId: challengeAttempt?._id || null,
+        linkedSubmissionId: linkedSubmission?._id || null,
         roundEndedAt: submission.roundEndedAt,
         problemResults,
+        accuracy: submission.totalScore,
+        evaluationStatus: linkedSubmission?.status || (submission.totalScore === 100 ? "Passed" : "Pending"),
         totalScore: submission.totalScore,
         maxPossibleScore: codingRound.problems.length * 100,
         totalProblems: codingRound.problems.length,
         attempted: totalProblemsAttempted,
         correctSolutions: correctSolutions,
+        ...challengeOutcome,
       },
     });
   } catch (error) {
-    console.error("Error ending coding round:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error ending coding round:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to end coding round",
+      message: error.message || "Failed to end coding round",
     });
   }
 };
@@ -955,9 +1505,10 @@ export const endCodingRound = async (req, res) => {
 export const autoSubmitRound = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail } = req.body;
+    const { studentEmail, attemptId } = req.body;
+    const normalizedEmail = String(studentEmail || "").trim().toLowerCase();
 
-    if (!studentEmail) {
+    if (!normalizedEmail) {
       return res.status(400).json({
         success: false,
         message: "Student email is required",
@@ -972,17 +1523,41 @@ export const autoSubmitRound = async (req, res) => {
       });
     }
 
-    // Find submission record
+    let participant = null;
+    let challengeAttempt = null;
+    if (codingRound.challengeType === "daily_challenge") {
+      participant = await resolveDailyChallengeParticipant({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
+      });
+
+      challengeAttempt = await getDailyChallengeAttempt({
+        codingRoundId: codingRound._id,
+        studentEmail: normalizedEmail,
+      });
+      if (!challengeAttempt || (attemptId && String(challengeAttempt._id) !== String(attemptId))) {
+        return res.status(403).json({
+          success: false,
+          message: "A valid Daily Challenge attempt is required before auto-submit.",
+        });
+      }
+    }
+
     let submission = await StudentCodingSubmission.findOne({
       codingRoundId: codingRound._id,
-      studentEmail: studentEmail.toLowerCase(),
+      studentEmail: normalizedEmail,
     });
 
     if (!submission) {
-      // Create empty submission if student hasn't submitted anything
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
-        studentEmail: studentEmail.toLowerCase(),
+        studentId: participant?.student?._id || null,
+        batchId: codingRound.batchId || null,
+        trackId: codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        attemptId: challengeAttempt?._id || null,
+        studentEmail: normalizedEmail,
         problemScores: new Map(),
         totalScore: 0,
         isRoundEnded: true,
@@ -991,12 +1566,10 @@ export const autoSubmitRound = async (req, res) => {
         lastSubmissionAt: new Date(),
       });
     } else if (!submission.isRoundEnded) {
-      // Auto-end existing submission
       submission.isRoundEnded = true;
       submission.autoEnded = true;
       submission.roundEndedAt = new Date();
     } else {
-      // Already ended, return current status
       return res.status(200).json({
         success: true,
         message: "Coding round was already ended",
@@ -1009,9 +1582,22 @@ export const autoSubmitRound = async (req, res) => {
       });
     }
 
-    await submission.save();
+    let linkedSubmission = null;
+    if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
+      const finalized = await finalizeDailyChallengeAttempt({
+        codingRound,
+        student: participant.student,
+        attempt: challengeAttempt,
+        submission,
+        finalStatus: "auto_submitted",
+        autoEnded: true,
+      });
+      challengeAttempt = finalized.attempt;
+      linkedSubmission = finalized.linkedSubmission;
+    } else {
+      await submission.save();
+    }
 
-    // Prepare problem results
     const problemResults = codingRound.problems.map((problem, index) => {
       const score = submission.problemScores.get(index.toString()) || 0;
       return {
@@ -1024,25 +1610,40 @@ export const autoSubmitRound = async (req, res) => {
     });
 
     const correctSolutions = problemResults.filter((p) => p.isCorrect).length;
+    const challengeOutcome = await buildDailyChallengeOutcome({
+      codingRound,
+      submission,
+      attempt: challengeAttempt,
+      totalProblems: codingRound.problems.length,
+      correctSolutions,
+    });
 
     res.status(200).json({
       success: true,
       message: "Coding round auto-submitted and ended due to time expiry",
       data: {
         submissionId: submission._id,
+        attemptId: challengeAttempt?._id || null,
+        linkedSubmissionId: linkedSubmission?._id || null,
+        accuracy: submission.totalScore,
+        evaluationStatus: linkedSubmission?.status || "Timeout",
         totalScore: submission.totalScore,
         endedAt: submission.roundEndedAt,
         autoEnded: true,
         problemResults,
         correctSolutions,
         totalProblems: codingRound.problems.length,
+        ...challengeOutcome,
       },
     });
   } catch (error) {
-    console.error("Error auto-submitting coding round:", error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 500) {
+      console.error("Error auto-submitting coding round:", error);
+    }
+    res.status(statusCode).json({
       success: false,
-      message: "Failed to auto-submit coding round",
+      message: error.message || "Failed to auto-submit coding round",
     });
   }
 };

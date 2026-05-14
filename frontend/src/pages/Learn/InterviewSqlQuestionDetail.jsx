@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
+import { practiceAPI } from '../../services/practiceApi';
 
 const sqlNotesById = {
   'iq-7': `## Notes\n\n### JOIN basics\n- Use an \`INNER JOIN\` to keep only matching rows.\n- Use a \`LEFT JOIN\` to keep all rows from the left table.\n\n### Example\n\n\`\`\`sql\nSELECT u.id, o.total\nFROM users u\nJOIN orders o ON o.user_id = u.id;\n\`\`\`\n`,
@@ -24,17 +25,48 @@ export default function InterviewSqlQuestionDetail() {
       : '/dashboard/practice/sql'
     : '/learn/interview-questions/sql';
 
+  const [liveQuestions, setLiveQuestions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    practiceAPI.getQuestions('SQL')
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setLiveQuestions(data);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveQuestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const question = useMemo(() => {
-    return interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'SQL') || null;
-  }, [questionId]);
+    return (
+      interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'SQL') ||
+      liveQuestions.find((q) => String(q.id) === String(questionId) && q.topic === 'SQL') ||
+      null
+    );
+  }, [questionId, liveQuestions]);
 
   const notes = useMemo(() => {
     if (!question) return '';
     return (
       sqlNotesById[question.id] ||
+      question.description ||
       `## Explanation\n\n**${question.title}** (Topic: ${question.subtitle})\n\nNotes/explanation will be added here (admin markdown upload).`
     );
   }, [question]);
+  const [submissionMessage, setSubmissionMessage] = useState('');
+
+  const markSolved = async () => {
+    try {
+      await practiceAPI.recordSubmission({ questionId: question.id, track: 'SQL', isCorrect: true });
+      setSubmissionMessage('Practice progress saved.');
+    } catch (error) {
+      setSubmissionMessage(error?.message || 'Could not save practice progress.');
+    }
+  };
 
   if (!question) {
     return (
@@ -73,6 +105,19 @@ export default function InterviewSqlQuestionDetail() {
           <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
             {question.subtitle} • {question.difficulty}
           </div>
+          {isDashboardContext ? (
+            <button
+              type="button"
+              onClick={markSolved}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
+            >
+              <CheckCircle className="h-4 w-4" />
+              Mark solved
+            </button>
+          ) : null}
+          {submissionMessage ? (
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">{submissionMessage}</p>
+          ) : null}
         </div>
 
         <div className="rounded-2xl border border-white/20 bg-white/60 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/30">

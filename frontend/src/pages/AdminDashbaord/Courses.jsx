@@ -3,9 +3,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import CoursesTable from "../../components/AdminDashbaord/CoursesTable";
 import NewCourseForm from "../../components/AdminDashbaord/NewCourseForm";
 import { useNavigate } from "react-router-dom";
-
-// Backend API base
-const BASE_URL = import.meta.env.VITE_API_URL;
+import { adminAPI } from "../../services/adminApi";
 
 export default function Courses() {
   const [courses, setCourses] = useState([]);
@@ -19,20 +17,7 @@ export default function Courses() {
     async function fetchCourses() {
       try {
         setError(null);
-        const token = localStorage.getItem("token");
-
-        const res = await fetch(`${BASE_URL}/courses`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-
-        const data = await res.json();
-
+        const data = await adminAPI.getCourses();
         const coursesArray = Array.isArray(data.courses) ? data.courses : [];
 
         const validatedCourses = coursesArray.map((course) => ({
@@ -65,31 +50,8 @@ export default function Courses() {
 
     console.log("Sending course data:", validatedCourse);
 
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Authentication required. Please log in again.");
-      return;
-    }
-
     try {
-      const res = await fetch(`${BASE_URL}/courses/course-initiate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(validatedCourse),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(
-          errorData.message || `HTTP error! status: ${res.status}`
-        );
-      }
-
-      const responseData = await res.json();
+      const responseData = await adminAPI.createCourse(validatedCourse);
       const courseId = String(responseData.courseId || "");
 
       const newCourse = {
@@ -140,19 +102,7 @@ export default function Courses() {
       )
     ) {
       try {
-        const token = localStorage.getItem("token");
-
-        const res = await fetch(`${BASE_URL}/courses/${courseId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.message || "Delete request failed");
-        }
+        await adminAPI.deleteCourse(courseId);
 
         setCourses((prevCourses) =>
           prevCourses.filter((c) => {

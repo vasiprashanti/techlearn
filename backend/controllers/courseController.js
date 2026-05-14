@@ -100,6 +100,44 @@ export const deleteCourse = async (req, res) => {
   }
 };
 
+export const updateCourseShell = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { title, description, level, numTopics } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ message: "Invalid course ID" });
+    }
+
+    const update = {};
+    if (title !== undefined) update.title = String(title).trim();
+    if (description !== undefined) update.description = String(description).trim();
+    if (level !== undefined) update.level = level;
+    if (numTopics !== undefined) update.numTopics = Number(numTopics);
+
+    const course = await Course.findByIdAndUpdate(
+      courseId,
+      { $set: update },
+      { new: true, runValidators: true }
+    );
+
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Course updated successfully",
+      course,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to update course",
+      error: error.message,
+    });
+  }
+};
+
 //create multiple topics while also inserting the notes for them
 export const addMultipleTopics = async (req, res) => {
   try {

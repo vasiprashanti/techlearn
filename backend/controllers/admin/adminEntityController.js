@@ -6,8 +6,40 @@ import Submission from "../../models/Submission.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
 import Track from "../../models/Track.js";
+import User from "../../models/User.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
+
+const DEFAULT_BATCH_TRACK_TYPES = ["Core", "DSA", "SQL"];
+
+const ensureDefaultBatchTracks = async (batchId, session) => {
+  let existingTracksQuery = Track.find({ batchId }).select("trackType");
+  if (session) {
+    existingTracksQuery = existingTracksQuery.session(session);
+  }
+  const existingTracks = await existingTracksQuery.lean();
+
+  const existingTrackTypes = new Set(existingTracks.map((track) => track.trackType));
+  const missingTrackDocs = DEFAULT_BATCH_TRACK_TYPES
+    .filter((trackType) => !existingTrackTypes.has(trackType))
+    .map((trackType) => ({
+      batchId,
+      trackType,
+      durationDays: 0,
+      orderedQuestionIds: [],
+    }));
+
+  if (missingTrackDocs.length === 0) {
+    return existingTracks;
+  }
+
+  if (session) {
+    await Track.create(missingTrackDocs, { session, ordered: true });
+  } else {
+    await Track.create(missingTrackDocs);
+  }
+  return [...existingTracks, ...missingTrackDocs];
+};
 
 export const listColleges = async (req, res) => {
   try {
@@ -70,6 +102,7 @@ export const listColleges = async (req, res) => {
       status: college.status || "Active",
       contactPerson: college.contactPerson || "",
       contactEmail: college.contactEmail || "",
+      accuracy: Number((submissionMap[String(college._id)]?.avgScore || 0).toFixed(0)),
       avgScore: Number((submissionMap[String(college._id)]?.avgScore || 0).toFixed(0)),
       activeStudents: studentMap[String(college._id)]?.activeStudents || 0,
       totalStudents: studentMap[String(college._id)]?.totalStudents || 0,
@@ -178,6 +211,7 @@ export const getCollegeDetail = async (req, res) => {
         totalStudents: students.length,
         activeStudents,
         activeBatches: batches.filter((batch) => batch.status === BATCH_STATUS.ACTIVE).length,
+        accuracy: Number((submissions[0]?.avgScore || 0).toFixed(0)),
         avgScore: Number((submissions[0]?.avgScore || 0).toFixed(0)),
         submissionRate:
           students.length > 0 ? Number(((activeStudents / students.length) * 100).toFixed(0)) : 0,
@@ -185,6 +219,7 @@ export const getCollegeDetail = async (req, res) => {
           id: batch._id,
           name: batch.name,
           students: batchStudentMap[String(batch._id)] || 0,
+          accuracy: Number((batchScoreMap[String(batch._id)] || 0).toFixed(0)),
           avgScore: Number((batchScoreMap[String(batch._id)] || 0).toFixed(0)),
           status: batch.status,
         })),
@@ -327,6 +362,7 @@ export const listBatches = async (req, res) => {
       start: formatDateLabel(batch.startDate),
       end: formatDateLabel(batch.expiryDate),
       students: studentMap[String(batch._id)] || 0,
+      accuracy: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
       avgScore: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
     }));
 
@@ -366,31 +402,11 @@ export const createBatchAdmin = async (req, res) => {
               status: status || BATCH_STATUS.DRAFT,
             },
           ],
-          { session }
+          { session, ordered: true }
         );
 
         batch = createdBatch;
-
-        const normalizedTrackType = String(assignedTrack || "").trim().toUpperCase();
-        const allowedTrackType = {
-          CORE: "Core",
-          DSA: "DSA",
-          SQL: "SQL",
-        }[normalizedTrackType] || null;
-
-        if (allowedTrackType) {
-          await Track.create(
-            [
-              {
-                batchId: batch._id,
-                trackType: allowedTrackType,
-                durationDays: 0,
-                orderedQuestionIds: [],
-              },
-            ],
-            { session }
-          );
-        }
+        await ensureDefaultBatchTracks(batch._id, session);
       });
     } finally {
       await session.endSession();
@@ -412,7 +428,11 @@ export const createBatchAdmin = async (req, res) => {
     return res.status(201).json({ success: true, data: batch });
   } catch (error) {
     console.error("createBatchAdmin error:", error);
-    return res.status(500).json({ success: false, message: "Failed to create batch.", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error?.message ? `Failed to create batch: ${error.message}` : "Failed to create batch.",
+      error: error.message,
+    });
   }
 };
 
@@ -452,12 +472,16 @@ export const getBatchDetail = async (req, res) => {
       data: {
         id: batch._id,
         name: batch.name,
+        collegeId: batch.collegeId?._id || null,
         college: batch.collegeId?.name || "Unknown College",
         assignedTrack: batch.assignedTrack || "",
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
+        startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
+        expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
         students: students.length,
+        accuracy: avgScore,
         avgScore,
         avgStreakDays: avgStreak,
         tracks: tracks.length > 0
@@ -494,6 +518,7 @@ export const getBatchDetail = async (req, res) => {
             id: student._id,
             name: student.name,
             email: student.email,
+            accuracy: score,
             score,
             streak: `${student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
           };
@@ -536,6 +561,8 @@ export const updateBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
+    await ensureDefaultBatchTracks(batchId);
+
     await writeAuditLog({
       verb: "Updated",
       entityType: "Batch",
@@ -548,7 +575,11 @@ export const updateBatchAdmin = async (req, res) => {
     return res.status(200).json({ success: true, data: batch });
   } catch (error) {
     console.error("updateBatchAdmin error:", error);
-    return res.status(500).json({ success: false, message: "Failed to update batch.", error: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error?.message ? `Failed to update batch: ${error.message}` : "Failed to update batch.",
+      error: error.message,
+    });
   }
 };
 
@@ -611,6 +642,7 @@ export const activateBatchAdmin = async (req, res) => {
 
     batch.status = BATCH_STATUS.ACTIVE;
     await batch.save();
+    await ensureDefaultBatchTracks(batchId);
     await Track.updateMany({ batchId }, { $set: { isLockedAfterActivation: true } });
 
     await writeAuditLog({
@@ -669,6 +701,7 @@ export const listStudentsAdmin = async (req, res) => {
       college: student.collegeId?.name || "Unknown College",
       batch: student.batchId?.name || "Unknown Batch",
       track: student.primaryTrack || "General Track",
+      accuracy: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       score: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       streak: student.streak || 0,
       status: student.status,
@@ -692,15 +725,44 @@ export const createStudentAdmin = async (req, res) => {
     }
     if (!assertObjectId(collegeId, "collegeId", res) || !assertObjectId(batchId, "batchId", res)) return;
 
+    const normalizedEmail = email.trim().toLowerCase();
+    const [batch, existingStudent, linkedUser] = await Promise.all([
+      Batch.findById(batchId).lean(),
+      Student.findOne({ email: normalizedEmail }).lean(),
+      User.findOne({ email: normalizedEmail }).select("_id").lean(),
+    ]);
+
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    if (String(batch.collegeId) !== String(collegeId)) {
+      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
+    }
+
+    if (existingStudent) {
+      return res.status(409).json({ success: false, message: "A student with this email already exists." });
+    }
+
     const student = await Student.create({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       rollNo: rollNo?.trim() || "",
       collegeId,
       batchId,
+      userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
       status: status || "Active",
     });
+
+    if (linkedUser?._id) {
+      await User.findByIdAndUpdate(linkedUser._id, {
+        $set: {
+          batchId,
+          startDate: batch.startDate,
+        },
+      });
+    }
 
     await writeAuditLog({
       verb: "Created",
@@ -752,6 +814,7 @@ export const getStudentDetailAdmin = async (req, res) => {
         college: student.collegeId?.name || "Unknown College",
         batch: student.batchId?.name || "Unknown Batch",
         track: student.primaryTrack || "General Track",
+        accuracy: score,
         score,
         streak: student.streak || 0,
         testsTaken: submissions.length,
@@ -770,6 +833,10 @@ export const updateStudentAdmin = async (req, res) => {
   try {
     const { studentId } = req.params;
     if (!assertObjectId(studentId, "studentId", res)) return;
+    const existingStudent = await Student.findById(studentId);
+    if (!existingStudent) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
 
     const update = {
       name: req.body.name?.trim(),
@@ -788,9 +855,39 @@ export const updateStudentAdmin = async (req, res) => {
       update.batchId = req.body.batchId;
     }
 
+    const nextCollegeId = update.collegeId || existingStudent.collegeId;
+    const nextBatchId = update.batchId || existingStudent.batchId;
+    const nextEmail = update.email || existingStudent.email;
+
+    const [batch, duplicateStudent, linkedUser] = await Promise.all([
+      Batch.findById(nextBatchId).lean(),
+      Student.findOne({ _id: { $ne: studentId }, email: nextEmail }).select("_id").lean(),
+      User.findOne({ email: nextEmail }).select("_id").lean(),
+    ]);
+
+    if (!batch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    if (String(batch.collegeId) !== String(nextCollegeId)) {
+      return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
+    }
+
+    if (duplicateStudent) {
+      return res.status(409).json({ success: false, message: "A student with this email already exists." });
+    }
+
+    update.userId = linkedUser?._id || existingStudent.userId || null;
+
     const student = await Student.findByIdAndUpdate(studentId, { $set: update }, { new: true, runValidators: true });
-    if (!student) {
-      return res.status(404).json({ success: false, message: "Student not found." });
+
+    if (linkedUser?._id) {
+      await User.findByIdAndUpdate(linkedUser._id, {
+        $set: {
+          batchId: nextBatchId,
+          startDate: batch.startDate,
+        },
+      });
     }
 
     await writeAuditLog({

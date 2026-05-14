@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import Track from "../models/Track.js";
 import College from "../models/College.js";
+import Question from "../models/Questions.js";
 
 // @desc    Create a new Batch and automatically initialize Core, DSA, and SQL tracks
 // @route   POST /api/admin/batches
@@ -119,6 +120,35 @@ export const activateBatch = async (req, res) => {
             });
         }
 
+        // AUTO-POPULATE: Fetch all questions from database
+        const allQuestions = await Question.find().session(session).lean();
+        if (allQuestions.length === 0) {
+            console.warn(`[BATCH_ACTIVATION] Warning: No questions found in database for batch ${batch._id}. Tracks will be empty.`);
+        }
+
+        // AUTO-POPULATE: Update all tracks for this batch with questions
+        const tracks = await Track.find({ batchId: batch._id }).session(session);
+        for (const track of tracks) {
+            if (!track.orderedQuestionIds || track.orderedQuestionIds.length === 0) {
+                // Create a 30-day schedule by cycling through available questions
+                const questionIds = [];
+                for (let day = 1; day <= 30; day++) {
+                    const questionIndex = (day - 1) % (allQuestions.length || 1);
+                    if (allQuestions.length > 0) {
+                        questionIds.push(allQuestions[questionIndex]._id);
+                    }
+                }
+
+                await Track.updateOne(
+                    { _id: track._id },
+                    { $set: { orderedQuestionIds: questionIds } },
+                    { session }
+                );
+
+                console.log(`[BATCH_ACTIVATION] Auto-populated ${track.trackType} track with ${questionIds.length} questions for batch ${batch.name}`);
+            }
+        }
+
         // Update Batch Status to ACTIVE
         batch.status = BATCH_STATUS.ACTIVE;
         await batch.save({ session });
@@ -136,7 +166,7 @@ export const activateBatch = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Batch activated and tracks locked successfully.",
+            message: "Batch activated, tracks populated with questions, and tracks locked successfully.",
             data: batch
         });
 

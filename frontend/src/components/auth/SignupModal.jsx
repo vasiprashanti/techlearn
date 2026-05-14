@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { useUser } from '../../context/UserContext';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../../config/firebase'; // Your Firebase config file
 import { FcGoogle } from 'react-icons/fc';
@@ -17,7 +18,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
   });
 
   const [error, setError] = useState('');
-  const { register } = useAuth();
+  const { register, setSession } = useAuth();
+  const { refetchUserData } = useUser();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -57,9 +59,9 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
       const data = await response.json();
 
       if (response.ok && data.token) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('userData', JSON.stringify(data.user));
         localStorage.setItem('isAdmin', data.user?.isAdmin ? 'true' : 'false');
+        setSession(data.user, data.token);
+        await refetchUserData();
         
         // Navigate based on user role
         navigateBasedOnRole(data.user);

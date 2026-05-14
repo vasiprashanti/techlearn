@@ -31,12 +31,15 @@ import mcqRouter from "./routes/checkpointMcqRoutes.js";
 import collegeMcqRoutes from "./routes/collegeMcqRoutes.js";
 import collegeRouter from "./routes/collegeRoutes.js";
 import codingRoundRoutes from "./routes/codingRoundRoutes.js";
+import dailyChallengeRoutes from "./routes/dailyChallengeRoutes.js";
 import batchRoutes from "./routes/batchRoutes.js";
 import submissionRoutes from "./routes/submissionRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import adminPortalRoutes from "./routes/adminPortalRoutes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
+import leaderboardRoutes from "./routes/leaderboardRoutes.js";
+import practiceRoutes from "./routes/practiceRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -101,9 +104,12 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api", mcqRouter);
 app.use("/api/college-mcq", collegeMcqRoutes);
 app.use("/api/college-coding", codingRoundRoutes);
+app.use("/api/daily-challenge", dailyChallengeRoutes);
 app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
 app.use("/api/resources", resourceRoutes);
+app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/practice", practiceRoutes);
 
 // ✅ BUILD PAGE Routes
 app.use("/api/mini-projects", miniRouter);
@@ -152,6 +158,10 @@ app.use((req, res) => {
       "/api/college",
       "/api/college-mcq",
       "/api/college-coding",
+      "/api/daily-challenge",
+      "/api/resources",
+      "/api/practice",
+      "/api/leaderboard",
       "/api/mini-projects",
       "/api/major-projects",
       "/api/bookings",
@@ -181,7 +191,7 @@ export default app;
 
 // Local Development Server (only runs when not in Vercel)
 if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);

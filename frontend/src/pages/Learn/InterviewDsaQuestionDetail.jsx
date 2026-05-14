@@ -3,10 +3,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft, Play } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Play } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
 import { compilerAPI } from '../../services/api';
+import { practiceAPI } from '../../services/practiceApi';
 import { useTheme } from '../../context/ThemeContext';
 
 const dsaDetailsById = {
@@ -31,16 +32,38 @@ export default function InterviewDsaQuestionDetail() {
       : '/dashboard/practice/dsa'
     : '/learn/interview-questions/dsa';
 
+  const [liveQuestions, setLiveQuestions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    practiceAPI.getQuestions('DSA')
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setLiveQuestions(data);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveQuestions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const question = useMemo(() => {
-    return interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'DSA') || null;
-  }, [questionId]);
+    return (
+      interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'DSA') ||
+      liveQuestions.find((q) => String(q.id) === String(questionId) && q.topic === 'DSA') ||
+      null
+    );
+  }, [questionId, liveQuestions]);
 
   const details = useMemo(() => {
     if (!question) return null;
     return (
       dsaDetailsById[question.id] || {
-        statement: `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`,
-        starterCode: `# ${question.title}\n\n# TODO: write your solution here\n\n`,
+        statement: question.description
+          ? `## Problem\n\n${question.description}\n\n${question.inputFormat ? `### Input Format\n${question.inputFormat}\n\n` : ''}${question.outputFormat ? `### Output Format\n${question.outputFormat}` : ''}`
+          : `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`,
+        starterCode: question.solutionCode || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
       }
     );
   }, [question]);
@@ -48,6 +71,7 @@ export default function InterviewDsaQuestionDetail() {
   const [code, setCode] = useState(details?.starterCode || '');
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState('');
 
   useEffect(() => {
     setCode(details?.starterCode || '');
@@ -100,6 +124,19 @@ export default function InterviewDsaQuestionDetail() {
     }
   };
 
+  const markSolved = async () => {
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'DSA',
+        isCorrect: true,
+      });
+      setSubmissionMessage('Practice progress saved.');
+    } catch (error) {
+      setSubmissionMessage(error?.message || 'Could not save practice progress.');
+    }
+  };
+
   return (
     <UserSidebarLayout maxWidthClass="max-w-6xl">
       <div className="space-y-4">
@@ -143,7 +180,20 @@ export default function InterviewDsaQuestionDetail() {
               <Play className="h-4 w-4" />
               {isRunning ? 'Running...' : 'Run'}
             </button>
+            {isDashboardContext ? (
+              <button
+                type="button"
+                onClick={markSolved}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Mark solved
+              </button>
+            ) : null}
           </div>
+          {submissionMessage ? (
+            <p className="mt-3 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{submissionMessage}</p>
+          ) : null}
 
           <div className="mt-4 overflow-hidden rounded-xl border border-white/20 dark:border-gray-700/30">
             <Editor

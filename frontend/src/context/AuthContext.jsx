@@ -160,6 +160,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const setSession = (user, token) => {
+    if (token) {
+      localStorage.setItem('token', token);
+    }
+    if (user) {
+      localStorage.setItem('userData', JSON.stringify(user));
+    }
+
+    dispatch({
+      type: AUTH_ACTIONS.LOGIN_SUCCESS,
+      payload: {
+        user,
+        token,
+      },
+    });
+  };
+
   // Register function
   const register = async (userData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
@@ -221,6 +238,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     clearError,
+    setSession,
   };
 
   return (

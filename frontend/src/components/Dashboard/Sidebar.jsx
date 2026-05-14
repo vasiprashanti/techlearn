@@ -1,9 +1,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { 
+import {
   FiX,
-  FiMenu,
+  FiSidebar,
   FiGrid,
   FiTarget,
   FiMap,
@@ -73,7 +73,11 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
-  const isDashboardRoute = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
+  const isDashboardRoute =
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/dashboard/') ||
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
 
   useEffect(() => {
     if (desktopNavRef.current) {
@@ -101,13 +105,13 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
   };
 
   const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       {menuGroups.map((group, idx) => (
-        <div key={idx} className="space-y-3">
-          <h4 className="text-[10px] uppercase tracking-[0.2em] font-semibold text-black/30 dark:text-white/30 px-4">
+        <div key={idx} className="space-y-2">
+          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:text-white/72 px-4">
             {group.title}
           </h4>
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {group.items.map((item) => (
               <NavLink
                 key={item.id}
@@ -118,8 +122,8 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
                   `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
                   ${
                     isActive
-                      ? "bg-[#3C83F6] text-white dark:bg-white dark:text-black font-semibold shadow-md"
-                      : "text-black/50 dark:text-white/50 hover:text-black hover:bg-black/5 dark:hover:text-white dark:hover:bg-white/5 font-normal"
+                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
+                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
                   }`
                 }
               >
@@ -139,30 +143,73 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
   return (
     <>
-      <div className="hidden lg:flex flex-col fixed left-0 top-0 bg-white/20 dark:bg-black/20 backdrop-blur-xl z-40 h-screen overflow-hidden w-64 pt-[6.5rem] border-r border-black/5 dark:border-white/5">
-        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4 scrollbar-hide">
-          {renderNavLinks()}
+      <style>{`
+        @media (max-width: 1024px) {
+          main header {
+            padding-left: 3.5rem !important;
+            transition: padding 0.3s ease-in-out;
+          }
+        }
+      `}</style>
+
+      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-black/40 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-white/5 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
+        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
+          <style>{`
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 1px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: #3C83F6;
+              border-radius: 1px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #2563eb;
+            }
+          `}</style>
+          <div className="custom-scrollbar">
+            {renderNavLinks()}
+          </div>
         </div>
       </div>
 
-      <button onClick={() => setMobileMenuOpen(true)} className="lg:hidden fixed top-20 left-6 z-50 p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10">
-        <FiMenu className="w-5 h-5" />
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="lg:hidden fixed top-24 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+      >
+        <FiSidebar className="w-[22px] h-[22px]" />
       </button>
 
       <AnimatePresence>
         {mobileMenuOpen && (
-          <button onClick={() => setMobileMenuOpen(false)} className="lg:hidden fixed top-20 right-6 z-[60] p-2 text-black dark:text-white bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-md border border-black/10 dark:border-white/10">
-            <FiX className="w-5 h-5" />
-          </button>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {mobileMenuOpen && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)} className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
-            <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} transition={{ type: "spring", damping: 30, stiffness: 200 }} className="lg:hidden fixed left-0 top-0 h-screen w-72 bg-[#daf0fa] dark:bg-[#020b23] border-r border-black/5 dark:border-white/5 z-50 pt-[6.5rem] shadow-2xl">
-              <div className="flex-1 overflow-y-auto px-4 h-full scrollbar-hide">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMenuOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 200 }}
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-black/40 border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+            >
+              <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
+                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
             </motion.div>

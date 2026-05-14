@@ -5,9 +5,24 @@ import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyBatches } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
+
+const DEFAULT_TRACK_OPTIONS = [
+  { value: 'DSA', label: 'DSA' },
+  { value: 'Core', label: 'Core CS' },
+  { value: 'SQL', label: 'SQL' },
+];
+
+const getTodayIsoDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -101,9 +116,9 @@ const Batches = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [batches, setBatches] = useState(emptyBatches);
-  const [colleges, setColleges] = useState([]);
-  const [trackOptions, setTrackOptions] = useState([]);
+  const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
+  const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -127,32 +142,26 @@ const Batches = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const todayIsoDate = getTodayIsoDate();
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const batchFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges, remoteTrackTemplates] = await Promise.all([
+    const [remoteBatches, remoteColleges] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
-      adminAPI.getTrackTemplates(),
     ]);
 
-    setBatches(preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch));
-    setColleges(
-      preferRemoteData(remoteColleges, []).map((college) => ({
-        id: college.id || college._id,
-        name: college.name || 'Untitled College',
-      }))
-    );
-    setTrackOptions(
-      Array.from(
-        new Set(
-          preferRemoteData(remoteTrackTemplates, [])
-            .map((template) => String(template?.name || '').trim())
-            .filter(Boolean)
-        )
-      )
-    );
+    const normalizedBatches = preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch);
+    const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({
+      id: college.id || college._id,
+      name: college.name || 'Untitled College',
+    }));
+
+    setBatches(normalizedBatches);
+    setColleges(normalizedColleges);
+    writeAdminSessionCache('batches', normalizedBatches);
+    writeAdminSessionCache('batches-colleges', normalizedColleges);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -164,6 +173,10 @@ const Batches = () => {
       if (!cancelled) {
         setBatches(emptyBatches);
         setColleges([]);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setIsLoadingBatches(false);
       }
     });
 
@@ -257,12 +270,12 @@ const Batches = () => {
       setCreateError('Start date and end date are required');
       return;
     }
-    if (createBatchForm.startDate > createBatchForm.endDate) {
-      setCreateError('End date must be after start date');
+    if (createBatchForm.startDate < todayIsoDate) {
+      setCreateError('Start date must be today or a future date');
       return;
     }
-    if (trackOptions.length > 0 && !createBatchForm.assignedTrack) {
-      setCreateError('Assigned track is required');
+    if (createBatchForm.startDate > createBatchForm.endDate) {
+      setCreateError('End date must be after start date');
       return;
     }
     if (createBatchForm.batchSize && (!/^\d+$/.test(createBatchForm.batchSize) || Number(createBatchForm.batchSize) <= 0)) {
@@ -300,7 +313,7 @@ const Batches = () => {
       setIsCreateFormOpen(false);
       setEditingBatchId(null);
     } catch (error) {
-      setCreateError(error.message || 'Failed to save batch');
+      setCreateError(error.message || (editingBatchId ? 'Failed to update batch.' : 'Failed to create batch.'));
     } finally {
       setIsSavingBatch(false);
     }
@@ -381,9 +394,13 @@ const Batches = () => {
                         setCreateBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                          endDate:
+                            prev.endDate && nextDate && prev.endDate < nextDate
+                              ? ''
+                              : prev.endDate,
                         }))
                       }
+                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -400,7 +417,7 @@ const Batches = () => {
                           endDate: nextDate,
                         }))
                       }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
@@ -410,17 +427,16 @@ const Batches = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track*</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createBatchForm.assignedTrack}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
-                      disabled={trackOptions.length === 0}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Select track' : 'No tracks available'}</option>
-                      {trackOptions.map((trackName) => (
-                        <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
+                      <option className={dropdownOptionClass} value="">Optional track</option>
+                      {DEFAULT_TRACK_OPTIONS.map((track) => (
+                        <option className={dropdownOptionClass} key={track.value} value={track.value}>{track.label}</option>
                       ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
@@ -526,6 +542,16 @@ const Batches = () => {
               <AdminHeaderControls user={user} logout={logout} />
             </header>
 
+            {isLoadingBatches ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading batches..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_170px_auto] gap-2.5 items-center">
               <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
@@ -662,6 +688,8 @@ const Batches = () => {
               <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
                 No batches found for the selected filters.
               </div>
+            )}
+            </>
             )}
           </div>
         </main>

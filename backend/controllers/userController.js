@@ -118,6 +118,7 @@ export const loginUser = async (req, res) => {
     }
 
     const token = generatorToken(user._id);
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
     // res.status(200).json({
     //   message: "Login successful",
     //   user: {
@@ -134,8 +135,11 @@ export const loginUser = async (req, res) => {
       user: {
         id: user._id,
         firstName: user.firstName,
+        lastName: user.lastName || "",
+        name: fullName || user.firstName,
         email: user.email,
-        photoUrl: user.photoUrl || "",
+        photoUrl: user.avatar || "",
+        avatar: user.avatar || "",
         role: user.role,
         isClub: user.isClub,
       },

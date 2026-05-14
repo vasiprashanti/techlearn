@@ -2,11 +2,17 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const GET_RETRY_ATTEMPTS = 2;
 const GET_RETRY_DELAY_MS = 250;
 const requestCache = new Map();
+const SESSION_CACHE_PREFIX = 'techlearn-admin-cache:';
 
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken');
 
 const buildHeaders = (extraHeaders = {}) => ({
   'Content-Type': 'application/json',
+  ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+  ...extraHeaders,
+});
+
+const buildAuthHeaders = (extraHeaders = {}) => ({
   ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
   ...extraHeaders,
 });
@@ -35,6 +41,37 @@ export const hasMeaningfulAdminData = (value) => {
 
 export const preferRemoteData = (remoteValue, fallbackValue) =>
   hasMeaningfulAdminData(remoteValue) ? remoteValue : fallbackValue;
+
+export const readAdminSessionCache = (key, fallbackValue) => {
+  if (typeof window === 'undefined') return fallbackValue;
+  try {
+    const raw = window.sessionStorage.getItem(`${SESSION_CACHE_PREFIX}${key}`);
+    if (!raw) return fallbackValue;
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+};
+
+export const writeAdminSessionCache = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(`${SESSION_CACHE_PREFIX}${key}`, JSON.stringify(value));
+  } catch {
+    // Ignore quota/serialization errors and continue without session cache.
+  }
+};
+
+const invalidateAdminSessionCache = (keys = []) => {
+  if (typeof window === 'undefined') return;
+  for (const key of keys) {
+    try {
+      window.sessionStorage.removeItem(`${SESSION_CACHE_PREFIX}${key}`);
+    } catch {
+      // Ignore session storage errors and continue.
+    }
+  }
+};
 
 const unwrapData = (payload) => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -65,6 +102,40 @@ const invalidateCacheForPath = (path) => {
         break;
       }
     }
+  }
+};
+
+const invalidateAdminSessionCacheForPath = (path) => {
+  const basePath = path.split('?')[0];
+
+  if (basePath.startsWith('/admin/batches')) {
+    invalidateAdminSessionCache([
+      'batches',
+      'batches-colleges',
+      'batches-track-options',
+      'students-batches',
+      'colleges',
+    ]);
+    return;
+  }
+
+  if (basePath.startsWith('/admin/colleges')) {
+    invalidateAdminSessionCache([
+      'colleges',
+      'batches-colleges',
+      'students-colleges',
+    ]);
+    return;
+  }
+
+  if (basePath.startsWith('/admin/students')) {
+    invalidateAdminSessionCache([
+      'students',
+      'students-batches',
+      'students-colleges',
+      'colleges',
+      'batches',
+    ]);
   }
 };
 
@@ -99,7 +170,10 @@ async function request(path, options = {}) {
       }
 
       if (response.status === 204) {
-        if (!isGet) invalidateCacheForPath(path);
+        if (!isGet) {
+          invalidateCacheForPath(path);
+          invalidateAdminSessionCacheForPath(path);
+        }
         return null;
       }
 
@@ -110,6 +184,7 @@ async function request(path, options = {}) {
         requestCache.set(path, unwrapped);
       } else {
         invalidateCacheForPath(path);
+        invalidateAdminSessionCacheForPath(path);
       }
 
       return unwrapped;
@@ -154,6 +229,29 @@ export const adminAPI = {
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
+  bulkUploadStudents: async ({ file, collegeId, batchId, primaryTrack, status = 'Active' }) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collegeId', collegeId);
+    formData.append('batchId', batchId);
+    formData.append('primaryTrack', primaryTrack || 'General Track');
+    formData.append('status', status);
+
+    const response = await fetch(`${API_BASE}/admin/students/bulk-upload`, {
+      method: 'POST',
+      headers: buildAuthHeaders(),
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || 'Bulk student import failed.');
+    }
+
+    invalidateCacheForPath('/admin/students');
+    invalidateAdminSessionCacheForPath('/admin/students');
+    return unwrapData(payload);
+  },
 
   getQuestionCategories: () => request('/admin/questions/categories'),
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
@@ -178,10 +276,41 @@ export const adminAPI = {
   reorderTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}/reorder`, { method: 'PUT', body: JSON.stringify(body) }),
 
   getResources: () => request('/admin/resources'),
-  createResource: (body) => request('/admin/resources', { method: 'POST', body: JSON.stringify(body) }),
-  updateResource: (resourceId, body) => request(`/admin/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  createResource: async (body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/resources`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to create resource.');
+      invalidateCacheForPath('/admin/resources');
+      return unwrapData(payload);
+    }
+    return request('/admin/resources', { method: 'POST', body: JSON.stringify(body) });
+  },
+  updateResource: async (resourceId, body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/resources/${resourceId}`, {
+        method: 'PUT',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to update resource.');
+      invalidateCacheForPath('/admin/resources');
+      return unwrapData(payload);
+    }
+    return request(`/admin/resources/${resourceId}`, { method: 'PUT', body: JSON.stringify(body) });
+  },
   deleteResource: (resourceId) => request(`/admin/resources/${resourceId}`, { method: 'DELETE' }),
   recordResourceView: (resourceId) => request(`/admin/resources/${resourceId}/view`, { method: 'POST' }),
+
+  getCourses: () => request('/courses'),
+  createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: JSON.stringify(body) }),
+  updateCourse: (courseId, body) => request(`/admin/${courseId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteCourse: (courseId) => request(`/admin/${courseId}`, { method: 'DELETE' }),
 
   getCertificates: () => request('/admin/certificates'),
   issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),

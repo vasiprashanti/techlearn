@@ -422,6 +422,7 @@ export const computeAdminMetrics = async () => {
       name: student.name || "Unknown Student",
       college: student.college || "Unknown College",
       track: "Track",
+      accuracy: Number(student.score || 0).toFixed(0),
       score: `${Number(student.score || 0).toFixed(0)}%`,
     })),
     topBatches: topBatchesAgg.map((batch, index) => ({

@@ -225,7 +225,7 @@ const CourseQuiz = () => {
         {loading ? (
            <LoadingScreen showMessage={false} size={48} duration={800} />
         ) : (
-          <div className="text-center bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-12 rounded-2xl max-w-md">
+          <div className="dashboard-surface text-center p-12 max-w-md">
             {quizCompleted && <CheckCircle size={48} className="mx-auto text-[#3C83F6] mb-6" />}
             <h1 className="text-xl font-light tracking-tight text-black dark:text-white mb-4">
               {!isAuthenticated ? 'Authentication Required' : error ? 'Quiz Status' : 'Quiz Not Found'}
@@ -233,7 +233,7 @@ const CourseQuiz = () => {
             <p className="text-sm text-black/60 dark:text-white/60 font-light mb-8">
               {!isAuthenticated ? 'Please log in to access the quiz.' : error ? error : 'The requested quiz could not be located.'}
             </p>
-            <button onClick={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn'), 100); }} className="px-6 py-3 bg-[#3C83F6] text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md hover:shadow-lg w-full">
+            <button onClick={() => { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); setTimeout(() => navigate('/learn'), 100); }} className="dashboard-primary-btn w-full px-6 py-3">
               Back to Learn
             </button>
           </div>
@@ -252,14 +252,14 @@ const CourseQuiz = () => {
           
           {!quizStarted ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center">
-              <h1 ref={titleRef} className={`text-4xl md:text-5xl font-normal tracking-tight text-[#3C83F6] dark:text-white mb-6 ${isTitleInViewport ? 'in-viewport' : ''}`}>
+              <h1 ref={titleRef} className={`dashboard-page-title text-4xl md:text-5xl mb-6 ${isTitleInViewport ? 'in-viewport' : ''}`}>
                 {quiz.title}.
               </h1>
-              <p className="text-lg text-black/60 dark:text-white/60 mb-10 leading-relaxed font-light max-w-2xl mx-auto">
+              <p className="dashboard-page-subtitle text-lg mb-10 leading-relaxed max-w-2xl mx-auto">
                 {quiz.description}
               </p>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-8 mb-10">
+              <div className="dashboard-surface rounded-2xl p-8 mb-10">
                 <div className="grid md:grid-cols-3 gap-8 text-center">
                   <div>
                     <div className="text-3xl font-light text-black dark:text-white mb-2">{quiz.questions.length}</div>
@@ -278,18 +278,18 @@ const CourseQuiz = () => {
 
               {showResumePrompt ? (
                 <div className="space-y-6">
-                  <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl p-8 mb-6">
+                  <div className="dashboard-surface rounded-2xl p-8 mb-6">
                     <h3 className="text-lg font-medium text-black dark:text-white mb-2">Quiz In Progress</h3>
                     <p className="text-sm text-black/60 dark:text-white/60 mb-6 font-light">
                       You have already answered {quizResumeData?.answeredQuestions} out of {quizResumeData?.totalQuestions} questions. Would you like to continue?
                     </p>
-                    <button onClick={handleResumeQuiz} className="px-8 py-4 bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md flex items-center gap-3 justify-center w-full max-w-xs mx-auto">
+                    <button onClick={handleResumeQuiz} className="dashboard-primary-btn px-8 py-4 flex items-center gap-3 justify-center w-full max-w-xs mx-auto">
                       <span>Resume Quiz</span> <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
               ) : (
-                <button onClick={handleStartQuiz} className="px-8 py-4 bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md flex items-center gap-3 mx-auto">
+                <button onClick={handleStartQuiz} className="dashboard-primary-btn px-8 py-4 flex items-center gap-3 mx-auto">
                   <span>Start Quiz</span> <ArrowRight className="w-4 h-4" />
                 </button>
               )}
@@ -406,7 +406,7 @@ const QuizQuestion = ({
         <div className="bg-[#3C83F6] dark:bg-white h-full transition-all duration-300" style={{ width: `${(questionNumber / totalQuestions) * 100}%` }} />
       </div>
 
-      <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-2xl p-8 md:p-12 shadow-sm border border-black/5 dark:border-white/5">
+      <div className="dashboard-surface rounded-2xl p-8 md:p-12 shadow-sm">
         <h2 className="text-xl md:text-2xl font-light text-black dark:text-white mb-8 leading-relaxed">
           {question.question}
         </h2>
@@ -429,7 +429,7 @@ const QuizQuestion = ({
           </div>
         ) : !answerSubmitted && selectedAnswer !== undefined && (
           <div className="mt-8 flex justify-center">
-            <button onClick={handleSubmitAnswer} disabled={submitting} className="px-8 py-3 bg-[#3C83F6] text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 hover:shadow-lg w-full md:w-auto">
+            <button onClick={handleSubmitAnswer} disabled={submitting} className="dashboard-primary-btn px-8 py-3 w-full md:w-auto">
               {submitting ? 'Submitting...' : 'Submit Answer'}
             </button>
           </div>
@@ -449,10 +449,10 @@ const QuizQuestion = ({
 
       {answerSubmitted && (
         <div className="flex items-center justify-between pt-4">
-          <button onClick={onPrevious} disabled={!canGoPrevious} className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300 ${canGoPrevious ? 'bg-white/40 dark:bg-black/40 border border-black/5 dark:border-white/5 text-black/60 dark:text-white/60 hover:bg-white/60 dark:hover:bg-black/60 hover:text-black dark:hover:text-white' : 'opacity-0 pointer-events-none'}`}>
+          <button onClick={onPrevious} disabled={!canGoPrevious} className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300 ${canGoPrevious ? 'dashboard-secondary-btn !px-6 !py-3 !text-[10px]' : 'opacity-0 pointer-events-none'}`}>
             <ArrowLeft className="w-3 h-3" /> Previous
           </button>
-          <button onClick={() => { setShowFeedback(false); setAnswerSubmitted(false); onNext(); }} className="flex items-center gap-2 px-8 py-3 bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-xl text-[11px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md">
+          <button onClick={() => { setShowFeedback(false); setAnswerSubmitted(false); onNext(); }} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3">
             {isLastQuestion ? 'Finish' : 'Next'} <ArrowRight className="w-3 h-3" />
           </button>
         </div>
@@ -468,7 +468,7 @@ const QuizResults = ({ score, passingScore, totalQuestions, correctAnswers, onBa
   return (
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }} className="text-center max-w-2xl mx-auto space-y-8">
       
-      <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-2xl p-12 shadow-sm border border-black/5 dark:border-white/5">
+      <div className="dashboard-surface rounded-2xl p-12 shadow-sm">
         <div className="flex justify-center mb-6">
           {passed ? <Trophy className="w-16 h-16 text-[#3C83F6] dark:text-white" strokeWidth={1} /> : <XCircle className="w-16 h-16 text-black/40 dark:text-white/40" strokeWidth={1} />}
         </div>
@@ -495,10 +495,10 @@ const QuizResults = ({ score, passingScore, totalQuestions, correctAnswers, onBa
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button onClick={onBackToCourse} className="flex items-center justify-center gap-2 px-8 py-3 bg-white/40 dark:bg-black/40 border border-black/5 dark:border-white/5 text-black/60 dark:text-white/60 hover:bg-white/60 dark:hover:bg-black/60 hover:text-black dark:hover:text-white rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300">
+          <button onClick={onBackToCourse} className="dashboard-secondary-btn flex items-center justify-center gap-2 px-8 py-3 text-[10px]">
             <ArrowLeft className="w-3 h-3" /> Back to Learn
           </button>
-          <button onClick={onBackToHome} className="flex items-center justify-center gap-2 px-8 py-3 bg-[#3C83F6] hover:bg-blue-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 text-white rounded-xl text-[10px] uppercase tracking-widest font-medium transition-all duration-300 shadow-md">
+          <button onClick={onBackToHome} className="dashboard-primary-btn flex items-center justify-center gap-2 px-8 py-3">
             <Home className="w-3 h-3" /> Learn Home
           </button>
         </div>

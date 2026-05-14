@@ -18,8 +18,6 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
 
     try {
       const data = await progressAPI.getUserProgress();
-      // Sum all values in courseXP and exerciseXP objects
-      console.log("data",data);
       const courseXP = data.courseXP ? Object.values(data.courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
       const exerciseXP = data.exerciseXP ? Object.values(data.exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
       const totalXP = courseXP + exerciseXP;
@@ -29,11 +27,10 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
         error: null
       });
     } catch (err) {
-      console.error('Error fetching XP:', err);
       setXpData({
         points: 0,
         loading: false,
-        error: 'Failed to load points'
+        error: 'Failed to sync'
       });
     }
   };
@@ -43,10 +40,7 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    const handleXPUpdate = () => {
-      fetchXP();
-    };
-
+    const handleXPUpdate = () => fetchXP();
     window.addEventListener('xpUpdated', handleXPUpdate);
     return () => window.removeEventListener('xpUpdated', handleXPUpdate);
   }, [isAuthenticated]);
@@ -56,26 +50,29 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
   const displayError = error || xpData.error;
 
   return (
-    <div className="bg-white/50 dark:bg-gray-800/50 p-6 flex flex-col items-center justify-start space-y-4 rounded-xl h-full text-light-text dark:text-dark-text shadow-md">
-      <h3 className="text-lg font-semibold font-poppins text-gray-600 dark:text-gray-400 hover-gradient-text">
-        XP Points
+    <div className="bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 p-8 flex flex-col justify-between h-full min-h-[240px]">
+      <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">
+        Total Experience
       </h3>
 
-      {displayLoading ? (
-        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent animate-pulse">
-          ...
-        </div>
-      ) : displayError ? (
-        <div className="text-4xl font-bold text-red-500">Error</div>
-      ) : (
-        <div className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-blue-400 bg-clip-text text-transparent">
-          {displayPoints.toLocaleString()}
-        </div>
-      )}
+      <div className="mt-8 mb-4">
+        {displayLoading ? (
+          <div className="text-6xl font-light tracking-tighter text-black/20 dark:text-white/20 animate-pulse">000</div>
+        ) : displayError ? (
+          <div className="text-sm tracking-widest text-red-500 uppercase">Error</div>
+        ) : (
+          <div className="text-7xl font-light tracking-tighter text-black dark:text-white">
+            {displayPoints.toLocaleString()}
+          </div>
+        )}
+      </div>
 
-      <p className="text-sm text-light-text/70 dark:text-dark-text/70">
-        {displayError ? 'Failed to load points' : 'Points collected'}
-      </p>
+      <div className="flex items-center gap-2">
+        <div className="h-[1px] flex-1 bg-black/10 dark:bg-white/10"></div>
+        <p className="text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">
+          Points
+        </p>
+      </div>
     </div>
   );
 };

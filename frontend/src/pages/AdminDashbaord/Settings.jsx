@@ -75,9 +75,16 @@ export default function Settings() {
             <AdminHeaderControls user={user} logout={logout} />
           </header>
 
-          <section className="max-w-4xl space-y-6">
-            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
-              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">General Settings</h2>
+          <section className="max-w-5xl space-y-6">
+            <div className="space-y-2 px-1">
+              <h1 className="dashboard-page-title">Admin Settings</h1>
+              <p className="dashboard-page-subtitle">
+                Manage theme, certificates, account access, and the core content shown across the platform.
+              </p>
+            </div>
+
+            <div className="dashboard-surface space-y-7 p-7">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white">General Settings</h2>
 
               <div className="space-y-8">
                 <div className="flex items-start justify-between gap-6">
@@ -122,8 +129,8 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#0f1f43] border border-black/8 dark:border-white/10 rounded-2xl p-7 shadow-sm">
-              <h2 className="text-xl font-light tracking-tight text-black dark:text-white mb-7">Content</h2>
+            <div className="dashboard-surface space-y-6 p-7">
+              <h2 className="text-xl font-light tracking-tight text-black dark:text-white">Content</h2>
 
               <div className="space-y-6">
                 <div>
@@ -134,7 +141,7 @@ export default function Settings() {
                     rows={3}
                     value={homeText}
                     onChange={(e) => setHomeText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
+                    className="dashboard-input-surface min-h-[7rem] w-full rounded-2xl p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
@@ -146,7 +153,7 @@ export default function Settings() {
                     rows={3}
                     value={termsText}
                     onChange={(e) => setTermsText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
+                    className="dashboard-input-surface min-h-[7rem] w-full rounded-2xl p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
@@ -158,12 +165,12 @@ export default function Settings() {
                     rows={3}
                     value={privacyText}
                     onChange={(e) => setPrivacyText(e.target.value)}
-                    className="w-full text-sm leading-relaxed rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#14264d] text-black/75 dark:text-white/85 p-4 focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
+                    className="dashboard-input-surface min-h-[7rem] w-full rounded-2xl p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/25"
                   />
                 </div>
 
                 <div className="pt-2 flex justify-end">
-                  <button className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors">
+                  <button className="dashboard-primary-btn px-5 py-2.5 text-sm font-medium">
                     Save Changes
                   </button>
                 </div>
