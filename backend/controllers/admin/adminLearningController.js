@@ -338,12 +338,18 @@ export const createQuestionAdmin = async (req, res) => {
       outputFormat: outputFormat || "",
       visibleTestCases: normalizedVisibleTestCases,
       hiddenTestCases: normalizedHiddenTestCases,
+      constraints: req.body.constraints || "",
+      starterCode: req.body.starterCode || {},
+      referenceSolution: req.body.referenceSolution || "",
       timeLimit: parsePositiveNumber(timeLimit, 1),
       memoryLimit: parsePositiveNumber(memoryLimit, 256),
       referenceLanguage: referenceLanguage || "C++",
       solutionCode: solutionCode || "",
-      editorial: editorial || "",
-      status: status || "Active",
+          editorial: editorial || "",
+          status: status || "Active",
+          constraints: req.body.constraints || "",
+          starterCode: req.body.starterCode || {},
+          referenceSolution: req.body.referenceSolution || "", 
     });
 
     await writeAuditLog({

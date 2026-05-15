@@ -8,7 +8,11 @@ import {
     getLeaderboard,
     getDayWiseScore,
     getWeeklyMatrix,
-    exportBatchReportCSV
+    exportBatchReportCSV,
+    getCodingQuestionStats,
+    getCodingQuestionLeaderboard,
+    getCodingBatchAnalytics,
+    getCodingAccuracyAnalysis,
 } from "../controllers/analyticsController.js";
 
 const analyticsRouter = express.Router();
@@ -39,5 +43,38 @@ analyticsRouter.get("/matrix/:batchId/:studentId", protect, isAdmin, getWeeklyMa
 
 // GET /api/admin/analytics/export/:batchId
 analyticsRouter.get("/export/:batchId", protect, isAdmin, exportBatchReportCSV);
+
+// Coding Question Analytics Routes
+// GET /api/admin/analytics/coding-questions/stats?batchId=<id>&categoryId=<id>&questionId=<id>
+analyticsRouter.get(
+    "/coding-questions/stats",
+    protect,
+    isAdmin,
+    getCodingQuestionStats
+);
+
+// GET /api/admin/analytics/coding-questions/leaderboard/:questionId?batchId=<id>
+analyticsRouter.get(
+    "/coding-questions/leaderboard/:questionId",
+    protect,
+    isAdmin,
+    getCodingQuestionLeaderboard
+);
+
+// GET /api/admin/analytics/coding-batch?batchId=<id> or ?collegeId=<id>
+analyticsRouter.get(
+    "/coding-batch",
+    protect,
+    isAdmin,
+    getCodingBatchAnalytics
+);
+
+// GET /api/admin/analytics/coding-accuracy?batchId=<id>&questionId=<id>
+analyticsRouter.get(
+    "/coding-accuracy",
+    protect,
+    isAdmin,
+    getCodingAccuracyAnalysis
+);
 
 export default analyticsRouter;

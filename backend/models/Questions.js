@@ -64,6 +64,12 @@ const questionSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Coding-only fields
+    constraints: {
+      type: String,
+      default: "",
+    },
+
     visibleTestCases: [testCaseSchema],
 
     hiddenTestCases: [testCaseSchema],
@@ -71,6 +77,17 @@ const questionSchema = new mongoose.Schema(
     timeLimit: Number,
 
     memoryLimit: Number,
+
+    starterCode: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+
+    referenceSolution: {
+      type: String,
+      default: "",
+    },
 
     status: {
       type: String,
@@ -115,3 +132,4 @@ questionSchema.index({ categorySlug: 1, status: 1 });
 questionSchema.index({ trackType: 1 });
 
 export default mongoose.model("Question", questionSchema);
+

@@ -3,6 +3,8 @@ import { Parser } from "json2csv";
 import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
 import Submission from "../models/Submission.js";
+import StudentCodingQuestionSubmission from "../models/StudentCodingQuestionSubmission.js";
+import { Question } from "../models/Questions.js";
 
 // ---------------------------------------------------------------------------
 // Shared helper: resolve & validate the collegeId query param, then return
@@ -540,5 +542,371 @@ export const exportBatchReportCSV = async (req, res) => {
     } catch (error) {
         console.error("CSV Export Error:", error);
         return res.status(500).json({ success: false, message: "Server error during CSV export.", error: error.message });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// @desc    Get coding question statistics (batch-wise, category-wise)
+// @route   GET /api/admin/analytics/coding-questions/stats
+// @access  Private/Admin
+//
+// Query params: batchId, categoryId (optional), questionId (optional)
+// Response: [{ questionId, questionTitle, batchId, avgScore, accuracy, attemptCount, passCount, passRate }, ...]
+// ---------------------------------------------------------------------------
+export const getCodingQuestionStats = async (req, res) => {
+    try {
+        const { batchId, categoryId, questionId } = req.query;
+
+        if (!batchId || !mongoose.Types.ObjectId.isValid(batchId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid batchId query parameter is required.",
+            });
+        }
+
+        const batchObjId = new mongoose.Types.ObjectId(batchId);
+
+        // Build match stage
+        const matchStage = { batchId: batchObjId };
+        if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
+            matchStage.questionId = new mongoose.Types.ObjectId(questionId);
+        }
+
+        const pipeline = [
+            { $match: matchStage },
+
+            // Lookup question details
+            {
+                $lookup: {
+                    from: "questions",
+                    localField: "questionId",
+                    foreignField: "_id",
+                    as: "questionInfo",
+                },
+            },
+            { $unwind: { path: "$questionInfo", preserveNullAndEmptyArrays: true } },
+
+            // Group by question to compute stats
+            {
+                $group: {
+                    _id: "$questionId",
+                    questionTitle: { $first: "$questionInfo.title" },
+                    categoryId: { $first: "$questionInfo.categoryId" },
+                    avgScore: { $avg: "$score" },
+                    avgAccuracy: { $avg: "$accuracy" },
+                    attemptCount: { $sum: 1 },
+                    passCount: {
+                        $sum: { $cond: [{ $eq: ["$attemptStatus", "passed"] }, 1, 0] },
+                    },
+                },
+            },
+
+            // Filter by category if provided
+            ...(categoryId && mongoose.Types.ObjectId.isValid(categoryId)
+                ? [{ $match: { categoryId: new mongoose.Types.ObjectId(categoryId) } }]
+                : []),
+
+            // Project final output
+            {
+                $project: {
+                    _id: 0,
+                    questionId: "$_id",
+                    questionTitle: 1,
+                    categoryId: 1,
+                    avgScore: { $round: ["$avgScore", 2] },
+                    avgAccuracy: { $round: ["$avgAccuracy", 2] },
+                    attemptCount: 1,
+                    passCount: 1,
+                    passRate: {
+                        $round: [
+                            {
+                                $multiply: [
+                                    { $divide: ["$passCount", "$attemptCount"] },
+                                    100,
+                                ],
+                            },
+                            2,
+                        ],
+                    },
+                },
+            },
+            { $sort: { avgScore: -1 } },
+        ];
+
+        const data = await StudentCodingQuestionSubmission.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("getCodingQuestionStats error:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch coding question statistics.",
+            error: err.message,
+        });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// @desc    Get student leaderboard for a specific coding question
+// @route   GET /api/admin/analytics/coding-questions/leaderboard/:questionId
+// @access  Private/Admin
+//
+// Query params: batchId
+// Response: [{ studentId, studentName, studentEmail, score, accuracy, attemptTime }, ...]
+// ---------------------------------------------------------------------------
+export const getCodingQuestionLeaderboard = async (req, res) => {
+    try {
+        const { questionId } = req.params;
+        const { batchId } = req.query;
+
+        if (!questionId || !mongoose.Types.ObjectId.isValid(questionId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid questionId parameter is required.",
+            });
+        }
+
+        if (!batchId || !mongoose.Types.ObjectId.isValid(batchId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid batchId query parameter is required.",
+            });
+        }
+
+        const questionObjId = new mongoose.Types.ObjectId(questionId);
+        const batchObjId = new mongoose.Types.ObjectId(batchId);
+
+        const pipeline = [
+            { $match: { questionId: questionObjId, batchId: batchObjId } },
+
+            // Lookup student details
+            {
+                $lookup: {
+                    from: "students",
+                    localField: "studentId",
+                    foreignField: "_id",
+                    as: "studentInfo",
+                },
+            },
+            { $unwind: { path: "$studentInfo", preserveNullAndEmptyArrays: true } },
+
+            // Project final output
+            {
+                $project: {
+                    _id: 0,
+                    studentId: 1,
+                    studentName: "$studentInfo.name",
+                    studentEmail: "$studentInfo.email",
+                    score: 1,
+                    accuracy: 1,
+                    attemptStatus: 1,
+                    submittedAt: 1,
+                },
+            },
+            { $sort: { score: -1, accuracy: -1, submittedAt: 1 } },
+        ];
+
+        const data = await StudentCodingQuestionSubmission.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("getCodingQuestionLeaderboard error:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch coding question leaderboard.",
+            error: err.message,
+        });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// @desc    Get batch-wise coding analytics
+// @route   GET /api/admin/analytics/coding-batch
+// @access  Private/Admin
+//
+// Query params: collegeId or batchId
+// Response: { batchId, batchName, totalQuestions, avgScore, avgAccuracy, passRate, studentCount }
+// ---------------------------------------------------------------------------
+export const getCodingBatchAnalytics = async (req, res) => {
+    try {
+        const { batchId, collegeId } = req.query;
+
+        let matchStage = {};
+
+        if (batchId && mongoose.Types.ObjectId.isValid(batchId)) {
+            matchStage.batchId = new mongoose.Types.ObjectId(batchId);
+        } else if (collegeId && mongoose.Types.ObjectId.isValid(collegeId)) {
+            const collegeBatches = await Batch.find(
+                { collegeId: new mongoose.Types.ObjectId(collegeId) },
+                { _id: 1 }
+            );
+            if (collegeBatches.length === 0) {
+                return res.status(200).json({ success: true, data: [] });
+            }
+            matchStage.batchId = {
+                $in: collegeBatches.map((b) => b._id),
+            };
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Either batchId or collegeId query parameter is required.",
+            });
+        }
+
+        const pipeline = [
+            { $match: matchStage },
+
+            // Group by batch
+            {
+                $group: {
+                    _id: "$batchId",
+                    totalAttempts: { $sum: 1 },
+                    avgScore: { $avg: "$score" },
+                    avgAccuracy: { $avg: "$accuracy" },
+                    passCount: {
+                        $sum: { $cond: [{ $eq: ["$attemptStatus", "passed"] }, 1, 0] },
+                    },
+                    uniqueStudents: { $addToSet: "$studentId" },
+                    uniqueQuestions: { $addToSet: "$questionId" },
+                },
+            },
+
+            // Lookup batch details
+            {
+                $lookup: {
+                    from: "batches",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "batchInfo",
+                },
+            },
+            { $unwind: { path: "$batchInfo", preserveNullAndEmptyArrays: true } },
+
+            // Project final output
+            {
+                $project: {
+                    _id: 0,
+                    batchId: "$_id",
+                    batchName: "$batchInfo.name",
+                    totalQuestionAttempts: "$totalAttempts",
+                    totalQuestionsAttempted: { $size: "$uniqueQuestions" },
+                    avgScore: { $round: ["$avgScore", 2] },
+                    avgAccuracy: { $round: ["$avgAccuracy", 2] },
+                    passRate: {
+                        $round: [
+                            {
+                                $multiply: [
+                                    {
+                                        $divide: ["$passCount", "$totalAttempts"],
+                                    },
+                                    100,
+                                ],
+                            },
+                            2,
+                        ],
+                    },
+                    studentCount: { $size: "$uniqueStudents" },
+                },
+            },
+            { $sort: { avgScore: -1 } },
+        ];
+
+        const data = await StudentCodingQuestionSubmission.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("getCodingBatchAnalytics error:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch coding batch analytics.",
+            error: err.message,
+        });
+    }
+};
+
+// ---------------------------------------------------------------------------
+// @desc    Get accuracy analysis for coding questions over time
+// @route   GET /api/admin/analytics/coding-accuracy
+// @access  Private/Admin
+//
+// Query params: batchId, questionId (optional)
+// Response: [{ date, avgAccuracy, passCount, totalCount }, ...]
+// ---------------------------------------------------------------------------
+export const getCodingAccuracyAnalysis = async (req, res) => {
+    try {
+        const { batchId, questionId } = req.query;
+
+        if (!batchId || !mongoose.Types.ObjectId.isValid(batchId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Valid batchId query parameter is required.",
+            });
+        }
+
+        const matchStage = { batchId: new mongoose.Types.ObjectId(batchId) };
+        if (questionId && mongoose.Types.ObjectId.isValid(questionId)) {
+            matchStage.questionId = new mongoose.Types.ObjectId(questionId);
+        }
+
+        const pipeline = [
+            { $match: matchStage },
+
+            // Extract date from submittedAt
+            {
+                $project: {
+                    date: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                    },
+                    accuracy: 1,
+                    attemptStatus: 1,
+                },
+            },
+
+            // Group by date
+            {
+                $group: {
+                    _id: "$date",
+                    avgAccuracy: { $avg: "$accuracy" },
+                    passCount: {
+                        $sum: { $cond: [{ $eq: ["$attemptStatus", "passed"] }, 1, 0] },
+                    },
+                    totalCount: { $sum: 1 },
+                },
+            },
+
+            // Project final output
+            {
+                $project: {
+                    _id: 0,
+                    date: "$_id",
+                    avgAccuracy: { $round: ["$avgAccuracy", 2] },
+                    passCount: 1,
+                    totalCount: 1,
+                    passRate: {
+                        $round: [
+                            {
+                                $multiply: [
+                                    { $divide: ["$passCount", "$totalCount"] },
+                                    100,
+                                ],
+                            },
+                            2,
+                        ],
+                    },
+                },
+            },
+            { $sort: { date: 1 } },
+        ];
+
+        const data = await StudentCodingQuestionSubmission.aggregate(pipeline);
+
+        return res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("getCodingAccuracyAnalysis error:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch coding accuracy analysis.",
+            error: err.message,
+        });
     }
 };

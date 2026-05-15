@@ -22,6 +22,9 @@ const codingRoundSchema = new mongoose.Schema(
     },
     problems: [
       {
+        // Optional reference to question bank question
+        questionId: { type: mongoose.Schema.Types.ObjectId, ref: "Question", required: false },
+        
         problemTitle: { type: String, required: true },
         description: { type: String, required: true },
         difficulty: {
@@ -31,6 +34,9 @@ const codingRoundSchema = new mongoose.Schema(
         },
         inputDescription: { type: String, required: true },
         outputDescription: { type: String, required: true },
+        starterCode: { type: String }, // From question bank
+        referenceSolution: { type: String }, // From question bank
+        constraints: { type: String }, // From question bank
         visibleTestCases: [
           {
             input: { type: String, required: true },

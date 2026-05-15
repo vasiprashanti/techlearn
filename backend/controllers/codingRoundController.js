@@ -1,5 +1,7 @@
 import CodingRound from "../models/CodingRound.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
+import StudentCodingQuestionSubmission from "../models/StudentCodingQuestionSubmission.js";
+import Student from "../models/Student.js";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import {
@@ -344,7 +346,7 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
 export const submitCodingRoundAnswers = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail, solutions } = req.body;
+    const { studentEmail, solutions, batchId, trackId } = req.body;
 
     // Validate input
     if (!studentEmail || !solutions || !Array.isArray(solutions)) {
@@ -456,9 +458,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
     // Calculate proportional score for this problem
     const problemScore = Math.round((testsPassed / totalTests) * 100);
+    const accuracy = (testsPassed / totalTests) * 100;
     const isCorrect = testsPassed === totalTests;
 
-if (!submission) {
+    if (!submission) {
       // Create new submission
       const problemScores = new Map();
       problemScores.set(problemIndex.toString(), problemScore);
@@ -490,6 +493,40 @@ if (!submission) {
     }
 
     await submission.save();
+
+    // If problem has a questionId, also save to StudentCodingQuestionSubmission
+    if (problem.questionId && batchId) {
+      try {
+        // Find student by email
+        const student = await Student.findOne({ email: studentEmail.toLowerCase() });
+        if (student) {
+          // Upsert StudentCodingQuestionSubmission using (studentId, questionId, batchId)
+          const questionSubmission = await StudentCodingQuestionSubmission.findOneAndUpdate(
+            {
+              studentId: student._id,
+              questionId: problem.questionId,
+              batchId: batchId,
+            },
+            {
+              studentId: student._id,
+              questionId: problem.questionId,
+              batchId: batchId,
+              trackId: trackId || null,
+              startTime: submission.submittedAt || new Date(),
+              endTime: new Date(),
+              score: problemScore,
+              accuracy: Math.round(accuracy),
+              attemptStatus: isCorrect ? "passed" : "submitted",
+            },
+            { upsert: true, new: true }
+          );
+          console.log("StudentCodingQuestionSubmission saved:", questionSubmission._id);
+        }
+      } catch (error) {
+        console.error("Error saving StudentCodingQuestionSubmission:", error);
+        // Don't fail the main submission if this fails
+      }
+    }
 
     res.status(200).json({
       success: true,

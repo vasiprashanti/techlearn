@@ -32,6 +32,9 @@ const parseISTDateTime = (utcDateString) => {
 };
 
 export default function CodingRoundForm() {
+  // Mode: 'manual' or 'questionBank'
+  const [mode, setMode] = useState("manual");
+  
   const [college, setCollege] = useState("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(getTodayDate());
@@ -40,6 +43,14 @@ export default function CodingRoundForm() {
   const [duration, setDuration] = useState("");
   const [numQuestions, setNumQuestions] = useState(1);
   const [expanded, setExpanded] = useState([]);
+
+  // Question Bank mode state
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [categoryQuestions, setCategoryQuestions] = useState([]);
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   const [problems, setProblems] = useState([
     {
@@ -298,11 +309,15 @@ setExpanded(new Array(round.problems.length).fill(true));
       duration: parseInt(duration, 10),
       isActive: true, // backend expects this
       problems: problems.map((problem) => ({
+        questionId: problem.questionId || undefined, // Include if from question bank
         problemTitle: problem.problemTitle,
         description: problem.description,
         difficulty: problem.difficulty,
         inputDescription: problem.inputDescription || "",
         outputDescription: problem.outputDescription || "",
+        starterCode: problem.starterCode || "",
+        referenceSolution: problem.referenceSolution || "",
+        constraints: problem.constraints || "",
         visibleTestCases: problem.visibleTestCases.filter(
           (tc) => tc.input.trim() && tc.expectedOutput.trim()
         ),
@@ -340,6 +355,7 @@ setExpanded(new Array(round.problems.length).fill(true));
 
       // Reset form
       setEditingId(null);
+      setMode("manual");
       setCollege("");
       setTitle("");
       setDate(getTodayDate());
@@ -360,6 +376,8 @@ setExpanded(new Array(round.problems.length).fill(true));
       ]);
       setExpanded([]);
       setErrors({});
+      setSelectedCategory("");
+      setSelectedQuestionIds([]);
       fetchPreviousRounds();
     } catch (error) {
       console.error(
@@ -417,9 +435,112 @@ setExpanded(new Array(round.problems.length).fill(true));
     }
   };
 
+  // Fetch categories/tracks on mount
   useEffect(() => {
-    fetchPreviousRounds();
+    fetchCategories();
   }, []);
+
+  // Fetch categories/tracks for Question Bank mode
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const token = getToken();
+      const res = await axios.get(`${BASE_URL}/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data && Array.isArray(res.data)) {
+        setCategories(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Fetch coding questions for selected category
+  const fetchCategoryQuestions = async (categoryId) => {
+    if (!categoryId) {
+      setCategoryQuestions([]);
+      return;
+    }
+    try {
+      setLoadingQuestions(true);
+      const token = getToken();
+      // Fetch questions filtered by category and type=coding
+      const res = await axios.get(
+        `${BASE_URL}/questions?category=${categoryId}&type=coding`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.data && Array.isArray(res.data)) {
+        setCategoryQuestions(res.data);
+      }
+    } catch (error) {
+      console.error("Error fetching questions:", error);
+      setCategoryQuestions([]);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  // Handle category selection for Question Bank mode
+  const handleCategoryChange = (e) => {
+    const categoryId = e.target.value;
+    setSelectedCategory(categoryId);
+    setSelectedQuestionIds([]);
+    if (categoryId) {
+      fetchCategoryQuestions(categoryId);
+    }
+  };
+
+  // Toggle question selection
+  const toggleQuestionSelection = (questionId) => {
+    setSelectedQuestionIds((prev) =>
+      prev.includes(questionId)
+        ? prev.filter((id) => id !== questionId)
+        : [...prev, questionId]
+    );
+  };
+
+  // Populate problems from selected questions (Question Bank mode)
+  const populateFromQuestionBank = () => {
+    const selectedProbs = categoryQuestions.filter((q) =>
+      selectedQuestionIds.includes(q._id)
+    );
+
+    if (selectedProbs.length === 0) {
+      alert("Please select at least one question");
+      return;
+    }
+
+    const newProblems = selectedProbs.map((q) => ({
+      questionId: q._id,
+      problemTitle: q.title,
+      description: q.description,
+      difficulty: q.difficulty || "Medium",
+      inputDescription: q.inputDescription || "",
+      outputDescription: q.outputDescription || "",
+      starterCode: q.starterCode || "",
+      referenceSolution: q.referenceSolution || "",
+      constraints: q.constraints || "",
+      visibleTestCases: (q.testCases || [])
+        .filter((tc) => !tc.isHidden)
+        .map((tc) => ({ input: tc.input, expectedOutput: tc.output })) || [
+        { input: "", expectedOutput: "" },
+      ],
+      hiddenTestCases: (q.testCases || [])
+        .filter((tc) => tc.isHidden)
+        .map((tc) => ({ input: tc.input, expectedOutput: tc.output })) || [
+        { input: "", expectedOutput: "" },
+      ],
+    }));
+
+    setProblems(newProblems);
+    setNumQuestions(newProblems.length);
+    setExpanded(new Array(newProblems.length).fill(false));
+  };
 
   // --- Function to fetch report for a round ---
   const fetchReport = async (roundId) => {
@@ -455,6 +576,30 @@ setExpanded(new Array(round.problems.length).fill(true));
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-6">
             Coding Round
           </h1>
+
+          {/* Mode Toggle */}
+          <div className="mb-6 flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="manual"
+                checked={mode === "manual"}
+                onChange={(e) => setMode(e.target.value)}
+                className="w-4 h-4"
+              />
+              <span className="font-medium">Manual Entry</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                value="questionBank"
+                checked={mode === "questionBank"}
+                onChange={(e) => setMode(e.target.value)}
+                className="w-4 h-4"
+              />
+              <span className="font-medium">Use Question Bank</span>
+            </label>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* College */}
@@ -567,17 +712,115 @@ setExpanded(new Array(round.problems.length).fill(true));
               <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
                 Number of Problems *
               </label>
-              <input
-                type="number"
-                min="1"
-                value={numQuestions}
-                onChange={handleNumQuestionsChange}
-                className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              />
+              {mode === "manual" ? (
+                <input
+                  type="number"
+                  min="1"
+                  value={numQuestions}
+                  onChange={handleNumQuestionsChange}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              ) : (
+                <div className="space-y-4">
+                  {/* Category Selection */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
+                      Select Category/Track *
+                    </label>
+                    <select
+                      value={selectedCategory}
+                      onChange={handleCategoryChange}
+                      disabled={loadingCategories}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white disabled:opacity-50"
+                    >
+                      <option value="">
+                        {loadingCategories ? "Loading..." : "Select a category"}
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Questions Selection */}
+                  {selectedCategory && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Select Questions *
+                      </label>
+                      {loadingQuestions ? (
+                        <p className="text-gray-500">Loading questions...</p>
+                      ) : categoryQuestions.length === 0 ? (
+                        <p className="text-gray-500">
+                          No coding questions available in this category.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3 dark:bg-gray-700 dark:border-gray-600">
+                          {categoryQuestions.map((q) => (
+                            <label
+                              key={q._id}
+                              className="flex items-start gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 p-2 rounded"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedQuestionIds.includes(q._id)}
+                                onChange={() => toggleQuestionSelection(q._id)}
+                                className="w-4 h-4 mt-1"
+                              />
+                              <div className="flex-1 text-sm">
+                                <div className="font-medium">{q.title}</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-400">
+                                  Difficulty: {q.difficulty || "Medium"}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Populate Button */}
+                  {selectedCategory && selectedQuestionIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={populateFromQuestionBank}
+                      className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
+                    >
+                      Populate {selectedQuestionIds.length} Question(s)
+                    </button>
+                  )}
+
+                  {/* Selected Questions Count */}
+                  {selectedQuestionIds.length > 0 && (
+                    <div className="text-sm text-blue-600">
+                      {selectedQuestionIds.length} question(s) selected
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Problems Section */}
-            {problems.map((p, i) => (
+            {/* Problems Section - Only show if in manual mode or if problems populated */}
+            {(mode === "manual" || problems.some(p => p.questionId)) && (
+              <>
+                {mode === "manual" && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 dark:text-dark-text/70">
+                      Number of Problems *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={numQuestions}
+                      onChange={handleNumQuestionsChange}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                )}
+              {problems.map((p, i) => (
               <div
                 key={i}
                 className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40 space-y-4"
@@ -685,6 +928,54 @@ setExpanded(new Array(round.problems.length).fill(true));
                         />
                       </div>
                     </div>
+
+                    {/* Additional fields from Question Bank (if populated) */}
+                    {p.questionId && (
+                      <div className="space-y-3 border-t pt-3 mt-3">
+                        <h5 className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                          Question Bank Details:
+                        </h5>
+                        {p.constraints && (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">
+                              Constraints
+                            </label>
+                            <textarea
+                              value={p.constraints}
+                              readOnly
+                              rows="2"
+                              className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm"
+                            />
+                          </div>
+                        )}
+                        {p.starterCode && (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">
+                              Starter Code
+                            </label>
+                            <textarea
+                              value={p.starterCode}
+                              readOnly
+                              rows="3"
+                              className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-mono"
+                            />
+                          </div>
+                        )}
+                        {p.referenceSolution && (
+                          <div>
+                            <label className="block text-sm font-medium mb-1">
+                              Reference Solution
+                            </label>
+                            <textarea
+                              value={p.referenceSolution}
+                              readOnly
+                              rows="3"
+                              className="w-full px-3 py-2 border rounded-md bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-mono"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Visible Test Cases Section */}
                     <div className="space-y-3">
@@ -822,6 +1113,8 @@ setExpanded(new Array(round.problems.length).fill(true));
                 )}
               </div>
             ))}
+              </>
+            )}
 
             {/* Submit button */}
             <button
