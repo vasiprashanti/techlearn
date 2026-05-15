@@ -238,7 +238,7 @@ submissionSchema.index({ submittedAt: -1 });
 submissionSchema.index({ categoryId: 1, status: 1 }, { sparse: true });
 submissionSchema.index({ studentId: 1, categoryId: 1 }, { sparse: true });
 submissionSchema.index({ batchId: 1, categoryId: 1 }, { sparse: true });
-submissionSchema.index({ questionVersionId: 1 }, { sparse: true });
+// questionVersionId already has sparse: true in field definition
 submissionSchema.index({ submissionType: 1, submittedAt: -1 }, { sparse: true });
 
 export default mongoose.model("Submission", submissionSchema);
