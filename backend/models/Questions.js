@@ -32,8 +32,43 @@ const contentSchema = new mongoose.Schema(
     hiddenTestCases: { type: [hiddenTestCaseSchema], default: [], select: false },
     timeLimit: { type: Number, default: 1000 },
     memoryLimit: { type: Number, default: 256 },
-    starterCode: { type: Map, of: String },
-    referenceSolution: { type: String, default: '', select: false },
+
+    // Multi-language starter code schema (explicit languages)
+    starterCode: {
+      type: new mongoose.Schema(
+        {
+          cpp: { code: String, version: { type: Number, default: 1 } },
+          python: { code: String, version: { type: Number, default: 1 } },
+          java: { code: String, version: { type: Number, default: 1 } },
+          javascript: { code: String, version: { type: Number, default: 1 } },
+          c: { code: String, version: { type: Number, default: 1 } },
+          csharp: { code: String, version: { type: Number, default: 1 } },
+          go: { code: String, version: { type: Number, default: 1 } },
+          rust: { code: String, version: { type: Number, default: 1 } },
+        },
+        { _id: false }
+      ),
+      default: {},
+    },
+
+    // Multi-language reference solution (hidden)
+    referenceSolution: {
+      type: new mongoose.Schema(
+        {
+          cpp: { code: String, version: { type: Number, default: 1 } },
+          python: { code: String, version: { type: Number, default: 1 } },
+          java: { code: String, version: { type: Number, default: 1 } },
+          javascript: { code: String, version: { type: Number, default: 1 } },
+          c: { code: String, version: { type: Number, default: 1 } },
+          csharp: { code: String, version: { type: Number, default: 1 } },
+          go: { code: String, version: { type: Number, default: 1 } },
+          rust: { code: String, version: { type: Number, default: 1 } },
+        },
+        { _id: false, select: false }
+      ),
+      default: {},
+    },
+    contentVersion: { type: Number, default: 1 },
 
     options: { type: [mcqOptionSchema], default: [] },
     correctOption: { type: String, enum: ['A', 'B', 'C', 'D', ''], default: '', select: false },
@@ -158,6 +193,26 @@ questionSchema.pre('save', function (next) {
   }
 
   const c = this.content;
+
+  // --- Migration fallback: if starterCode was previously stored as a Map<string,string>,
+  // convert it into the explicit language schema so older records remain compatible.
+  try {
+    if (c.starterCode && typeof c.starterCode === 'object' && !c.starterCode.cpp && !c.starterCode.python) {
+      const legacy = c.starterCode;
+      const normalized = {};
+      for (const k of Object.keys(legacy)) {
+        const val = legacy[k];
+        if (typeof val === 'string') {
+          normalized[k] = { code: val, version: 1 };
+        } else if (val && val.code) {
+          normalized[k] = { code: val.code, version: val.version || 1 };
+        }
+      }
+      c.starterCode = normalized;
+    }
+  } catch (e) {
+    // ignore migration fallback errors; validation will surface issues if any
+  }
 
   if (this.categoryType === 'Coding') {
     if (!c.visibleTestCases || c.visibleTestCases.length === 0) {

@@ -134,15 +134,33 @@ export const updateQuestion = async (req, res) => {
       });
     }
 
-    const updated = await Question.findByIdAndUpdate(
-      req.params.questionId,
-      { $set: updates },
-      { new: true, runValidators: true }
-    );
-
-    if (!updated) {
+    const existing = await Question.findById(req.params.questionId);
+    if (!existing) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
+
+    // Determine if we need to bump top-level version (title/description changes)
+    const bumpVersion = (updates.title && updates.title !== existing.title) ||
+      (updates.description && updates.description !== existing.description);
+
+    // Determine if we need to bump contentVersion (testcases/timeLimit/memoryLimit/constraints changes)
+    let bumpContent = false;
+    if (updates.content) {
+      const c = updates.content;
+      if (c.visibleTestCases || c.hiddenTestCases || c.timeLimit !== undefined || c.memoryLimit !== undefined || c.constraints !== undefined) {
+        bumpContent = true;
+      }
+    }
+
+    const updateOps = { $set: updates };
+    if (bumpVersion) updateOps.$inc = { ...(updateOps.$inc || {}), version: 1 };
+    if (bumpContent) updateOps.$inc = { ...(updateOps.$inc || {}), 'content.contentVersion': 1 };
+
+    const updated = await Question.findByIdAndUpdate(
+      req.params.questionId,
+      updateOps,
+      { new: true, runValidators: true }
+    );
 
     return res.status(200).json({ success: true, data: updated });
   } catch (err) {

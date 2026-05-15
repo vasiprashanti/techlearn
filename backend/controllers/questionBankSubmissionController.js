@@ -140,31 +140,30 @@ const executeCode = async (code, language, testCase, timeLimit, memoryLimit) => 
     };
   }
 
-  try {
-    const result = await testCodeWithJudge0({
-      code,
-      languageId: ALLOWED_LANGUAGES[language].id,
-      input: testCase.input,
-      expectedOutput: testCase.output,
-      timeLimit: timeLimit || EXECUTION_CONSTRAINTS.maxTimePerTestCase,
-      memoryLimit: memoryLimit || MEMORY_CONSTRAINTS.maxMemoryPerTest,
-    });
+    try {
+      // Judge0 util expects positional args: (sourceCode, languageId, input, expectedOutput)
+      const judgeRes = await testCodeWithJudge0(
+        code,
+        ALLOWED_LANGUAGES[language].id,
+        testCase.input,
+        testCase.output
+      );
 
-    return {
-      passed: result.passed || false,
-      executionTime: result.executionTime || 0,
-      memoryUsed: result.memoryUsed || 0,
-      status: result.status || "Error",
-      output: result.output || "",
-      error: result.error || null,
-    };
-  } catch (error) {
-    return {
-      error: error.message,
-      status: "Error",
-      passed: false,
-    };
-  }
+      return {
+        passed: judgeRes.passed || false,
+        executionTime: judgeRes.executionTime || 0,
+        memoryUsed: judgeRes.memoryUsed || 0,
+        status: judgeRes.statusDescription || judgeRes.statusId || "Error",
+        output: judgeRes.actualOutput || judgeRes.output || "",
+        error: judgeRes.error || judgeRes.compileOutput || null,
+      };
+    } catch (error) {
+      return {
+        error: error.message,
+        status: "Error",
+        passed: false,
+      };
+    }
 };
 
 // ===== SUBMISSION ENDPOINTS =====
@@ -249,9 +248,25 @@ export const startSubmission = async (req, res) => {
         constraints: submission.snapshotConstraints,
         visibleTestCases: submission.snapshotVisibleTestCases,
         language: submission.language,
-        starterCode:
-          question.content?.starterCode?.[language]?.code ||
-          "// Start coding here",
+        starterCode: (() => {
+          const sc = question.content && question.content.starterCode;
+          let fallback = "// Start coding here";
+          if (!sc) return fallback;
+          // If legacy Map stored as plain object or Map
+          try {
+            if (typeof sc.get === 'function') {
+              return sc.get(language) || fallback;
+            }
+            if (sc[language]) {
+              // Structured: { code, version }
+              if (typeof sc[language] === 'object' && sc[language].code) return sc[language].code;
+              if (typeof sc[language] === 'string') return sc[language];
+            }
+          } catch (e) {
+            return fallback;
+          }
+          return fallback;
+        })(),
         startTime: submission.startTime,
       },
     });
