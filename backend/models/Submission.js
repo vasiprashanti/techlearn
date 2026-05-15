@@ -1,7 +1,35 @@
 import mongoose from "mongoose";
 
+// Test case result subdocument for final submission evaluation
+const testCaseResultSchema = new mongoose.Schema(
+  {
+    index: Number,
+    visible: { type: Boolean, default: true },
+    passed: Boolean,
+    executionTime: Number,    // milliseconds
+    memoryUsed: Number,       // MB
+    expectedOutput: String,
+    actualOutput: String,     // Only populated for failed tests
+  },
+  { _id: false }
+);
+
+// Final submission evaluation results subdocument
+const finalSubmissionResultsSchema = new mongoose.Schema(
+  {
+    passedTestCases: Number,
+    totalTestCases: Number,
+    testCaseDetails: [testCaseResultSchema],
+    compileOutput: String,
+    runtimeError: String,
+    evaluatedAt: Date,
+  },
+  { _id: false }
+);
+
 const submissionSchema = new mongoose.Schema(
   {
+    // Existing fields (unchanged for backward compatibility)
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
@@ -56,7 +84,8 @@ const submissionSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Passed", "Failed", "Timeout", "Error", "Pending"],
+      enum: ["Passed", "Failed", "PartialPass", "Timeout", "CompileError", "RuntimeError", "Error", "Pending"],
+      default: "Pending",
     },
 
     challengeType: {
@@ -66,20 +95,150 @@ const submissionSchema = new mongoose.Schema(
     },
 
     submittedAt: Date,
+
+    // ===== NEW FIELDS FOR QUESTION BANK INTEGRATION =====
+
+    // Question Bank references
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
+      sparse: true,
+    },
+
+    categoryType: {
+      type: String,
+      enum: ["Coding", "MCQ", "Notes"],
+      default: null,
+      sparse: true,
+    },
+
+    // Submission lifecycle (Coding-specific)
+    startTime: {
+      type: Date,
+      default: null,
+      sparse: true,
+    },
+
+    endTime: {
+      type: Date,
+      default: null,
+      sparse: true,
+    },
+
+    timeSpent: {
+      type: Number,          // milliseconds from start to final submit
+      default: null,
+      sparse: true,
+    },
+
+    // Submission code details (Coding-specific)
+    submittedCode: {
+      type: String,          // Final submitted code
+      default: null,
+      sparse: true,
+    },
+
+    language: {
+      type: String,          // e.g., "cpp", "python", "java"
+      default: null,
+      sparse: true,
+    },
+
+    languageId: {
+      type: Number,          // Judge0 language ID
+      default: null,
+      sparse: true,
+    },
+
+    // Question versioning (for post-edit fairness)
+    questionVersionId: {
+      type: Number,          // Question.version at submission time
+      default: null,
+      sparse: true,
+    },
+
+    contentVersionId: {
+      type: Number,          // Question.content.contentVersion at submission time
+      default: null,
+      sparse: true,
+    },
+
+    // Snapshot fields (immutable point-in-time copy)
+    snapshotConstraints: {
+      type: String,
+      default: null,
+      sparse: true,
+    },
+
+    snapshotVisibleTestCases: {
+      type: [
+        {
+          input: String,
+          output: String,
+          explanation: String,
+        },
+      ],
+      default: [],
+      sparse: true,
+    },
+
+    snapshotHiddenTestCases: {
+      type: [
+        {
+          input: String,
+          output: String,
+        },
+      ],
+      default: [],
+      sparse: true,
+    },
+
+    snapshotTimeLimit: {
+      type: Number,          // milliseconds
+      default: null,
+      sparse: true,
+    },
+
+    snapshotMemoryLimit: {
+      type: Number,          // MB
+      default: null,
+      sparse: true,
+    },
+
+    // Final submission evaluation (only populated on successful submit)
+    finalSubmissionResults: {
+      type: finalSubmissionResultsSchema,
+      default: null,
+      sparse: true,
+    },
+
+    // Submission type (for future MCQ/Notes support)
+    submissionType: {
+      type: String,
+      enum: ["coding", "track_question", "daily_challenge"],
+      default: "track_question",
+    },
   },
   { timestamps: true }
 );
 
-// Compound indexes for common filter combinations
+// Compound indexes for common filter combinations (existing)
 submissionSchema.index({ studentId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, trackId: 1 });
 submissionSchema.index({ attemptId: 1 }, { unique: true, sparse: true });
 
-// Standalone indexes for sort and single-field filters
-// Note: { batchId: 1 } is intentionally omitted — the compound index above
-// serves as a prefix cover for batchId-only queries.
+// Standalone indexes for sort and single-field filters (existing)
 submissionSchema.index({ workingDay: 1 });
 submissionSchema.index({ submittedAt: -1 });
+
+// NEW indexes for Question Bank queries
+submissionSchema.index({ categoryId: 1, status: 1 }, { sparse: true });
+submissionSchema.index({ studentId: 1, categoryId: 1 }, { sparse: true });
+submissionSchema.index({ batchId: 1, categoryId: 1 }, { sparse: true });
+submissionSchema.index({ questionVersionId: 1 }, { sparse: true });
+submissionSchema.index({ submissionType: 1, submittedAt: -1 }, { sparse: true });
 
 export default mongoose.model("Submission", submissionSchema);
