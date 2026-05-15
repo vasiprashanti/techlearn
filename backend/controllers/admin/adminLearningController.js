@@ -17,7 +17,10 @@ import {
   getCategorySlug,
   getCategoryTitle,
   getTrackTemplateIconKey,
+  legacyVisibilityFromCategoryStatus,
   listKnownQuestionCategories,
+  normalizeQuestionCategoryStatus,
+  resolveCategoryStatusFromRequest,
   slugifyCategory,
 } from "./adminCommon.js";
 
@@ -105,11 +108,51 @@ const parsePositiveNumber = (value, fallback) => {
   return parsed;
 };
 
-const ensureTrackExists = async (trackType) => {
-  const normalized = String(trackType || "").trim();
-  if (!normalized) return false;
-  const track = await TrackTemplate.findOne({ name: normalized }).select("_id").lean();
-  return Boolean(track);
+/** Admin JSON row: stable `questionId` + `categoryId` for downstream systems (tracks, practice, analytics). */
+const formatQuestionAdminPayload = (question, slugToCategoryIdMap = null) => {
+  const slug = getCategorySlug(question);
+  let categoryId = question.categoryId ? String(question.categoryId) : null;
+  if (!categoryId && slugToCategoryIdMap instanceof Map) {
+    const mapped = slugToCategoryIdMap.get(slug);
+    if (mapped) categoryId = String(mapped);
+  }
+  return {
+    questionId: question._id,
+    id: question._id,
+    categoryId,
+    title: question.title,
+    questionType: question.questionType || "Coding",
+    difficulty: question.difficulty,
+    track: getCategoryTitle(question),
+    trackType: question.trackType || "",
+    created: question.createdAt?.toISOString?.().slice(0, 10) || "",
+    status: question.status || "Active",
+    tags: question.tags || [],
+    description: question.description || "",
+    inputFormat: question.inputFormat || "",
+    outputFormat: question.outputFormat || "",
+    visibleTestCases: question.visibleTestCases || [],
+    hiddenTestCases: question.hiddenTestCases || [],
+    timeLimit: String(question.timeLimit || 1),
+    memoryLimit: String(question.memoryLimit || 256),
+    solved: String(question.solvedCount || 0),
+    referenceLanguage: question.referenceLanguage || "C++",
+    solutionCode: question.solutionCode || "",
+    editorial: question.editorial || "",
+    mcqOptions: question.mcqOptions || [],
+    mcqCorrectIndex: typeof question.mcqCorrectIndex === "number" ? question.mcqCorrectIndex : null,
+    mcqExplanation: question.mcqExplanation || "",
+    notesMarkdown: question.notesMarkdown || "",
+    categorySlug: slug,
+    categoryTitle: question.categoryTitle || "",
+  };
+};
+
+const loadSlugToCategoryIdMap = async (slugs = []) => {
+  const uniq = [...new Set(slugs.map((s) => String(s || "").trim()).filter(Boolean))];
+  if (!uniq.length) return new Map();
+  const rows = await QuestionCategory.find({ slug: { $in: uniq } }).select("_id slug").lean();
+  return new Map(rows.map((row) => [row.slug, row._id]));
 };
 
 export const listQuestionCategories = async (req, res) => {
@@ -140,6 +183,9 @@ export const listQuestionCategories = async (req, res) => {
       total: groupMap[category.slug]?.total || 0,
       active: groupMap[category.slug]?.active || 0,
       icon: category.icon,
+      description: category.description,
+      categoryType: category.categoryType || "Coding",
+      status: category.status || "Active",
     }));
 
     return res.status(200).json({ success: true, data });
@@ -151,7 +197,7 @@ export const listQuestionCategories = async (req, res) => {
 
 export const createQuestionCategory = async (req, res) => {
   try {
-    const { title, subtitle, icon } = req.body;
+    const { title, subtitle, description, icon, categoryType } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Category title is required." });
@@ -167,11 +213,17 @@ export const createQuestionCategory = async (req, res) => {
       return res.status(409).json({ success: false, message: "A category with this title already exists." });
     }
 
+    const nextStatus = resolveCategoryStatusFromRequest(req.body, null);
+    const legacyVisibility = legacyVisibilityFromCategoryStatus(nextStatus);
+
     const category = await QuestionCategory.create({
       slug,
       title: title.trim(),
-      subtitle: subtitle?.trim() || "Custom question category",
+      subtitle: (description ?? subtitle)?.trim() || "Custom question category",
       icon: icon || "chart",
+      categoryType: categoryType || "Coding",
+      visibility: legacyVisibility,
+      status: nextStatus,
     });
 
     await writeAuditLog({
@@ -190,9 +242,12 @@ export const createQuestionCategory = async (req, res) => {
         slug: category.slug,
         title: category.title,
         subtitle: category.subtitle,
+        description: category.subtitle,
         total: 0,
         active: 0,
         icon: category.icon,
+        categoryType: category.categoryType,
+        status: normalizeQuestionCategoryStatus(category.toObject()),
       },
     });
   } catch (error) {
@@ -212,8 +267,11 @@ export const updateQuestionCategory = async (req, res) => {
     }
 
     const nextTitle = req.body.title?.trim() || category.title;
-    const nextSubtitle = req.body.subtitle?.trim() || category.subtitle;
+    const nextSubtitle = (req.body.description ?? req.body.subtitle)?.trim() || category.subtitle;
     const nextIcon = req.body.icon || category.icon;
+    const nextCategoryType = req.body.categoryType || category.categoryType || "Coding";
+    const nextStatus = resolveCategoryStatusFromRequest(req.body, category.toObject());
+    const legacyVisibility = legacyVisibilityFromCategoryStatus(nextStatus);
 
     const nextSlug = slugifyCategory(nextTitle);
     if (!nextSlug) {
@@ -236,17 +294,20 @@ export const updateQuestionCategory = async (req, res) => {
     category.title = nextTitle;
     category.subtitle = nextSubtitle;
     category.icon = nextIcon;
+    category.categoryType = nextCategoryType;
+    category.visibility = legacyVisibility;
+    category.status = nextStatus;
     await category.save();
 
     await Question.updateMany(
       {
-        $or: [{ categorySlug: previousSlug }, { categoryTitle: previousTitle }],
+        $or: [{ categorySlug: previousSlug }, { categoryTitle: previousTitle }, { categoryId: category._id }],
       },
       {
         $set: {
           categorySlug: category.slug,
           categoryTitle: category.title,
-          trackType: category.title,
+          categoryId: category._id,
         },
       }
     );
@@ -267,7 +328,10 @@ export const updateQuestionCategory = async (req, res) => {
         slug: category.slug,
         title: category.title,
         subtitle: category.subtitle,
+        description: category.subtitle,
         icon: category.icon,
+        categoryType: category.categoryType,
+        status: normalizeQuestionCategoryStatus(category.toObject()),
       },
     });
   } catch (error) {
@@ -287,7 +351,7 @@ export const deleteQuestionCategory = async (req, res) => {
     }
 
     await Question.deleteMany({
-      $or: [{ categorySlug: category.slug }, { categoryTitle: category.title }],
+      $or: [{ categorySlug: category.slug }, { categoryTitle: category.title }, { categoryId: category._id }],
     });
 
     await writeAuditLog({
@@ -309,32 +373,25 @@ export const deleteQuestionCategory = async (req, res) => {
 export const listQuestionsAdmin = async (req, res) => {
   try {
     const query = {};
-    if (req.query.categorySlug) query.categorySlug = req.query.categorySlug;
+
+    if (req.query.categoryId) {
+      if (!assertObjectId(req.query.categoryId, "categoryId", res)) return;
+      const cat = await QuestionCategory.findById(req.query.categoryId).select("slug").lean();
+      if (!cat) {
+        return res.status(404).json({ success: false, message: "Question category not found." });
+      }
+      query.$or = [{ categoryId: cat._id }, { categorySlug: cat.slug }];
+    } else if (req.query.categorySlug) {
+      query.categorySlug = req.query.categorySlug;
+    }
+
     if (req.query.status) query.status = req.query.status;
     if (req.query.difficulty) query.difficulty = req.query.difficulty;
+    if (req.query.questionType) query.questionType = req.query.questionType;
 
     const questions = await Question.find(query).sort({ createdAt: -1 }).lean();
-    const data = questions.map((question) => ({
-      id: question._id,
-      title: question.title,
-      difficulty: question.difficulty,
-      track: getCategoryTitle(question),
-      created: question.createdAt?.toISOString?.().slice(0, 10) || "",
-      status: question.status || "Active",
-      tags: question.tags || [],
-      description: question.description || "",
-      inputFormat: question.inputFormat || "",
-      outputFormat: question.outputFormat || "",
-      visibleTestCases: question.visibleTestCases || [],
-      hiddenTestCases: question.hiddenTestCases || [],
-      timeLimit: String(question.timeLimit || 1),
-      memoryLimit: String(question.memoryLimit || 256),
-      solved: String(question.solvedCount || 0),
-      referenceLanguage: question.referenceLanguage || "C++",
-      solutionCode: question.solutionCode || "",
-      editorial: question.editorial || "",
-      categorySlug: getCategorySlug(question),
-    }));
+    const slugMap = await loadSlugToCategoryIdMap(questions.map((q) => getCategorySlug(q)));
+    const data = questions.map((question) => formatQuestionAdminPayload(question, slugMap));
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -346,9 +403,9 @@ export const listQuestionsAdmin = async (req, res) => {
 export const createQuestionAdmin = async (req, res) => {
   try {
     const {
+      questionType,
       title,
       difficulty,
-      trackType,
       categorySlug,
       categoryTitle,
       tags,
@@ -362,48 +419,89 @@ export const createQuestionAdmin = async (req, res) => {
       referenceLanguage,
       solutionCode,
       editorial,
+      mcqOptions,
+      mcqCorrectIndex,
+      mcqExplanation,
+      notesMarkdown,
       status,
+      categoryId: categoryIdFromBody,
     } = req.body;
+
+    const normalizedQuestionType = String(questionType || "Coding").trim() || "Coding";
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Question title is required." });
     }
 
-    if (!String(description || "").trim()) {
-      return res.status(400).json({ success: false, message: "Problem description is required." });
-    }
-
-    if (!String(trackType || "").trim()) {
-      return res.status(400).json({ success: false, message: "Track type is required." });
-    }
-
-    const trackExists = await ensureTrackExists(trackType);
-    if (!trackExists) {
-      return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
-    }
-
-    if (categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
+    if (normalizedQuestionType === "Coding") {
+      if (!String(description || "").trim()) {
+        return res.status(400).json({ success: false, message: "Problem description is required." });
       }
     }
 
-    const resolvedCategorySlug = categorySlug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "web-development";
-    const resolvedCategoryTitle =
-      categoryTitle || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || trackType || "General";
+    if (normalizedQuestionType === "MCQ") {
+      if (!String(description || "").trim()) {
+        return res.status(400).json({ success: false, message: "MCQ question text is required." });
+      }
+
+      const normalizedOptions = Array.isArray(mcqOptions) ? mcqOptions.map((opt) => String(opt || "").trim()).filter(Boolean) : [];
+      if (normalizedOptions.length < 2) {
+        return res.status(400).json({ success: false, message: "Provide at least 2 MCQ options." });
+      }
+
+      const parsedCorrect = Number(mcqCorrectIndex);
+      if (!Number.isInteger(parsedCorrect) || parsedCorrect < 0 || parsedCorrect >= normalizedOptions.length) {
+        return res.status(400).json({ success: false, message: "Select a valid correct option." });
+      }
+    }
+
+    if (normalizedQuestionType === "Notes") {
+      if (!String(notesMarkdown || "").trim()) {
+        return res.status(400).json({ success: false, message: "Notes markdown content is required." });
+      }
+    }
+
+    let resolvedCategorySlug =
+      categorySlug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "web-development";
+    let resolvedCategoryTitle =
+      categoryTitle || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || "General";
+    let resolvedCategoryObjectId = null;
+
+    if (categoryIdFromBody) {
+      if (!mongoose.Types.ObjectId.isValid(String(categoryIdFromBody))) {
+        return res.status(400).json({ success: false, message: "Invalid categoryId." });
+      }
+      const catById = await QuestionCategory.findById(categoryIdFromBody).lean();
+      if (!catById) {
+        return res.status(400).json({ success: false, message: "Category not found for categoryId." });
+      }
+      resolvedCategorySlug = catById.slug;
+      resolvedCategoryTitle = catById.title;
+      resolvedCategoryObjectId = catById._id;
+    } else {
+      if (categorySlug) {
+        const categoryExists = await QuestionCategory.findOne({ slug: categorySlug }).select("_id").lean();
+        if (!categoryExists) {
+          return res.status(400).json({ success: false, message: "Selected category does not exist." });
+        }
+      }
+      const catMatch = await QuestionCategory.findOne({ slug: resolvedCategorySlug }).select("_id").lean();
+      resolvedCategoryObjectId = catMatch?._id || null;
+    }
 
     const normalizedVisibleTestCases = normalizeTestCases(visibleTestCases);
     const normalizedHiddenTestCases = normalizeTestCases(hiddenTestCases);
 
     const question = await Question.create({
       title: title.trim(),
+      questionType: normalizedQuestionType,
       difficulty: difficulty || "Easy",
-      trackType: String(trackType).trim(),
+      trackType: "",
       categorySlug: resolvedCategorySlug,
       categoryTitle: resolvedCategoryTitle,
+      categoryId: resolvedCategoryObjectId,
       tags: tags || [],
-      description: String(description).trim(),
+      description: String(description || "").trim(),
       inputFormat: inputFormat || "",
       outputFormat: outputFormat || "",
       visibleTestCases: normalizedVisibleTestCases,
@@ -413,6 +511,10 @@ export const createQuestionAdmin = async (req, res) => {
       referenceLanguage: referenceLanguage || "C++",
       solutionCode: solutionCode || "",
       editorial: editorial || "",
+      mcqOptions: Array.isArray(mcqOptions) ? mcqOptions.map((opt) => String(opt || "").trim()).filter(Boolean) : [],
+      mcqCorrectIndex: typeof mcqCorrectIndex === "number" ? mcqCorrectIndex : Number.isInteger(Number(mcqCorrectIndex)) ? Number(mcqCorrectIndex) : null,
+      mcqExplanation: mcqExplanation || "",
+      notesMarkdown: notesMarkdown || "",
       status: status || "Active",
     });
 
@@ -425,7 +527,10 @@ export const createQuestionAdmin = async (req, res) => {
       actor: req.user,
     });
 
-    return res.status(201).json({ success: true, data: question });
+    return res.status(201).json({
+      success: true,
+      data: formatQuestionAdminPayload(question.toObject(), null),
+    });
   } catch (error) {
     console.error("createQuestionAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to create question.", error: error.message });
@@ -442,29 +547,11 @@ export const getQuestionDetailAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question not found." });
     }
 
+    const slugMap = await loadSlugToCategoryIdMap([getCategorySlug(question)]);
+
     return res.status(200).json({
       success: true,
-      data: {
-        id: question._id,
-        title: question.title,
-        difficulty: question.difficulty,
-        track: getCategoryTitle(question),
-        created: question.createdAt?.toISOString?.().slice(0, 10) || "",
-        status: question.status || "Active",
-        tags: question.tags || [],
-        description: question.description || "",
-        inputFormat: question.inputFormat || "",
-        outputFormat: question.outputFormat || "",
-        visibleTestCases: question.visibleTestCases || [],
-        hiddenTestCases: question.hiddenTestCases || [],
-        timeLimit: String(question.timeLimit || 1),
-        memoryLimit: String(question.memoryLimit || 256),
-        solved: String(question.solvedCount || 0),
-        referenceLanguage: question.referenceLanguage || "C++",
-        solutionCode: question.solutionCode || "",
-        editorial: question.editorial || "",
-        categorySlug: getCategorySlug(question),
-      },
+      data: formatQuestionAdminPayload(question, slugMap),
     });
   } catch (error) {
     console.error("getQuestionDetailAdmin error:", error);
@@ -477,36 +564,85 @@ export const updateQuestionAdmin = async (req, res) => {
     const { questionId } = req.params;
     if (!assertObjectId(questionId, "questionId", res)) return;
 
+    const normalizedQuestionType = String(req.body.questionType || "Coding").trim() || "Coding";
+
     const nextTitle = String(req.body.title || "").trim();
     const nextDescription = String(req.body.description || "").trim();
-    const nextTrackType = String(req.body.trackType || "").trim();
 
     if (!nextTitle) {
       return res.status(400).json({ success: false, message: "Question title is required." });
     }
 
-    if (!nextDescription) {
-      return res.status(400).json({ success: false, message: "Problem description is required." });
-    }
-
-    if (!nextTrackType) {
-      return res.status(400).json({ success: false, message: "Track type is required." });
-    }
-
-    const trackExists = await ensureTrackExists(nextTrackType);
-    if (!trackExists) {
-      return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
-    }
-
-    if (req.body.categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: req.body.categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
+    if (normalizedQuestionType === "Coding") {
+      if (!nextDescription) {
+        return res.status(400).json({ success: false, message: "Problem description is required." });
       }
     }
 
-    const resolvedCategorySlug =
-      req.body.categorySlug || CATEGORY_SLUG_BY_TITLE[req.body.categoryTitle] || slugifyCategory(req.body.categoryTitle) || undefined;
+    if (normalizedQuestionType === "MCQ") {
+      if (!nextDescription) {
+        return res.status(400).json({ success: false, message: "MCQ question text is required." });
+      }
+
+      const normalizedOptions = Array.isArray(req.body.mcqOptions)
+        ? req.body.mcqOptions.map((opt) => String(opt || "").trim()).filter(Boolean)
+        : [];
+      if (normalizedOptions.length < 2) {
+        return res.status(400).json({ success: false, message: "Provide at least 2 MCQ options." });
+      }
+
+      const parsedCorrect = Number(req.body.mcqCorrectIndex);
+      if (!Number.isInteger(parsedCorrect) || parsedCorrect < 0 || parsedCorrect >= normalizedOptions.length) {
+        return res.status(400).json({ success: false, message: "Select a valid correct option." });
+      }
+    }
+
+    if (normalizedQuestionType === "Notes") {
+      if (!String(req.body.notesMarkdown || "").trim()) {
+        return res.status(400).json({ success: false, message: "Notes markdown content is required." });
+      }
+    }
+
+    const existing = await Question.findById(questionId).lean();
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Question not found." });
+    }
+
+    let resolvedCategorySlug =
+      req.body.categorySlug?.trim() ||
+      CATEGORY_SLUG_BY_TITLE[req.body.categoryTitle] ||
+      (req.body.categoryTitle ? slugifyCategory(req.body.categoryTitle) : null) ||
+      getCategorySlug(existing);
+
+    let resolvedCategoryTitle =
+      (typeof req.body.categoryTitle === "string" && req.body.categoryTitle.trim()) ||
+      QUESTION_CATEGORY_META[resolvedCategorySlug]?.title ||
+      existing.categoryTitle ||
+      "General";
+
+    let resolvedCategoryObjectId = existing.categoryId || null;
+
+    if (req.body.categoryId) {
+      if (!mongoose.Types.ObjectId.isValid(String(req.body.categoryId))) {
+        return res.status(400).json({ success: false, message: "Invalid categoryId." });
+      }
+      const catById = await QuestionCategory.findById(req.body.categoryId).lean();
+      if (!catById) {
+        return res.status(400).json({ success: false, message: "Category not found for categoryId." });
+      }
+      resolvedCategorySlug = catById.slug;
+      resolvedCategoryTitle = catById.title;
+      resolvedCategoryObjectId = catById._id;
+    } else {
+      if (req.body.categorySlug) {
+        const categoryExists = await QuestionCategory.findOne({ slug: req.body.categorySlug }).select("_id").lean();
+        if (!categoryExists) {
+          return res.status(400).json({ success: false, message: "Selected category does not exist." });
+        }
+      }
+      const catMatch = await QuestionCategory.findOne({ slug: resolvedCategorySlug }).select("_id").lean();
+      resolvedCategoryObjectId = catMatch?._id || existing.categoryId || null;
+    }
 
     const normalizedVisibleTestCases = normalizeTestCases(req.body.visibleTestCases);
     const normalizedHiddenTestCases = normalizeTestCases(req.body.hiddenTestCases);
@@ -516,10 +652,11 @@ export const updateQuestionAdmin = async (req, res) => {
       {
         $set: {
           title: nextTitle,
+          questionType: normalizedQuestionType,
           difficulty: req.body.difficulty,
-          trackType: nextTrackType,
           categorySlug: resolvedCategorySlug,
-          categoryTitle: req.body.categoryTitle,
+          categoryTitle: resolvedCategoryTitle,
+          categoryId: resolvedCategoryObjectId,
           tags: req.body.tags,
           description: nextDescription,
           inputFormat: req.body.inputFormat,
@@ -531,6 +668,16 @@ export const updateQuestionAdmin = async (req, res) => {
           referenceLanguage: req.body.referenceLanguage || "C++",
           solutionCode: req.body.solutionCode || "",
           editorial: req.body.editorial || "",
+          mcqOptions: Array.isArray(req.body.mcqOptions)
+            ? req.body.mcqOptions.map((opt) => String(opt || "").trim()).filter(Boolean)
+            : [],
+          mcqCorrectIndex: typeof req.body.mcqCorrectIndex === "number"
+            ? req.body.mcqCorrectIndex
+            : Number.isInteger(Number(req.body.mcqCorrectIndex))
+              ? Number(req.body.mcqCorrectIndex)
+              : null,
+          mcqExplanation: req.body.mcqExplanation || "",
+          notesMarkdown: req.body.notesMarkdown || "",
           status: req.body.status || "Active",
         },
       },
@@ -550,7 +697,10 @@ export const updateQuestionAdmin = async (req, res) => {
       actor: req.user,
     });
 
-    return res.status(200).json({ success: true, data: question });
+    return res.status(200).json({
+      success: true,
+      data: formatQuestionAdminPayload(question.toObject(), null),
+    });
   } catch (error) {
     console.error("updateQuestionAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to update question.", error: error.message });

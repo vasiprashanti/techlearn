@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "seed:auth": "node scripts/seedAuthUsers.js",
+    "backfill:question-category-ids": "node scripts/backfillQuestionCategoryIds.js",
     "build": "echo 'No build step required for Node.js backend'"
   },
   "keywords": [],

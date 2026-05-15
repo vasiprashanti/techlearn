@@ -12,7 +12,7 @@ const LANGUAGES = {
   javascript: {
     id: "javascript",
     name: "JavaScript",
-    icon: "/javascript.png",
+    icon: "/js.png",
     extension: ".js",
     defaultCode: `// Write your code here\n`,
     monacoLanguage: "javascript",

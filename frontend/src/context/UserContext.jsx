@@ -21,6 +21,23 @@ export const UserProvider = ({ children }) => {
   const [isReady, setIsReady] = useState(false);
   const [latestDailyChallenge, setLatestDailyChallenge] = useState(null);
 
+  const updateUser = (partial) => {
+    if (!partial || typeof partial !== 'object') return;
+
+    setUser((prev) => {
+      const next = { ...(prev || {}), ...partial };
+      try {
+        const rawStored = localStorage.getItem('userData');
+        const parsedStored = JSON.parse(rawStored || '{}');
+        const stored = parsedStored && typeof parsedStored === 'object' && !Array.isArray(parsedStored) ? parsedStored : {};
+        localStorage.setItem('userData', JSON.stringify({ ...stored, ...partial }));
+      } catch {
+        // ignore storage failures
+      }
+      return next;
+    });
+  };
+
   // Load user data from localStorage and validate structure
   const loadUserFromStorage = () => {
     const userDataStr = localStorage.getItem('userData');
@@ -66,10 +83,19 @@ export const UserProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Update user data if API returns it
+      // Update user data if API returns it (merge so we never drop auth fields e.g. `role`)
       if (data.user) {
-        setUser(data.user);
-        localStorage.setItem('userData', JSON.stringify(data.user));
+        let merged = { ...data.user };
+        try {
+          const prev = JSON.parse(localStorage.getItem('userData') || '{}');
+          if (prev && typeof prev === 'object' && !Array.isArray(prev)) {
+            merged = { ...prev, ...data.user };
+          }
+        } catch {
+          // ignore parse errors
+        }
+        setUser(merged);
+        localStorage.setItem('userData', JSON.stringify(merged));
       }
 
       // Calculate total XP from courseXP field
@@ -134,6 +160,7 @@ export const UserProvider = ({ children }) => {
         activities,
         isReady,
         latestDailyChallenge,
+        updateUser,
         updateXp: (newXp) => setXp(newXp),
         markActivity: (date, status) =>
           setActivities((prev) => ({ ...prev, [date]: status })),

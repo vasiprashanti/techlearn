@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBarChart2, FiChevronDown, FiCode, FiDatabase, FiGlobe, FiMoreHorizontal, FiPlus, FiTerminal, FiTrash2, FiX } from 'react-icons/fi';
+import { FiBarChart2, FiChevronDown, FiCode, FiDatabase, FiGlobe, FiLayers, FiMoreHorizontal, FiPlus, FiTerminal, FiTrash2, FiX } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -62,6 +62,28 @@ const getCategoryTheme = (icon) => {
 
 const isPersistedCategory = (categoryId) => /^[a-f0-9]{24}$/i.test(String(categoryId || ''));
 
+const categoryTypeBadgeClass = (type) => {
+  const t = String(type || 'Coding');
+  if (t === 'MCQ') {
+    return 'bg-violet-100 text-violet-800 border-violet-200/90 dark:bg-violet-500/15 dark:text-violet-100 dark:border-violet-400/25';
+  }
+  if (t === 'Notes') {
+    return 'bg-emerald-100 text-emerald-900 border-emerald-200/90 dark:bg-emerald-500/15 dark:text-emerald-100 dark:border-emerald-400/25';
+  }
+  return 'bg-sky-100 text-sky-900 border-sky-200/90 dark:bg-sky-500/15 dark:text-sky-100 dark:border-sky-400/25';
+};
+
+const categoryStatusBadgeClass = (status) => {
+  const s = String(status || 'Active');
+  if (s === 'Hidden') {
+    return 'bg-amber-100 text-amber-950 border-amber-200/90 dark:bg-amber-500/12 dark:text-amber-100 dark:border-amber-400/25';
+  }
+  if (s === 'Draft') {
+    return 'bg-slate-200 text-slate-800 border-slate-300/90 dark:bg-slate-600/25 dark:text-slate-100 dark:border-slate-400/30';
+  }
+  return 'bg-green-100 text-green-900 border-green-200/90 dark:bg-green-500/15 dark:text-green-100 dark:border-green-400/25';
+};
+
 export default function QuestionBank() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -72,7 +94,13 @@ export default function QuestionBank() {
   const [mounted, setMounted] = useState(false);
   const [categoryState, setCategoryState] = useState(emptyQuestionCategories);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart' });
+  const [categoryForm, setCategoryForm] = useState({
+    title: '',
+    description: '',
+    categoryType: 'Coding',
+    icon: 'chart',
+    status: 'Active',
+  });
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -97,6 +125,13 @@ export default function QuestionBank() {
           const normalized = preferRemoteData(remoteCategories, emptyQuestionCategories).map((category) => ({
             ...getCategoryTheme(category.icon),
             ...category,
+            status:
+              category.status === 'Draft' || category.status === 'Hidden' || category.status === 'Active'
+                ? category.status
+                : category.visibility === 'Hidden'
+                  ? 'Hidden'
+                  : 'Active',
+            total: Number(category.total ?? category.totalQuestions ?? 0) || 0,
           }));
           setCategoryState(normalized);
         }
@@ -132,7 +167,7 @@ export default function QuestionBank() {
   const closeCategoryModal = () => {
     setIsCategoryModalOpen(false);
     setEditingCategoryId(null);
-    setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
+    setCategoryForm({ title: '', description: '', categoryType: 'Coding', icon: 'chart', status: 'Active' });
     setCategoryError('');
     setIsSavingCategory(false);
   };
@@ -142,8 +177,10 @@ export default function QuestionBank() {
     setCategoryError('');
     setCategoryForm({
       title: category.title || '',
-      subtitle: category.subtitle || '',
+      description: category.description || category.subtitle || '',
+      categoryType: category.categoryType || 'Coding',
       icon: category.icon || 'chart',
+      status: category.status || 'Active',
     });
     setIsCategoryModalOpen(true);
   };
@@ -163,6 +200,7 @@ export default function QuestionBank() {
         const updatedTheme = {
           ...getCategoryTheme(updatedCategory.icon),
           ...updatedCategory,
+          total: Number(updatedCategory.total ?? updatedCategory.totalQuestions ?? 0) || 0,
         };
         setCategoryState((prev) => prev.map((category) => (
           String(category.id) === String(editingCategoryId)
@@ -172,17 +210,24 @@ export default function QuestionBank() {
             }
             : category
         )));
+        closeCategoryModal();
       } else {
         const createdCategory = await adminAPI.createQuestionCategory(categoryForm);
         const categoryWithTheme = {
           ...getCategoryTheme(createdCategory.icon),
           ...createdCategory,
+          total: Number(createdCategory.total ?? createdCategory.totalQuestions ?? 0) || 0,
         };
         setCategoryState((prev) => [...prev, categoryWithTheme]);
+        const slug = String(categoryWithTheme.slug || createdCategory.slug || '').trim();
+        closeCategoryModal();
+        if (slug) {
+          navigate(`/question-dataset/${slug}`, { state: { openAddQuestion: true } });
+        }
       }
-      closeCategoryModal();
     } catch (error) {
-      setCategoryError(error.message || 'Failed to create category.');
+      setCategoryError(error.message || 'Failed to save category.');
+    } finally {
       setIsSavingCategory(false);
     }
   };
@@ -209,31 +254,78 @@ export default function QuestionBank() {
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCategoryModal} />
           <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1d45] shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{editingCategoryId ? 'Edit Question Category' : 'Add Question Category'}</h2>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                {editingCategoryId ? 'Edit category' : 'Create category'}
+              </h2>
               <button onClick={closeCategoryModal} className="text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white" aria-label="Close category form">
                 <FiX className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-6 space-y-4">
+              {!editingCategoryId && (
+                <div className="rounded-xl border border-[#3c83f6]/25 bg-[#f0f6fc] dark:bg-[#0f274f]/80 px-3.5 py-3">
+                  <p className="text-xs font-semibold text-[#0d2a57] dark:text-sky-200">Suggested workflow</p>
+                  <ol className="mt-2 space-y-1.5 text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 list-decimal list-inside leading-snug">
+                    <li>Name the category and choose its <strong className="font-semibold text-slate-800 dark:text-slate-100">type</strong> (Coding, MCQ, or Notes).</li>
+                    <li>Save — you&apos;ll open the question dataset for that category.</li>
+                    <li>Use <strong className="font-semibold text-slate-800 dark:text-slate-100">Add Question</strong>; the correct form appears automatically from the type.</li>
+                  </ol>
+                </div>
+              )}
+
               <div>
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category Title</label>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category name</label>
                 <input
                   value={categoryForm.title}
                   onChange={(event) => setCategoryForm((prev) => ({ ...prev, title: event.target.value }))}
-                  placeholder="Enter category name"
+                  placeholder="e.g. Arrays and hashing"
                   className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Subtitle</label>
-                <input
-                  value={categoryForm.subtitle}
-                  onChange={(event) => setCategoryForm((prev) => ({ ...prev, subtitle: event.target.value }))}
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category type</label>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Controls which editor is used when adding questions to this dataset.</p>
+                <div className="relative mt-1.5 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={categoryForm.categoryType}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, categoryType: event.target.value }))}
+                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="Coding">Coding</option>
+                    <option className={dropdownOptionClass} value="MCQ">MCQ</option>
+                    <option className={dropdownOptionClass} value="Notes">Notes</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Description</label>
+                <textarea
+                  value={categoryForm.description}
+                  onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))}
                   placeholder="Short description for the category"
-                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 text-sm"
+                  rows={2}
+                  className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-white/5 px-3.5 py-2.5 text-sm"
                 />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Status</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={categoryForm.status}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, status: event.target.value }))}
+                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Hidden">Hidden</option>
+                    <option className={dropdownOptionClass} value="Draft">Draft</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
               </div>
 
               <div>
@@ -271,7 +363,7 @@ export default function QuestionBank() {
                   disabled={isSavingCategory}
                   className="h-10 px-5 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold transition-colors"
                 >
-                  {isSavingCategory ? 'Saving...' : editingCategoryId ? 'Save Changes' : 'Create Category'}
+                  {isSavingCategory ? 'Saving...' : editingCategoryId ? 'Save changes' : 'Save category'}
                 </button>
               </div>
             </div>
@@ -341,29 +433,38 @@ export default function QuestionBank() {
           </section>
 
           <section>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
+              </div>
               <button
                 onClick={() => {
                   setEditingCategoryId(null);
-                  setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
+                  setCategoryForm({ title: '', description: '', categoryType: 'Coding', icon: 'chart', status: 'Active' });
                   setCategoryError('');
                   setIsCategoryModalOpen(true);
                 }}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#3c83f6] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2563eb]"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#3c83f6] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#2563eb]"
               >
                 <FiPlus className="w-4 h-4" />
-                Add Category
+                Create category
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {categoryState.map((category) => {
                 const Icon = categoryIconMap[category.icon] || FiBarChart2;
                 const isCrudEnabled = isPersistedCategory(category.id);
+                const categoryName = category.title || 'Untitled category';
+                const categoryType = category.categoryType || 'Coding';
+                const categoryStatus = category.status || 'Active';
+                const totalQuestions = Number(category.total ?? 0) || 0;
 
                 return (
-                  <article key={category.id} className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] shadow-sm h-full flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                  <article
+                    key={category.id}
+                    className="relative flex flex-col h-full rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1d45] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                  >
                     <div className="absolute right-3 top-3 z-20">
                       <button
                         type="button"
@@ -408,31 +509,52 @@ export default function QuestionBank() {
                       )}
                     </div>
 
-                    <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/10 ${category.topTint}`}>
-                      <div className="flex items-start gap-2.5">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm ${category.iconBg}`}>
+                    <div className={`px-5 pt-5 pb-4 border-b border-black/5 dark:border-white/10 ${category.topTint}`}>
+                      <div className="flex items-start gap-3 pr-8">
+                        <div
+                          className={`shrink-0 h-11 w-11 rounded-xl flex items-center justify-center border border-black/10 dark:border-white/10 shadow-sm ${category.iconBg}`}
+                          aria-hidden
+                        >
                           <Icon className={`w-5 h-5 ${category.iconColor}`} />
                         </div>
-                        <div className="min-h-[64px]">
-                          <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white">{category.title}</h3>
-                          <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300">{category.subtitle}</p>
+                        <div className="min-w-0 flex-1 pt-0.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-black/50 dark:text-white/50">Category name</p>
+                          <h3 className="mt-1 text-lg font-semibold leading-snug text-slate-900 dark:text-white line-clamp-2">{categoryName}</h3>
                         </div>
                       </div>
                     </div>
 
-                    <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent">
-                      <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
-                        <span>Total Questions</span>
-                        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.total}</span>
+                    <div className="flex-1 px-5 py-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Category type</span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums ${categoryTypeBadgeClass(categoryType)}`}
+                        >
+                          {categoryType}
+                        </span>
                       </div>
-                      <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
-                        <span>Active Questions</span>
-                        <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.active}</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Status</span>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${categoryStatusBadgeClass(categoryStatus)}`}
+                        >
+                          {categoryStatus}
+                        </span>
                       </div>
+                      <div className="rounded-xl border border-black/10 dark:border-white/10 bg-slate-50/90 dark:bg-white/[0.04] px-3.5 py-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FiLayers className="w-4 h-4 shrink-0 text-[#3c83f6] dark:text-sky-300" aria-hidden />
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Total questions</span>
+                        </div>
+                        <span className="text-xl font-bold tabular-nums tracking-tight text-slate-900 dark:text-white">{totalQuestions}</span>
+                      </div>
+                    </div>
 
+                    <div className="px-5 pb-5 pt-0 mt-auto">
                       <button
-                        onClick={() => navigate(`/question-bank/${category.slug}`)}
-                        className="mt-4 w-full h-9 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs md:text-sm font-semibold transition-colors"
+                        type="button"
+                        onClick={() => navigate(`/question-dataset/${category.slug}`)}
+                        className="w-full h-10 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold transition-colors shadow-sm"
                       >
                         View Questions
                       </button>

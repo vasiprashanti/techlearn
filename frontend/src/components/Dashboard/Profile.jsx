@@ -1,21 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   User, Mail, CalendarDays, Lock, Camera, ArrowLeft,
-  X, CheckCircle, Shield 
+  Shield 
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
 import UserSidebarLayout from "./UserSidebarLayout";
+import AvatarPickerModal from "./AvatarPickerModal";
 
-const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
 
 // Helper function to get initial avatar
 const getInitialAvatar = () => {
   const storedUser = JSON.parse(localStorage.getItem("userData"));
+  if (storedUser?.avatar) {
+    return storedUser.avatar;
+  }
   if (storedUser?.photoUrl) {
     return storedUser.photoUrl;
   }
@@ -25,62 +28,55 @@ const getInitialAvatar = () => {
 const Profile = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { user, isLoading } = useUser();
+  const { user, isLoading, updateUser } = useUser();
   
   const isDarkMode = theme === 'dark';
   
   // Avatar State
   const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
-  const [pendingAvatar, setPendingAvatar] = useState(null);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
 
   useEffect(() => {
-    // Only update if there's no avatar already selected and user data is available
     const storedUser = JSON.parse(localStorage.getItem("userData"));
-    if (storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(storedUser.photoUrl);
-    } else if (user?.photoUrl && !storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(user.photoUrl);
+    const nextAvatar = user?.avatar || user?.photoUrl || storedUser?.avatar || storedUser?.photoUrl;
+    if (nextAvatar) {
+      setSelectedAvatar(nextAvatar);
     }
-  }, [user?.photoUrl, selectedAvatar]);
+  }, [user?.avatar, user?.photoUrl]);
 
   const handleAvatarSelect = async (avatarUrl) => {
-    setSelectedAvatar(avatarUrl);
-    setIsSelectingAvatar(false);
+    if (!avatarUrl || isSavingAvatar) return;
 
+    setIsSavingAvatar(true);
     try {
-      // Get the user from localStorage
-      const storedUser = JSON.parse(localStorage.getItem("userData"));
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
 
-      if (!storedUser || !storedUser.id) {
-        throw new Error("User ID not found in localStorage");
-      }
-
-      const userId = storedUser.id;
-
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/users/user/${userId}`,
-        {
-          method: "PUT",
+      if (token) {
+        const res = await fetch(`${apiBase}/auth/avatar`, {
+          method: 'PUT',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ photoUrl: avatarUrl }),
-        }
-      );
+          body: JSON.stringify({ avatar: avatarUrl }),
+        });
 
-      if (!res.ok) {
-        throw new Error("Failed to update avatar");
+        if (!res.ok) {
+          throw new Error('Failed to update avatar');
+        }
+
+        await res.json().catch(() => null);
       }
 
-      await res.json();
-
-      // Update localStorage with new photoUrl
-      const updatedUser = { ...storedUser, photoUrl: avatarUrl };
-      localStorage.setItem("userData", JSON.stringify(updatedUser));
-      
+      setSelectedAvatar(avatarUrl);
+      updateUser({ avatar: avatarUrl, photoUrl: avatarUrl });
+      setIsSelectingAvatar(false);
     } catch (error) {
       console.error("Error updating avatar:", error);
+    } finally {
+      setIsSavingAvatar(false);
     }
   };
 
@@ -279,93 +275,12 @@ const Profile = () => {
         </div>
       </UserSidebarLayout>
 
-      <AnimatePresence>
-        {isSelectingAvatar && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setIsSelectingAvatar(false)}
-              className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm"
-            />
-            
-            {/* Modal */}
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }} 
-              animate={{ scale: 1, opacity: 1, y: 0 }} 
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[2rem] p-8 md:p-10 shadow-2xl w-full max-w-2xl mx-4 relative z-10"
-            >
-              <button
-                onClick={() => setIsSelectingAvatar(false)}
-                className="absolute top-6 right-6 w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center transition-colors text-black/50 dark:text-white/50"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              
-              <div className="text-center mb-8 mt-2">
-                <h3 className="text-2xl font-medium text-black dark:text-white tracking-tight mb-2">
-                  Choose Your Avatar
-                </h3>
-                <p className="text-[11px] uppercase tracking-widest text-black/40 dark:text-white/40 font-semibold">
-                  Select a profile identity
-                </p>
-              </div>
-
-              <div className="flex flex-wrap justify-center gap-6 mb-10">
-                {Array.from({ length: AVATAR_COUNT }, (_, i) => {
-                  const avatarUrl = `${AVATAR_PATH}/avatar${i + 1}.png`;
-                  const isSelected = avatarUrl === (pendingAvatar || selectedAvatar);
-
-                  return (
-                    <button
-                      type="button"
-                      key={i}
-                      onClick={() => setPendingAvatar(avatarUrl)}
-                      className={`relative rounded-full focus:outline-none transition-all duration-300 ${
-                        isSelected
-                          ? "scale-110 shadow-xl"
-                          : "hover:scale-105 hover:shadow-md opacity-70 hover:opacity-100"
-                      }`}
-                    >
-                      <div className={`p-1 rounded-full ${isSelected ? 'bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400' : 'bg-transparent'}`}>
-                        <img
-                          src={avatarUrl}
-                          alt={`Avatar ${i + 1}`}
-                          className="w-20 h-20 md:w-24 md:h-24 rounded-full object-cover bg-white dark:bg-black/50"
-                          draggable={false}
-                        />
-                      </div>
-                      {isSelected && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#3C83F6] dark:bg-white rounded-full flex items-center justify-center border-2 border-white dark:border-[#0a1128] shadow-sm">
-                          <CheckCircle className="w-3.5 h-3.5 text-white dark:text-black" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-center gap-4 border-t border-black/5 dark:border-white/5 pt-8">
-                <button
-                  onClick={() => setIsSelectingAvatar(false)}
-                  className="px-8 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleAvatarSelect(pendingAvatar || selectedAvatar)}
-                  disabled={!pendingAvatar || pendingAvatar === selectedAvatar}
-                  className="px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <AvatarPickerModal
+        isOpen={isSelectingAvatar}
+        currentAvatar={selectedAvatar}
+        onClose={() => (isSavingAvatar ? null : setIsSelectingAvatar(false))}
+        onSave={handleAvatarSelect}
+      />
     </>
   );
 };

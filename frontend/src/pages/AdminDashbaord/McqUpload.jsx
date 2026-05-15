@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
+import McqQuestionEditor from "../../components/AdminDashbaord/McqQuestionEditor";
 
 const McqUpload = () => {
   const [title, setTitle] = useState("");
@@ -290,91 +291,16 @@ const McqUpload = () => {
 
             {/* Questions Section */}
             {questions.map((q, qIndex) => (
-              <div key={qIndex} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700/40 space-y-4">
-                <h3 className="font-semibold">Question {qIndex + 1}</h3>
-
-                {/* Question Text */}
-                <input
-                  type="text"
-                  value={q.text}
-                  onChange={(e) => handleQuestionChange(qIndex, "text", e.target.value)}
-                  placeholder="Enter question text"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-                {errors[`q-${qIndex}-text`] && <p className="text-red-500 text-sm">{errors[`q-${qIndex}-text`]}</p>}
-
-                {/* Options */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {q.options.map((opt, optIndex) => (
-                    <div key={optIndex}>
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
-                        placeholder={`Option ${optIndex + 1}`}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                      />
-                      {errors[`q-${qIndex}-opt-${optIndex}`] && (
-                        <p className="text-red-500 text-sm">{errors[`q-${qIndex}-opt-${optIndex}`]}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Correct Answer */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Correct Answer *</label>
-                  <select
-                    value={q.correct}
-                    onChange={(e) => handleQuestionChange(qIndex, "correct", parseInt(e.target.value))}
-                    className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  >
-                    <option value={0}>Option 1</option>
-                    <option value={1}>Option 2</option>
-                    <option value={2}>Option 3</option>
-                    <option value={3}>Option 4</option>
-                  </select>
-                </div>
-
-                {/* Difficulty */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Difficulty *</label>
-                  <select
-                    value={q.difficulty}
-                    onChange={(e) => handleQuestionChange(qIndex, "difficulty", e.target.value)}
-                    className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
-                </div>
-
-                {/* Tags */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">Tags</label>
-                  <input
-                    type="text"
-                    onKeyDown={(e) => handleAddTag(qIndex, e)}
-                    placeholder="Type tag and press Enter"
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {q.tags.map((tag, tagIndex) => (
-                      <span key={tagIndex} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2">
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTag(qIndex, tagIndex)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <McqQuestionEditor
+                key={qIndex}
+                question={q}
+                questionIndex={qIndex}
+                errors={errors}
+                onQuestionChange={handleQuestionChange}
+                onOptionChange={handleOptionChange}
+                onAddTag={handleAddTag}
+                onRemoveTag={handleRemoveTag}
+              />
             ))}
 
             {/* Submit */}

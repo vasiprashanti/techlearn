@@ -130,14 +130,42 @@ export const slugifyCategory = (value) =>
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
 
+/** Public category status for admin UI and APIs (maps legacy Archived / visibility). */
+export const normalizeQuestionCategoryStatus = (category = {}) => {
+  if (category.status === "Draft") return "Draft";
+  if (
+    category.status === "Hidden" ||
+    category.status === "Archived" ||
+    category.visibility === "Hidden"
+  ) {
+    return "Hidden";
+  }
+  return "Active";
+};
+
+export const legacyVisibilityFromCategoryStatus = (status) => (status === "Hidden" ? "Hidden" : "Visible");
+
+/** Body may send `status` (Active | Hidden | Draft) or legacy `visibility`. */
+export const resolveCategoryStatusFromRequest = (body = {}, existingCategory = null) => {
+  const s = body.status;
+  if (s === "Active" || s === "Hidden" || s === "Draft") return s;
+  if (body.visibility === "Hidden") return "Hidden";
+  if (body.visibility === "Visible") return "Active";
+  if (existingCategory) return normalizeQuestionCategoryStatus(existingCategory);
+  return "Active";
+};
+
 export const listKnownQuestionCategories = async () => {
-  const storedCategories = await QuestionCategory.find({ status: "Active" }).sort({ createdAt: 1 }).lean();
+  const storedCategories = await QuestionCategory.find().sort({ createdAt: 1 }).lean();
   return storedCategories.map((category) => ({
     id: category._id,
     slug: category.slug,
     title: category.title,
     subtitle: category.subtitle || "",
+    description: category.subtitle || "",
     icon: category.icon || "chart",
+    categoryType: category.categoryType || "Coding",
+    status: normalizeQuestionCategoryStatus(category),
   }));
 };
 

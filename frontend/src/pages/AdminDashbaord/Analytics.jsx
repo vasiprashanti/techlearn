@@ -21,7 +21,7 @@ import {
 } from 'react-icons/fi';
 
 const searchRoutes = [
-  { id: "dashboard", title: "Dashboard", category: "Overview" },
+  { id: "admin", title: "Dashboard", category: "Overview" },
   { id: "analytics", title: "Analytics", category: "Overview" },
   { id: "system-health", title: "System Health", category: "Overview" },
   { id: "colleges", title: "Colleges", category: "Organization" },

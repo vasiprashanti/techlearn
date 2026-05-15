@@ -12,7 +12,7 @@ import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiX,
 const resourceCategoryOptions = ['Courses', 'Important Topics', 'Resume Templates'];
 
 const searchRoutes = [
-  { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
+  { id: 'admin', title: 'Dashboard', category: 'Overview' },
   { id: 'analytics', title: 'Analytics', category: 'Overview' },
   { id: 'system-health', title: 'System Health', category: 'Overview' },
   { id: 'colleges', title: 'Colleges', category: 'Organization' },

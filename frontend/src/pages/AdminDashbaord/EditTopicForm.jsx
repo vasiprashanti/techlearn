@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { HiOutlineUpload } from "react-icons/hi";
+import MarkdownFileUploadField from "../../components/AdminDashbaord/MarkdownFileUploadField";
 
 const BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -69,48 +69,20 @@ const EditTopicForm = () => {
         </div>
 
         {/* Notes File upload */}
-        <div>
-          <h2 className="text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
-            Notes File
-          </h2>
-          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-            <HiOutlineUpload className="inline text-lg" />
-            <input
-              type="file"
-              accept=".md"
-              className="hidden"
-              onChange={(e) => setNotesFile(e.target.files?.[0] || null)}
-            />
-            Upload Notes File (.md)
-          </label>
-          {notesFile && (
-            <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
-              {notesFile.name}
-            </p>
-          )}
-        </div>
+        <MarkdownFileUploadField
+          label="Notes File"
+          file={notesFile}
+          onChange={setNotesFile}
+          accept=".md"
+        />
 
         {/* MCQ File upload */}
-        <div>
-          <h2 className="text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">
-            MCQ File
-          </h2>
-          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-            <HiOutlineUpload className="inline text-lg" />
-            <input
-              type="file"
-              accept=".md"
-              className="hidden"
-              onChange={(e) => setMcqFile(e.target.files?.[0] || null)}
-            />
-            Upload MCQ File (.md)
-          </label>
-          {mcqFile && (
-            <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
-              {mcqFile.name}
-            </p>
-          )}
-        </div>
+        <MarkdownFileUploadField
+          label="MCQ File"
+          file={mcqFile}
+          onChange={setMcqFile}
+          accept=".md"
+        />
         <button
           type="submit"
           className="bg-blue-600 text-white rounded-lg px-4 sm:px-4 py-2 text-sm sm:text-base font-semibold shadow hover:bg-blue-700 transition w-full sm:w-auto"

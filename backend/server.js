@@ -51,7 +51,12 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    const devOrigins = ["http://localhost:3000", "http://localhost:5173"];
+    const devOrigins = [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ];
     if (devOrigins.includes(origin)) return callback(null, true);
 
     if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL)

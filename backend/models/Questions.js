@@ -11,6 +11,13 @@ const testCaseSchema = new mongoose.Schema(
 
 const questionSchema = new mongoose.Schema(
   {
+    questionType: {
+      type: String,
+      enum: ["Coding", "MCQ", "Notes"],
+      default: "Coding",
+      trim: true,
+      index: true,
+    },
     title: {
       type: String,
       required: true,
@@ -30,7 +37,7 @@ const questionSchema = new mongoose.Schema(
 
     trackType: {
       type: String,
-      default: "Core",
+      default: "",
       trim: true,
     },
 
@@ -38,6 +45,14 @@ const questionSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+      index: true,
+    },
+
+    /** Canonical link to QuestionCategory — stable reference for tracks, practice, analytics */
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "QuestionCategory",
+      default: null,
       index: true,
     },
 
@@ -98,6 +113,26 @@ const questionSchema = new mongoose.Schema(
       default: "",
     },
 
+    mcqOptions: {
+      type: [String],
+      default: [],
+    },
+
+    mcqCorrectIndex: {
+      type: Number,
+      default: null,
+    },
+
+    mcqExplanation: {
+      type: String,
+      default: "",
+    },
+
+    notesMarkdown: {
+      type: String,
+      default: "",
+    },
+
     version: {
       type: Number,
       default: 1,
@@ -112,6 +147,7 @@ const questionSchema = new mongoose.Schema(
 );
 
 questionSchema.index({ categorySlug: 1, status: 1 });
+questionSchema.index({ categoryId: 1, status: 1 });
 questionSchema.index({ trackType: 1 });
 
 export default mongoose.model("Question", questionSchema);

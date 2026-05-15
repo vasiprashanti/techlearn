@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import AdminHeaderControls from "../../components/AdminDashbaord/AdminHeaderControls";
+import CodingRoundProblemEditor from "../../components/AdminDashbaord/CodingRoundProblemEditor";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
 
@@ -628,226 +629,26 @@ setExpanded(new Array(round.problems.length).fill(true));
 
                 {expanded[i] && (
                   <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={p.problemTitle}
-                      onChange={(e) =>
-                        handleProblemChange(i, "problemTitle", e.target.value)
-                      }
-                      placeholder={`Problem ${i + 1} Title`}
-                      className={formFieldClass}
+                    <CodingRoundProblemEditor
+                      problem={p}
+                      problemIndex={i}
+                      errors={errors}
+                      formFieldClass={formFieldClass}
+                      formSelectClass={formSelectClass}
+                      textareaClass={textareaClass}
+                      onProblemChange={handleProblemChange}
+                      onVisibleTestCaseChange={handleVisibleTestCaseChange}
+                      onHiddenTestCaseChange={handleHiddenTestCaseChange}
+                      onAddVisibleTestCase={addVisibleTestCase}
+                      onRemoveVisibleTestCase={removeVisibleTestCase}
+                      onAddHiddenTestCase={addHiddenTestCase}
+                      onRemoveHiddenTestCase={removeHiddenTestCase}
                     />
-                    {errors[`p-${i}-title`] && (
+                    {errors[`p-${i}-testcases`] && (
                       <p className="text-red-500 text-sm">
-                        {errors[`p-${i}-title`]}
+                        {errors[`p-${i}-testcases`]}
                       </p>
                     )}
-
-                    <select
-                      value={p.difficulty}
-                      onChange={(e) =>
-                        handleProblemChange(i, "difficulty", e.target.value)
-                      }
-                      className={formSelectClass}
-                    >
-                      <option value="">Select difficulty</option>
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
-                    {errors[`p-${i}-difficulty`] && (
-                      <p className="text-red-500 text-sm">
-                        {errors[`p-${i}-difficulty`]}
-                      </p>
-                    )}
-
-                    <textarea
-                      value={p.description}
-                      onChange={(e) =>
-                        handleProblemChange(i, "description", e.target.value)
-                      }
-                      placeholder="Problem description"
-                      rows="3"
-                      className={textareaClass}
-                    />
-                    {errors[`p-${i}-description`] && (
-                      <p className="text-red-500 text-sm">
-                        {errors[`p-${i}-description`]}
-                      </p>
-                    )}
-
-                    {/* Input/Output Descriptions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1 text-[#0d2a57] dark:text-[#8fd9ff]">
-                          Input Description
-                        </label>
-                        <textarea
-                          value={p.inputDescription}
-                          onChange={(e) =>
-                            handleProblemChange(
-                              i,
-                              "inputDescription",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Describe the input format"
-                          rows="2"
-                          className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1 text-[#0d2a57] dark:text-[#8fd9ff]">
-                          Output Description
-                        </label>
-                        <textarea
-                          value={p.outputDescription}
-                          onChange={(e) =>
-                            handleProblemChange(
-                              i,
-                              "outputDescription",
-                              e.target.value
-                            )
-                          }
-                          placeholder="Describe the output format"
-                          rows="2"
-                          className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Visible Test Cases Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
-                        Visible Test Cases:
-                      </h4>
-                      {p.visibleTestCases.map((testCase, tcIndex) => (
-                        <div
-                          key={tcIndex}
-                          className="dashboard-surface-strong rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">
-                              Visible Test Case {tcIndex + 1}
-                            </span>
-                            {p.visibleTestCases.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeVisibleTestCase(i, tcIndex)
-                                }
-                                className="text-red-500 hover:text-red-700 text-sm"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          <textarea
-                            value={testCase.input}
-                            onChange={(e) =>
-                              handleVisibleTestCaseChange(
-                                i,
-                                tcIndex,
-                                "input",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Input (e.g., '9\n2 7 11 15')"
-                            rows="2"
-                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                          />
-                          <textarea
-                            value={testCase.expectedOutput}
-                            onChange={(e) =>
-                              handleVisibleTestCaseChange(
-                                i,
-                                tcIndex,
-                                "expectedOutput",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Expected Output (e.g., '0 1')"
-                            rows="2"
-                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                          />
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addVisibleTestCase(i)}
-                        className="text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] text-sm font-medium"
-                      >
-                        + Add Visible Test Case
-                      </button>
-                    </div>
-
-                    {/* Hidden Test Cases Section */}
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">
-                        Hidden Test Cases:
-                      </h4>
-                      {p.hiddenTestCases.map((testCase, tcIndex) => (
-                        <div
-                          key={tcIndex}
-                          className="dashboard-surface-strong rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">
-                              Hidden Test Case {tcIndex + 1}
-                            </span>
-                            {p.hiddenTestCases.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => removeHiddenTestCase(i, tcIndex)}
-                                className="text-red-500 hover:text-red-700 text-sm"
-                              >
-                                Remove
-                              </button>
-                            )}
-                          </div>
-                          <textarea
-                            value={testCase.input}
-                            onChange={(e) =>
-                              handleHiddenTestCaseChange(
-                                i,
-                                tcIndex,
-                                "input",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Input (e.g., '6\n3 3')"
-                            rows="2"
-                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                          />
-                          <textarea
-                            value={testCase.expectedOutput}
-                            onChange={(e) =>
-                              handleHiddenTestCaseChange(
-                                i,
-                                tcIndex,
-                                "expectedOutput",
-                                e.target.value
-                              )
-                            }
-                            placeholder="Expected Output (e.g., '0 1')"
-                            rows="2"
-                            className={`${textareaClass} text-sm min-h-[5.5rem]`}
-                          />
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addHiddenTestCase(i)}
-                        className="text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] text-sm font-medium"
-                      >
-                        + Add Hidden Test Case
-                      </button>
-                      {errors[`p-${i}-testcases`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`p-${i}-testcases`]}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>

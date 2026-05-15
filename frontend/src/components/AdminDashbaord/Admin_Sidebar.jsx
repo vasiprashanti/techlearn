@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext";
 import {
   FiX, FiSidebar, FiGrid, FiBarChart2, FiActivity,
@@ -58,6 +58,7 @@ export const OPEN_ADMIN_SIDEBAR_EVENT = 'admin-sidebar:open-mobile';
 
 const Sidebar = ({ showMobileMenuButton = true }) => {
   const { theme } = useTheme();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const isDarkMode = theme === "dark";
@@ -96,8 +97,49 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     }
   };
 
+  const renderCornerLogo = () => (
+      <Link
+        to="/"
+      className="hidden lg:flex fixed left-6 top-5 z-[60] h-11 w-11 items-center justify-center"
+        aria-label="Go to TechLearn home"
+      >
+      <img
+        src={isDarkMode ? "/logoo2.png" : "/logoo.png"}
+        alt="TechLearn"
+        className="h-full w-full object-contain"
+      />
+    </Link>
+  );
+
+  const renderMobileBrand = (onClickAction = () => {}) => (
+    <Link
+      to="/"
+      onClick={onClickAction}
+      className="flex h-14 w-14 items-center justify-center"
+      aria-label="Go to TechLearn home"
+    >
+      <img
+        src={isDarkMode ? "/logoo2.png" : "/logoo.png"}
+        alt="TechLearn"
+        className="h-full w-full object-contain"
+      />
+    </Link>
+  );
+
   const renderNavLinks = (onClickAction = () => {}) => (
     <div className="space-y-6 pb-12">
+      <div className="space-y-2">
+        <NavLink
+          to="/"
+          end
+          onClick={onClickAction}
+          className={({ isActive }) => getNavClass(isActive)}
+        >
+          <FiHome className="w-4 h-4" />
+          <span>Home</span>
+        </NavLink>
+      </div>
+
       {menuGroups.map((group, idx) => (
         <div key={idx} className="space-y-2">
           <h4 className={sectionHeadingClass}>
@@ -108,8 +150,19 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               <NavLink
                 key={item.id}
                 to={`/${item.id}`}
+                title={item.id === "question-bank" ? "Categories and per-category question datasets" : undefined}
                 onClick={onClickAction}
-                className={({ isActive }) => getNavClass(isActive)}
+                className={({ isActive }) => {
+                  let active = isActive;
+                  if (item.id === "question-bank") {
+                    const p = location.pathname;
+                    active =
+                      p === "/question-bank" ||
+                      p.startsWith("/question-bank/") ||
+                      p.startsWith("/question-dataset/");
+                  }
+                  return getNavClass(active);
+                }}
               >
                 {item.icon}
                 <span>{item.title}</span>
@@ -134,6 +187,8 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
 
   return (
     <>
+      {renderCornerLogo()}
+
       <div className={`sidebar-container hidden lg:flex flex-col fixed left-3 top-20 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 rounded-[2rem] ${
         isDarkMode
           ? "bg-black/40 border border-white/5 shadow-[0_14px_34px_rgba(0,0,0,0.28)]"
@@ -194,7 +249,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
               }`}
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <span className={`text-sm font-semibold ${isDarkMode ? "text-white/70" : "text-black/70"}`}>Menu</span>
+                {renderMobileBrand(() => setMobileMenuOpen(false))}
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className={`p-2 rounded-md transition-all ${

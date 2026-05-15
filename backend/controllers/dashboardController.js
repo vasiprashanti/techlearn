@@ -9,6 +9,8 @@ import Submission from "../models/Submission.js";
 import mongoose from "mongoose";
 
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+/** Bump when `user` payload shape changes (invalidates stale cache entries). */
+const DASHBOARD_USER_PAYLOAD_VERSION = 2;
 const dashboardCache = new Map();
 
 const toPlainMap = (value) => {
@@ -22,6 +24,10 @@ const toPlainMap = (value) => {
 const getCachedDashboard = (userId) => {
   const cached = dashboardCache.get(String(userId));
   if (!cached) return null;
+  if (cached.userPayloadVersion !== DASHBOARD_USER_PAYLOAD_VERSION) {
+    dashboardCache.delete(String(userId));
+    return null;
+  }
   if (Date.now() > cached.expiresAt) {
     dashboardCache.delete(String(userId));
     return null;
@@ -32,6 +38,7 @@ const getCachedDashboard = (userId) => {
 const setCachedDashboard = (userId, payload) => {
   dashboardCache.set(String(userId), {
     expiresAt: Date.now() + DASHBOARD_CACHE_TTL_MS,
+    userPayloadVersion: DASHBOARD_USER_PAYLOAD_VERSION,
     payload,
   });
 };
@@ -55,6 +62,9 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     name: displayName || "Student",
     email: user?.email || "",
     avatar: user?.avatar || "",
+    collegeName: linkedStudent?.collegeId?.name || "",
+    streak: Number(linkedStudent?.streak || 0),
+    role: user?.role || "user",
   };
 };
 
@@ -72,7 +82,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar email firstName lastName name").lean(),
+      User.findById(userId).select("avatar email firstName lastName name role").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -108,7 +118,10 @@ export const getDashboardData = async (req, res) => {
       .trim()
       .toLowerCase();
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name").lean()
+      ? await Student.findOne({ email: normalizedEmail })
+          .select("_id name streak collegeId")
+          .populate("collegeId", "name")
+          .lean()
       : null;
     const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
     const latestDailyChallenge = linkedStudent?._id

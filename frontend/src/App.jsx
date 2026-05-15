@@ -631,6 +631,12 @@ const CareersPage = () => {
   );
 };
 
+/** Legacy / mistaken URL: app only registers `/admin/upload-topics`. */
+function RedirectToAdminUploadTopics() {
+  const { search } = useLocation();
+  return <Navigate to={`/admin/upload-topics${search}`} replace />;
+}
+
 function FloatingCodeBackground() {
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
@@ -662,9 +668,11 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/colleges/') ||
                            location.pathname.startsWith('/batches/') ||
                            location.pathname.startsWith('/question-bank/') ||
+                           location.pathname.startsWith('/question-dataset/') ||
                            location.pathname.startsWith('/track-templates/') ||
                            location.pathname.startsWith('/track/') ||
-                           location.pathname.startsWith('/admin');
+                           location.pathname.startsWith('/admin') ||
+                           location.pathname === '/upload-topics';
 
   const isStudentSidebarRoute =
     ['/projects', '/leaderboard'].includes(location.pathname) ||
@@ -788,6 +796,7 @@ function LayoutWrapper() {
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/upload-topics" element={<RedirectToAdminUploadTopics />} />
             <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
@@ -803,6 +812,7 @@ function LayoutWrapper() {
 <Route path="/students" element={<Students />} />
 <Route path="/question-bank" element={<QuestionBank />} />
 <Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
+<Route path="/question-dataset/:categorySlug" element={<QuestionCategoryDetails />} />
 <Route path="/track-templates" element={<TrackTemplate />} />
 <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
 <Route path="/resources" element={<Resources />} />

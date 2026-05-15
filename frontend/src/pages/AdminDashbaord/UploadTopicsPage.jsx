@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import { HiOutlineUpload } from "react-icons/hi";
+import MarkdownFileUploadField from "../../components/AdminDashbaord/MarkdownFileUploadField";
 import { useSearchParams } from "react-router-dom";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
@@ -13,7 +13,6 @@ export default function UploadTopicsPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [exerciseFile, setExerciseFile] = useState(null);
-  const [exerciseStatus, setExerciseStatus] = useState("");
 
   const [searchParams] = useSearchParams();
   const courseId = searchParams.get("courseId");
@@ -78,7 +77,6 @@ export default function UploadTopicsPage() {
   // handle exercise file input change
   const handleExerciseFileChange = (file) => {
     setExerciseFile(file);
-    setExerciseStatus(file ? `Uploaded: ${file.name}` : "");
   };
 
   /** MAIN SUBMIT HANDLER **/
@@ -307,41 +305,20 @@ export default function UploadTopicsPage() {
                       required
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Upload Notes File</label>
-                      <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-1 text-sm">
-                        <HiOutlineUpload className="inline text-base" />
-                        <input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          onChange={e => handleFileUpload(i, e.target.files?.[0] || null)}
-                        />
-                        Upload .md
-                      </label>
-                    </div>
-                    {topic.status && (
-                      <div className="text-xs text-gray-600 dark:text-gray-400 max-w-32 truncate">
-                        {topic.status}
-                      </div>
-                    )}
-                  </div>
+                  <MarkdownFileUploadField
+                    label="Notes File"
+                    file={topic.file}
+                    onChange={(file) => handleFileUpload(i, file)}
+                    accept=".md"
+                  />
                   {mcqInputOpen[i] && (
                     <div className="border-l-4 border-green-300 dark:border-green-700 pl-3 bg-green-50/50 dark:bg-green-900/20 rounded-r-lg py-2">
-                      <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                        Upload MCQ File:
-                      </label>
-                      <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1 text-sm">
-                        <HiOutlineUpload className="inline text-base" />
-                        <input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
-                        />
-                        Upload MCQ .md
-                      </label>
+                      <MarkdownFileUploadField
+                        label="MCQ File"
+                        file={topic.mcqFile}
+                        onChange={(file) => handleMcqFileUpload(i, file)}
+                        accept=".md"
+                      />
                       {topic.mcqStatus && (
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
                           {topic.mcqStatus}
@@ -382,16 +359,12 @@ export default function UploadTopicsPage() {
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-1">
-                            <HiOutlineUpload className="inline text-lg" />
-                            <input
-                              type="file"
-                              accept=".md"
-                              className="hidden"
-                              onChange={e => handleFileUpload(i, e.target.files?.[0] || null)}
-                            />
-                            Upload
-                          </label>
+                          <MarkdownFileUploadField
+                            label="Notes File"
+                            file={topic.file}
+                            onChange={(file) => handleFileUpload(i, file)}
+                            accept=".md"
+                          />
                         </td>
                         <td className="px-4 py-2 text-gray-700 text-xs">
                           {topic.status || (topic.file ? `Uploaded: ${topic.file.name}` : "")}
@@ -410,22 +383,15 @@ export default function UploadTopicsPage() {
                         <tr>
                           <td colSpan={4} className="pl-8 border-l-4 border-green-300 dark:border-green-700 bg-transparent">
                             <div className="flex flex-col gap-2 py-2">
-                              <label className="ml-2 font-medium text-xs text-green-800 dark:text-green-100 mb-1">
-                                Upload MCQ File:
-                              </label>
-                              <div className="flex items-center gap-4">
-                                <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1">
-                                  <HiOutlineUpload className="inline text-base" />
-                                  <input
-                                    type="file"
-                                    accept=".md"
-                                    className="hidden"
-                                    onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
-                                  />
-                                  Upload MCQ .md
-                                </label>
+                              <div className="ml-2 flex flex-col sm:flex-row sm:items-start sm:gap-4">
+                                <MarkdownFileUploadField
+                                  label="MCQ File"
+                                  file={topic.mcqFile}
+                                  onChange={(file) => handleMcqFileUpload(i, file)}
+                                  accept=".md"
+                                />
                                 {topic.mcqStatus && (
-                                  <span className="text-xs text-green-600 dark:text-green-400">
+                                  <span className="text-xs text-green-600 dark:text-green-400 sm:mt-6">
                                     {topic.mcqStatus}
                                   </span>
                                 )}
@@ -452,21 +418,12 @@ export default function UploadTopicsPage() {
               <h2 className="text-base sm:text-lg font-semibold mb-3 text-light-text/80 dark:text-dark-text/70">
                 Exercise File
               </h2>
-              <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-                <HiOutlineUpload className="inline text-lg" />
-                <input
-                  type="file"
-                  accept=".md"
-                  className="hidden"
-                  onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
-                />
-                Upload Exercise File (.md)
-              </label>
-              {exerciseStatus && (
-                <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
-                  {exerciseStatus}
-                </p>
-              )}
+              <MarkdownFileUploadField
+                label="Exercise File"
+                file={exerciseFile}
+                onChange={handleExerciseFileChange}
+                accept=".md"
+              />
             </div>
 
             <div className="flex justify-end mt-6">

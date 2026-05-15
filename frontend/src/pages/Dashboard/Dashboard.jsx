@@ -7,42 +7,17 @@ import {
   FiTrendingUp,
 } from 'react-icons/fi';
 import Sidebar from '../../components/Dashboard/Sidebar';
+import AvatarPickerModal from '../../components/Dashboard/AvatarPickerModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 import heroBg from '../../assets/hero-bg.jpg';
 
-const PixelStar = () => (
-  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
-    <path d="M4 0h2v2H4V0zM2 2h2v2H2V2zM6 2h2v2H6V2zM0 4h10v2H0V4zM2 6h2v2H2V6zM6 6h2v2H6V6zM4 8h2v2H4V8z" fill="#FFD700" />
-    <path d="M4 2h2v6H4V2zM2 4h6v2H2V4z" fill="#FFF2AC" />
-  </svg>
-);
-
-const PixelQuestion = () => (
-  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
-    <rect width="10" height="10" fill="#4FB7FF" />
-    <path d="M2 2h6v2H8v2H7V5H5v2H4V5H2V2zm2 6h4v1H4V8z" fill="white" />
-    <circle cx="5" cy="3" r="1" fill="white" />
-    <rect x="1" y="1" width="8" height="8" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="0.5" />
-  </svg>
-);
-
-const PixelDiamond = () => (
-  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
-    <path d="M4 0h2v2h2v2h2v2H8v2H6v2H4V8H2V6H0V4h2V2h2V0z" fill="#00E5FF" />
-    <path d="M4 2h2v2H4V2zm2 2h2v2H6V4z" fill="white" fillOpacity="0.5" />
-  </svg>
-);
-
-const PixelFlame = () => (
-  <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
-    <path d="M3 0h4v1H7v1H6v1H5v1H4V3H3V0zm0 3h1v1H3V3zm4 0h1v1H7V3zm-3 2h1v1H4V5zm2 0h1v1H6V5zm-3 2h1v1H3V7zm4 0h1v1H7V7zm-2 2h2v1H5V9z" fill="#FF4D00" />
-    <path d="M4 2h2v1H4V2zm1 3h1v3H5V5z" fill="#FFD700" />
-    <path d="M4.5 1h1v2h-1V1z" fill="#FF8C00" />
-  </svg>
-);
+const ICON_XP = '/dashboard_svgs/Xp%20star.png';
+const ICON_SOLVED = '/dashboard_svgs/solved-question.png';
+const ICON_PROGRESS = '/dashboard_svgs/progress-arrow%20(1).png';
+const ICON_STREAK = '/dashboard_svgs/streak%20flame.png';
 
 const PlaceholderBar = ({ className = '' }) => (
   <div
@@ -60,6 +35,15 @@ export default function Dashboard() {
   const [activeChallenge, setActiveChallenge] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [challengeLoading, setChallengeLoading] = useState(true);
+  const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [todaysTasks, setTodaysTasks] = useState(() => [
+    { label: "Finish today's Daily Challenge", done: false },
+    { label: 'Solve 2 practice exercises', done: false },
+    { label: 'Review notes for 15 minutes', done: false },
+    { label: 'Update your profile details', done: false },
+    { label: 'Check leaderboard rank', done: false },
+  ]);
 
   const {
     user,
@@ -70,6 +54,7 @@ export default function Dashboard() {
     progress: contextProgress,
     isReady,
     latestDailyChallenge,
+    updateUser,
   } = useUser();
 
   const isDarkMode = theme === 'dark';
@@ -148,20 +133,61 @@ export default function Dashboard() {
     day: 'numeric',
   });
 
-  const retroStats = [
-    { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
-    { title: 'Total Solved', value: progress.completed.toString(), icon: <PixelQuestion /> },
-    {
-      title: 'Completion',
-      value: `${progress.total ? Math.round((progress.completed / progress.total) * 100) : 0}%`,
-      icon: <PixelDiamond />,
-    },
-    {
-      title: 'Last Accuracy',
-      value: latestDailyChallenge ? `${latestDailyChallenge.accuracy || 0}%` : '--',
-      icon: <PixelFlame />,
-    },
-  ];
+  const completionPercent = progress.total
+    ? Math.round((progress.completed / progress.total) * 100)
+    : 0;
+  const dayStreak = Number.isFinite(Number(user?.streak)) ? Number(user?.streak) : 0;
+  const instituteName =
+    user?.collegeName ||
+    user?.college ||
+    user?.university ||
+    user?.institute ||
+    '';
+  const avatarUrl = user?.avatar || user?.photoUrl || user?.avatarUrl || '';
+  const resolvedAvatarUrl = avatarUrl || '/profile_avatars/avatar1.png';
+
+  const handleSaveAvatar = async (nextAvatarUrl) => {
+    if (!nextAvatarUrl || isSavingAvatar) return;
+
+    setIsSavingAvatar(true);
+    try {
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+
+      if (token) {
+        const response = await fetch(`${apiBase}/auth/avatar`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ avatar: nextAvatarUrl }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to update avatar');
+        }
+
+        await response.json().catch(() => null);
+      }
+
+      // Keep backward compatibility with any UI still reading photoUrl
+      updateUser({ avatar: nextAvatarUrl, photoUrl: nextAvatarUrl });
+      setIsSelectingAvatar(false);
+    } catch (saveError) {
+      console.error(saveError);
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
+
+  const toggleTodayTask = (taskLabel) => {
+    setTodaysTasks((tasks) =>
+      tasks.map((task) =>
+        task.label === taskLabel ? { ...task, done: !task.done } : task
+      )
+    );
+  };
 
   const dailyChallenge = {
     title: 'Daily Challenge',
@@ -220,7 +246,6 @@ export default function Dashboard() {
           __html: `
             @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
             .font-press-start { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
-            .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
           `,
         }}
       />
@@ -235,28 +260,11 @@ export default function Dashboard() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
-            {error && !error.includes('authentication') ? (
-              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-                Some dashboard details are still syncing. You can keep using the page while we retry in the background.
-              </div>
-            ) : null}
-
-            <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
-                  Welcome back, {userDisplayName}.
-                </h1>
-                <p className="text-[10px] tracking-[0.25em] uppercase text-black/40 dark:text-white/40 mt-2">
-                  Student Overview
-                </p>
-              </div>
-            </header>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
               <div className="lg:col-span-2 rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[45vh] md:min-h-[350px] shadow-sm">
                 <div
@@ -330,6 +338,123 @@ export default function Dashboard() {
               </div>
 
               <div className="flex flex-col gap-4 h-full">
+                <div
+                  className={`p-5 md:p-6 rounded-xl flex flex-col ${
+                    isDarkMode
+                      ? 'bg-[#020b23]/90 dark:bg-black/40 backdrop-blur-xl border border-white/10 dark:border-white/5 text-white'
+                      : 'bg-white/40 backdrop-blur-xl border border-black/5 text-slate-900 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="relative w-12 h-12 shrink-0">
+                        <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 overflow-hidden">
+                          <img
+                            src={resolvedAvatarUrl}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                            draggable={false}
+                          />
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-press-start text-[14px] md:text-[16px] uppercase tracking-wider truncate">
+                          {userDisplayName}
+                        </p>
+                        {instituteName ? (
+                          <p className={`text-xs truncate mt-1 ${isDarkMode ? 'text-white/70' : 'text-black/60'}`}>
+                            {instituteName}
+                          </p>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => navigate('/dashboard/profile/edit')}
+                          className="mt-2 text-xs font-medium text-[#3C83F6] dark:text-blue-400 hover:underline"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-5 mt-6">
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 scale-[0.75] origin-left">
+                        <img src={ICON_XP} alt="XP" className="w-9 h-9 object-contain [image-rendering:pixelated]" draggable={false} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-press-start text-sm md:text-base leading-none">
+                          {progress.xp.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-black/50 dark:text-white/70 mt-1">
+                          Total XP
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 scale-[0.75] origin-left">
+                        <img src={ICON_SOLVED} alt="Solved" className="w-9 h-9 object-contain [image-rendering:pixelated]" draggable={false} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-press-start text-sm md:text-base leading-none">
+                          {progress.completed.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-black/50 dark:text-white/70 mt-1">
+                          Total Solved
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 scale-[0.75] origin-left">
+                        <img src={ICON_PROGRESS} alt="Progress" className="w-9 h-9 object-contain [image-rendering:pixelated]" draggable={false} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-press-start text-sm md:text-base leading-none">
+                          {completionPercent}%
+                        </p>
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-black/50 dark:text-white/70 mt-1">
+                          Progress
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="shrink-0 scale-[0.75] origin-left">
+                        <img src={ICON_STREAK} alt="Streak" className="w-9 h-9 object-contain [image-rendering:pixelated]" draggable={false} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-press-start text-sm md:text-base leading-none">
+                          {dayStreak}
+                        </p>
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-black/50 dark:text-white/70 mt-1">
+                          Day streak
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/profile')}
+                    className={`mt-6 self-center w-auto px-6 font-press-start text-[10px] tracking-[0.22em] uppercase py-3 rounded-lg transition-colors ${
+                      isDarkMode
+                        ? 'bg-dark-bg-mid hover:bg-dark-bg-end border border-white/15'
+                        : 'bg-secondary-blue text-white hover:bg-secondary-blue/90 shadow-sm'
+                    }`}
+                  >
+                    View Profile
+                  </button>
+                </div>
+
+                <AvatarPickerModal
+                  isOpen={isSelectingAvatar}
+                  currentAvatar={resolvedAvatarUrl}
+                  onClose={() => (isSavingAvatar ? null : setIsSelectingAvatar(false))}
+                  onSave={handleSaveAvatar}
+                />
+
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
                     <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
@@ -375,25 +500,29 @@ export default function Dashboard() {
                         ))}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col">
-                  <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
-                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
-                    <span className="font-press-start text-[9px] tracking-widest text-black/35 dark:text-white/45">OVERVIEW</span>
-                  </div>
+            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-8 rounded-xl flex flex-col">
+              <div className="flex items-center justify-between mb-6 shrink-0">
+                <h3 className="text-xs tracking-widest uppercase text-black/50 dark:text-white/50">Today's Tasks</h3>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-y-4 md:gap-y-5 gap-x-2">
-                    {retroStats.map((stat) => (
-                      <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
-                          <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
-                        </div>
-                        <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div className="space-y-3">
+                {todaysTasks.map((task) => (
+                  <label
+                    key={task.label}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={() => toggleTodayTask(task.label)}
+                      className="h-4 w-4 accent-[#3C83F6]"
+                    />
+                    <span className="text-sm text-black/80 dark:text-white/80">{task.label}</span>
+                  </label>
+                ))}
               </div>
             </div>
 
