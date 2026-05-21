@@ -1,5 +1,6 @@
 import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
+import { normalizeCategoryType } from "../utils/questionBank.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude"];
 
@@ -47,21 +48,27 @@ const calculateStreak = (submissions) => {
 };
 
 const formatQuestion = (question) => {
-  const track = normalizePracticeTrack(question.categoryTitle || question.trackType);
+  const category = question.categoryId && typeof question.categoryId === "object" ? question.categoryId : null;
+  const categoryType = normalizeCategoryType(question.categoryType || category?.categoryType);
+  if (categoryType && categoryType !== "Coding") return null;
+
+  const content = question.content || {};
+  const track = normalizePracticeTrack(category?.title || question.categoryTitle || question.trackType);
   if (!track) return null;
 
   return {
     id: String(question._id),
     title: question.title,
-    subtitle: question.tags?.[0] || question.categoryTitle || question.trackType || track,
+    subtitle: question.tags?.[0] || category?.title || question.categoryTitle || question.trackType || track,
     difficulty: question.difficulty || "Easy",
     topic: track,
+    categoryType: categoryType || "Coding",
     description: question.description || "",
     inputFormat: question.inputFormat || "",
     outputFormat: question.outputFormat || "",
-    visibleTestCases: question.visibleTestCases || [],
-    hiddenTestCases: question.hiddenTestCases || [],
-    editorial: question.editorial || "",
+    visibleTestCases: content.visibleTestCases?.length ? content.visibleTestCases : question.visibleTestCases || [],
+    hiddenTestCases: content.hiddenTestCases?.length ? content.hiddenTestCases : question.hiddenTestCases || [],
+    editorial: question.editorial || content.solutionNotes || "",
     solutionCode: question.solutionCode || "",
   };
 };
@@ -72,9 +79,13 @@ export const listPracticeQuestions = async (req, res) => {
     const query = {
       status: "Active",
       isActive: { $ne: false },
+      $or: [{ categoryType: "Coding" }, { categoryType: { $exists: false } }, { categoryType: null }],
     };
 
-    const questions = await Question.find(query).sort({ createdAt: -1 }).lean();
+    const questions = await Question.find(query)
+      .populate("categoryId", "title slug categoryType")
+      .sort({ createdAt: -1 })
+      .lean();
     const data = questions
       .map(formatQuestion)
       .filter(Boolean)
@@ -118,7 +129,14 @@ export const recordPracticeSubmission = async (req, res) => {
 export const getPracticeStats = async (req, res) => {
   try {
     const [questions, submissions] = await Promise.all([
-      Question.find({ status: "Active", isActive: { $ne: false } }).select("trackType categoryTitle").lean(),
+      Question.find({
+        status: "Active",
+        isActive: { $ne: false },
+        $or: [{ categoryType: "Coding" }, { categoryType: { $exists: false } }, { categoryType: null }],
+      })
+        .select("trackType categoryTitle categoryType categoryId")
+        .populate("categoryId", "title slug categoryType")
+        .lean(),
       PracticeSubmission.find({ userId: req.user._id }).sort({ submittedAt: -1 }).lean(),
     ]);
 
@@ -136,7 +154,7 @@ export const getPracticeStats = async (req, res) => {
     );
 
     for (const question of questions) {
-      const track = normalizePracticeTrack(question.categoryTitle || question.trackType);
+      const track = normalizePracticeTrack(question.categoryId?.title || question.categoryTitle || question.trackType);
       if (stats[track]) stats[track].total += 1;
     }
 

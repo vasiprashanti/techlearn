@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { normalizeCategoryType } from '../utils/questionBank.js';
 
 const categorySchema = new mongoose.Schema(
   {
@@ -25,6 +26,7 @@ const categorySchema = new mongoose.Schema(
         values: ['Coding', 'MCQ', 'Notes'],
         message: 'categoryType must be Coding, MCQ, or Notes',
       },
+      set: normalizeCategoryType,
       required: [true, 'categoryType is required'],
     },
     icon: {

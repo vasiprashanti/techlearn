@@ -7,7 +7,7 @@ import Student from "../../models/Student.js";
 import Submission from "../../models/Submission.js";
 import Payment from "../../models/Payment.js";
 import Question from "../../models/Questions.js";
-import QuestionCategory from "../../models/QuestionCategory.js";
+import Category from "../../models/Category.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import Resource from "../../models/Resource.js";
 import AdminNotification from "../../models/AdminNotification.js";
@@ -104,6 +104,7 @@ export const normalizeSubmissionStatus = (status) => {
 };
 
 export const getCategorySlug = (question) => {
+  if (question.categoryId?.slug) return question.categoryId.slug;
   if (question.categorySlug) return question.categorySlug;
   if (question.categoryTitle && CATEGORY_SLUG_BY_TITLE[question.categoryTitle]) {
     return CATEGORY_SLUG_BY_TITLE[question.categoryTitle];
@@ -112,6 +113,7 @@ export const getCategorySlug = (question) => {
 };
 
 export const getCategoryTitle = (question) => {
+  if (question.categoryId?.title) return question.categoryId.title;
   const slug = getCategorySlug(question);
   return question.categoryTitle || QUESTION_CATEGORY_META[slug]?.title || question.trackType || "General";
 };
@@ -131,13 +133,14 @@ export const slugifyCategory = (value) =>
     .replace(/-{2,}/g, "-");
 
 export const listKnownQuestionCategories = async () => {
-  const storedCategories = await QuestionCategory.find({ status: "Active" }).sort({ createdAt: 1 }).lean();
+  const storedCategories = await Category.find({ visibility: { $ne: "private" } }).sort({ createdAt: 1 }).lean();
   return storedCategories.map((category) => ({
     id: category._id,
     slug: category.slug,
     title: category.title,
-    subtitle: category.subtitle || "",
+    subtitle: category.description || "",
     icon: category.icon || "chart",
+    categoryType: category.categoryType,
   }));
 };
 
@@ -384,7 +387,7 @@ export const computeAdminMetrics = async () => {
         },
       },
     ]),
-    QuestionCategory.countDocuments({ status: "Active" }),
+    Category.countDocuments({ visibility: { $ne: "private" } }),
   ]);
 
   const metrics = submissionAgg[0] || {};

@@ -72,7 +72,7 @@ export default function QuestionBank() {
   const [mounted, setMounted] = useState(false);
   const [categoryState, setCategoryState] = useState(emptyQuestionCategories);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart' });
+  const [categoryForm, setCategoryForm] = useState({ title: '', subtitle: '', icon: 'chart', categoryType: 'Coding' });
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
@@ -132,7 +132,7 @@ export default function QuestionBank() {
   const closeCategoryModal = () => {
     setIsCategoryModalOpen(false);
     setEditingCategoryId(null);
-    setCategoryForm({ title: '', subtitle: '', icon: 'chart' });
+    setCategoryForm({ title: '', subtitle: '', icon: 'chart', categoryType: 'Coding' });
     setCategoryError('');
     setIsSavingCategory(false);
   };
@@ -144,6 +144,7 @@ export default function QuestionBank() {
       title: category.title || '',
       subtitle: category.subtitle || '',
       icon: category.icon || 'chart',
+      categoryType: category.categoryType || 'Coding',
     });
     setIsCategoryModalOpen(true);
   };
@@ -159,7 +160,12 @@ export default function QuestionBank() {
 
     try {
       if (editingCategoryId) {
-        const updatedCategory = await adminAPI.updateQuestionCategory(editingCategoryId, categoryForm);
+        const editableCategoryFields = {
+          title: categoryForm.title,
+          subtitle: categoryForm.subtitle,
+          icon: categoryForm.icon,
+        };
+        const updatedCategory = await adminAPI.updateQuestionCategory(editingCategoryId, editableCategoryFields);
         const updatedTheme = {
           ...getCategoryTheme(updatedCategory.icon),
           ...updatedCategory,
@@ -216,6 +222,23 @@ export default function QuestionBank() {
             </div>
 
             <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category Type</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                  <select
+                    value={categoryForm.categoryType}
+                    onChange={(event) => setCategoryForm((prev) => ({ ...prev, categoryType: event.target.value }))}
+                    disabled={Boolean(editingCategoryId)}
+                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none disabled:opacity-70"
+                  >
+                    <option className={dropdownOptionClass} value="Coding">Coding</option>
+                    <option className={dropdownOptionClass} value="MCQ">MCQ</option>
+                    <option className={dropdownOptionClass} value="Notes">Notes</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+
               <div>
                 <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Category Title</label>
                 <input
@@ -416,6 +439,9 @@ export default function QuestionBank() {
                         <div className="min-h-[64px]">
                           <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white">{category.title}</h3>
                           <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300">{category.subtitle}</p>
+                          <span className="mt-2 inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                            {category.categoryType || 'Coding'}
+                          </span>
                         </div>
                       </div>
                     </div>

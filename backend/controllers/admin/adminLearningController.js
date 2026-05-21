@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Question from "../../models/Questions.js";
-import QuestionCategory from "../../models/QuestionCategory.js";
+import Category from "../../models/Category.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import Track from "../../models/Track.js";
 import Batch from "../../models/Batch.js";
@@ -11,11 +11,14 @@ import CertificateTemplate from "../../models/CertificateTemplate.js";
 import IssuedCertificate from "../../models/IssuedCertificate.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import {
-  QUESTION_CATEGORY_META,
+  buildCentralQuestionPayload,
+  formatQuestionForAdmin,
+  normalizeCategoryType,
+} from "../../utils/questionBank.js";
+import {
   CATEGORY_SLUG_BY_TITLE,
   assertObjectId,
   getActorName,
-  getCategorySlug,
   getCategoryTitle,
   getTrackTemplateIconKey,
   listKnownQuestionCategories,
@@ -91,15 +94,6 @@ const syncTemplateToTrack = async (template) => {
   );
 };
 
-const normalizeTestCases = (value) => {
-  if (!Array.isArray(value)) return [];
-  return value.map((testCase) => ({
-    input: String(testCase?.input || ""),
-    output: String(testCase?.output || ""),
-    explanation: String(testCase?.explanation || ""),
-  }));
-};
-
 const detectResourceType = (file = {}) => {
   const name = String(file.originalname || "").toLowerCase();
   const mime = String(file.mimetype || "").toLowerCase();
@@ -141,48 +135,38 @@ const uploadResourceFile = async (file) => {
   });
 };
 
-const parsePositiveNumber = (value, fallback) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return parsed;
-};
-
-const ensureTrackExists = async (trackType) => {
-  const normalized = String(trackType || "").trim();
-  if (!normalized) return false;
-  const track = await TrackTemplate.findOne({ name: normalized }).select("_id").lean();
-  return Boolean(track);
-};
-
 export const listQuestionCategories = async (req, res) => {
   try {
-    const grouped = await Question.aggregate([
-      {
-        $group: {
-          _id: {
-            $ifNull: ["$categorySlug", "$trackType"],
-          },
-          total: { $sum: 1 },
-          active: {
-            $sum: {
-              $cond: [{ $eq: ["$status", "Active"] }, 1, 0],
-            },
-          },
-        },
-      },
-    ]);
-
-    const groupMap = Object.fromEntries(grouped.map((entry) => [String(entry._id), entry]));
     const categories = await listKnownQuestionCategories();
-    const data = categories.map((category) => ({
-      id: category.id,
-      slug: category.slug,
-      title: category.title,
-      subtitle: category.subtitle,
-      total: groupMap[category.slug]?.total || 0,
-      active: groupMap[category.slug]?.active || 0,
-      icon: category.icon,
-    }));
+    const data = await Promise.all(
+      categories.map(async (category) => {
+        const questionFilter = {
+          $or: [
+            { categoryId: category.id },
+            { categorySlug: category.slug },
+          ],
+        };
+        const [total, active] = await Promise.all([
+          Question.countDocuments(questionFilter),
+          Question.countDocuments({
+            ...questionFilter,
+            status: "Active",
+            isActive: { $ne: false },
+          }),
+        ]);
+
+        return {
+          id: category.id,
+          slug: category.slug,
+          title: category.title,
+          subtitle: category.subtitle,
+          total,
+          active,
+          icon: category.icon,
+          categoryType: category.categoryType,
+        };
+      })
+    );
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -194,9 +178,14 @@ export const listQuestionCategories = async (req, res) => {
 export const createQuestionCategory = async (req, res) => {
   try {
     const { title, subtitle, icon } = req.body;
+    const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Category title is required." });
+    }
+
+    if (!categoryType) {
+      return res.status(400).json({ success: false, message: "A valid categoryType is required." });
     }
 
     const slug = slugifyCategory(title);
@@ -204,16 +193,18 @@ export const createQuestionCategory = async (req, res) => {
       return res.status(400).json({ success: false, message: "Category title must contain letters or numbers." });
     }
 
-    const existingBySlug = await QuestionCategory.findOne({ slug }).lean();
+    const existingBySlug = await Category.findOne({ slug }).lean();
     if (existingBySlug) {
       return res.status(409).json({ success: false, message: "A category with this title already exists." });
     }
 
-    const category = await QuestionCategory.create({
+    const category = await Category.create({
       slug,
       title: title.trim(),
-      subtitle: subtitle?.trim() || "Custom question category",
+      description: subtitle?.trim() || "Custom question category",
       icon: icon || "chart",
+      categoryType,
+      createdBy: req.user?._id,
     });
 
     await writeAuditLog({
@@ -231,10 +222,11 @@ export const createQuestionCategory = async (req, res) => {
         id: category._id,
         slug: category.slug,
         title: category.title,
-        subtitle: category.subtitle,
+        subtitle: category.description,
         total: 0,
         active: 0,
         icon: category.icon,
+        categoryType: category.categoryType,
       },
     });
   } catch (error) {
@@ -248,13 +240,20 @@ export const updateQuestionCategory = async (req, res) => {
     const { categoryId } = req.params;
     if (!assertObjectId(categoryId, "categoryId", res)) return;
 
-    const category = await QuestionCategory.findById(categoryId);
+    if (req.body.categoryType) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryType cannot be changed after category creation.",
+      });
+    }
+
+    const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(404).json({ success: false, message: "Question category not found." });
     }
 
     const nextTitle = req.body.title?.trim() || category.title;
-    const nextSubtitle = req.body.subtitle?.trim() || category.subtitle;
+    const nextSubtitle = req.body.subtitle?.trim() || category.description;
     const nextIcon = req.body.icon || category.icon;
 
     const nextSlug = slugifyCategory(nextTitle);
@@ -262,7 +261,7 @@ export const updateQuestionCategory = async (req, res) => {
       return res.status(400).json({ success: false, message: "Category title must contain letters or numbers." });
     }
 
-    const duplicate = await QuestionCategory.findOne({
+    const duplicate = await Category.findOne({
       _id: { $ne: category._id },
       $or: [{ slug: nextSlug }, { title: nextTitle }],
     }).lean();
@@ -276,16 +275,18 @@ export const updateQuestionCategory = async (req, res) => {
 
     category.slug = nextSlug;
     category.title = nextTitle;
-    category.subtitle = nextSubtitle;
+    category.description = nextSubtitle;
     category.icon = nextIcon;
     await category.save();
 
     await Question.updateMany(
       {
-        $or: [{ categorySlug: previousSlug }, { categoryTitle: previousTitle }],
+        $or: [{ categoryId: category._id }, { categorySlug: previousSlug }, { categoryTitle: previousTitle }],
       },
       {
         $set: {
+          categoryId: category._id,
+          categoryType: category.categoryType,
           categorySlug: category.slug,
           categoryTitle: category.title,
           trackType: category.title,
@@ -308,8 +309,9 @@ export const updateQuestionCategory = async (req, res) => {
         id: category._id,
         slug: category.slug,
         title: category.title,
-        subtitle: category.subtitle,
+        subtitle: category.description,
         icon: category.icon,
+        categoryType: category.categoryType,
       },
     });
   } catch (error) {
@@ -323,14 +325,24 @@ export const deleteQuestionCategory = async (req, res) => {
     const { categoryId } = req.params;
     if (!assertObjectId(categoryId, "categoryId", res)) return;
 
-    const category = await QuestionCategory.findByIdAndDelete(categoryId);
+    const category = await Category.findById(categoryId);
     if (!category) {
       return res.status(404).json({ success: false, message: "Question category not found." });
     }
 
-    await Question.deleteMany({
-      $or: [{ categorySlug: category.slug }, { categoryTitle: category.title }],
+    const activeQuestions = await Question.countDocuments({
+      $or: [{ categoryId: category._id }, { categorySlug: category.slug }, { categoryTitle: category.title }],
+      isActive: { $ne: false },
     });
+
+    if (activeQuestions > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot delete a category that still has active questions. Delete or archive the questions first.",
+      });
+    }
+
+    await Category.findByIdAndDelete(category._id);
 
     await writeAuditLog({
       verb: "Deleted",
@@ -350,33 +362,36 @@ export const deleteQuestionCategory = async (req, res) => {
 
 export const listQuestionsAdmin = async (req, res) => {
   try {
-    const query = {};
-    if (req.query.categorySlug) query.categorySlug = req.query.categorySlug;
+    const query = { isActive: { $ne: false } };
+    let category = null;
+
+    if (req.query.categorySlug) {
+      category = await Category.findOne({ slug: req.query.categorySlug }).lean();
+      if (!category) {
+        return res.status(404).json({ success: false, message: "Question category not found." });
+      }
+      query.$or = [{ categoryId: category._id }, { categorySlug: category.slug }];
+    }
+
+    if (req.query.categoryId) {
+      if (!assertObjectId(req.query.categoryId, "categoryId", res)) return;
+      category = await Category.findById(req.query.categoryId).lean();
+      if (!category) {
+        return res.status(404).json({ success: false, message: "Question category not found." });
+      }
+      query.categoryId = category._id;
+      delete query.$or;
+    }
+
     if (req.query.status) query.status = req.query.status;
     if (req.query.difficulty) query.difficulty = req.query.difficulty;
 
-    const questions = await Question.find(query).sort({ createdAt: -1 }).lean();
-    const data = questions.map((question) => ({
-      id: question._id,
-      title: question.title,
-      difficulty: question.difficulty,
-      track: getCategoryTitle(question),
-      created: question.createdAt?.toISOString?.().slice(0, 10) || "",
-      status: question.status || "Active",
-      tags: question.tags || [],
-      description: question.description || "",
-      inputFormat: question.inputFormat || "",
-      outputFormat: question.outputFormat || "",
-      visibleTestCases: question.visibleTestCases || [],
-      hiddenTestCases: question.hiddenTestCases || [],
-      timeLimit: String(question.timeLimit || 1),
-      memoryLimit: String(question.memoryLimit || 256),
-      solved: String(question.solvedCount || 0),
-      referenceLanguage: question.referenceLanguage || "C++",
-      solutionCode: question.solutionCode || "",
-      editorial: question.editorial || "",
-      categorySlug: getCategorySlug(question),
-    }));
+    const questions = await Question.find(query)
+      .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution")
+      .populate("categoryId", "title slug categoryType")
+      .sort({ createdAt: -1 })
+      .lean();
+    const data = questions.map((question) => formatQuestionForAdmin(question, question.categoryId || category));
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -387,76 +402,26 @@ export const listQuestionsAdmin = async (req, res) => {
 
 export const createQuestionAdmin = async (req, res) => {
   try {
-    const {
-      title,
-      difficulty,
-      trackType,
-      categorySlug,
-      categoryTitle,
-      tags,
-      description,
-      inputFormat,
-      outputFormat,
-      visibleTestCases,
-      hiddenTestCases,
-      timeLimit,
-      memoryLimit,
-      referenceLanguage,
-      solutionCode,
-      editorial,
-      status,
-    } = req.body;
+    const { title, categorySlug, categoryId } = req.body;
 
     if (!title?.trim()) {
       return res.status(400).json({ success: false, message: "Question title is required." });
     }
 
-    if (!String(description || "").trim()) {
-      return res.status(400).json({ success: false, message: "Problem description is required." });
+    let category = null;
+    if (categoryId) {
+      if (!assertObjectId(categoryId, "categoryId", res)) return;
+      category = await Category.findById(categoryId);
+    } else if (categorySlug) {
+      category = await Category.findOne({ slug: categorySlug });
     }
 
-    if (!String(trackType || "").trim()) {
-      return res.status(400).json({ success: false, message: "Track type is required." });
+    if (!category) {
+      return res.status(400).json({ success: false, message: "Selected central Question Bank category does not exist." });
     }
 
-    const trackExists = await ensureTrackExists(trackType);
-    if (!trackExists) {
-      return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
-    }
-
-    if (categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
-      }
-    }
-
-    const resolvedCategorySlug = categorySlug || CATEGORY_SLUG_BY_TITLE[categoryTitle] || slugifyCategory(categoryTitle) || "web-development";
-    const resolvedCategoryTitle =
-      categoryTitle || QUESTION_CATEGORY_META[resolvedCategorySlug]?.title || trackType || "General";
-
-    const normalizedVisibleTestCases = normalizeTestCases(visibleTestCases);
-    const normalizedHiddenTestCases = normalizeTestCases(hiddenTestCases);
-
-    const question = await Question.create({
-      title: title.trim(),
-      difficulty: difficulty || "Easy",
-      trackType: String(trackType).trim(),
-      categorySlug: resolvedCategorySlug,
-      categoryTitle: resolvedCategoryTitle,
-      tags: tags || [],
-      description: String(description).trim(),
-      inputFormat: inputFormat || "",
-      outputFormat: outputFormat || "",
-      visibleTestCases: normalizedVisibleTestCases,
-      hiddenTestCases: normalizedHiddenTestCases,
-      timeLimit: parsePositiveNumber(timeLimit, 1),
-      memoryLimit: parsePositiveNumber(memoryLimit, 256),
-      referenceLanguage: referenceLanguage || "C++",
-      solutionCode: solutionCode || "",
-      editorial: editorial || "",
-      status: status || "Active",
-    });
+    const payload = buildCentralQuestionPayload({ category, body: req.body });
+    const question = await Question.create(payload);
 
     await writeAuditLog({
       verb: "Created",
@@ -467,7 +432,7 @@ export const createQuestionAdmin = async (req, res) => {
       actor: req.user,
     });
 
-    return res.status(201).json({ success: true, data: question });
+    return res.status(201).json({ success: true, data: formatQuestionForAdmin(question, category) });
   } catch (error) {
     console.error("createQuestionAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to create question.", error: error.message });
@@ -479,34 +444,17 @@ export const getQuestionDetailAdmin = async (req, res) => {
     const { questionId } = req.params;
     if (!assertObjectId(questionId, "questionId", res)) return;
 
-    const question = await Question.findById(questionId).lean();
+    const question = await Question.findById(questionId)
+      .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution")
+      .populate("categoryId", "title slug categoryType")
+      .lean();
     if (!question) {
       return res.status(404).json({ success: false, message: "Question not found." });
     }
 
     return res.status(200).json({
       success: true,
-      data: {
-        id: question._id,
-        title: question.title,
-        difficulty: question.difficulty,
-        track: getCategoryTitle(question),
-        created: question.createdAt?.toISOString?.().slice(0, 10) || "",
-        status: question.status || "Active",
-        tags: question.tags || [],
-        description: question.description || "",
-        inputFormat: question.inputFormat || "",
-        outputFormat: question.outputFormat || "",
-        visibleTestCases: question.visibleTestCases || [],
-        hiddenTestCases: question.hiddenTestCases || [],
-        timeLimit: String(question.timeLimit || 1),
-        memoryLimit: String(question.memoryLimit || 256),
-        solved: String(question.solvedCount || 0),
-        referenceLanguage: question.referenceLanguage || "C++",
-        solutionCode: question.solutionCode || "",
-        editorial: question.editorial || "",
-        categorySlug: getCategorySlug(question),
-      },
+      data: formatQuestionForAdmin(question, question.categoryId),
     });
   } catch (error) {
     console.error("getQuestionDetailAdmin error:", error);
@@ -519,65 +467,25 @@ export const updateQuestionAdmin = async (req, res) => {
     const { questionId } = req.params;
     if (!assertObjectId(questionId, "questionId", res)) return;
 
-    const nextTitle = String(req.body.title || "").trim();
-    const nextDescription = String(req.body.description || "").trim();
-    const nextTrackType = String(req.body.trackType || "").trim();
+    const existing = await Question.findById(questionId)
+      .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution");
 
-    if (!nextTitle) {
-      return res.status(400).json({ success: false, message: "Question title is required." });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: "Question not found." });
     }
 
-    if (!nextDescription) {
-      return res.status(400).json({ success: false, message: "Problem description is required." });
+    const category = await Category.findById(existing.categoryId || req.body.categoryId);
+    if (!category) {
+      return res.status(400).json({ success: false, message: "Question must belong to an existing central category." });
     }
 
-    if (!nextTrackType) {
-      return res.status(400).json({ success: false, message: "Track type is required." });
-    }
+    const payload = buildCentralQuestionPayload({
+      category,
+      body: req.body,
+      existingQuestion: existing,
+    });
 
-    const trackExists = await ensureTrackExists(nextTrackType);
-    if (!trackExists) {
-      return res.status(400).json({ success: false, message: "Track type must match an existing created track." });
-    }
-
-    if (req.body.categorySlug) {
-      const categoryExists = await QuestionCategory.findOne({ slug: req.body.categorySlug }).select("_id").lean();
-      if (!categoryExists) {
-        return res.status(400).json({ success: false, message: "Selected category does not exist." });
-      }
-    }
-
-    const resolvedCategorySlug =
-      req.body.categorySlug || CATEGORY_SLUG_BY_TITLE[req.body.categoryTitle] || slugifyCategory(req.body.categoryTitle) || undefined;
-
-    const normalizedVisibleTestCases = normalizeTestCases(req.body.visibleTestCases);
-    const normalizedHiddenTestCases = normalizeTestCases(req.body.hiddenTestCases);
-
-    const question = await Question.findByIdAndUpdate(
-      questionId,
-      {
-        $set: {
-          title: nextTitle,
-          difficulty: req.body.difficulty,
-          trackType: nextTrackType,
-          categorySlug: resolvedCategorySlug,
-          categoryTitle: req.body.categoryTitle,
-          tags: req.body.tags,
-          description: nextDescription,
-          inputFormat: req.body.inputFormat,
-          outputFormat: req.body.outputFormat,
-          visibleTestCases: normalizedVisibleTestCases,
-          hiddenTestCases: normalizedHiddenTestCases,
-          timeLimit: parsePositiveNumber(req.body.timeLimit, 1),
-          memoryLimit: parsePositiveNumber(req.body.memoryLimit, 256),
-          referenceLanguage: req.body.referenceLanguage || "C++",
-          solutionCode: req.body.solutionCode || "",
-          editorial: req.body.editorial || "",
-          status: req.body.status || "Active",
-        },
-      },
-      { new: true, runValidators: true }
-    );
+    const question = await Question.findByIdAndUpdate(questionId, { $set: payload }, { new: true, runValidators: true });
 
     if (!question) {
       return res.status(404).json({ success: false, message: "Question not found." });
@@ -592,7 +500,7 @@ export const updateQuestionAdmin = async (req, res) => {
       actor: req.user,
     });
 
-    return res.status(200).json({ success: true, data: question });
+    return res.status(200).json({ success: true, data: formatQuestionForAdmin(question, category) });
   } catch (error) {
     console.error("updateQuestionAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to update question.", error: error.message });
@@ -604,7 +512,11 @@ export const deleteQuestionAdmin = async (req, res) => {
     const { questionId } = req.params;
     if (!assertObjectId(questionId, "questionId", res)) return;
 
-    const question = await Question.findByIdAndDelete(questionId);
+    const question = await Question.findByIdAndUpdate(
+      questionId,
+      { $set: { isActive: false, status: "Archived" } },
+      { new: true }
+    );
     if (!question) {
       return res.status(404).json({ success: false, message: "Question not found." });
     }
@@ -717,8 +629,12 @@ export const getTrackTemplateDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const categorySlug = CATEGORY_SLUG_BY_TITLE[template.category] || "web-development";
-    const availableQuestions = await Question.find({ categorySlug, status: "Active" }).lean();
+    const categorySlug = CATEGORY_SLUG_BY_TITLE[template.category] || slugifyCategory(template.category);
+    const category = await Category.findOne({ slug: categorySlug }).lean();
+    const questionFilter = category
+      ? { $or: [{ categoryId: category._id }, { categorySlug: category.slug }], status: "Active", isActive: { $ne: false } }
+      : { categorySlug, status: "Active", isActive: { $ne: false } };
+    const availableQuestions = await Question.find(questionFilter).populate("categoryId", "title slug categoryType").lean();
 
     return res.status(200).json({
       success: true,

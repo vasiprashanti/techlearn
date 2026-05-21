@@ -1,5 +1,6 @@
 import Category from '../models/Category.js';
 import Question from '../models/Question.js';
+import { normalizeCategoryType } from '../utils/questionBank.js';
 
 const generateSlug = (title) =>
   title
@@ -14,10 +15,11 @@ const generateSlug = (title) =>
  */
 export const createCategory = async (req, res) => {
   try {
-    const { title, slug, description, categoryType, icon, visibility } = req.body;
+    const { title, slug, description, icon, visibility } = req.body;
+    const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title || !categoryType) {
-      return res.status(400).json({ success: false, message: 'title and categoryType are required' });
+      return res.status(400).json({ success: false, message: 'title and a valid categoryType are required' });
     }
 
     const resolvedSlug = slug ? slug.toLowerCase().trim() : generateSlug(title);

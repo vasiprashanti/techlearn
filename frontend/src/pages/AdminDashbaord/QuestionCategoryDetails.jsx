@@ -30,6 +30,7 @@ const statusPillClass = (status) =>
     : 'bg-[#dbe7ff] text-[#3c83f6]';
 
 const createTestCase = () => ({ input: '', output: '', explanation: '' });
+const createMcqOption = (label, text = '') => ({ label, text });
 
 const dynamicCategoryFallback = (slug) => ({
   id: slug,
@@ -42,6 +43,7 @@ const dynamicCategoryFallback = (slug) => ({
   total: 0,
   active: 0,
   icon: 'chart',
+  categoryType: 'Coding',
 });
 
 const createQuestionForm = (track = '') => ({
@@ -51,6 +53,12 @@ const createQuestionForm = (track = '') => ({
   tags: [],
   tagInput: '',
   problemDescription: '',
+  options: ['A', 'B', 'C', 'D'].map((label) => createMcqOption(label)),
+  correctOption: 'A',
+  explanation: '',
+  markdownBody: '',
+  markdownFileUrl: '',
+  solutionNotes: '',
   inputFormat: '',
   outputFormat: '',
   timeLimit: '1',
@@ -69,6 +77,15 @@ const formFromQuestion = (question) => ({
   tags: Array.isArray(question.tags) ? question.tags : [],
   tagInput: '',
   problemDescription: question.description || '',
+  options:
+    Array.isArray(question.options) && question.options.length
+      ? question.options
+      : ['A', 'B', 'C', 'D'].map((label) => createMcqOption(label)),
+  correctOption: question.correctOption || 'A',
+  explanation: question.explanation || '',
+  markdownBody: question.markdownBody || question.content?.markdownBody || '',
+  markdownFileUrl: question.markdownFileUrl || question.content?.markdownFileUrl || '',
+  solutionNotes: question.solutionNotes || question.content?.solutionNotes || '',
   inputFormat: question.inputFormat || '',
   outputFormat: question.outputFormat || '',
   timeLimit: String(question.timeLimit || '1'),
@@ -119,6 +136,10 @@ export default function QuestionCategoryDetails() {
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
   const category = remoteCategory || dynamicCategoryFallback(categorySlug);
+  const categoryType = category?.categoryType || 'Coding';
+  const isCodingCategory = categoryType === 'Coding';
+  const isMcqCategory = categoryType === 'MCQ';
+  const isNotesCategory = categoryType === 'Notes';
 
   const seedQuestions = useMemo(() => [], []);
 
@@ -275,33 +296,62 @@ export default function QuestionCategoryDetails() {
     }));
   };
 
+  const updateMcqOption = (index, value) => {
+    setQuestionForm((prev) => ({
+      ...prev,
+      options: prev.options.map((option, i) => (i === index ? { ...option, text: value } : option)),
+    }));
+  };
+
   const addTestCase = (section) => {
     setQuestionForm((prev) => ({ ...prev, [section]: [...prev[section], createTestCase()] }));
   };
 
   const saveQuestion = async () => {
-    if (!questionForm.title.trim() || !questionForm.trackType || !questionForm.problemDescription.trim()) {
-      setFormError('Title, track type, and problem description are required.');
+    if (!questionForm.title.trim()) {
+      setFormError('Question title is required.');
+      return;
+    }
+
+    if ((isCodingCategory || isNotesCategory) && !questionForm.problemDescription.trim()) {
+      setFormError(isCodingCategory ? 'Problem description is required.' : 'Notes description is required.');
+      return;
+    }
+
+    if (isMcqCategory && questionForm.options.filter((option) => option.text.trim()).length < 2) {
+      setFormError('MCQ questions require at least two options.');
+      return;
+    }
+
+    if (isNotesCategory && !questionForm.markdownBody.trim() && !questionForm.markdownFileUrl.trim()) {
+      setFormError('Notes entries require markdown body or a markdown file URL.');
       return;
     }
 
     const backendPayload = {
       title: questionForm.title.trim(),
       difficulty: questionForm.difficulty,
+      categoryId: category?.id,
       categorySlug,
       categoryTitle: category?.title,
-      trackType: questionForm.trackType,
+      trackType: questionForm.trackType || category?.title || '',
       tags: questionForm.tags,
       description: questionForm.problemDescription.trim(),
-      inputFormat: questionForm.inputFormat.trim(),
-      outputFormat: questionForm.outputFormat.trim(),
-      visibleTestCases: questionForm.visibleTestCases,
-      hiddenTestCases: questionForm.hiddenTestCases,
+      inputFormat: isCodingCategory ? questionForm.inputFormat.trim() : '',
+      outputFormat: isCodingCategory ? questionForm.outputFormat.trim() : '',
+      visibleTestCases: isCodingCategory ? questionForm.visibleTestCases : [],
+      hiddenTestCases: isCodingCategory ? questionForm.hiddenTestCases : [],
       timeLimit: questionForm.timeLimit,
       memoryLimit: questionForm.memoryLimit,
       referenceLanguage: questionForm.referenceLanguage,
-      solutionCode: questionForm.solutionCode,
+      solutionCode: isCodingCategory ? questionForm.solutionCode : '',
       editorial: questionForm.editorial,
+      options: isMcqCategory ? questionForm.options : [],
+      correctOption: isMcqCategory ? questionForm.correctOption : '',
+      explanation: isMcqCategory ? questionForm.explanation : '',
+      markdownBody: isNotesCategory ? questionForm.markdownBody : '',
+      markdownFileUrl: isNotesCategory ? questionForm.markdownFileUrl : '',
+      solutionNotes: isNotesCategory ? questionForm.solutionNotes : '',
       status: 'Active',
     };
 
@@ -370,7 +420,14 @@ export default function QuestionCategoryDetails() {
                 </div>
 
                 <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Track type*</label>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Category type</label>
+                  <div className="mt-1 h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm font-semibold text-slate-800 dark:text-white flex items-center">
+                    {categoryType}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Track type{isCodingCategory ? '*' : ''}</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={questionForm.trackType}
@@ -431,49 +488,130 @@ export default function QuestionCategoryDetails() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Problem Description*</label>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">{isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}</label>
                   <textarea
                     value={questionForm.problemDescription}
                     onChange={(e) => updateFormField('problemDescription', e.target.value)}
                     rows={4}
-                    placeholder="Describe the problem statement"
+                    placeholder={isNotesCategory ? 'Describe what this note covers' : isMcqCategory ? 'Optional supporting prompt or context' : 'Describe the problem statement'}
                     className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
                   />
                 </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Input format</label>
-                  <textarea
-                    value={questionForm.inputFormat}
-                    onChange={(e) => updateFormField('inputFormat', e.target.value)}
-                    rows={2}
-                    placeholder="Describe input format"
-                    className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
-                  />
-                </div>
+                {isCodingCategory && (
+                  <>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Input format</label>
+                      <textarea
+                        value={questionForm.inputFormat}
+                        onChange={(e) => updateFormField('inputFormat', e.target.value)}
+                        rows={2}
+                        placeholder="Describe input format"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Output format</label>
-                  <textarea
-                    value={questionForm.outputFormat}
-                    onChange={(e) => updateFormField('outputFormat', e.target.value)}
-                    rows={2}
-                    placeholder="Describe output format"
-                    className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
-                  />
-                </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Output format</label>
+                      <textarea
+                        value={questionForm.outputFormat}
+                        onChange={(e) => updateFormField('outputFormat', e.target.value)}
+                        rows={2}
+                        placeholder="Describe output format"
+                        className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Time limit (seconds)</label>
-                  <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
-                </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Time limit (seconds)</label>
+                      <input type="number" min="1" value={questionForm.timeLimit} onChange={(e) => updateFormField('timeLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
+                    </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Memory limit (MB)</label>
-                  <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
-                </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Memory limit (MB)</label>
+                      <input type="number" min="1" value={questionForm.memoryLimit} onChange={(e) => updateFormField('memoryLimit', e.target.value)} className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm" />
+                    </div>
+                  </>
+                )}
               </div>
 
+              {isMcqCategory && (
+                <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 p-3.5 space-y-3">
+                  <h3 className="text-sm font-semibold text-black/85 dark:text-white/90">MCQ Options</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {questionForm.options.map((option, index) => (
+                      <div key={option.label}>
+                        <label className="admin-micro-label text-black/50 dark:text-white/50">Option {option.label}</label>
+                        <input
+                          value={option.text}
+                          onChange={(e) => updateMcqOption(index, e.target.value)}
+                          className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Correct option</label>
+                      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                        <select
+                          value={questionForm.correctOption}
+                          onChange={(e) => updateFormField('correctOption', e.target.value)}
+                          className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                        >
+                          {questionForm.options.map((option) => (
+                            <option className={dropdownOptionClass} key={option.label} value={option.label}>{option.label}</option>
+                          ))}
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="admin-micro-label text-black/50 dark:text-white/50">Explanation</label>
+                      <input
+                        value={questionForm.explanation}
+                        onChange={(e) => updateFormField('explanation', e.target.value)}
+                        className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm"
+                      />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {isNotesCategory && (
+                <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 p-3.5 space-y-3">
+                  <h3 className="text-sm font-semibold text-black/85 dark:text-white/90">Notes Content</h3>
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Markdown body</label>
+                    <textarea
+                      value={questionForm.markdownBody}
+                      onChange={(e) => updateFormField('markdownBody', e.target.value)}
+                      rows={8}
+                      className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Markdown file URL</label>
+                    <input
+                      value={questionForm.markdownFileUrl}
+                      onChange={(e) => updateFormField('markdownFileUrl', e.target.value)}
+                      className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Notes / solution summary</label>
+                    <textarea
+                      value={questionForm.solutionNotes}
+                      onChange={(e) => updateFormField('solutionNotes', e.target.value)}
+                      rows={3}
+                      className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3.5 py-2.5 text-sm"
+                    />
+                  </div>
+                </section>
+              )}
+
+              {isCodingCategory && (
+              <>
               <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/35 dark:bg-white/5 overflow-hidden">
                 <button
                   type="button"
@@ -592,6 +730,8 @@ export default function QuestionCategoryDetails() {
                   </div>
                 )}
               </section>
+              </>
+              )}
 
               <div className="flex items-center justify-end gap-2.5 pt-1.5">
                 <button onClick={closeQuestionModal} className="h-9 w-[120px] rounded-xl border border-black/10 dark:border-white/10 inline-flex items-center justify-center text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10 transition-colors">Cancel</button>
@@ -624,6 +764,9 @@ export default function QuestionCategoryDetails() {
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-black/10 dark:border-white/15 text-slate-800 dark:text-slate-200 bg-white/55 dark:bg-white/10">
                 {viewQuestion.track}
               </span>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-black/10 dark:border-white/15 text-slate-800 dark:text-slate-200 bg-white/55 dark:bg-white/10">
+                {viewQuestion.categoryType || categoryType}
+              </span>
               {(viewQuestion.tags || []).map((tag) => (
                 <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border border-black/10 dark:border-white/15 text-slate-800 dark:text-slate-200 bg-white/55 dark:bg-white/10">
                   {tag}
@@ -637,6 +780,7 @@ export default function QuestionCategoryDetails() {
                 <p className="mt-1 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{viewQuestion.description}</p>
               </div>
 
+              {(viewQuestion.categoryType || categoryType) === 'Coding' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-base font-semibold text-slate-900 dark:text-white">Input Format</h4>
@@ -647,7 +791,9 @@ export default function QuestionCategoryDetails() {
                   <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{viewQuestion.outputFormat}</p>
                 </div>
               </div>
+              )}
 
+              {(viewQuestion.categoryType || categoryType) === 'Coding' && (
               <div>
                 <h4 className="text-base font-semibold text-slate-900 dark:text-white">Test Cases</h4>
                 <div className="mt-2.5 space-y-2.5">
@@ -665,12 +811,38 @@ export default function QuestionCategoryDetails() {
                   ))}
                 </div>
               </div>
+              )}
+
+              {(viewQuestion.categoryType || categoryType) === 'MCQ' && (
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white">Options</h4>
+                  <div className="mt-2.5 space-y-2">
+                    {(viewQuestion.options || []).map((option) => (
+                      <div key={option.label} className="rounded-lg bg-white/45 dark:bg-white/10 p-2.5 text-sm text-slate-800 dark:text-slate-100">
+                        <span className="font-semibold">{option.label}.</span> {option.text}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">Correct option: <span className="font-semibold">{viewQuestion.correctOption}</span></p>
+                  {viewQuestion.explanation && <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{viewQuestion.explanation}</p>}
+                </div>
+              )}
+
+              {(viewQuestion.categoryType || categoryType) === 'Notes' && (
+                <div>
+                  <h4 className="text-base font-semibold text-slate-900 dark:text-white">Notes</h4>
+                  <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600 dark:text-slate-300 leading-relaxed">{viewQuestion.markdownBody || viewQuestion.markdownFileUrl}</p>
+                  {viewQuestion.solutionNotes && <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{viewQuestion.solutionNotes}</p>}
+                </div>
+              )}
             </section>
 
+            {(viewQuestion.categoryType || categoryType) === 'Coding' && (
             <div className="mt-3 flex items-center gap-4 text-sm md:text-base">
               <p className="text-slate-500 dark:text-slate-300">Time Limit: <span className="font-semibold text-slate-900 dark:text-white">{viewQuestion.timeLimit}s</span></p>
               <p className="text-slate-500 dark:text-slate-300">Solved: <span className="font-semibold text-slate-900 dark:text-white">{viewQuestion.solved}</span></p>
             </div>
+            )}
           </div>
         </div>
       )}
@@ -730,7 +902,12 @@ export default function QuestionCategoryDetails() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <h2 className="text-xl leading-tight md:text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{category.title}</h2>
-                  <p className="text-xs leading-tight md:text-sm font-light text-slate-600 dark:text-slate-300">{questions.length} questions</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-xs leading-tight md:text-sm font-light text-slate-600 dark:text-slate-300">{questions.length} questions</p>
+                    <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                      {categoryType}
+                    </span>
+                  </div>
                 </div>
 
                 <button

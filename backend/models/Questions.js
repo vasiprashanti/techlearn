@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { normalizeCategoryType, validateQuestionPayload } from '../utils/questionBank.js';
 
 const testCaseSchema = new mongoose.Schema(
   {
@@ -92,6 +93,7 @@ const questionSchema = new mongoose.Schema(
     categoryType: {
       type: String,
       enum: ['Coding', 'MCQ', 'Notes'],
+      set: normalizeCategoryType,
       required: false,
     },
     content: {
@@ -214,28 +216,10 @@ questionSchema.pre('save', function (next) {
     // ignore migration fallback errors; validation will surface issues if any
   }
 
-  if (this.categoryType === 'Coding') {
-    if (!c.visibleTestCases || c.visibleTestCases.length === 0) {
-      return next(new Error('Coding questions require at least one visible test case'));
-    }
-    if (!c.hiddenTestCases || c.hiddenTestCases.length === 0) {
-      return next(new Error('Coding questions require at least one hidden test case'));
-    }
-  }
-
-  if (this.categoryType === 'MCQ') {
-    if (!c.options || c.options.length < 2) {
-      return next(new Error('MCQ questions require at least 2 options'));
-    }
-    if (!c.correctOption) {
-      return next(new Error('MCQ questions require correctOption to be set'));
-    }
-  }
-
-  if (this.categoryType === 'Notes') {
-    if (!c.markdownBody && !c.markdownFileUrl) {
-      return next(new Error('Notes questions require either markdownBody or markdownFileUrl'));
-    }
+  try {
+    validateQuestionPayload(this);
+  } catch (error) {
+    return next(error);
   }
 
   next();

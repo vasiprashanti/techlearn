@@ -1,5 +1,6 @@
 import Question from '../models/Question.js';
 import Category from '../models/Category.js';
+import { buildCentralQuestionPayload } from '../utils/questionBank.js';
 
 /*
   POST /api/question-bank/categories/:categoryId/questions
@@ -15,21 +16,14 @@ export const createQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    const { title, description, difficulty, tags, content } = req.body;
+    const { title } = req.body;
 
     if (!title) {
       return res.status(400).json({ success: false, message: 'title is required' });
     }
 
-    const question = await Question.create({
-      categoryId,
-      categoryType: category.categoryType,
-      title,
-      description,
-      difficulty,
-      tags,
-      content,
-    });
+    const payload = buildCentralQuestionPayload({ category, body: req.body });
+    const question = await Question.create(payload);
 
     return res.status(201).json({ success: true, data: question });
   } catch (err) {
@@ -134,10 +128,22 @@ export const updateQuestion = async (req, res) => {
       });
     }
 
-    const existing = await Question.findById(req.params.questionId);
+    const existing = await Question.findById(req.params.questionId)
+      .select('+content.hiddenTestCases +content.correctOption +content.referenceSolution');
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
+
+    const category = await Category.findById(existing.categoryId);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found for this question' });
+    }
+
+    const nextPayload = buildCentralQuestionPayload({
+      category,
+      body: updates,
+      existingQuestion: existing,
+    });
 
     // Determine if we need to bump top-level version (title/description changes)
     const bumpVersion = (updates.title && updates.title !== existing.title) ||
@@ -145,14 +151,14 @@ export const updateQuestion = async (req, res) => {
 
     // Determine if we need to bump contentVersion (testcases/timeLimit/memoryLimit/constraints changes)
     let bumpContent = false;
-    if (updates.content) {
-      const c = updates.content;
+    if (nextPayload.content) {
+      const c = nextPayload.content;
       if (c.visibleTestCases || c.hiddenTestCases || c.timeLimit !== undefined || c.memoryLimit !== undefined || c.constraints !== undefined) {
         bumpContent = true;
       }
     }
 
-    const updateOps = { $set: updates };
+    const updateOps = { $set: nextPayload };
     if (bumpVersion) updateOps.$inc = { ...(updateOps.$inc || {}), version: 1 };
     if (bumpContent) updateOps.$inc = { ...(updateOps.$inc || {}), 'content.contentVersion': 1 };
 

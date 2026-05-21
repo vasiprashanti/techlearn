@@ -4,6 +4,7 @@ import Category from "../models/Category.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
+import { normalizeCategoryType } from "../utils/questionBank.js";
 import rateLimit from "express-rate-limit";
 
 // ===== EXECUTION CONSTRAINTS =====
@@ -180,13 +181,14 @@ export const startSubmission = async (req, res) => {
     const studentId = req.user._id;
 
     // Validate question exists
-    const question = await Question.findById(questionId);
+    const question = await Question.findById(questionId)
+      .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution");
     if (!question) {
       return res.status(404).json({ success: false, message: "Question not found" });
     }
 
     // Only allow Coding questions
-    if (question.categoryType !== "Coding") {
+    if (normalizeCategoryType(question.categoryType) !== "Coding") {
       return res.status(400).json({
         success: false,
         message: "Only Coding-type questions can be submitted",

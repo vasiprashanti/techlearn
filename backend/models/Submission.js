@@ -40,13 +40,13 @@ const submissionSchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
-      required: true,
+      default: null,
     },
 
     trackId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Track",
-      required: true,
+      default: null,
     },
 
     questionId: {
