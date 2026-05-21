@@ -100,8 +100,8 @@ import CollegeDetails from './pages/AdminDashbaord/CollegeDetails';
 import Batches from './pages/AdminDashbaord/Batches';
 import BatchDetails from './pages/AdminDashbaord/BatchDetails';
 import Students from './pages/AdminDashbaord/Students';
-import QuestionBank from './pages/AdminDashbaord/QuestionBank';
-import QuestionCategoryDetails from './pages/AdminDashbaord/QuestionCategoryDetails';
+import QuestionBankAdminPage from './pages/Admin/QuestionBankAdminPage';
+import QuestionBankCategoryDetailPage from './pages/Admin/QuestionBankCategoryDetailPage';
 import Resources from './pages/AdminDashbaord/Resources';
 import Certificates from './pages/AdminDashbaord/Certificates';
 import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
@@ -804,8 +804,10 @@ function LayoutWrapper() {
 <Route path="/batches" element={<Batches />} />
 <Route path="/batches/:batchId" element={<BatchDetails />} />
 <Route path="/students" element={<Students />} />
-<Route path="/question-bank" element={<QuestionBank />} />
-<Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
+<Route path="/admin/question-bank" element={<QuestionBankAdminPage />} />
+<Route path="/admin/question-bank/:categoryId" element={<QuestionBankCategoryDetailPage />} />
+<Route path="/question-bank" element={<QuestionBankAdminPage />} />
+<Route path="/question-bank/:categoryId" element={<QuestionBankCategoryDetailPage />} />
 <Route path="/track-templates" element={<TrackTemplate />} />
 <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
 <Route path="/resources" element={<Resources />} />

@@ -71,12 +71,6 @@ export const getQuestionsByCategory = async (req, res) => {
   }
 };
 
-/*
-  GET /api/question-bank/questions/:questionId
-  Fetches a single question by ID.
-  Used by ALL consumer systems: Practice, Daily Challenge, Track Templates, etc.
-  Hidden test cases and correctOption are excluded from the default projection.
- */
 export const getQuestionById = async (req, res) => {
   try {
     const question = await Question.findById(req.params.questionId).lean();
@@ -84,6 +78,20 @@ export const getQuestionById = async (req, res) => {
     if (!question || !question.isActive) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
+
+    // Sanitize sensitive fields before returning to client (student)
+    if (question.content) {
+      delete question.content.hiddenTestCases;
+      delete question.content.correctOption;
+      delete question.content.referenceSolution;
+      delete question.content.explanation;
+      delete question.content.solutionNotes;
+    }
+
+    // Also sanitize legacy/compatibility fields on the root level
+    delete question.hiddenTestCases;
+    delete question.solutionCode;
+    delete question.editorial;
 
     return res.status(200).json({ success: true, data: question });
   } catch (err) {

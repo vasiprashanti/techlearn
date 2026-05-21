@@ -450,12 +450,12 @@ export const submitSolution = [
       const hiddenTestCases = submission.snapshotHiddenTestCases || [];
       const allTestCases = [
         ...visibleTestCases.map((tc, idx) => ({
-          ...tc,
+          ...(typeof tc.toObject === "function" ? tc.toObject() : tc),
           visible: true,
           index: idx,
         })),
         ...hiddenTestCases.map((tc, idx) => ({
-          ...tc,
+          ...(typeof tc.toObject === "function" ? tc.toObject() : tc),
           visible: false,
           index: visibleTestCases.length + idx,
         })),
