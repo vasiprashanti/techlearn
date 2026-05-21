@@ -10,7 +10,13 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "build": "echo 'No build step required for Node.js backend'"
+    "build": "echo 'No build step required for Node.js backend'",
+    "migrate:practice-questionbank": "node scripts/migrate-practice-questionbank-refs.js",
+    "reconcile:submission-indexes": "node scripts/reconcile-submission-indexes.js",
+    "validate:phase1": "node scripts/validate-phase1.js",
+    "validate:phase1:concurrency": "node scripts/validate-analytics-concurrency.js",
+    "validate:phase2": "node scripts/validate-phase2.js"
+    ,"validate:analytics-mix": "node scripts/validate-analytics-mix.js"
   },
   "keywords": [],
   "author": "",

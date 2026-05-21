@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Notes from "../models/Notes.js";
+import Question from "../models/Questions.js";
 import Exercise from "../models/Exercise.js";
 import {
   generateSlug,
@@ -18,6 +19,7 @@ import Batch from "../models/Batch.js";
 import MajorProject from "../models/majorProject.js";
 import MiniProject from "../models/miniProject.js";
 import MidProject from "../models/MidProject.js";
+import { syncNotesQuestionBankEntry } from "../utils/notesBridge.js";
 
 export const getCourseTopicsForDashboard = async (req, res) => {
   try {
@@ -133,6 +135,9 @@ export const editTopicDetails = async (req, res) => {
       notes.checkpointMcqs = mcqArray;
     }
 
+    await notes.save();
+
+    await syncNotesQuestionBankEntry({ notes, topic, actor: req.user });
     await notes.save();
 
     // 🔧 VALIDATION: Ensure Topic points to the correct Notes (should already be correct)

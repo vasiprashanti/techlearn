@@ -1,5 +1,6 @@
 import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
+import mongoose from "mongoose";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude"];
@@ -101,9 +102,9 @@ export const listPracticeQuestions = async (req, res) => {
 export const recordPracticeSubmission = async (req, res) => {
   try {
     const track = normalizePracticeTrack(req.body.track);
-    const questionId = String(req.body.questionId || "").trim();
+    const questionIdRaw = String(req.body.questionId || "").trim();
 
-    if (!questionId) {
+    if (!questionIdRaw) {
       return res.status(400).json({ success: false, message: "questionId is required." });
     }
 
@@ -111,11 +112,33 @@ export const recordPracticeSubmission = async (req, res) => {
       return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, or Aptitude." });
     }
 
+    let canonicalQuestion = null;
+    if (mongoose.Types.ObjectId.isValid(questionIdRaw)) {
+      canonicalQuestion = await Question.findById(questionIdRaw)
+        .select("_id categoryId categoryType")
+        .lean();
+    }
+
+    const selectedAnswer = String(req.body.selectedAnswer || "").trim().toUpperCase();
+    const normalizedCategoryType = normalizeCategoryType(canonicalQuestion?.categoryType || req.body.categoryType);
+    const isMcqSubmission = normalizedCategoryType === "MCQ" && ["A", "B", "C", "D"].includes(selectedAnswer);
+
+    const isCorrect = Boolean(req.body.isCorrect);
+    const score = Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : (isCorrect ? 1 : 0);
+    const accuracy = Number.isFinite(Number(req.body.accuracy)) ? Number(req.body.accuracy) : (isCorrect ? 100 : 0);
+
     const submission = await PracticeSubmission.create({
       userId: req.user._id,
-      questionId,
+      questionId: questionIdRaw,
+      questionBankId: canonicalQuestion?._id || null,
+      categoryId: canonicalQuestion?.categoryId || null,
+      categoryType: normalizedCategoryType || null,
       track,
-      isCorrect: Boolean(req.body.isCorrect),
+      source: req.body.source || "practice",
+      selectedAnswer: isMcqSubmission ? selectedAnswer : "",
+      isCorrect,
+      score,
+      accuracy,
       submittedAt: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
     });
 

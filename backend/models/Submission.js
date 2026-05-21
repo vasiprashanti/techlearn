@@ -228,7 +228,15 @@ const submissionSchema = new mongoose.Schema(
 submissionSchema.index({ studentId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, workingDay: 1 });
 submissionSchema.index({ batchId: 1, trackId: 1 });
-submissionSchema.index({ attemptId: 1 }, { unique: true, sparse: true });
+submissionSchema.index(
+  { attemptId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      attemptId: { $type: "objectId" },
+    },
+  }
+);
 
 // Standalone indexes for sort and single-field filters (existing)
 submissionSchema.index({ workingDay: 1 });
@@ -240,5 +248,17 @@ submissionSchema.index({ studentId: 1, categoryId: 1 }, { sparse: true });
 submissionSchema.index({ batchId: 1, categoryId: 1 }, { sparse: true });
 // questionVersionId already has sparse: true in field definition
 submissionSchema.index({ submissionType: 1, submittedAt: -1 }, { sparse: true });
+// Ensure MCQ retries and concurrent duplicates collapse to a single canonical submission per student/question.
+submissionSchema.index(
+  { studentId: 1, questionId: 1, categoryType: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      categoryType: "MCQ",
+      studentId: { $type: "objectId" },
+      questionId: { $type: "objectId" },
+    },
+  }
+);
 
 export default mongoose.model("Submission", submissionSchema);

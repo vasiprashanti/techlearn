@@ -1,10 +1,12 @@
 import Submission from "../models/Submission.js";
 import Question from "../models/Questions.js";
+import PracticeSubmission from "../models/PracticeSubmission.js";
 import Category from "../models/Category.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
+import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
 
 // ===== EXECUTION CONSTRAINTS =====
@@ -57,6 +59,21 @@ const RATE_LIMITS = {
     interval: 60 * 1000,            // 1 minute window
     max: 20,                        // Max 20 runs across all questions per minute
   },
+};
+
+const MCQ_LABELS = ["A", "B", "C", "D"];
+
+const normalizeMcqAnswer = (value) => {
+  if (typeof value === "number" || /^\d+$/.test(String(value || ""))) {
+    const label = MCQ_LABELS[Number(value)];
+    return label || "";
+  }
+  return String(value || "").trim().toUpperCase();
+};
+
+const normalizeMcqSource = (value = "") => {
+  if (value === "track_template" || value === "daily_challenge") return value;
+  return "practice";
 };
 
 // ===== RATE LIMITERS =====
@@ -541,6 +558,167 @@ export const submitSolution = [
     }
   },
 ];
+
+/**
+ * @desc    Submit a centralized MCQ answer and track practice-compatible stats
+ * @route   POST /api/question-bank/submissions/questions/:questionId/mcq
+ * @access  Private
+ */
+export const submitMcqAnswer = async (req, res) => {
+  try {
+    const { questionId } = req.params;
+    const studentId = req.user._id;
+    const selectedAnswer = normalizeMcqAnswer(req.body.selectedAnswer ?? req.body.selectedOption);
+    const source = normalizeMcqSource(req.body.source);
+
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      return res.status(400).json({ success: false, message: "Invalid questionId." });
+    }
+
+    if (!MCQ_LABELS.includes(selectedAnswer)) {
+      return res.status(400).json({ success: false, message: "selectedAnswer must be A, B, C, or D." });
+    }
+
+    const question = await Question.findById(questionId).select("+content.correctOption").lean();
+    if (!question || question.isActive === false || question.status === "Archived") {
+      return res.status(404).json({ success: false, message: "Question not found." });
+    }
+
+    if (normalizeCategoryType(question.categoryType) !== "MCQ") {
+      return res.status(400).json({ success: false, message: "Only MCQ-type questions can use this endpoint." });
+    }
+
+    const correctAnswer = normalizeMcqAnswer(question.content?.correctOption);
+    if (!MCQ_LABELS.includes(correctAnswer)) {
+      return res.status(500).json({ success: false, message: "MCQ answer key is not configured." });
+    }
+
+    const duplicate = await Submission.findOne({
+      studentId,
+      questionId: question._id,
+      categoryType: "MCQ",
+      submittedAt: { $gte: new Date(Date.now() - 3000) },
+    })
+      .sort({ submittedAt: -1 })
+      .lean();
+
+    if (duplicate) {
+      return res.status(200).json({
+        success: true,
+        duplicate: true,
+        data: {
+          submissionId: duplicate._id,
+          questionId: String(question._id),
+          categoryId: question.categoryId || null,
+          categoryType: "MCQ",
+          selectedAnswer,
+          correctAnswer,
+          isCorrect: duplicate.status === "Passed",
+          score: duplicate.totalScore || 0,
+          accuracy: duplicate.accuracyScore || 0,
+          explanation: question.content?.explanation || "",
+          submittedAt: duplicate.submittedAt,
+        },
+      });
+    }
+
+    const isCorrect = selectedAnswer === correctAnswer;
+    const now = new Date();
+
+    const submission = await Submission.create({
+      studentId,
+      questionId: question._id,
+      categoryId: question.categoryId || null,
+      categoryType: "MCQ",
+      batchId: req.body.batchId || null,
+      trackId: null,
+      status: isCorrect ? "Passed" : "Failed",
+      startTime: now,
+      endTime: now,
+      timeSpent: 0,
+      submittedAt: now,
+      accuracyScore: isCorrect ? 100 : 0,
+      efficiencyScore: null,
+      disciplineScore: null,
+      totalScore: isCorrect ? 1 : 0,
+      submissionType: "track_question",
+    });
+
+    await PracticeSubmission.create({
+      userId: studentId,
+      questionId: String(question._id),
+      questionBankId: question._id,
+      categoryId: question.categoryId || null,
+      categoryType: "MCQ",
+      track: (() => {
+        const normalized = String(req.body.track || question.categoryTitle || question.trackType || "").toLowerCase();
+        if (normalized.includes("dsa")) return "DSA";
+        if (normalized.includes("sql")) return "SQL";
+        if (normalized.includes("aptitude")) return "Aptitude";
+        return "Core CS";
+      })(),
+      source,
+      selectedAnswer,
+      isCorrect,
+      score: isCorrect ? 1 : 0,
+      accuracy: isCorrect ? 100 : 0,
+      submittedAt: now,
+    });
+
+    await Question.findByIdAndUpdate(question._id, { $inc: { solvedCount: isCorrect ? 1 : 0 } });
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        submissionId: submission._id,
+        questionId: String(question._id),
+        categoryId: question.categoryId || null,
+        categoryType: "MCQ",
+        selectedAnswer,
+        correctAnswer,
+        isCorrect,
+        score: submission.totalScore || 0,
+        accuracy: submission.accuracyScore || 0,
+        explanation: question.content?.explanation || "",
+        submittedAt: submission.submittedAt,
+      },
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      const questionId = req.params.questionId;
+      const studentId = req.user._id;
+      const question = await Question.findById(questionId).select("+content.correctOption").lean();
+      const existing = await Submission.findOne({
+        studentId,
+        questionId,
+        categoryType: "MCQ",
+      }).sort({ submittedAt: -1 });
+
+      if (existing && question) {
+        const selectedAnswer = normalizeMcqAnswer(req.body.selectedAnswer ?? req.body.selectedOption);
+        const correctAnswer = normalizeMcqAnswer(question.content?.correctOption);
+        return res.status(200).json({
+          success: true,
+          duplicate: true,
+          data: {
+            submissionId: existing._id,
+            questionId: String(question._id),
+            categoryId: question.categoryId || null,
+            categoryType: "MCQ",
+            selectedAnswer,
+            correctAnswer,
+            isCorrect: existing.status === "Passed",
+            score: existing.totalScore || 0,
+            accuracy: existing.accuracyScore || 0,
+            explanation: question.content?.explanation || "",
+            submittedAt: existing.submittedAt,
+          },
+        });
+      }
+    }
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 /**
  * @desc    Get submission details

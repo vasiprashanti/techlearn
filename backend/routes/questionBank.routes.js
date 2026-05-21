@@ -19,6 +19,7 @@ import {
   startSubmission,
   runCode,
   submitSolution,
+  submitMcqAnswer,
   getSubmission,
 } from '../controllers/questionBankSubmissionController.js';
 import {
@@ -60,6 +61,9 @@ router.post('/submissions/:submissionId/run', studentAuth, runCode);
 
 // Submit final solution (tests against all test cases)
 router.post('/submissions/:submissionId/submit', studentAuth, submitSolution);
+
+// Submit MCQ answer with centralized submission tracking
+router.post('/submissions/questions/:questionId/mcq', studentAuth, submitMcqAnswer);
 
 // Get submission details
 router.get('/submissions/:submissionId', studentAuth, getSubmission);

@@ -4,6 +4,70 @@ import Batch from "../models/Batch.js";
 import Category from "../models/Category.js";
 import mongoose from "mongoose";
 
+const buildSubmissionFilter = ({
+  batchId,
+  studentId,
+  categoryId,
+  status,
+  categoryType,
+  submittedOnly = false,
+  startDate,
+  endDate,
+}) => {
+  const filter = {};
+
+  if (batchId && mongoose.Types.ObjectId.isValid(batchId)) {
+    filter.batchId = new mongoose.Types.ObjectId(batchId);
+  }
+  if (studentId && mongoose.Types.ObjectId.isValid(studentId)) {
+    filter.studentId = new mongoose.Types.ObjectId(studentId);
+  }
+  if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+    filter.categoryId = new mongoose.Types.ObjectId(categoryId);
+  }
+  if (status) {
+    filter.status = status;
+  }
+  if (categoryType) {
+    filter.categoryType = categoryType;
+  }
+
+  if (submittedOnly || startDate || endDate) {
+    filter.submittedAt = submittedOnly ? { $ne: null } : {};
+    if (startDate) {
+      filter.submittedAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      filter.submittedAt.$lte = new Date(endDate);
+    }
+  }
+
+  return filter;
+};
+
+const buildCategoryTypeBreakdown = async (filter) => {
+  const breakdown = await Submission.aggregate([
+    { $match: filter },
+    {
+      $group: {
+        _id: { $ifNull: ["$categoryType", "Unknown"] },
+        count: { $sum: 1 },
+        avgScore: { $avg: "$totalScore" },
+      },
+    },
+    {
+      $project: {
+        categoryType: "$_id",
+        count: 1,
+        avgScore: { $round: ["$avgScore", 2] },
+      },
+    },
+    { $sort: { count: -1, categoryType: 1 } },
+  ]);
+
+  return breakdown;
+};
+
 // ===== ADMIN ANALYTICS ENDPOINTS =====
 
 /**
@@ -14,7 +78,9 @@ import mongoose from "mongoose";
 export const getBatchSubmissions = async (req, res) => {
   try {
     const { batchId } = req.params;
-    const { categoryId, status, page = 1, limit = 20 } = req.query;
+    const { categoryId, status, categoryType, includeAllTypes, page = 1, limit = 20 } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Validate batch exists
     const batch = await Batch.findById(batchId);
@@ -23,18 +89,12 @@ export const getBatchSubmissions = async (req, res) => {
     }
 
     // Build filter
-    const filter = {
-      batchId: new mongoose.Types.ObjectId(batchId),
-      submissionType: "coding",
-    };
-
-    if (categoryId) {
-      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
-    }
-
-    if (status) {
-      filter.status = status;
-    }
+    const filter = buildSubmissionFilter({
+      batchId,
+      categoryId,
+      status,
+      categoryType: resolvedCategoryType,
+    });
 
     // Pagination
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -57,11 +117,11 @@ export const getBatchSubmissions = async (req, res) => {
       data: {
         submissions: submissions.map((sub) => ({
           submissionId: sub._id,
-          studentId: sub.studentId._id,
-          studentName: sub.studentId.name,
-          studentEmail: sub.studentId.email,
-          questionId: sub.questionId._id,
-          questionTitle: sub.questionId.title,
+          studentId: sub.studentId?._id || null,
+          studentName: sub.studentId?.name || "Unknown",
+          studentEmail: sub.studentId?.email || "",
+          questionId: sub.questionId?._id || null,
+          questionTitle: sub.questionId?.title || "Unknown",
           categoryId: sub.categoryId?._id,
           categoryTitle: sub.categoryId?.title,
           status: sub.status,
@@ -91,7 +151,9 @@ export const getBatchSubmissions = async (req, res) => {
 export const getStudentSubmissions = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { batchId, categoryId, status, page = 1, limit = 20 } = req.query;
+    const { batchId, categoryId, status, categoryType, includeAllTypes, page = 1, limit = 20 } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Validate student exists
     const student = await Student.findById(studentId);
@@ -100,22 +162,13 @@ export const getStudentSubmissions = async (req, res) => {
     }
 
     // Build filter
-    const filter = {
-      studentId: new mongoose.Types.ObjectId(studentId),
-      submissionType: "coding",
-    };
-
-    if (batchId) {
-      filter.batchId = new mongoose.Types.ObjectId(batchId);
-    }
-
-    if (categoryId) {
-      filter.categoryId = new mongoose.Types.ObjectId(categoryId);
-    }
-
-    if (status) {
-      filter.status = status;
-    }
+    const filter = buildSubmissionFilter({
+      studentId,
+      batchId,
+      categoryId,
+      status,
+      categoryType: resolvedCategoryType,
+    });
 
     // Pagination
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -138,8 +191,8 @@ export const getStudentSubmissions = async (req, res) => {
         studentName: student.name,
         submissions: submissions.map((sub) => ({
           submissionId: sub._id,
-          questionId: sub.questionId._id,
-          questionTitle: sub.questionId.title,
+          questionId: sub.questionId?._id || null,
+          questionTitle: sub.questionId?.title || "Unknown",
           categoryId: sub.categoryId?._id,
           categoryTitle: sub.categoryId?.title,
           status: sub.status,
@@ -168,7 +221,9 @@ export const getStudentSubmissions = async (req, res) => {
 export const getCategorySubmissions = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const { batchId, page = 1, limit = 20 } = req.query;
+    const { batchId, categoryType, includeAllTypes, page = 1, limit = 20 } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Validate category exists
     const category = await Category.findById(categoryId);
@@ -177,14 +232,11 @@ export const getCategorySubmissions = async (req, res) => {
     }
 
     // Build filter
-    const filter = {
-      categoryId: new mongoose.Types.ObjectId(categoryId),
-      submissionType: "coding",
-    };
-
-    if (batchId) {
-      filter.batchId = new mongoose.Types.ObjectId(batchId);
-    }
+    const filter = buildSubmissionFilter({
+      categoryId,
+      batchId,
+      categoryType: resolvedCategoryType,
+    });
 
     // Pagination
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
@@ -208,10 +260,10 @@ export const getCategorySubmissions = async (req, res) => {
         categoryType: category.categoryType,
         submissions: submissions.map((sub) => ({
           submissionId: sub._id,
-          studentId: sub.studentId._id,
-          studentName: sub.studentId.name,
-          questionId: sub.questionId._id,
-          questionTitle: sub.questionId.title,
+          studentId: sub.studentId?._id || null,
+          studentName: sub.studentId?.name || "Unknown",
+          questionId: sub.questionId?._id || null,
+          questionTitle: sub.questionId?.title || "Unknown",
           status: sub.status,
           totalScore: sub.totalScore,
           submittedAt: sub.submittedAt,
@@ -237,6 +289,9 @@ export const getCategorySubmissions = async (req, res) => {
 export const getBatchStats = async (req, res) => {
   try {
     const { batchId } = req.params;
+    const { categoryType, includeAllTypes } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Validate batch exists
     const batch = await Batch.findById(batchId);
@@ -244,11 +299,11 @@ export const getBatchStats = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found" });
     }
 
-    const filter = {
-      batchId: new mongoose.Types.ObjectId(batchId),
-      submissionType: "coding",
-      submittedAt: { $ne: null },
-    };
+    const filter = buildSubmissionFilter({
+      batchId,
+      categoryType: resolvedCategoryType,
+      submittedOnly: true,
+    });
 
     // Total submissions
     const totalSubmissions = await Submission.countDocuments(filter);
@@ -355,6 +410,10 @@ export const getBatchStats = async (req, res) => {
         topPerformers,
         categoryStats,
         timingAnalytics,
+        submissionTypeBreakdown:
+          String(includeAllTypes).toLowerCase() === "true" || categoryType
+            ? await buildCategoryTypeBreakdown(filter)
+            : [{ categoryType: resolvedCategoryType || "Coding", count: totalSubmissions, avgScore: averageScore }],
       },
     });
   } catch (error) {
@@ -370,6 +429,9 @@ export const getBatchStats = async (req, res) => {
 export const getStudentProgress = async (req, res) => {
   try {
     const { studentId } = req.params;
+    const { categoryType, includeAllTypes } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Validate student exists
     const student = await Student.findById(studentId);
@@ -377,11 +439,11 @@ export const getStudentProgress = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
-    const filter = {
-      studentId: new mongoose.Types.ObjectId(studentId),
-      submissionType: "coding",
-      submittedAt: { $ne: null },
-    };
+    const filter = buildSubmissionFilter({
+      studentId,
+      categoryType: resolvedCategoryType,
+      submittedOnly: true,
+    });
 
     // Total attempts
     const totalAttempts = await Submission.countDocuments(filter);
@@ -438,6 +500,7 @@ export const getStudentProgress = async (req, res) => {
         $project: {
           categoryId: "$_id",
           categoryTitle: "$category.title",
+          categoryType: "$category.categoryType",
           attempted: 1,
           completed: 1,
           avgScore: { $round: ["$avgScore", 2] },
@@ -472,27 +535,18 @@ export const getStudentProgress = async (req, res) => {
  */
 export const getPlatformAnalytics = async (req, res) => {
   try {
-    const { batchId, startDate, endDate } = req.query;
+    const { batchId, startDate, endDate, categoryType, includeAllTypes } = req.query;
+    const resolvedCategoryType =
+      categoryType || (String(includeAllTypes).toLowerCase() === "true" ? null : "Coding");
 
     // Build filter
-    const filter = {
-      submissionType: "coding",
-      submittedAt: { $ne: null },
-    };
-
-    if (batchId) {
-      filter.batchId = new mongoose.Types.ObjectId(batchId);
-    }
-
-    if (startDate || endDate) {
-      filter.submittedAt = {};
-      if (startDate) {
-        filter.submittedAt.$gte = new Date(startDate);
-      }
-      if (endDate) {
-        filter.submittedAt.$lte = new Date(endDate);
-      }
-    }
+    const filter = buildSubmissionFilter({
+      batchId,
+      categoryType: resolvedCategoryType,
+      submittedOnly: true,
+      startDate,
+      endDate,
+    });
 
     // Total submissions
     const totalSubmissions = await Submission.countDocuments(filter);
@@ -528,6 +582,11 @@ export const getPlatformAnalytics = async (req, res) => {
       },
     ]);
 
+    const submissionTypeBreakdown =
+      String(includeAllTypes).toLowerCase() === "true" || categoryType
+        ? await buildCategoryTypeBreakdown(filter)
+        : [{ categoryType: resolvedCategoryType || "Coding", count: totalSubmissions }];
+
     // Top students
     const topStudents = await Submission.aggregate([
       { $match: filter },
@@ -562,6 +621,7 @@ export const getPlatformAnalytics = async (req, res) => {
           return acc;
         }, {}),
         submissionsByCategory: categoryBreakdown,
+        submissionsByType: submissionTypeBreakdown,
         topStudents,
       },
     });

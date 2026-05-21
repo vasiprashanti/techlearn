@@ -94,6 +94,8 @@ const trackTemplateSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+trackTemplateSchema.set("optimisticConcurrency", true);
+
 trackTemplateSchema.index({ category: 1, status: 1 });
 
 export default mongoose.model("TrackTemplate", trackTemplateSchema);

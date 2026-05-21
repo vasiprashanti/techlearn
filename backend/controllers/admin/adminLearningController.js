@@ -15,6 +15,7 @@ import {
   formatQuestionForAdmin,
   normalizeCategoryType,
 } from "../../utils/questionBank.js";
+import { validateTrackTemplateQuestionAssignment } from "../../utils/trackTemplateValidation.js";
 import {
   CATEGORY_SLUG_BY_TITLE,
   assertObjectId,
@@ -92,6 +93,33 @@ const syncTemplateToTrack = async (template) => {
     },
     { new: true }
   );
+};
+
+const logTrackTemplateEvent = async ({ verb, action, detail, actor, metadata = {}, entityId = null }) => {
+  await writeAuditLog({
+    verb,
+    entityType: "TrackTemplate",
+    entityId,
+    action,
+    detail,
+    actor,
+    metadata,
+  });
+};
+
+const logTrackTemplateValidationFailure = async ({ templateId, action, detail, actor, metadata = {} }) => {
+  await writeAuditLog({
+    verb: "Validation Failed",
+    entityType: "TrackTemplate",
+    entityId: templateId,
+    action,
+    detail,
+    actor,
+    metadata: {
+      ...metadata,
+      outcome: "rejected",
+    },
+  });
 };
 
 const detectResourceType = (file = {}) => {
@@ -173,6 +201,10 @@ export const listQuestionCategories = async (req, res) => {
     console.error("listQuestionCategories error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch question categories." });
   }
+};
+
+const removeQuestionAssignmentAcrossTemplates = async (questionId) => {
+  await TrackTemplate.updateMany({}, { $pull: { dayAssignments: { questionId } } });
 };
 
 export const createQuestionCategory = async (req, res) => {
@@ -521,7 +553,7 @@ export const deleteQuestionAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question not found." });
     }
 
-    await TrackTemplate.updateMany({}, { $pull: { dayAssignments: { questionId: question._id } } });
+    await removeQuestionAssignmentAcrossTemplates(question._id);
 
     await writeAuditLog({
       verb: "Deleted",
@@ -782,18 +814,32 @@ export const assignTrackTemplateDay = async (req, res) => {
     const { dayNumber, questionId } = req.body;
     if (!assertObjectId(templateId, "templateId", res) || !assertObjectId(questionId, "questionId", res)) return;
 
+    const validation = await validateTrackTemplateQuestionAssignment({ templateId, dayNumber, questionId });
+    if (!validation.valid) {
+      await logTrackTemplateValidationFailure({
+        templateId,
+        action: "Assign track template day rejected",
+        detail: validation.message,
+        actor: req.user,
+        metadata: { dayNumber, questionId },
+      });
+      return res.status(validation.status || 400).json({ success: false, message: validation.message });
+    }
+
     const template = await TrackTemplate.findById(templateId);
     if (!template) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
+    const { normalizedDayNumber } = validation;
+
     const existingIndex = template.dayAssignments.findIndex(
-      (assignment) => assignment.dayNumber === Number(dayNumber)
+      (assignment) => assignment.dayNumber === normalizedDayNumber
     );
     if (existingIndex >= 0) {
       template.dayAssignments[existingIndex].questionId = questionId;
     } else {
-      template.dayAssignments.push({ dayNumber: Number(dayNumber), questionId });
+      template.dayAssignments.push({ dayNumber: normalizedDayNumber, questionId });
     }
 
     template.dayAssignments.sort((a, b) => a.dayNumber - b.dayNumber);
@@ -810,8 +856,26 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     await template.save();
     await syncTemplateToTrack(template);
+    await logTrackTemplateEvent({
+      verb: "Updated",
+      action: "Assigned question to track template day",
+      detail: `Day ${normalizedDayNumber}`,
+      actor: req.user,
+      entityId: template._id,
+      metadata: { dayNumber: normalizedDayNumber, questionId },
+    });
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
+    if (error?.name === "VersionError") {
+      await logTrackTemplateValidationFailure({
+        templateId: req.params.templateId,
+        action: "Assign track template day conflict",
+        detail: "Concurrent update detected while assigning a question to a track template day.",
+        actor: req.user,
+        metadata: { dayNumber: req.body?.dayNumber, questionId: req.body?.questionId },
+      });
+      return res.status(409).json({ success: false, message: "Track template was modified by another request. Please retry." });
+    }
     console.error("assignTrackTemplateDay error:", error);
     return res.status(500).json({ success: false, message: "Failed to assign track template day." });
   }
@@ -832,9 +896,27 @@ export const removeTrackTemplateDay = async (req, res) => {
     );
     await template.save();
     await syncTemplateToTrack(template);
+    await logTrackTemplateEvent({
+      verb: "Updated",
+      action: "Removed day from track template",
+      detail: `Day ${dayNumber}`,
+      actor: req.user,
+      entityId: template._id,
+      metadata: { dayNumber },
+    });
 
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
+    if (error?.name === "VersionError") {
+      await logTrackTemplateValidationFailure({
+        templateId: req.params.templateId,
+        action: "Remove track template day conflict",
+        detail: "Concurrent update detected while removing a track template day.",
+        actor: req.user,
+        metadata: { dayNumber: req.params.dayNumber },
+      });
+      return res.status(409).json({ success: false, message: "Track template was modified by another request. Please retry." });
+    }
     console.error("removeTrackTemplateDay error:", error);
     return res.status(500).json({ success: false, message: "Failed to remove day assignment." });
   }
@@ -855,15 +937,81 @@ export const reorderTrackTemplateQuestions = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
+    const seenDayNumbers = new Set();
+    const seenQuestionIds = new Set();
+    for (let index = 0; index < orderedDayAssignments.length; index += 1) {
+      const assignment = orderedDayAssignments[index] || {};
+      const dayNumber = Number(assignment.dayNumber || index + 1);
+      const questionId = assignment.questionId;
+
+      const validation = await validateTrackTemplateQuestionAssignment({
+        templateId,
+        dayNumber,
+        questionId,
+      });
+      if (!validation.valid) {
+        await logTrackTemplateValidationFailure({
+          templateId,
+          action: "Reorder track template rejected",
+          detail: validation.message,
+          actor: req.user,
+          metadata: { dayNumber, questionId, index },
+        });
+        return res.status(validation.status || 400).json({ success: false, message: validation.message });
+      }
+
+      if (seenDayNumbers.has(dayNumber)) {
+        await logTrackTemplateValidationFailure({
+          templateId,
+          action: "Reorder track template rejected",
+          detail: "Duplicate dayNumber values are not allowed in a track template.",
+          actor: req.user,
+          metadata: { dayNumber, questionId, index },
+        });
+        return res.status(400).json({ success: false, message: "Duplicate dayNumber values are not allowed in a track template." });
+      }
+      if (seenQuestionIds.has(String(questionId))) {
+        await logTrackTemplateValidationFailure({
+          templateId,
+          action: "Reorder track template rejected",
+          detail: "Duplicate question assignments are not allowed in a track template.",
+          actor: req.user,
+          metadata: { dayNumber, questionId, index },
+        });
+        return res.status(400).json({ success: false, message: "Duplicate question assignments are not allowed in a track template." });
+      }
+
+      seenDayNumbers.add(dayNumber);
+      seenQuestionIds.add(String(questionId));
+    }
+
     template.dayAssignments = orderedDayAssignments.map((assignment, index) => ({
       dayNumber: Number(assignment.dayNumber || index + 1),
       questionId: assignment.questionId,
     }));
     await template.save();
     await syncTemplateToTrack(template);
+    await logTrackTemplateEvent({
+      verb: "Updated",
+      action: "Reordered track template questions",
+      detail: template.name,
+      actor: req.user,
+      entityId: template._id,
+      metadata: { dayAssignments: template.dayAssignments.length },
+    });
 
     return res.status(200).json({ success: true, data: template });
   } catch (error) {
+    if (error?.name === "VersionError") {
+      await logTrackTemplateValidationFailure({
+        templateId: req.params.templateId,
+        action: "Reorder track template conflict",
+        detail: "Concurrent update detected while reordering track template questions.",
+        actor: req.user,
+        metadata: { orderedDayAssignments: Array.isArray(req.body?.orderedDayAssignments) ? req.body.orderedDayAssignments.length : 0 },
+      });
+      return res.status(409).json({ success: false, message: "Track template was modified by another request. Please retry." });
+    }
     console.error("reorderTrackTemplateQuestions error:", error);
     return res.status(500).json({ success: false, message: "Failed to reorder track template questions." });
   }
