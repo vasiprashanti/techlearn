@@ -64,6 +64,12 @@ import {
   listAuditLogsAdmin,
   listNotificationsAdmin,
 } from "../controllers/admin/adminOperationsController.js";
+import {
+  createRoadmapAdmin,
+  deleteRoadmapAdmin,
+  listRoadmapsAdmin,
+  updateRoadmapAdmin,
+} from "../controllers/roadmapController.js";
 
 const router = express.Router();
 const upload = multer({
@@ -120,6 +126,11 @@ router.post("/resources", upload.single("file"), createResourceAdmin);
 router.put("/resources/:resourceId", upload.single("file"), updateResourceAdmin);
 router.delete("/resources/:resourceId", deleteResourceAdmin);
 router.post("/resources/:resourceId/view", recordResourceView);
+
+router.get("/roadmaps", listRoadmapsAdmin);
+router.post("/roadmaps", createRoadmapAdmin);
+router.put("/roadmaps/:roadmapId", updateRoadmapAdmin);
+router.delete("/roadmaps/:roadmapId", deleteRoadmapAdmin);
 
 router.get("/certificates", getCertificatesPage);
 router.post("/certificates/issued", issueCertificateAdmin);

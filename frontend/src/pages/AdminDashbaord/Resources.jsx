@@ -7,9 +7,16 @@ import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderCont
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyResources } from '../../data/adminEmptyStates';
-import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiX, FiEdit2, FiTrash2, FiMoreHorizontal, FiUpload, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiX, FiEdit2, FiTrash2, FiMoreHorizontal, FiUpload, FiChevronDown, FiMap } from 'react-icons/fi';
 
 const resourceCategoryOptions = ['Courses', 'Important Topics', 'Resume Templates'];
+const createRoadmapForm = () => ({
+  title: '',
+  description: '',
+  markdownBody: '',
+  assignedBatchIds: [],
+  status: 'Active',
+});
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -46,6 +53,13 @@ export default function Resources() {
     file: null,
     fileName: '',
   });
+  const [roadmapEntries, setRoadmapEntries] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
+  const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
+  const [editingRoadmapId, setEditingRoadmapId] = useState(null);
+  const [roadmapForm, setRoadmapForm] = useState(createRoadmapForm());
+  const [roadmapFormError, setRoadmapFormError] = useState('');
+  const [isSavingRoadmap, setIsSavingRoadmap] = useState(false);
   const [editingResourceId, setEditingResourceId] = useState(null);
   const [isSavingResource, setIsSavingResource] = useState(false);
   const [openResourceMenuId, setOpenResourceMenuId] = useState(null);
@@ -75,6 +89,34 @@ export default function Resources() {
       .catch(() => {
         if (!cancelled) {
           setResourceEntries(emptyResources);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.all([
+      adminAPI.getRoadmaps(),
+      adminAPI.getBatches(),
+    ])
+      .then(([remoteRoadmaps, remoteBatches]) => {
+        if (cancelled) return;
+        setRoadmapEntries(Array.isArray(remoteRoadmaps) ? remoteRoadmaps : []);
+        setBatchOptions((Array.isArray(remoteBatches) ? remoteBatches : []).map((batch) => ({
+          id: batch.id || batch._id,
+          name: batch.name || 'Untitled Batch',
+          college: batch.college || '',
+        })));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRoadmapEntries([]);
+          setBatchOptions([]);
         }
       });
 
@@ -176,6 +218,44 @@ export default function Resources() {
     setResourceFormError('');
   };
 
+  const openAddRoadmapModal = () => {
+    setEditingRoadmapId(null);
+    setRoadmapForm(createRoadmapForm());
+    setRoadmapFormError('');
+    setIsRoadmapModalOpen(true);
+  };
+
+  const openEditRoadmapModal = (roadmap) => {
+    setEditingRoadmapId(roadmap.id || roadmap._id);
+    setRoadmapForm({
+      title: roadmap.title || '',
+      description: roadmap.description || '',
+      markdownBody: roadmap.markdownBody || '',
+      assignedBatchIds: (roadmap.assignedBatchIds || []).map((batchId) => String(batchId)),
+      status: roadmap.status || 'Active',
+    });
+    setRoadmapFormError('');
+    setIsRoadmapModalOpen(true);
+  };
+
+  const closeRoadmapModal = () => {
+    setIsRoadmapModalOpen(false);
+    setEditingRoadmapId(null);
+    setRoadmapForm(createRoadmapForm());
+    setRoadmapFormError('');
+    setIsSavingRoadmap(false);
+  };
+
+  const toggleRoadmapBatch = (batchId) => {
+    setRoadmapForm((prev) => {
+      const nextId = String(batchId);
+      const selected = new Set((prev.assignedBatchIds || []).map(String));
+      if (selected.has(nextId)) selected.delete(nextId);
+      else selected.add(nextId);
+      return { ...prev, assignedBatchIds: Array.from(selected) };
+    });
+  };
+
   const normalizeResource = (resource) => ({
     ...resource,
     id: resource?.id || resource?._id,
@@ -270,6 +350,56 @@ export default function Resources() {
       setResourceFormError(error?.message || 'Failed to save resource.');
     } finally {
       setIsSavingResource(false);
+    }
+  };
+
+  const saveRoadmap = async () => {
+    if (!roadmapForm.title.trim()) {
+      setRoadmapFormError('Roadmap title is required.');
+      return;
+    }
+
+    if (!roadmapForm.markdownBody.trim()) {
+      setRoadmapFormError('Roadmap markdown is required.');
+      return;
+    }
+
+    setIsSavingRoadmap(true);
+    setRoadmapFormError('');
+
+    const payload = {
+      title: roadmapForm.title.trim(),
+      description: roadmapForm.description.trim(),
+      markdownBody: roadmapForm.markdownBody.trim(),
+      assignedBatchIds: roadmapForm.assignedBatchIds,
+      status: roadmapForm.status,
+    };
+
+    try {
+      if (editingRoadmapId) {
+        await adminAPI.updateRoadmap(editingRoadmapId, payload);
+      } else {
+        await adminAPI.createRoadmap(payload);
+      }
+      const refreshed = await adminAPI.getRoadmaps();
+      setRoadmapEntries(Array.isArray(refreshed) ? refreshed : []);
+      closeRoadmapModal();
+    } catch (error) {
+      setRoadmapFormError(error?.message || 'Failed to save roadmap.');
+    } finally {
+      setIsSavingRoadmap(false);
+    }
+  };
+
+  const deleteRoadmap = async (roadmap) => {
+    const confirmed = window.confirm(`Delete "${roadmap.title}"?`);
+    if (!confirmed) return;
+
+    try {
+      await adminAPI.deleteRoadmap(roadmap.id || roadmap._id);
+      setRoadmapEntries((prev) => prev.filter((entry) => String(entry.id || entry._id) !== String(roadmap.id || roadmap._id)));
+    } catch (error) {
+      window.alert(error?.message || 'Failed to delete roadmap.');
     }
   };
 
@@ -410,6 +540,108 @@ export default function Resources() {
         </div>
       )}
 
+      {isRoadmapModalOpen && (
+        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeRoadmapModal} />
+          <div className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl p-6">
+            <button
+              onClick={closeRoadmapModal}
+              className="absolute right-4 top-4 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
+              aria-label="Close roadmap form"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{editingRoadmapId ? 'Edit Roadmap' : 'Create Roadmap'}</h2>
+
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Roadmap Title*</label>
+                  <input
+                    value={roadmapForm.title}
+                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Description</label>
+                  <input
+                    value={roadmapForm.description}
+                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, description: e.target.value }))}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Markdown*</label>
+                  <textarea
+                    value={roadmapForm.markdownBody}
+                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, markdownBody: e.target.value }))}
+                    rows={14}
+                    className="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 py-2 text-sm font-mono text-slate-800 dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <aside className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Status</label>
+                  <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                    <select
+                      value={roadmapForm.status}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, status: e.target.value }))}
+                      className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Active</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Draft</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Assign to Batches</p>
+                  <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#122b52] p-2 space-y-1">
+                    {batchOptions.map((batch) => {
+                      const checked = roadmapForm.assignedBatchIds.map(String).includes(String(batch.id));
+                      return (
+                        <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleRoadmapBatch(batch.id)}
+                            className="mt-1"
+                          />
+                          <span>
+                            <span className="block font-medium">{batch.name}</span>
+                            {batch.college && <span className="block text-[11px] text-[#5f7592] dark:text-slate-300">{batch.college}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {batchOptions.length === 0 && (
+                      <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-300">No batches available.</p>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={saveRoadmap}
+                  disabled={isSavingRoadmap}
+                  className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-70 text-white text-sm font-semibold"
+                >
+                  {isSavingRoadmap ? 'Saving...' : editingRoadmapId ? 'Save Changes' : 'Create Roadmap'}
+                </button>
+                {roadmapFormError && <p className="text-xs text-red-500">{roadmapFormError}</p>}
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -425,6 +657,65 @@ export default function Resources() {
               </div>
               <AdminHeaderControls user={user} logout={logout} />
             </header>
+
+            <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                    <FiMap className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
+                  </div>
+                  <div>
+                    <h2 className="text-base md:text-lg font-semibold text-[#0b1b38] dark:text-white">Batch Roadmaps</h2>
+                    <p className="text-xs md:text-sm text-[#5f7592] dark:text-slate-300">Create one roadmap and assign it to multiple batches.</p>
+                  </div>
+                </div>
+                <button onClick={openAddRoadmapModal} className="dashboard-primary-btn w-full sm:w-auto h-10 px-4 text-xs">
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Create Roadmap
+                </button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {roadmapEntries.map((roadmap) => (
+                  <article key={roadmap.id || roadmap._id} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f5fbff] dark:bg-[#122b52] px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-sm md:text-base font-semibold text-[#0b1b38] dark:text-white break-words">{roadmap.title}</h3>
+                        <p className="mt-1 text-xs text-[#5f7592] dark:text-slate-300 break-words">{roadmap.description || 'No description'}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                        {roadmap.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-xs text-[#5f7592] dark:text-slate-300">
+                      Assigned to {(roadmap.assignedBatches || []).length} batch{(roadmap.assignedBatches || []).length === 1 ? '' : 'es'}
+                    </p>
+                    {(roadmap.assignedBatches || []).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {roadmap.assignedBatches.map((batch) => (
+                          <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
+                            {batch.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <button onClick={() => openEditRoadmapModal(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${roadmap.title}`}>
+                        <FiEdit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => deleteRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${roadmap.title}`}>
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {roadmapEntries.length === 0 && (
+                  <div className="lg:col-span-2 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
+                    No roadmaps created yet. Users will keep seeing the default roadmap until a batch roadmap is assigned.
+                  </div>
+                )}
+              </div>
+            </section>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[

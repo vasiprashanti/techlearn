@@ -304,6 +304,13 @@ export const compilerAPI = {
 };
 
 export const resourceAPI = {
+  getCurrentRoadmap: async () => {
+    const response = await fetch(`${API_BASE}/resources/roadmaps/current`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   getResources: async (category) => {
     const suffix = category ? `?category=${encodeURIComponent(category)}` : '';
     const response = await fetch(`${API_BASE}/resources${suffix}`, {

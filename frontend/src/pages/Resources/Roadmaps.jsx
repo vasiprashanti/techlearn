@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import ScrollProgress from '../../components/ScrollProgress';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
+import { resourceAPI } from '../../services/api';
 
 const ROADMAP_PATH = '/resources/roadmaps/roadmap.md';
 
@@ -87,6 +88,8 @@ const markdownComponents = {
 
 export default function Roadmaps() {
   const [markdown, setMarkdown] = useState('');
+  const [roadmapTitle, setRoadmapTitle] = useState('Roadmap');
+  const [roadmapDescription, setRoadmapDescription] = useState('Plan clearly, track faster, and read your roadmap without visual noise.');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -97,6 +100,22 @@ export default function Roadmaps() {
       try {
         setLoading(true);
         setError('');
+
+        const hasToken = Boolean(localStorage.getItem('token') || localStorage.getItem('authToken'));
+        if (hasToken) {
+          try {
+            const assignedRoadmapPayload = await resourceAPI.getCurrentRoadmap();
+            const assignedRoadmap = assignedRoadmapPayload?.data || assignedRoadmapPayload;
+            if (assignedRoadmap?.markdownBody && !cancelled) {
+              setMarkdown(assignedRoadmap.markdownBody);
+              setRoadmapTitle(assignedRoadmap.title || 'Roadmap');
+              setRoadmapDescription(assignedRoadmap.description || 'Your batch roadmap is ready.');
+              return;
+            }
+          } catch {
+            // Fall back to the default markdown file below.
+          }
+        }
 
         const response = await fetch(ROADMAP_PATH, { cache: 'no-store' });
         if (!response.ok) {
@@ -110,6 +129,8 @@ export default function Roadmaps() {
 
         if (!cancelled) {
           setMarkdown(content);
+          setRoadmapTitle('Roadmap');
+          setRoadmapDescription('Plan clearly, track faster, and read your roadmap without visual noise.');
         }
       } catch (fetchError) {
         if (!cancelled) {
@@ -173,10 +194,10 @@ export default function Roadmaps() {
       <div className="space-y-6">
         <section className="px-1 py-2">
           <h1 className="dashboard-page-title">
-            Roadmap
+            {roadmapTitle}
           </h1>
           <p className="dashboard-page-subtitle max-w-3xl">
-            Plan clearly, track faster, and read your roadmap without visual noise.
+            {roadmapDescription}
           </p>
         </section>
 

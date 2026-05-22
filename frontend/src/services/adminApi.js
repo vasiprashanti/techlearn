@@ -306,6 +306,10 @@ export const adminAPI = {
   },
   deleteResource: (resourceId) => request(`/admin/resources/${resourceId}`, { method: 'DELETE' }),
   recordResourceView: (resourceId) => request(`/admin/resources/${resourceId}/view`, { method: 'POST' }),
+  getRoadmaps: () => request('/admin/roadmaps'),
+  createRoadmap: (body) => request('/admin/roadmaps', { method: 'POST', body: JSON.stringify(body) }),
+  updateRoadmap: (roadmapId, body) => request(`/admin/roadmaps/${roadmapId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteRoadmap: (roadmapId) => request(`/admin/roadmaps/${roadmapId}`, { method: 'DELETE' }),
 
   getCourses: () => request('/courses'),
   createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: JSON.stringify(body) }),
