@@ -15,11 +15,11 @@ export const CodingRoundQuestionFormWrapper = ({
   const inputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all';
 
   return (
-    <div className="space-y-4">
-      <div className="border-t border-black/10 dark:border-white/10 pt-4">
+    <div className="space-y-2">
+      <div className="border-t border-black/10 dark:border-white/10 pt-2">
         <h3 className="text-xs font-bold text-[#3C83F6] dark:text-[#bceaff] uppercase tracking-wider">Coding Specifications</h3>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <div>
           <label className="admin-micro-label text-black/45 dark:text-white/45">Input Format</label>
           <textarea
@@ -83,7 +83,7 @@ export const CodingRoundQuestionFormWrapper = ({
           />
         </button>
         {expandedSections?.visible && (
-          <div className="px-4 py-3 space-y-4 bg-white/40 dark:bg-black/10">
+          <div className="px-4 py-3 space-y-2 bg-white/40 dark:bg-black/10">
             <p className="text-xs text-black/45 dark:text-white/45">These test cases are visible to students when they run their code.</p>
             {(formData.visibleTestCases || []).map((testCase, index) => (
               <div key={`visible-${index}`} className="rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-black/25 p-3.5 space-y-3">
@@ -99,7 +99,7 @@ export const CodingRoundQuestionFormWrapper = ({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Input</label>
                     <textarea
@@ -159,7 +159,7 @@ export const CodingRoundQuestionFormWrapper = ({
           />
         </button>
         {expandedSections?.hidden && (
-          <div className="px-4 py-3 space-y-4 bg-white/40 dark:bg-black/10">
+          <div className="px-4 py-3 space-y-2 bg-white/40 dark:bg-black/10">
             <p className="text-xs text-black/45 dark:text-white/45">Hidden test cases are used for grading and are not visible to students.</p>
             {(formData.hiddenTestCases || []).map((testCase, index) => (
               <div key={`hidden-${index}`} className="rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-black/25 p-3.5 space-y-3">
@@ -175,7 +175,7 @@ export const CodingRoundQuestionFormWrapper = ({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Input</label>
                     <textarea
@@ -230,7 +230,7 @@ export const CodingRoundQuestionFormWrapper = ({
           />
         </button>
         {expandedSections?.reference && (
-          <div className="px-4 py-3 space-y-4 bg-white/40 dark:bg-black/10">
+          <div className="px-4 py-3 space-y-2 bg-white/40 dark:bg-black/10">
             <div>
               <label className="admin-micro-label text-black/45 dark:text-white/45">Language</label>
               <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">

@@ -8,8 +8,8 @@ export const NotesQuestionFormWrapper = ({
   const inputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all';
 
   return (
-    <div className="space-y-4">
-      <div className="border-t border-black/10 dark:border-white/10 pt-4">
+    <div className="space-y-2">
+      <div className="border-t border-black/10 dark:border-white/10 pt-2">
         <h3 className="text-sm font-semibold text-[#3C83F6] dark:text-[#bceaff] uppercase tracking-wider text-xs font-bold">Notes Content</h3>
       </div>
       

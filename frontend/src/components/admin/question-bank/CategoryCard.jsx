@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FiBarChart2, FiCode, FiDatabase, FiGlobe, FiMoreHorizontal, FiTerminal } from 'react-icons/fi';
-import { PiBrainLight } from 'react-icons/pi';
+import { FiBarChart2, FiCode, FiCheckSquare, FiBook, FiMoreHorizontal } from 'react-icons/fi';
 
 const categoryIconMap = {
   code: FiCode,
-  globe: FiGlobe,
-  terminal: FiTerminal,
-  database: FiDatabase,
-  brain: PiBrainLight,
+  check: FiCheckSquare,
+  book: FiBook,
   chart: FiBarChart2,
 };
 
@@ -19,29 +16,17 @@ const getCategoryTheme = (icon) => {
         iconBg: 'bg-[#e6ebf5] dark:bg-[#2f4466]',
         iconColor: 'text-[#3c83f6] dark:text-blue-300',
       };
-    case 'globe':
+    case 'check':
       return {
         topTint: 'bg-[#d2e9e5] dark:bg-[#204744]',
         iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]',
         iconColor: 'text-[#129775] dark:text-emerald-300',
       };
-    case 'terminal':
+    case 'book':
       return {
         topTint: 'bg-[#efe6d2] dark:bg-[#4f4228]',
         iconBg: 'bg-[#f8f0df] dark:bg-[#625133]',
         iconColor: 'text-[#d17d00] dark:text-amber-300',
-      };
-    case 'database':
-      return {
-        topTint: 'bg-[#e7def3] dark:bg-[#3a2f58]',
-        iconBg: 'bg-[#f1eafb] dark:bg-[#4a3b73]',
-        iconColor: 'text-[#8c4df4] dark:text-violet-300',
-      };
-    case 'brain':
-      return {
-        topTint: 'bg-[#f1dbe4] dark:bg-[#5a3042]',
-        iconBg: 'bg-[#faeaf0] dark:bg-[#6f3b50]',
-        iconColor: 'text-[#df2f64] dark:text-rose-300',
       };
     default:
       return {
@@ -54,9 +39,9 @@ const getCategoryTheme = (icon) => {
 
 const getCategoryIconKey = (type) => {
   switch (type?.toLowerCase()) {
-    case 'coding': return 'terminal';
-    case 'mcq': return 'brain';
-    case 'notes': return 'database';
+    case 'coding': return 'code';
+    case 'mcq': return 'check';
+    case 'notes': return 'book';
     default: return 'chart';
   }
 };

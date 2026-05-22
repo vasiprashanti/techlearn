@@ -318,6 +318,123 @@ export const QuestionBankCategoryDetailPage = () => {
     }
   };
 
+  const titleField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Question title*</label>
+      <input
+        value={questionForm.title}
+        onChange={(e) => updateFormField('title', e.target.value)}
+        placeholder="Enter question title"
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
+  const trackTypeField = (
+    <div>
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Track type*</label>
+      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+        <select
+          value={questionForm.trackType}
+          onChange={(e) => updateFormField('trackType', e.target.value)}
+          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+        >
+          <option className={dropdownOptionClass} value="">Select track type</option>
+          {trackOptions.map((track) => (
+            <option className={dropdownOptionClass} key={track} value={track}>{track}</option>
+          ))}
+        </select>
+        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+      </div>
+      {trackOptions.length === 0 && (
+        <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">No tracks created yet. Make sure a Track Template exists.</p>
+      )}
+    </div>
+  );
+
+  const difficultyField = (
+    <div>
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
+      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+        <select
+          value={questionForm.difficulty}
+          onChange={(e) => updateFormField('difficulty', e.target.value)}
+          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+        >
+          <option className={dropdownOptionClass}>Easy</option>
+          <option className={dropdownOptionClass}>Medium</option>
+          <option className={dropdownOptionClass}>Hard</option>
+        </select>
+        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+      </div>
+    </div>
+  );
+
+  const tagsField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
+      <div className="mt-1 flex gap-2">
+        <input
+          value={questionForm.tagInput}
+          onChange={(e) => updateFormField('tagInput', e.target.value)}
+          placeholder="Add tag label..."
+          className={questionFormInputClass}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
+        />
+        <button
+          type="button"
+          onClick={handleAddTag}
+          className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold border border-[#3C83F6]/20 transition-colors shadow-sm"
+        >
+          Add
+        </button>
+      </div>
+      {questionForm.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {questionForm.tags.map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200">
+              {tag}
+              <button type="button" onClick={() => handleRemoveTag(tag)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <FiX className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const descriptionField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">
+        {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}
+      </label>
+      <textarea
+        value={questionForm.problemDescription}
+        onChange={(e) => updateFormField('problemDescription', e.target.value)}
+        rows={4}
+        placeholder={isNotesCategory ? 'Describe what this note covers...' : isMcqCategory ? 'Optional supporting text...' : 'Describe the problem statement in detail...'}
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
+  const dynamicHostField = (
+    <div className="md:col-span-2 pt-2">
+      <DynamicQuestionFormHost
+        categoryType={categoryType}
+        formData={questionForm}
+        onChange={updateFormField}
+        onTestCaseChange={handleUpdateTestCase}
+        onAddTestCase={handleAddTestCase}
+        onRemoveTestCase={handleRemoveTestCase}
+        onMcqOptionChange={handleUpdateMcqOption}
+        expandedSections={expandedFormSections}
+        onToggleSection={toggleFormSection}
+      />
+    </div>
+  );
+
   if (!mounted || categoriesLoading || questionsLoading) {
     return <LoadingScreen />;
   }
@@ -341,122 +458,27 @@ export const QuestionBankCategoryDetailPage = () => {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Question title*</label>
-                  <input
-                    value={questionForm.title}
-                    onChange={(e) => updateFormField('title', e.target.value)}
-                    placeholder="Enter question title"
-                    className={questionFormInputClass}
-                  />
-                </div>
-
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Category type</label>
-                  <input
-                    value={categoryType}
-                    disabled
-                    className="mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-black/5 dark:bg-[#0f1f43]/50 text-slate-500 dark:text-slate-400 cursor-not-allowed outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track type*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={questionForm.trackType}
-                      onChange={(e) => updateFormField('trackType', e.target.value)}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className={dropdownOptionClass} value="">Select track type</option>
-                      {trackOptions.map((track) => (
-                        <option className={dropdownOptionClass} key={track} value={track}>{track}</option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                  </div>
-                  {trackOptions.length === 0 && (
-                    <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">No tracks created yet. Make sure a Track Template exists.</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={questionForm.difficulty}
-                      onChange={(e) => updateFormField('difficulty', e.target.value)}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className={dropdownOptionClass}>Easy</option>
-                      <option className={dropdownOptionClass}>Medium</option>
-                      <option className={dropdownOptionClass}>Hard</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
-                  <div className="mt-1 flex gap-2">
-                    <input
-                      value={questionForm.tagInput}
-                      onChange={(e) => updateFormField('tagInput', e.target.value)}
-                      placeholder="Add tag label..."
-                      className={questionFormInputClass}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold border border-[#3C83F6]/20 transition-colors shadow-sm"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  {questionForm.tags.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {questionForm.tags.map((tag) => (
-                        <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200">
-                          {tag}
-                          <button type="button" onClick={() => handleRemoveTag(tag)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                            <FiX className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">
-                    {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}
-                  </label>
-                  <textarea
-                    value={questionForm.problemDescription}
-                    onChange={(e) => updateFormField('problemDescription', e.target.value)}
-                    rows={4}
-                    placeholder={isNotesCategory ? 'Describe what this note covers...' : isMcqCategory ? 'Optional supporting text...' : 'Describe the problem statement in detail...'}
-                    className={questionFormInputClass}
-                  />
-                </div>
-              </div>
-
-              {/* DYNAMIC FORM RESOLVER */}
-              <div className="pt-2">
-                <DynamicQuestionFormHost
-                  categoryType={categoryType}
-                  formData={questionForm}
-                  onChange={updateFormField}
-                  onTestCaseChange={handleUpdateTestCase}
-                  onAddTestCase={handleAddTestCase}
-                  onRemoveTestCase={handleRemoveTestCase}
-                  onMcqOptionChange={handleUpdateMcqOption}
-                  expandedSections={expandedFormSections}
-                  onToggleSection={toggleFormSection}
-                />
+            <div className="p-5 space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {isMcqCategory ? (
+                  <>
+                    {descriptionField}
+                    {dynamicHostField}
+                    {tagsField}
+                    {difficultyField}
+                    {trackTypeField}
+                    {titleField}
+                  </>
+                ) : (
+                  <>
+                    {titleField}
+                    {trackTypeField}
+                    {difficultyField}
+                    {tagsField}
+                    {descriptionField}
+                    {dynamicHostField}
+                  </>
+                )}
               </div>
 
               {formError && (

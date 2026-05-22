@@ -57,14 +57,14 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+        <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
             {editingCategory ? 'Edit Question Category' : 'Add Question Category'}
           </h2>
           <button onClick={onClose} className="text-sm text-black/40 dark:text-white/40">Close</button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-2">
           <div>
             <label className="admin-micro-label text-black/45 dark:text-white/45">Category Type</label>
             <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
