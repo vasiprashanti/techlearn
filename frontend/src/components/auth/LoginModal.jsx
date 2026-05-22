@@ -93,8 +93,18 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       formData.email === "admintls@123" &&
       formData.password === "admintls123"
     ) {
+      const mockAdminUser = {
+        id: "mock-admin-id",
+        firstName: "Admin",
+        lastName: "TLS",
+        name: "Admin TLS",
+        email: "admintls@123",
+        role: "admin",
+      };
       localStorage.setItem("token", "mock-admin-token");
       localStorage.setItem("isAdmin", "true");
+      localStorage.setItem("userData", JSON.stringify(mockAdminUser));
+      setSession(mockAdminUser, "mock-admin-token");
       navigate("/admin");
       onClose();
       return;

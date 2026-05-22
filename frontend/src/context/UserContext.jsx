@@ -68,8 +68,23 @@ export const UserProvider = ({ children }) => {
 
       // Update user data if API returns it
       if (data.user) {
-        setUser(data.user);
-        localStorage.setItem('userData', JSON.stringify(data.user));
+        const storedUserData = localStorage.getItem('userData');
+        let currentRole = 'student';
+        try {
+          if (storedUserData) {
+            const parsed = JSON.parse(storedUserData);
+            currentRole = parsed.role || 'student';
+          }
+        } catch (e) {
+          console.error(e);
+        }
+
+        const updatedUser = {
+          ...data.user,
+          role: data.user.role || currentRole,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
       }
 
       // Calculate total XP from courseXP field
