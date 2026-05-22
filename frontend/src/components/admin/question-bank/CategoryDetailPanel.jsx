@@ -67,13 +67,10 @@ export const CategoryDetailPanel = ({
 
           <div className="mt-6 flex flex-wrap gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
             <div>
-              <span>Visibility: </span>
-              <span className="text-slate-800 dark:text-slate-200">{category.visibility || 'Public'}</span>
+              <span>Status: </span>
+              <span className="text-slate-800 dark:text-slate-200">{category.status || 'Draft'}</span>
             </div>
-            <div>
-              <span>Category ID: </span>
-              <span className="font-mono text-slate-600 dark:text-slate-300">{category.id || category._id || 'N/A'}</span>
-            </div>
+
           </div>
         </div>
 

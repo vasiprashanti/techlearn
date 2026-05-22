@@ -90,7 +90,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       </div>
 
       {/* Desktop Table Layout */}
-      <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm">
+      <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-slate-50 dark:bg-[#0a1737] backdrop-blur-xl shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
             <table className="w-full min-w-[980px]">

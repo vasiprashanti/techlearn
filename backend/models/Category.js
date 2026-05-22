@@ -29,14 +29,10 @@ const categorySchema = new mongoose.Schema(
       set: normalizeCategoryType,
       required: [true, 'categoryType is required'],
     },
-    icon: {
+    status: {
       type: String,
-      default: '',
-    },
-    visibility: {
-      type: String,
-      enum: ['public', 'private'],
-      default: 'public',
+      enum: ['Active', 'Inactive', 'Draft'],
+      default: 'Draft',
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

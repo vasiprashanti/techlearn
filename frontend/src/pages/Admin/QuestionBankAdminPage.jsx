@@ -65,8 +65,7 @@ export const QuestionBankAdminPage = () => {
         const editableFields = {
           title: formPayload.title,
           subtitle: formPayload.subtitle,
-          icon: formPayload.icon,
-          visibility: formPayload.visibility,
+          status: formPayload.status,
         };
         await questionBankApi.updateCategory(editingCategory.id || editingCategory._id, editableFields);
       } else {

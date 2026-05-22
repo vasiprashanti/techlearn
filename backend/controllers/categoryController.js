@@ -15,7 +15,7 @@ const generateSlug = (title) =>
  */
 export const createCategory = async (req, res) => {
   try {
-    const { title, slug, description, icon, visibility } = req.body;
+    const { title, slug, description, status } = req.body;
     const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title || !categoryType) {
@@ -37,8 +37,7 @@ export const createCategory = async (req, res) => {
       slug: resolvedSlug,
       description,
       categoryType,
-      icon,
-      visibility,
+      status,
       createdBy: req.user?._id || req.admin?._id,
     });
 

@@ -52,12 +52,22 @@ const getCategoryTheme = (icon) => {
   }
 };
 
+const getCategoryIconKey = (type) => {
+  switch (type?.toLowerCase()) {
+    case 'coding': return 'terminal';
+    case 'mcq': return 'brain';
+    case 'notes': return 'database';
+    default: return 'chart';
+  }
+};
+
 const isPersistedCategory = (categoryId) => /^[a-f0-9]{24}$/i.test(String(categoryId || ''));
 
 export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const theme = getCategoryTheme(category.icon);
-  const Icon = categoryIconMap[category.icon] || FiBarChart2;
+  const iconKey = getCategoryIconKey(category.categoryType);
+  const theme = getCategoryTheme(iconKey);
+  const Icon = categoryIconMap[iconKey] || FiBarChart2;
   const isCrudEnabled = isPersistedCategory(category.id);
 
   useEffect(() => {
@@ -129,7 +139,7 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
                 {category.categoryType || 'Coding'}
               </span>
               <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-                {category.visibility || 'Public'}
+                {category.status || 'Draft'}
               </span>
             </div>
           </div>
@@ -146,8 +156,8 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
           <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.active || 0}</span>
         </div>
         <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
-          <span>Visibility</span>
-          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.visibility || 'Public'}</span>
+          <span>Status</span>
+          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.status || 'Draft'}</span>
         </div>
 
         <button
