@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Filter, Search } from 'lucide-react';
+import { Check, ChevronDown, Filter, Search, Code, Database, Cpu, Brain, Briefcase, ChevronRight, Flame } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 import { practiceAPI } from '../services/practiceApi';
@@ -179,19 +179,53 @@ export default function QuestionCatalogPage({
   }, [availableTags, showAllTags]);
 
   const effectivePracticeTracks = useMemo(() => {
-    if (!practiceStats?.tracks) return [];
+    const defaultTracks = {
+      'DSA': { track: 'DSA', attempted: 0, total: 0, accuracy: 0, icon: <Code className="w-4 h-4 text-blue-500" /> },
+      'SQL': { track: 'SQL', attempted: 0, total: 0, accuracy: 0, icon: <Database className="w-4 h-4 text-sky-500" /> },
+      'Core CS': { track: 'Core CS', attempted: 0, total: 0, accuracy: 0, icon: <Cpu className="w-4 h-4 text-slate-500" /> },
+      'Aptitude': { track: 'Aptitude', attempted: 0, total: 0, accuracy: 0, icon: <Brain className="w-4 h-4 text-indigo-500" /> },
+      'Company': { track: 'Company', attempted: 0, total: 0, accuracy: 0, icon: <Briefcase className="w-4 h-4 text-orange-500" /> },
+    };
+
     const visibleTotals = displayQuestions.reduce((accumulator, question) => {
-      if (['DSA', 'Core CS', 'SQL', 'Aptitude'].includes(question.topic)) {
-        accumulator[question.topic] = (accumulator[question.topic] || 0) + 1;
+      const topic = question.topic === 'Company' ? 'Company' : question.topic;
+      if (['DSA', 'Core CS', 'SQL', 'Aptitude', 'Company'].includes(topic)) {
+        accumulator[topic] = (accumulator[topic] || 0) + 1;
       }
       return accumulator;
     }, {});
 
-    return practiceStats.tracks.map((track) => ({
-      ...track,
-      total: Math.max(Number(track.total || 0), visibleTotals[track.track] || 0),
-    }));
+    if (practiceStats?.tracks) {
+      practiceStats.tracks.forEach((t) => {
+        const key = t.track === 'Company' ? 'Company' : t.track;
+        if (defaultTracks[key]) {
+          defaultTracks[key].attempted = t.attempted || 0;
+          defaultTracks[key].correct = t.correct || 0;
+          defaultTracks[key].accuracy = t.accuracy || 0;
+          defaultTracks[key].total = t.total || 0;
+        }
+      });
+    }
+
+    Object.keys(defaultTracks).forEach((key) => {
+      defaultTracks[key].total = Math.max(defaultTracks[key].total, visibleTotals[key] || 0);
+    });
+
+    return Object.values(defaultTracks);
   }, [displayQuestions, practiceStats]);
+
+  const handleTrackNavigate = (trackName) => {
+    const routeMap = {
+      'DSA': '/dashboard/practice/dsa',
+      'SQL': '/dashboard/practice/sql',
+      'Core CS': '/dashboard/practice/core-cs',
+      'Aptitude': '/dashboard/practice/aptitude',
+      'Company': '/dashboard/practice/company-based',
+    };
+    if (routeMap[trackName]) {
+      navigate(routeMap[trackName]);
+    }
+  };
 
   const handleRowOpen = (question) => {
     if (!question?.topic || !question?.id) return;
@@ -260,27 +294,55 @@ export default function QuestionCatalogPage({
             </p>
           </div>
 
-          {practiceStats ? (
-            <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-5">
-              <div className="dashboard-surface dashboard-surface-strong p-4">
-                <p className="dashboard-micro-label">Practice Streak</p>
-                <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff]">{practiceStats.streak || 0}</p>
+          <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[110px] relative overflow-hidden">
+              <div className="absolute right-2 bottom-2 text-orange-500/10 dark:text-orange-500/5">
+                <Flame className="w-16 h-16" />
               </div>
-              {effectivePracticeTracks.map((track) => (
-                <div key={track.track} className="dashboard-surface p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff]">{track.track}</p>
-                    <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8]">
-                      {track.accuracy || 0}%
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
-                    {track.attempted || 0}/{track.total || 0} attempted · {track.correct || 0} correct
-                  </p>
-                </div>
-              ))}
+              <div className="flex items-center justify-between gap-2 z-10">
+                <p className="dashboard-micro-label">Practice Streak</p>
+                <Flame className="w-4 h-4 text-orange-500" />
+              </div>
+              <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff] z-10">
+                {practiceStats?.streak || 0} <span className="text-xs font-normal text-[#4c6f9a] dark:text-[#7fb8e2]">days</span>
+              </p>
             </div>
-          ) : null}
+            
+            {effectivePracticeTracks.map((track) => (
+              <button
+                key={track.track}
+                type="button"
+                onClick={() => handleTrackNavigate(track.track)}
+                className="dashboard-surface p-4 text-left border border-transparent hover:border-[#3C83F6]/45 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between min-h-[110px]"
+              >
+                <div className="w-full flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="shrink-0">{track.icon}</span>
+                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff] truncate group-hover:text-[#3C83F6] transition-colors">
+                      {track.track}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8] shrink-0 font-medium">
+                    {track.accuracy || 0}%
+                  </span>
+                </div>
+                
+                <div className="mt-3 w-full flex items-end justify-between">
+                  <div>
+                    <p className="text-[11px] text-[#4c6f9a] dark:text-[#7fb8e2] font-medium leading-none">
+                      {track.attempted || 0}/{track.total || 0} solved
+                    </p>
+                    {track.correct !== undefined && (
+                      <p className="text-[10px] text-[#4c6f9a]/75 dark:text-[#7fb8e2]/75 mt-1 leading-none">
+                        {track.correct} correct
+                      </p>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[#3C83F6] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                </div>
+              </button>
+            ))}
+          </div>
 
           <div className="dashboard-surface dashboard-surface-strong relative z-30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

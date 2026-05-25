@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -191,15 +192,19 @@ export default function Roadmaps() {
     <UserSidebarLayout maxWidthClass="max-w-[90rem]">
       <ScrollProgress />
 
-      <div className="space-y-6">
-        <section className="px-1 py-2">
-          <h1 className="dashboard-page-title">
-            {roadmapTitle}
-          </h1>
-          <p className="dashboard-page-subtitle max-w-3xl">
-            {roadmapDescription}
-          </p>
-        </section>
+      <div className="space-y-8">
+        <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+              <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
+                {roadmapTitle}.
+              </span>
+            </h1>
+            <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
+              {roadmapDescription}
+            </p>
+          </motion.div>
+        </header>
 
         <section>
           <div className="mb-6 grid gap-3 sm:grid-cols-3">

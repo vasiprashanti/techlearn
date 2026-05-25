@@ -38,6 +38,7 @@ import DashboardSettings from './pages/Dashboard/Settings'
 import Languages from './pages/Dashboard/Languages'
 import Concepts from './pages/Dashboard/Concepts'
 import ImportantConceptDetail from './pages/Dashboard/ImportantConceptDetail'
+import ResourcesHub from './pages/Dashboard/ResourcesHub'
 import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
 import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
 import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
@@ -723,6 +724,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
+             <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
             <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
             <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />

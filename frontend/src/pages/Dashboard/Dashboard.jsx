@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   FiChevronRight,
   FiClock,
@@ -235,7 +236,7 @@ export default function Dashboard() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[16.5rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
@@ -246,153 +247,144 @@ export default function Dashboard() {
               </div>
             ) : null}
 
-            <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
-                  Welcome back, {userDisplayName}.
-                </h1>
-                <p className="text-[10px] tracking-[0.25em] uppercase text-black/40 dark:text-white/40 mt-2">
-                  Student Overview
-                </p>
-              </div>
-            </header>
+            {/* Daily Challenge Card at the Top (Full Width) */}
+            <div className="rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[420px] shadow-sm mt-4">
+              <div
+                className="absolute inset-0 z-0"
+                style={{
+                  backgroundImage: `url(${heroBg})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              />
+              <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[45vh] md:min-h-[350px] shadow-sm">
-                <div
-                  className="absolute inset-0 z-0"
-                  style={{
-                    backgroundImage: `url(${heroBg})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: '65% center',
-                  }}
-                />
-                <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
-
-                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4 text-white">
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
-                    <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
-                      <FiClock className="w-3.5 h-3.5 shrink-0" />
-                      <span className="whitespace-nowrap">{todayFormatted}</span>
-                      <span className="opacity-65 text-[8px] sm:text-[9px] tracking-[0.22em] uppercase font-bold shrink-0">IST</span>
-                    </span>
-                    <span className="text-[8px] sm:text-[9px] tracking-[0.24em] uppercase font-bold text-white bg-rose-500/72 backdrop-blur-md px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
-                      Resets in 14h 22m
-                    </span>
-                  </div>
-
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
-                    {dailyChallenge.title}
-                  </h1>
-
-                  {challengeLoading ? (
-                    <div className="w-full max-w-xl space-y-3 pt-1">
-                      <PlaceholderBar className="h-4 w-full" />
-                      <PlaceholderBar className="h-4 w-5/6" />
-                      <div className="flex items-center gap-5 pt-2">
-                        <PlaceholderBar className="h-4 w-24" />
-                        <PlaceholderBar className="h-4 w-20" />
-                      </div>
-                      <PlaceholderBar className="mt-4 h-11 w-40 rounded-lg bg-white/25 dark:bg-white/15" />
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
-                        {dailyChallenge.prompt}
-                      </p>
-
-                      <div className="flex items-center gap-5 mt-1.5">
-                        <div className="flex items-center gap-2 text-sm text-white">
-                          <FiStar className="text-amber-400" />
-                          <span>+{dailyChallenge.xpReward} XP</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-white">
-                          <FiClock className="text-sky-300" />
-                          <span>~{dailyChallenge.timeEstimate}</span>
-                        </div>
-                        {latestDailyChallenge ? (
-                          <div className="flex items-center gap-2 text-sm text-white">
-                            <FiTrendingUp className="text-emerald-300" />
-                            <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <button
-                        onClick={() => navigate('/dashboard/daily-challenge')}
-                        className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
-                      >
-                        Start Challenge <FiChevronRight />
-                      </button>
-                    </>
-                  )}
+              <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4 text-white">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+                  <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
+                    <FiClock className="w-3.5 h-3.5 shrink-0" />
+                    <span className="whitespace-nowrap">{todayFormatted}</span>
+                    <span className="opacity-65 text-[8px] sm:text-[9px] tracking-[0.22em] uppercase font-bold shrink-0">IST</span>
+                  </span>
+                  <span className="text-[8px] sm:text-[9px] tracking-[0.24em] uppercase font-bold text-white bg-rose-500/72 backdrop-blur-md px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+                    Resets in 14h 22m
+                  </span>
                 </div>
-              </div>
 
-              <div className="flex flex-col gap-4 h-full">
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
-                  <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
-                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
-                    <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
-                      View Full
-                    </button>
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
+                  {dailyChallenge.title}
+                </h1>
+
+                {challengeLoading ? (
+                  <div className="w-full max-w-xl space-y-3 pt-1">
+                    <PlaceholderBar className="h-4 w-full" />
+                    <PlaceholderBar className="h-4 w-5/6" />
+                    <div className="flex items-center gap-5 pt-2">
+                      <PlaceholderBar className="h-4 w-24" />
+                      <PlaceholderBar className="h-4 w-20" />
+                    </div>
+                    <PlaceholderBar className="mt-4 h-11 w-40 rounded-lg bg-white/25 dark:bg-white/15" />
                   </div>
-                  <div className="flex-1 flex flex-col justify-around gap-2">
-                    {leaderboardLoading
-                      ? Array.from({ length: 5 }).map((_, index) => (
+                ) : (
+                  <>
+                    <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
+                      {dailyChallenge.prompt}
+                    </p>
+
+                    <div className="flex items-center gap-5 mt-1.5">
+                      <div className="flex items-center gap-2 text-sm text-white">
+                        <FiStar className="text-amber-400" />
+                        <span>+{dailyChallenge.xpReward} XP</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-white">
+                        <FiClock className="text-sky-300" />
+                        <span>~{dailyChallenge.timeEstimate}</span>
+                      </div>
+                      {latestDailyChallenge ? (
+                        <div className="flex items-center gap-2 text-sm text-white">
+                          <FiTrendingUp className="text-emerald-300" />
+                          <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <button
+                      onClick={() => navigate('/dashboard/daily-challenge')}
+                      className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
+                    >
+                      Start Challenge <FiChevronRight />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Leaderboard and Stats Cards Side-By-Side under the Daily Challenge */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+                <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
+                  <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    View Full
+                  </button>
+                </div>
+                <div className="flex-1 flex flex-col justify-around gap-2">
+                  {leaderboardLoading
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <div
+                          key={`leaderboard-loading-${index}`}
+                          className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg"
+                        >
+                          <PlaceholderBar className="h-3 w-7" />
+                          <PlaceholderBar className="h-4 flex-1 rounded-md" />
+                          <PlaceholderBar className="h-3 w-16" />
+                        </div>
+                      ))
+                    : featuredLeaderboard.map((student) => (
+                        <div
+                          key={student.userId}
+                          className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
+                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                          }`}
+                        >
                           <div
-                            key={`leaderboard-loading-${index}`}
-                            className="flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg"
-                          >
-                            <PlaceholderBar className="h-3 w-7" />
-                            <PlaceholderBar className="h-4 flex-1 rounded-md" />
-                            <PlaceholderBar className="h-3 w-16" />
-                          </div>
-                        ))
-                      : featuredLeaderboard.map((student) => (
-                          <div
-                            key={student.userId}
-                            className={`flex items-center gap-3 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                              student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                            className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
+                              student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
                             }`}
                           >
-                            <div
-                              className={`w-6 font-press-start text-[10px] text-right shrink-0 ${
-                                student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
-                              }`}
-                            >
-                              #{student.rank}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
-                                {student.name}
-                              </h4>
-                            </div>
-                            <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
-                              {student.totalXp.toLocaleString()}
-                            </div>
+                            #{student.rank}
                           </div>
-                        ))}
-                  </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`font-press-start text-[8px] md:text-[10px] truncate ml-2 leading-loose ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
+                              {student.name}
+                            </h4>
+                          </div>
+                          <div className="font-press-start text-[8px] md:text-[10px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
+                            {student.totalXp.toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                </div>
+              </div>
+
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+                <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
+                  <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
+                  <button onClick={() => navigate('/dashboard/performance')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    View Details
+                  </button>
                 </div>
 
-                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col">
-                  <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
-                    <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
-                    <span className="font-press-start text-[9px] tracking-widest text-black/35 dark:text-white/45">OVERVIEW</span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-y-4 md:gap-y-5 gap-x-2">
-                    {retroStats.map((stat) => (
-                      <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
-                          <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
-                        </div>
-                        <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
+                <div className="grid grid-cols-2 gap-y-4 md:gap-y-5 gap-x-2 my-auto">
+                  {retroStats.map((stat) => (
+                    <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
+                        <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
                       </div>
-                    ))}
-                  </div>
+                      <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
