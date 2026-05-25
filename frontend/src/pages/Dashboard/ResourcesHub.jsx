@@ -48,19 +48,23 @@ export default function ResourcesHub() {
     <UserSidebarLayout maxWidthClass="max-w-6xl">
       <div className="space-y-8 py-2 px-1">
         {/* Header Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-10"
-        >
-          <h1 className="dashboard-page-title text-3xl md:text-4xl">
-            Learning Resources
-          </h1>
-          <p className="dashboard-page-subtitle max-w-2xl mt-2">
-            Boost your computer science preparation and career development with our curated tracks, concept reviews, certificates, and resume templates.
-          </p>
-        </motion.div>
+        <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="min-w-0"
+          >
+            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+              <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
+                Resources.
+              </span>
+            </h1>
+            <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4 max-w-4xl leading-relaxed">
+              Curated tracks, computer science concept reviews, professional certificates, and resume templates.
+            </p>
+          </motion.div>
+        </header>
 
         {/* Resources Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

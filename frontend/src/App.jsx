@@ -759,7 +759,7 @@ function LayoutWrapper() {
           </Route>
           
           <Route path="/dashboard/profile" element={<Profile />} />
-          <Route path="/dashboard/profile/edit" element={<EditProfile />} />
+          <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/settings" replace />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />

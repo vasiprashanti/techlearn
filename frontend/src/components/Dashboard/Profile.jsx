@@ -110,7 +110,7 @@ const Profile = () => {
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
+                <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
                   My Profile.
                 </span>
               </h1>
@@ -118,17 +118,6 @@ const Profile = () => {
                 Manage your personal information
               </p>
             </motion.div>
-            
-            <motion.button
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 }}
-              onClick={() => navigate('/dashboard/settings')}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 border border-[#86c4ff]/50 bg-[#dbf1ff]/40 text-[#123f7b] dark:border-[#2c4a88]/50 dark:bg-[#122449]/40 dark:text-white hover:bg-[#dbf1ff] dark:hover:bg-[#122449] hover:shadow-md shrink-0 self-start md:self-end mt-4 md:mt-0"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Settings</span>
-            </motion.button>
           </header>
 
           {/* Main Content Grid */}
@@ -269,10 +258,11 @@ const Profile = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard/profile/edit')}
-                  className="dashboard-primary-btn relative z-10 mt-5"
+                  onClick={() => navigate('/dashboard/settings')}
+                  className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
                 >
-                  Edit Profile
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
                 </button>
               </div>
             </motion.div>

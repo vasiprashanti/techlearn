@@ -153,14 +153,16 @@ const Leaderboard = () => {
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
+      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[16.5rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
         <div className="max-w-[1600px] mx-auto space-y-8">
-          <header className="flex items-center pb-6 gap-3 sm:gap-4">
+          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="min-w-0">
-              <h1 className="dashboard-page-title md:text-4xl truncate">
-                Leaderboard.
+              <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+                <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
+                  Leaderboard.
+                </span>
               </h1>
-              <p className="dashboard-page-subtitle hidden sm:block truncate">
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
                 Global Rankings & Achievements
               </p>
             </MotionDiv>

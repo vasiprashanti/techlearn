@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Clock, Calendar, ArrowRight, Code } from "lucide-react";
+import { Clock, Calendar, ArrowRight, ArrowLeft, Code } from "lucide-react";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI, dataAdapters } from "../../services/api";
 import { useTheme } from '../../context/ThemeContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Carousel,
   CarouselContent,
@@ -48,6 +49,18 @@ export default function Courses() {
   const onlineCoursesSectionRef = useRef(null);
   const isDarkMode = theme === 'dark';
   const cachedCourses = readCachedCourses();
+
+  // Embla API Instances for scroll control
+  const [selfPacedApi, setSelfPacedApi] = useState(null);
+  const [expertLedApi, setExpertLedApi] = useState(null);
+
+  // Self-Paced Scroll Boundary States
+  const [canScrollPrevSelf, setCanScrollPrevSelf] = useState(false);
+  const [canScrollNextSelf, setCanScrollNextSelf] = useState(true);
+
+  // Expert-Led Scroll Boundary States
+  const [canScrollPrevExpert, setCanScrollPrevExpert] = useState(false);
+  const [canScrollNextExpert, setCanScrollNextExpert] = useState(true);
 
   const levelTagStyles = {
     Beginner: 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]',
@@ -102,7 +115,7 @@ export default function Courses() {
     };
 
     fetchCourses();
-  }, [cachedCourses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const shouldScrollToOnlineCourses = sessionStorage.getItem('returnToOnlineCourses');
@@ -125,14 +138,71 @@ export default function Courses() {
     }
   }, [loading]);
 
-  const handleCourseClick = (courseId) => {
-    navigate(`/learn/courses/${courseId}`);
-  };
+  // Hook scroll boundaries trackers for Self-Paced
+  useEffect(() => {
+    if (!selfPacedApi) return;
+    
+    const onSelect = () => {
+      setCanScrollPrevSelf(selfPacedApi.canScrollPrev());
+      setCanScrollNextSelf(selfPacedApi.canScrollNext());
+    };
+
+    selfPacedApi.on("select", onSelect);
+    selfPacedApi.on("reInit", onSelect);
+    
+    onSelect();
+
+    return () => {
+      selfPacedApi.off("select", onSelect);
+      selfPacedApi.off("reInit", onSelect);
+    };
+  }, [selfPacedApi]);
+
+  // Hook scroll boundaries trackers for Expert-Led
+  useEffect(() => {
+    if (!expertLedApi) return;
+    
+    const onSelect = () => {
+      setCanScrollPrevExpert(expertLedApi.canScrollPrev());
+      setCanScrollNextExpert(expertLedApi.canScrollNext());
+    };
+
+    expertLedApi.on("select", onSelect);
+    expertLedApi.on("reInit", onSelect);
+    
+    onSelect();
+
+    return () => {
+      expertLedApi.off("select", onSelect);
+      expertLedApi.off("reInit", onSelect);
+    };
+  }, [expertLedApi]);
 
   const handleWhatsAppClick = (courseTitle) => {
     const message = `Hi! I'd like to join the waitlist for ${courseTitle}. Can you share more details?`;
     const whatsappUrl = `https://wa.me/919676663136?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  // Custom navigation arrow button
+  const NavArrow = ({ direction, onClick }) => {
+    const isLeft = direction === 'left';
+    return (
+      <motion.button
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.8 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        type="button"
+        onClick={onClick}
+        className={`absolute z-30 top-1/2 -translate-y-1/2 p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#0a1128]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center ${
+          isLeft ? 'left-2 md:-left-5' : 'right-2 md:-right-5'
+        }`}
+      >
+        {isLeft ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+      </motion.button>
+    );
   };
 
   if (loading) {
@@ -144,129 +214,173 @@ export default function Courses() {
       <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
-          <section className="pt-6">
+          <section className="pt-6 space-y-10">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
               <div>
-                <h2 className="dashboard-page-title">
-                  Courses
-                </h2>
-                <p className="dashboard-page-subtitle mt-2">
-                  Pick a track and start building skills
+                <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+                  <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
+                    Courses.
+                  </span>
+                </h1>
+                <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4 max-w-4xl leading-relaxed">
+                  Pick a track, enroll in self-paced or expert-led learning courses, and start building skills.
                 </p>
               </div>
             </header>
 
-            <div className="mb-8 mt-6">
-              {error && (
-                <div className="text-left py-2 mb-4">
-                  <p className="text-sm text-red-500 dark:text-red-400">Failed to load courses: {error}. Showing fallback data.</p>
-                </div>
-              )}
-
-              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 md:gap-6">
-                {coursesData.map((course) => (
-                  <div
-                    key={course.id}
-                    onClick={() => handleCourseClick(course.id)}
-                    className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1"
-                  >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
-
-                    <div className="relative z-10 flex items-start justify-between mb-5 min-h-[52px]">
-                      <div className="dashboard-icon-badge group-hover:scale-110 transition-transform duration-500">
-                        <Code className="w-5 h-5 text-[#3C83F6] dark:text-[#8fd9ff]" />
-                      </div>
-                    </div>
-
-                    <div className="relative z-10 mt-auto">
-                      <h3 className="text-2xl md:text-[1.9rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
-                        {course.title}
-                      </h3>
-                      <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
-                        {course.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            {error && (
+              <div className="text-left py-2">
+                <p className="text-sm text-red-500 dark:text-red-400">Failed to load courses: {error}. Showing fallback data.</p>
               </div>
+            )}
 
-            </div>
-          </section>
+            {/* Subsection 1: Self-Paced Courses */}
+            <div className="space-y-6">
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
+                <span className="w-1.5 h-6 rounded-full bg-[#3C83F6]" />
+                Self-Paced Courses
+              </h3>
 
-          <section
-            ref={onlineCoursesSectionRef}
-            className="pb-4"
-          >
-            <div className="mb-8">
-              <div className="flex items-center">
-                <h2 className="dashboard-page-title">
-                  Online Courses
-                </h2>
-              </div>
-            </div>
-
-            <div className="relative px-2 mb-8">
-              <Carousel
-                opts={{ align: "start", loop: true, dragFree: true, slidesToScroll: 1 }}
-                className="w-full max-w-full"
-              >
-                <CarouselContent className="-ml-2 py-4">
-                  {onlineCourses.map((batch, index) => (
-                    <CarouselItem
-                      key={batch.id}
-                      className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
-                    >
-                      <div
-                        className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
+              <div className="relative px-2 group">
+                <Carousel
+                  setApi={setSelfPacedApi}
+                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: false }}
+                  className="w-full max-w-full"
+                >
+                  <CarouselContent className="-ml-2 py-4">
+                    {coursesData.map((course) => (
+                      <CarouselItem
+                        key={course.id}
+                        className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
                       >
-                        <div className="flex justify-between items-center mb-6">
-                          <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
-                            {batch.level}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-widest text-[#4f719c] dark:text-[#8ac7f3] transition-colors">
-                            By {batch.instructor}
-                          </span>
-                        </div>
-
-                        <div className={`mb-5 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 bg-gradient-to-r ${bannerStyles[index % bannerStyles.length]} flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]`}>
-                          <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#08295e]/85">
-                            Banner Space
-                          </span>
-                        </div>
-
-                        <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2c7de4] dark:group-hover:text-[#9adfff] transition-colors mb-6">
-                          {batch.title}
-                        </h3>
-
-                        <div className="grid grid-cols-2 gap-y-5 gap-x-8 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
-                          <div className="flex items-start gap-2.5">
-                            <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
-                            <div className="flex flex-col">
-                              <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.time}</span>
-                              <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">{batch.duration}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-2.5">
-                            <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
-                            <div className="flex flex-col">
-                              <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
-                              <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">Recurring</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => handleWhatsAppClick(batch.title)}
-                          className="dashboard-primary-btn mt-auto w-full py-3"
+                        <div
+                          onClick={() => navigate(`/learn/courses/${course.id}`)}
+                          className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1 h-full"
                         >
-                          Join Waitlist <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+
+                          <div className="relative z-10 flex items-start justify-between mb-5 min-h-[52px]">
+                            <div className="dashboard-icon-badge group-hover:scale-110 transition-transform duration-500">
+                              <Code className="w-5 h-5 text-[#3C83F6] dark:text-[#8fd9ff]" />
+                            </div>
+                          </div>
+
+                          <div className="relative z-10 mt-auto">
+                            <h3 className="text-xl md:text-[1.6rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
+                              {course.title}
+                            </h3>
+                            <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
+                              {course.description}
+                            </p>
+                          </div>
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+
+                <AnimatePresence>
+                  {canScrollPrevSelf && (
+                    <NavArrow direction="left" onClick={() => selfPacedApi?.scrollPrev()} />
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {canScrollNextSelf && (
+                    <NavArrow direction="right" onClick={() => selfPacedApi?.scrollNext()} />
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
+
+            {/* Subsection 2: Expert-Led Courses */}
+            <div
+              ref={onlineCoursesSectionRef}
+              className="space-y-6 pt-4"
+            >
+              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
+                <span className="w-1.5 h-6 rounded-full bg-[#3C83F6]" />
+                Expert-Led Courses
+              </h3>
+
+              <div className="relative px-2 group">
+                <Carousel
+                  setApi={setExpertLedApi}
+                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: false }}
+                  className="w-full max-w-full"
+                >
+                  <CarouselContent className="-ml-2 py-4">
+                    {onlineCourses.map((batch, index) => (
+                      <CarouselItem
+                        key={batch.id}
+                        className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
+                      >
+                        <div
+                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
+                        >
+                          <div className="flex justify-between items-center mb-6">
+                            <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
+                              {batch.level}
+                            </span>
+                            <span className="text-[10px] uppercase tracking-widest text-[#4f719c] dark:text-[#8ac7f3] transition-colors">
+                              By {batch.instructor}
+                            </span>
+                          </div>
+
+                          <div className={`mb-5 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 bg-gradient-to-r ${bannerStyles[index % bannerStyles.length]} flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]`}>
+                            <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#08295e]/85">
+                              Banner Space
+                            </span>
+                          </div>
+
+                          <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2c7de4] dark:group-hover:text-[#9adfff] transition-colors mb-6">
+                            {batch.title}
+                          </h3>
+
+                          <div className="grid grid-cols-2 gap-y-5 gap-x-8 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
+                            <div className="flex items-start gap-2.5">
+                              <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
+                              <div className="flex flex-col">
+                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.time}</span>
+                                <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">{batch.duration}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-2.5">
+                              <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
+                              <div className="flex flex-col">
+                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
+                                <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">Recurring</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleWhatsAppClick(batch.title)}
+                            className="dashboard-secondary-btn mt-auto w-full py-3 flex items-center justify-center gap-2"
+                          >
+                            <span>Join Waitlist</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+
+                <AnimatePresence>
+                  {canScrollPrevExpert && (
+                    <NavArrow direction="left" onClick={() => expertLedApi?.scrollPrev()} />
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {canScrollNextExpert && (
+                    <NavArrow direction="right" onClick={() => expertLedApi?.scrollNext()} />
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
           </section>
         </div>
       </main>
