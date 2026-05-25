@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -68,8 +68,9 @@ const menuGroups = [
 ];
 
 const SCROLL_KEY = 'student-sidebar-scroll';
+const userNavItems = menuGroups.flatMap((group) => group.items);
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
@@ -104,35 +105,63 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
     }
   };
 
-  const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="space-y-6 pb-12">
-      {menuGroups.map((group, idx) => (
-        <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:text-white/72 px-4">
-            {group.title}
-          </h4>
-          <div className="space-y-0.5">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.id}
-                to={`/${item.id}`}
-                end
-                onClick={onClickAction}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
-                  ${
-                    isActive
-                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
-                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
-                  }`
-                }
-              >
-                {item.icon}
-                <span>{item.title}</span>
-              </NavLink>
-            ))}
-          </div>
-        </div>
+  const compactLabel = (title) => {
+    const labels = {
+      "Daily Challenge": "Daily",
+      "SQL Practice": "SQL",
+      "DSA Practice": "DSA",
+      "Company-Based Questions": "Company",
+      "Free Courses": "Courses",
+      "Important Concepts": "Concepts",
+      "Free Certifications": "Certs",
+      "Resume Templates": "Resume",
+    };
+    return labels[title] || title;
+  };
+
+  const renderRailLinks = (onClickAction = () => {}) => (
+    <div className="flex min-h-full w-full flex-col items-center gap-2 py-2">
+      {userNavItems.map((item) => (
+        <NavLink
+          key={item.id}
+          to={`/${item.id}`}
+          end
+          onClick={onClickAction}
+          title={item.title}
+          className={({ isActive }) =>
+            `group shrink-0 w-[60px] h-[54px] flex flex-col items-center justify-center rounded-[14px] transition-all duration-200 ease-out ${
+              isActive
+                ? "bg-[#0000a8] text-white shadow-[0_10px_24px_rgba(0,0,168,0.24)]"
+                : "text-slate-500 dark:text-slate-300 hover:bg-[#0000a8]/10 hover:text-[#0000a8] dark:hover:bg-[#0000a8]/35 dark:hover:text-white hover:-translate-y-0.5"
+            }`
+          }
+        >
+          <span className="[&>svg]:w-4 [&>svg]:h-4">{item.icon}</span>
+          <span className="mt-1 max-w-[54px] truncate text-[10px] font-semibold leading-none">{compactLabel(item.title)}</span>
+        </NavLink>
+      ))}
+    </div>
+  );
+
+  const renderMobileLinks = (onClickAction = () => {}) => (
+    <div className="grid grid-cols-3 gap-2 pb-6">
+      {userNavItems.map((item) => (
+        <NavLink
+          key={item.id}
+          to={`/${item.id}`}
+          end
+          onClick={onClickAction}
+          className={({ isActive }) =>
+            `h-[62px] rounded-[14px] flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-all ${
+              isActive
+                ? "bg-[#0000a8] text-white"
+                : "text-slate-500 dark:text-slate-300 hover:bg-[#0000a8]/10 hover:text-[#0000a8] dark:hover:text-white"
+            }`
+          }
+        >
+          {item.icon}
+          <span className="max-w-[76px] truncate">{compactLabel(item.title)}</span>
+        </NavLink>
       ))}
     </div>
   );
@@ -143,41 +172,23 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
 
   return (
     <>
-      <style>{`
-        @media (max-width: 1024px) {
-          main header {
-            padding-left: 3.5rem !important;
-            transition: padding 0.3s ease-in-out;
-          }
-        }
-      `}</style>
-
-      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-black/40 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-white/5 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
-        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
-          <style>{`
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 1px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #3C83F6;
-              border-radius: 1px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #2563eb;
-            }
-          `}</style>
-          <div className="custom-scrollbar">
-            {renderNavLinks()}
-          </div>
+      <aside className="hidden lg:flex fixed left-0 top-0 z-50 h-screen w-[90px] flex-col items-center border-r border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#020b23]/95 backdrop-blur-xl py-4 shadow-[8px_0_24px_rgba(15,23,42,0.04)]">
+        <NavLink to="/dashboard" aria-label="TechLearn Solutions" className="mb-5 flex h-[56px] w-[56px] items-center justify-center overflow-hidden rounded-2xl">
+          <img src="/logoo.png" alt="TechLearn Solutions" className="h-full w-full object-contain" />
+        </NavLink>
+        <div
+          ref={desktopNavRef}
+          onScroll={handleDesktopScroll}
+          className="flex-1 w-full overflow-y-auto overflow-x-hidden px-[15px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {renderRailLinks()}
         </div>
-      </div>
+      </aside>
 
       <button
         onClick={() => setMobileMenuOpen(true)}
         className="lg:hidden fixed top-24 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+        aria-label="Open menu"
       >
         <FiSidebar className="w-[22px] h-[22px]" />
       </button>
@@ -185,34 +196,28 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setMobileMenuOpen(false)}
               className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-black/40 border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+            <div
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-[21rem] max-w-[88vw] bg-white dark:bg-[#020b23] border-r border-black/5 dark:border-white/10 z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+                <img src="/logoo.png" alt="TechLearn Solutions" className="h-12 w-12 object-contain" />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+                  aria-label="Close menu"
                 >
                   <FiX className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide">
-                {renderNavLinks(() => setMobileMenuOpen(false))}
+                {renderMobileLinks(() => setMobileMenuOpen(false))}
               </div>
-            </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

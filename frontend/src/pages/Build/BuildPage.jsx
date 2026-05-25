@@ -69,7 +69,7 @@ const BuildPage = () => {
       {/* Sidebar */}
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}>
+      <main className="flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-8 pb-12 px-6 md:px-12 lg:px-16 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-8">
           
           {/* Header */}

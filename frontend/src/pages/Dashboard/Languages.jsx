@@ -46,7 +46,7 @@ const Languages = () => {
 
       <main
         className={`flex-1 transition-all duration-700 ease-in-out z-10 ${
-          sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+          "lg:ml-[90px]"
         } pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
       >
         <div style={{ padding: "28px 32px" }}>

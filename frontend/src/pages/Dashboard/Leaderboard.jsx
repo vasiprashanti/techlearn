@@ -153,7 +153,7 @@ const Leaderboard = () => {
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[20rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
+      <main className="flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-8">
           <header className="flex items-center pb-6 gap-3 sm:gap-4">
             <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="min-w-0">
