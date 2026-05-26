@@ -13,6 +13,7 @@ import {
 
 const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
 const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
+const MotionButton = motion.button;
 
 const readCachedCourses = () => {
   try {
@@ -86,9 +87,9 @@ export default function Courses() {
   ];
 
   const onlineCourses = [
-    { id: "python-programming", title: "Python Programming", instructor: "Prashanti Vasi", duration: "2 weeks", schedule: "Mon-Sat", time: "11:30 AM - 12:30 PM", startDate: "In Progress", level: "Beginner" },
-    { id: "dsa-with-java", title: "DSA with Java", instructor: "Prashanti Vasi", duration: "3 weeks", schedule: "Mon-Sat", time: "10:00 AM - 11:00 AM", startDate: "In Progress", level: "Intermediate" },
-    { id: "dsa-with-python", title: "DSA with Python", instructor: "Prashanti Vasi", duration: "3 weeks", schedule: "Mon-Sat", time: "10:00 AM - 11:00 AM", startDate: "In Progress", level: "Intermediate" },
+    { id: "python-programming", title: "Python Programming", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Beginner" },
+    { id: "dsa-with-java", title: "DSA with Java", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate" },
+    { id: "dsa-with-python", title: "DSA with Python", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate" },
     { id: "web-development", title: "Web Development", instructor: "Jyotsna", duration: "3 weeks", schedule: "Mon-Sat", time: "6:00 PM - 7:00 PM", startDate: "In Progress", level: "Beginner" },
     { id: "java-core", title: "Java (Core)", instructor: "Prashanti Vasi", duration: "TBD", schedule: "Mon-Sat", time: "(Not listed)", startDate: "In Progress", level: "Intermediate" }
   ];
@@ -188,7 +189,7 @@ export default function Courses() {
   const NavArrow = ({ direction, onClick }) => {
     const isLeft = direction === 'left';
     return (
-      <motion.button
+      <MotionButton
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
@@ -201,7 +202,7 @@ export default function Courses() {
         }`}
       >
         {isLeft ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
-      </motion.button>
+      </MotionButton>
     );
   };
 
@@ -254,7 +255,7 @@ export default function Courses() {
                         className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
                       >
                         <div
-                          onClick={() => navigate(`/learn/courses/${course.id}`)}
+                          onClick={() => navigate(`/learn/courses/${course.id}/topics`)}
                           className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1 h-full"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
@@ -341,8 +342,7 @@ export default function Courses() {
                             <div className="flex items-start gap-2.5">
                               <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
                               <div className="flex flex-col">
-                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.time}</span>
-                                <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">{batch.duration}</span>
+                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
                               </div>
                             </div>
                             <div className="flex items-start gap-2.5">
@@ -356,7 +356,7 @@ export default function Courses() {
 
                           <button
                             onClick={() => handleWhatsAppClick(batch.title)}
-                            className="dashboard-secondary-btn mt-auto w-full py-3 flex items-center justify-center gap-2"
+                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:hover:bg-[#001b5c]"
                           >
                             <span>Join Waitlist</span>
                             <ArrowRight className="w-4 h-4" />

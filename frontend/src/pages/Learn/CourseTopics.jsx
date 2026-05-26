@@ -6,11 +6,14 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
-import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, AlertCircle } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
 import { useTheme } from '../../context/ThemeContext';
+
+const MotionDiv = motion.div;
+const MotionH1 = motion.h1;
 
 const CourseTopics = () => {
   const { theme } = useTheme();
@@ -19,7 +22,6 @@ const CourseTopics = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
   
-  const [courseSidebarCollapsed, setCourseSidebarCollapsed] = useState(false);
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState(0);
@@ -77,7 +79,6 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
-  const courseSidebarWidthClass = courseSidebarCollapsed ? "md:w-20" : "md:w-72";
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
@@ -188,26 +189,8 @@ const CourseTopics = () => {
         </header>
 
         <aside
-          className={`hidden md:flex fixed z-30 left-0 top-[112px] h-[calc(100vh-112px)] flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out ${courseSidebarWidthClass}`}
+          className="hidden md:flex fixed z-30 left-0 top-[132px] h-[calc(100vh-132px)] w-72 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
         >
-          <div className="flex items-center justify-between gap-3 px-4 py-4 border-b border-black/5 dark:border-white/5">
-            <div className={`${courseSidebarCollapsed ? "hidden" : "block"} min-w-0`}>
-              <span className="block text-sm uppercase tracking-[0.18em] font-semibold text-black/55 dark:text-white/80">
-                Chapters
-              </span>
-              <span className="block mt-1 text-xs font-medium text-black/55 dark:text-white/60">
-                {totalTopics} chapters
-              </span>
-            </div>
-            <button
-              onClick={() => setCourseSidebarCollapsed((prev) => !prev)}
-              className="dashboard-inner-surface flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-black/55 dark:text-white/70 transition-all hover:text-black dark:hover:text-white"
-              aria-label={courseSidebarCollapsed ? "Expand course topics sidebar" : "Collapse course topics sidebar"}
-            >
-              {courseSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-            </button>
-          </div>
-
           <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="space-y-2">
               {currentCourse.topics.map((topic, index) => {
@@ -221,29 +204,11 @@ const CourseTopics = () => {
                       isActive
                         ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
                         : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
-                    } ${courseSidebarCollapsed ? "justify-center px-2" : ""}`}
-                    title={courseSidebarCollapsed ? topic.title : undefined}
+                    }`}
                   >
-                    <div
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold transition-colors ${
-                        isActive
-                          ? "border border-black/10 bg-white text-[#020b23] shadow-md dark:border-white/10 dark:bg-black/30 dark:text-white"
-                          : "border border-black/10 bg-white text-black/65 dark:border-white/10 dark:bg-black/30 dark:text-white/75"
-                      }`}
-                    >
-                      {index + 1}
-                    </div>
-
-                    {!courseSidebarCollapsed && (
-                      <div className="min-w-0 flex-1 self-center">
-                        <span className="block text-[9px] uppercase tracking-[0.16em] font-semibold text-black/35 dark:text-white/45 leading-none">
-                          Chapter {index + 1}
-                        </span>
-                        <span className="mt-1 block text-sm font-medium leading-tight line-clamp-2">
-                          {topic.title}
-                        </span>
-                      </div>
-                    )}
+                    <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
+                      {topic.title}
+                    </span>
                   </button>
                 );
               })}
@@ -255,23 +220,22 @@ const CourseTopics = () => {
         <AnimatePresence>
           {isSyllabusOpen && (
             <>
-              <motion.div 
+              <MotionDiv 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
                 onClick={() => setIsSyllabusOpen(false)} 
                 className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40" 
               />
-              <motion.div 
+              <MotionDiv 
                 initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
                 className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl md:hidden"
               >
                 <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
                   <div>
-                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Chapter List</span>
-                    <span className="text-xs font-medium text-black/50 dark:text-white/50">{totalTopics} Chapters Total</span>
+                    <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                    <PanelLeftClose className="w-4 h-4 text-black/60 dark:text-white/60" />
+                    <ChevronRight className="w-4 h-4 text-black/60 dark:text-white/60" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -281,14 +245,11 @@ const CourseTopics = () => {
                       onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }} 
                       className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-300 ${selectedTopic === index ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white border border-black/5 dark:border-white/5 shadow-sm' : 'text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'}`}
                      >
-                       <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-[11px] font-medium transition-colors ${selectedTopic === index ? 'bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black shadow-md' : 'bg-white dark:bg-black/50 border border-black/10 dark:border-white/10'}`}>
-                         {index + 1}
-                       </div>
                        <span className="text-sm font-medium line-clamp-2 pr-4 leading-relaxed">{topic.title}</span>
                      </button>
                   ))}
                 </div>
-              </motion.div>
+              </MotionDiv>
             </>
           )}
         </AnimatePresence>
@@ -296,9 +257,7 @@ const CourseTopics = () => {
         {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
         <div 
           ref={scrollContainerRef} 
-          className={`flex-1 overflow-y-auto px-4 md:px-8 pt-4 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${
-            courseSidebarCollapsed ? "md:pl-28" : "md:pl-80"
-          }`}
+          className="flex-1 overflow-y-auto px-4 md:px-8 pt-0 pb-10 relative transition-all duration-500 ease-out md:pl-80 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           <div className="max-w-[800px] mx-auto pb-20">
 
@@ -307,17 +266,10 @@ const CourseTopics = () => {
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#3C83F6]/10 dark:bg-white/5 rounded-full mb-6 border border-[#3C83F6]/20 dark:border-white/10">
-                  <div className="w-2 h-2 rounded-full bg-[#3C83F6] dark:bg-white animate-pulse"></div>
-                  <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-bold">
-                    Chapters
-                  </span>
-                </div>
-                
                 {/* Swapped out useInViewport for a Framer Motion component tied to a key.
                   This forces React to completely unmount and re-animate the title whenever the selectedTopic changes.
                 */}
-                <motion.h1 
+                <MotionH1 
                   key={selectedTopic}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -325,7 +277,7 @@ const CourseTopics = () => {
                   className="text-3xl md:text-4xl lg:text-5xl font-medium text-black dark:text-white tracking-tight leading-[1.2]"
                 >
                   {currentTopic?.title}
-                </motion.h1>
+                </MotionH1>
               </div>
 
               {/* Dynamic Content - Added CSS rules to strictly strip top margin from the very first Markdown element */}
