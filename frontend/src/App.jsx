@@ -642,7 +642,6 @@ function LayoutWrapper() {
     location.pathname.startsWith('/core-prep/important-concepts') ||
     location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname.startsWith('/resources/resume-templates') ||
-    location.pathname.startsWith('/learn/courses') ||
     location.pathname.startsWith('/learn/exercises') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
