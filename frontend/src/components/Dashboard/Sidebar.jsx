@@ -28,6 +28,7 @@ const Sidebar = () => {
   const location = useLocation();
   const { theme } = useTheme();
   const logoSrc = theme === "dark" ? "/logoo2.png" : "/logoo.png";
+  const lightSidebarSurface = theme === "dark" ? undefined : { background: "#bceaff" };
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
@@ -120,7 +121,10 @@ const Sidebar = () => {
 
   return (
     <>
-      <aside className="hidden lg:flex fixed left-0 top-0 z-50 h-screen w-[90px] flex-col items-center border-r border-sky-100/70 dark:border-white/10 bg-[#bceaff] dark:bg-[#020b23] backdrop-blur-xl py-4 shadow-[8px_0_24px_rgba(15,23,42,0.04)]">
+      <aside
+        style={lightSidebarSurface}
+        className="hidden lg:flex fixed left-0 top-0 z-50 h-screen w-[90px] flex-col items-center border-r border-sky-100/70 dark:border-white/10 bg-[#bceaff] dark:bg-[#020b23] py-4 shadow-[8px_0_24px_rgba(15,23,42,0.04)]"
+      >
         <NavLink to="/dashboard" aria-label="TechLearn Solutions" className="mb-5 flex h-[56px] w-[56px] items-center justify-center overflow-hidden rounded-2xl">
           <img src={logoSrc} alt="TechLearn Solutions" className="h-full w-full object-contain" />
         </NavLink>
@@ -149,6 +153,7 @@ const Sidebar = () => {
               className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
             />
             <div
+              style={lightSidebarSurface}
               className="lg:hidden fixed left-0 top-0 bottom-0 w-[21rem] max-w-[88vw] bg-[#bceaff] dark:bg-[#020b23] border-r border-sky-100/70 dark:border-white/10 z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
