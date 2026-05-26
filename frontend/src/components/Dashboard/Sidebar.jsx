@@ -5,70 +5,21 @@ import {
   FiX,
   FiSidebar,
   FiGrid,
-  FiTarget,
   FiMap,
   FiPlayCircle,
-  FiCpu,
-  FiBarChart2,
   FiAward,
-  FiBook,
-  FiLayers,
-  FiFileText,
   FiUser,
-  FiSettings,
-  FiDatabase,
-  FiCode,
-  FiBriefcase,
-  FiCheckCircle
 } from "react-icons/fi";
 
-const menuGroups = [
-  {
-    title: "MAIN",
-    items: [
-      { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "dashboard/daily-challenge", title: "Daily Challenge", icon: <FiTarget className="w-4 h-4" /> },
-      { id: "dashboard/roadmap", title: "Roadmap", icon: <FiMap className="w-4 h-4" /> },
-      { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "PRACTICE",
-    items: [
-      { id: "dashboard/practice/core-cs", title: "Core CS", icon: <FiCpu className="w-4 h-4" /> },
-      { id: "dashboard/practice/aptitude", title: "Aptitude", icon: <FiCheckCircle className="w-4 h-4" /> },
-      { id: "dashboard/practice/sql", title: "SQL Practice", icon: <FiDatabase className="w-4 h-4" /> },
-      { id: "dashboard/practice/dsa", title: "DSA Practice", icon: <FiCode className="w-4 h-4" /> },
-      { id: "dashboard/practice/company-based", title: "Company-Based Questions", icon: <FiBriefcase className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "PERFORMANCE",
-    items: [
-      { id: "dashboard/performance", title: "Performance", icon: <FiBarChart2 className="w-4 h-4" /> },
-      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "RESOURCES",
-    items: [
-      { id: "dashboard/resources/free-courses", title: "Free Courses", icon: <FiBook className="w-4 h-4" /> },
-      { id: "dashboard/resources/important-concepts", title: "Important Concepts", icon: <FiLayers className="w-4 h-4" /> },
-      { id: "dashboard/resources/free-certifications", title: "Free Certifications", icon: <FiAward className="w-4 h-4" /> },
-      { id: "dashboard/resources/resume-templates", title: "Resume Templates", icon: <FiFileText className="w-4 h-4" /> },
-    ]
-  },
-  {
-    title: "ACCOUNT",
-    items: [
-      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
-      { id: "dashboard/settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
-    ]
-  }
+const userNavItems = [
+  { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
+  { id: "dashboard/roadmap", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
+  { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-4 h-4" /> },
+  { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
+  { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
 ];
 
 const SCROLL_KEY = 'student-sidebar-scroll';
-const userNavItems = menuGroups.flatMap((group) => group.items);
 
 const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -105,18 +56,12 @@ const Sidebar = () => {
     }
   };
 
-  const compactLabel = (title) => {
-    const labels = {
-      "Daily Challenge": "Daily",
-      "SQL Practice": "SQL",
-      "DSA Practice": "DSA",
-      "Company-Based Questions": "Company",
-      "Free Courses": "Courses",
-      "Important Concepts": "Concepts",
-      "Free Certifications": "Certs",
-      "Resume Templates": "Resume",
-    };
-    return labels[title] || title;
+  const isItemActive = (item) => {
+    const path = `/${item.id}`;
+    if (item.id === 'dashboard') return location.pathname === path;
+    if (item.id === 'dashboard/practice') return location.pathname.startsWith(path);
+    if (item.id === 'dashboard/profile') return location.pathname.startsWith(path);
+    return location.pathname === path;
   };
 
   const renderRailLinks = (onClickAction = () => {}) => (
@@ -125,19 +70,19 @@ const Sidebar = () => {
         <NavLink
           key={item.id}
           to={`/${item.id}`}
-          end
+          end={item.id === 'dashboard'}
           onClick={onClickAction}
           title={item.title}
-          className={({ isActive }) =>
+          className={() =>
             `group shrink-0 w-[60px] h-[54px] flex flex-col items-center justify-center rounded-[14px] transition-all duration-200 ease-out ${
-              isActive
+              isItemActive(item)
                 ? "bg-[#0000a8] text-white shadow-[0_10px_24px_rgba(0,0,168,0.24)]"
                 : "text-slate-500 dark:text-slate-300 hover:bg-[#0000a8]/10 hover:text-[#0000a8] dark:hover:bg-[#0000a8]/35 dark:hover:text-white hover:-translate-y-0.5"
             }`
           }
         >
           <span className="[&>svg]:w-4 [&>svg]:h-4">{item.icon}</span>
-          <span className="mt-1 max-w-[54px] truncate text-[10px] font-semibold leading-none">{compactLabel(item.title)}</span>
+          <span className="mt-1 max-w-[54px] truncate text-[10px] font-semibold leading-none">{item.title}</span>
         </NavLink>
       ))}
     </div>
@@ -149,18 +94,18 @@ const Sidebar = () => {
         <NavLink
           key={item.id}
           to={`/${item.id}`}
-          end
+          end={item.id === 'dashboard'}
           onClick={onClickAction}
-          className={({ isActive }) =>
+          className={() =>
             `h-[62px] rounded-[14px] flex flex-col items-center justify-center gap-1 text-xs font-semibold transition-all ${
-              isActive
+              isItemActive(item)
                 ? "bg-[#0000a8] text-white"
                 : "text-slate-500 dark:text-slate-300 hover:bg-[#0000a8]/10 hover:text-[#0000a8] dark:hover:text-white"
             }`
           }
         >
           {item.icon}
-          <span className="max-w-[76px] truncate">{compactLabel(item.title)}</span>
+          <span className="max-w-[76px] truncate">{item.title}</span>
         </NavLink>
       ))}
     </div>

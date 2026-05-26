@@ -5,7 +5,30 @@ import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 import { practiceAPI } from '../services/practiceApi';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
-const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
+const defaultTopicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
+const dashboardPracticeTopicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Aptitude'];
+const dashboardPracticeTracks = [
+  {
+    title: 'DSA',
+    description: 'Timed coding and problem-solving practice.',
+    path: '/dashboard/practice/dsa',
+  },
+  {
+    title: 'SQL',
+    description: 'Database queries and interview patterns.',
+    path: '/dashboard/practice/sql',
+  },
+  {
+    title: 'Core CS',
+    description: 'Operating systems, networks, DBMS, and fundamentals.',
+    path: '/dashboard/practice/core-cs',
+  },
+  {
+    title: 'Aptitude',
+    description: 'Quantitative, logical, and placement aptitude drills.',
+    path: '/dashboard/practice/aptitude',
+  },
+];
 const INITIAL_VISIBLE_TAGS = 10;
 
 const difficultyPillClass = {
@@ -84,6 +107,9 @@ export default function QuestionCatalogPage({
   const [remoteQuestions, setRemoteQuestions] = useState([]);
   const [practiceStats, setPracticeStats] = useState(null);
   const dropdownRef = useRef(null);
+  const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/practice');
+  const isDashboardPracticeIndex = location.pathname === '/dashboard/practice';
+  const topicOptions = isDashboardPracticeRoute ? dashboardPracticeTopicOptions : defaultTopicOptions;
 
   useEffect(() => {
     setSelectedTopic(lockedTopic || 'All Topics');
@@ -96,7 +122,6 @@ export default function QuestionCatalogPage({
 
   useEffect(() => {
     let cancelled = false;
-    const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/practice');
 
     practiceAPI
       .getQuestions(lockedTopic)
@@ -121,15 +146,17 @@ export default function QuestionCatalogPage({
     return () => {
       cancelled = true;
     };
-  }, [lockedTopic, location.pathname]);
+  }, [lockedTopic, location.pathname, isDashboardPracticeRoute]);
 
   const displayQuestions = useMemo(() => {
     const merged = new Map();
     [...questions, ...remoteQuestions].forEach((question) => {
       if (question?.id) merged.set(String(question.id), question);
     });
-    return [...merged.values()];
-  }, [questions, remoteQuestions]);
+    const mergedQuestions = [...merged.values()];
+    if (!isDashboardPracticeRoute) return mergedQuestions;
+    return mergedQuestions.filter((question) => dashboardPracticeTopicOptions.includes(question.topic));
+  }, [questions, remoteQuestions, isDashboardPracticeRoute]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -279,6 +306,36 @@ export default function QuestionCatalogPage({
                   </p>
                 </div>
               ))}
+            </div>
+          ) : null}
+
+          {isDashboardPracticeIndex ? (
+            <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {dashboardPracticeTracks.map((track) => {
+                const stats = effectivePracticeTracks.find((entry) => entry.track === track.title);
+
+                return (
+                  <button
+                    key={track.title}
+                    type="button"
+                    onClick={() => navigate(track.path)}
+                    className="dashboard-surface group p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/54 dark:hover:bg-[#0f2c60]/72"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-base font-semibold text-[#0d2a57] dark:text-[#dff3ff]">{track.title}</h2>
+                      <span className="rounded-full bg-[#0000a8] px-2.5 py-1 text-xs font-semibold text-white">
+                        {stats?.total || 0}
+                      </span>
+                    </div>
+                    <p className="mt-2 min-h-10 text-sm leading-5 text-[#4c6f9a] dark:text-[#8dbde2]">
+                      {track.description}
+                    </p>
+                    <p className="mt-3 text-xs font-semibold text-[#0000a8] transition group-hover:translate-x-0.5 dark:text-[#8fd9ff]">
+                      Open practice
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           ) : null}
 
