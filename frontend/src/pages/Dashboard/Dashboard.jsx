@@ -239,7 +239,7 @@ export default function Dashboard() {
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <div className="max-w-[1600px] mx-auto space-y-6">
+          <div className="max-w-5xl mx-auto space-y-6">
             {error && !error.includes('authentication') ? (
               <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
                 Some dashboard details are still syncing. You can keep using the page while we retry in the background.
@@ -257,8 +257,8 @@ export default function Dashboard() {
               </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-stretch">
-              <div className="lg:col-span-3 rounded-xl flex flex-col justify-end relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[230px] md:min-h-[245px] shadow-sm">
+            <div className="space-y-5">
+              <div className="rounded-xl flex flex-col justify-end relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[230px] md:min-h-[245px] shadow-sm">
                 <div
                   className="absolute inset-0 z-0"
                   style={{
@@ -329,7 +329,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="lg:col-span-2 flex flex-col gap-4 h-full">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
                     <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
