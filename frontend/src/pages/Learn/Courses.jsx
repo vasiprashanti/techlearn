@@ -14,6 +14,27 @@ import {
 const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
 const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
 const MotionButton = motion.button;
+const COURSE_TOPIC_ID_OVERRIDES = {
+  'c': '6890c2acbc09eb4b5c346b9b',
+  'c programming': '6890c2acbc09eb4b5c346b9b',
+  'introduction to c': '6890c2acbc09eb4b5c346b9b',
+  'python': '6890ec81950225df57310f52',
+  'python programming': '6890ec81950225df57310f52',
+  'java': '6890f09830551d88a325f623',
+  'java programming': '6890f09830551d88a325f623',
+  'core java': '6890f09830551d88a325f623',
+  'java (core)': '6890f09830551d88a325f623',
+};
+
+const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
+
+const getCourseTopicsPath = (course) => {
+  const overrideId =
+    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.title)] ||
+    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.id)];
+
+  return `/learn/courses/${overrideId || course.id}/topics`;
+};
 
 const readCachedCourses = () => {
   try {
@@ -80,8 +101,9 @@ export default function Courses() {
   const [error, setError] = useState(null);
 
   const mockCoursesData = [
-    { id: "java", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available" },
-    { id: "python", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available" },
+    { id: "6890c2acbc09eb4b5c346b9b", title: "C Programming", description: "Master the fundamentals of C programming and memory concepts", status: "available" },
+    { id: "6890ec81950225df57310f52", title: "Python Programming", description: "Learn Python programming from basics to advanced concepts", status: "available" },
+    { id: "6890f09830551d88a325f623", title: "Java Programming", description: "Master Java programming and object-oriented concepts", status: "available" },
     { id: "dsa", title: "Data Structures & Algorithms", description: "Master DSA concepts for coding interviews and problem solving", status: "available" },
     { id: "mysql", title: "MySQL Database", description: "Learn database design, queries, and management with MySQL", status: "available" }
   ];
@@ -255,7 +277,7 @@ export default function Courses() {
                         className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
                       >
                         <div
-                          onClick={() => navigate(`/learn/courses/${course.id}/topics`)}
+                          onClick={() => navigate(getCourseTopicsPath(course))}
                           className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1 h-full"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>

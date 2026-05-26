@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,6 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { openLogin } = useAuthModalContext();
   const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -44,6 +43,20 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    setIsVisible(true);
+    setLastScrollY(window.scrollY);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleCourseContentScroll = (event) => {
+      setIsVisible(!event.detail?.isScrolled);
+    };
+
+    window.addEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
+    return () => window.removeEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
+  }, []);
 
   useEffect(() => {
     if (!isUserMenuOpen) return undefined;

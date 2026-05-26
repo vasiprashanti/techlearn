@@ -23,6 +23,7 @@ const CourseTopics = () => {
   const navigate = useNavigate();
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
+  const [isCourseHeaderHidden, setIsCourseHeaderHidden] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState(0);
   
@@ -86,7 +87,29 @@ const CourseTopics = () => {
       // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
       scrollContainerRef.current.scrollTop = 0;
     }
+    setIsCourseHeaderHidden(false);
+    window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
+      detail: { isScrolled: false },
+    }));
   }, [selectedTopic]);
+
+  const handleContentScroll = (event) => {
+    const shouldHideHeader = event.currentTarget.scrollTop > 24;
+    window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
+      detail: { isScrolled: shouldHideHeader },
+    }));
+    setIsCourseHeaderHidden((current) => (
+      current === shouldHideHeader ? current : shouldHideHeader
+    ));
+  };
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
+        detail: { isScrolled: false },
+      }));
+    };
+  }, []);
 
   if (loading) return <><ScrollProgress /><LoadingScreen showMessage={false} size={48} duration={800} /></>;
 
@@ -158,7 +181,11 @@ const CourseTopics = () => {
       <main className="flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
         {/* Top Header */}
-        <header className="flex-shrink-0 flex items-center justify-between pt-4 pb-4 px-6 md:px-12">
+        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-6 md:px-12 transition-all duration-300 ease-out ${
+          isCourseHeaderHidden
+            ? "max-h-0 py-0 opacity-0 pointer-events-none"
+            : "max-h-32 pt-4 pb-4 opacity-100"
+        }`}>
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
@@ -187,34 +214,6 @@ const CourseTopics = () => {
             </button>
           </div>
         </header>
-
-        <aside
-          className="hidden md:flex fixed z-30 left-0 top-[132px] h-[calc(100vh-132px)] w-72 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
-        >
-          <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="space-y-2">
-              {currentCourse.topics.map((topic, index) => {
-                const isActive = selectedTopic === index;
-
-                return (
-                  <button
-                    key={topic.id}
-                    onClick={() => setSelectedTopic(index)}
-                    className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
-                      isActive
-                        ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                        : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
-                    }`}
-                  >
-                    <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
-                      {topic.title}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
 
         {/* Syllabus Drawer */}
         <AnimatePresence>
@@ -254,15 +253,45 @@ const CourseTopics = () => {
           )}
         </AnimatePresence>
 
-        {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
-        <div 
-          ref={scrollContainerRef} 
-          className="flex-1 overflow-y-auto px-4 md:px-8 pt-0 pb-10 relative transition-all duration-500 ease-out md:pl-80 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        >
-          <div className="max-w-[800px] mx-auto pb-20">
+        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
+          <aside
+            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+          >
+            <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="space-y-2">
+                {currentCourse.topics.map((topic, index) => {
+                  const isActive = selectedTopic === index;
 
-            {/* Reading Container Card */}
-            <div className="dashboard-surface rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
+                  return (
+                    <button
+                      key={topic.id}
+                      onClick={() => setSelectedTopic(index)}
+                      className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                        isActive
+                          ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
+                        {topic.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleContentScroll}
+            className="min-h-0 overflow-y-auto px-4 md:px-8 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            <div className="max-w-[800px] mx-auto pb-20">
+
+              {/* Reading Container Card */}
+              <div className="dashboard-surface rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
@@ -300,10 +329,10 @@ const CourseTopics = () => {
                   {currentTopic?.content.theory}
                 </div>
               )}
-            </div>
+              </div>
 
-            {/* Premium Navigation Footer */}
-            <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
+              {/* Premium Navigation Footer */}
+              <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
                 <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
@@ -323,8 +352,9 @@ const CourseTopics = () => {
                   Complete <CheckCircle className="w-4 h-4" />
                 </button>
               )}
-            </div>
+              </div>
 
+            </div>
           </div>
         </div>
       </main>
