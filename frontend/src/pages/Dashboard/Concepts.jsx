@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Search } from 'lucide-react';
+import { BookOpen, Search, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { conceptsData } from "../../api/coursesData";
@@ -40,22 +40,35 @@ const Concepts = () => {
   return (
     <UserSidebarLayout maxWidthClass="max-w-7xl">
       <div className="space-y-8">
-        <motion.section
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
-          className="px-1 py-2"
-        >
-          <div>
-            <h1 className="dashboard-page-title">
-              Important Concepts
+        
+        {/* Header Section with Brand Gradient and Back Button */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="min-w-0"
+          >
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/resources")}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Resources
+            </button>
+            <h1 className="font-poppins tracking-tight leading-[0.92]">
+              <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
+                Important Concepts.
+              </span>
             </h1>
-            <p className="dashboard-page-subtitle max-w-2xl">
+            <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4 max-w-4xl leading-relaxed">
               Strengthen your interview foundations with structured deep-dives into OS, DBMS, Networks, OOD, and system design essentials.
             </p>
-          </div>
-        </motion.section>
+          </motion.div>
+        </header>
 
+        {/* Search Section */}
         <motion.section
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -89,61 +102,76 @@ const Concepts = () => {
         ) : null}
 
         {!loading && !error ? (
-          <section>
-            <p className="mb-4 text-sm text-[#5f82ac] dark:text-[#81bde6]">
+          <section className="space-y-4">
+            <p className="text-sm text-[#5f82ac] dark:text-[#81bde6]">
               {filtered.length} topic{filtered.length !== 1 ? 's' : ''}
             </p>
 
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((concept, index) => (
                 <motion.article
                   key={concept.id}
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.45, delay: index * 0.05 }}
-                  className="dashboard-surface flex h-full flex-col p-5"
+                  className="dashboard-surface flex h-full flex-col p-6 md:p-8 border border-transparent hover:border-[#3C83F6]/25 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group justify-between"
                 >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold"
-                      style={{
-                        color: concept.color,
-                        borderColor: `${concept.color}55`,
-                        backgroundColor: `${concept.color}1f`,
-                      }}
-                    >
-                      {concept.icon}
-                    </div>
+                  {/* Hover Glow Layer */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#3C83F6]/0 to-[#3C83F6]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[2rem]" />
 
-                    <div className="min-h-[4.5rem] min-w-0 flex-1">
-                      <h2 className="text-lg font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{concept.title}</h2>
-                      <p className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">{concept.topics} topics</p>
-                    </div>
-                  </div>
-
-                  <p className="mt-4 min-h-[4.5rem] line-clamp-3 text-sm text-[#3d618e] dark:text-[#7fb8e2]">{concept.description}</p>
-
-                  <div className="mt-5">
-                    <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-widest">
-                      <span className="text-[#5f82ac] dark:text-[#81bde6]">Progress</span>
-                      <span className="font-semibold text-[#2d7fe8] dark:text-[#8fd9ff]">{concept.progress}%</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-[#c4e3ff] dark:bg-[#0a2f6f]/55">
+                  {/* Top Block */}
+                  <div className="z-10 flex flex-col gap-5">
+                    <div className="flex items-start gap-4">
                       <div
-                        className="h-2 rounded-full bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6]"
-                        style={{ width: `${concept.progress}%` }}
-                      />
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-sm font-semibold shadow-sm group-hover:scale-105 transition-transform duration-300"
+                        style={{
+                          color: concept.color,
+                          borderColor: `${concept.color}44`,
+                          backgroundColor: `${concept.color}15`,
+                        }}
+                      >
+                        {concept.icon}
+                      </div>
+
+                      <div className="min-h-[3rem] min-w-0 flex-1 flex flex-col justify-center">
+                        <h2 className="text-xl font-bold tracking-tight text-[#0d2a57] dark:text-[#dff3ff] group-hover:text-[#3C83F6] transition-colors duration-300 leading-snug">
+                          {concept.title}
+                        </h2>
+                        <p className="mt-1 text-xs uppercase tracking-widest font-semibold text-[#5f82ac] dark:text-[#81bde6]">
+                          {concept.topics} topics
+                        </p>
+                      </div>
                     </div>
+
+                    <p className="min-h-[4.5rem] line-clamp-3 text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed">
+                      {concept.description}
+                    </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => goToConceptDetail(concept.id)}
-                    className="dashboard-primary-btn mt-5 w-full px-4 py-2.5 text-xs"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    {concept.progress > 0 ? 'Continue' : 'Start Learning'}
-                  </button>
+                  {/* Bottom Block */}
+                  <div className="z-10 mt-6 pt-5 border-t border-black/5 dark:border-white/5 space-y-5">
+                    <div>
+                      <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-widest font-bold">
+                        <span className="text-[#5f82ac] dark:text-[#81bde6]">Progress</span>
+                        <span className="text-[#3c83f6] dark:text-[#8fd9ff]">{concept.progress}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-[#c4e3ff] dark:bg-[#0a2f6f]/55 relative overflow-hidden">
+                        <div
+                          className="h-2 rounded-full bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6]"
+                          style={{ width: `${concept.progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => goToConceptDetail(concept.id)}
+                      className="dashboard-secondary-btn w-full py-3 flex items-center justify-center gap-2"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                      <span>{concept.progress > 0 ? 'Continue' : 'Start Learning'}</span>
+                    </button>
+                  </div>
                 </motion.article>
               ))}
             </div>

@@ -247,11 +247,11 @@ const Certification = () => {
         <div className="mb-6 flex justify-start">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
-            className="inline-flex items-center gap-2 px-1 py-1 text-sm font-semibold text-[#2d7fe8] transition hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+            onClick={() => navigate('/dashboard/resources')}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            Back to Resources
           </button>
         </div>
 
