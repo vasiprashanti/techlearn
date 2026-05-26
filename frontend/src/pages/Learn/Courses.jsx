@@ -236,8 +236,8 @@ export default function Courses() {
   }
 
   return (
-    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:bg-black dark:text-[#8fd9ff] ${isDarkMode ? "dark" : "light"}`}>
-      <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
+    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:bg-[#020816] dark:text-[#8fd9ff] ${isDarkMode ? "dark" : "light"}`}>
+      <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto dark:bg-[#020816]">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
           <section className="pt-6 space-y-10">
@@ -341,7 +341,7 @@ export default function Courses() {
                         className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                       >
                         <div
-                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]"
+                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1 dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
                         >
                           <div className="flex justify-between items-center mb-6">
                             <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
