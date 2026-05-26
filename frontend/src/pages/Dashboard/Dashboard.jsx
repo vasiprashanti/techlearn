@@ -258,7 +258,7 @@ export default function Dashboard() {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-stretch">
-              <div className="lg:col-span-3 rounded-2xl flex flex-col justify-end relative overflow-hidden p-5 sm:p-6 md:p-7 min-h-[300px] md:min-h-[315px] shadow-sm">
+              <div className="lg:col-span-3 rounded-xl flex flex-col justify-end relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[230px] md:min-h-[245px] shadow-sm">
                 <div
                   className="absolute inset-0 z-0"
                   style={{
@@ -269,8 +269,8 @@ export default function Dashboard() {
                 />
                 <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 text-white">
-                  <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2 text-white">
+                  <div className="flex flex-wrap items-center gap-2 mb-0.5">
                     <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
                       <FiClock className="w-3.5 h-3.5 shrink-0" />
                       <span className="whitespace-nowrap">{todayFormatted}</span>
@@ -281,37 +281,37 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
                     {dailyChallenge.title}
                   </h1>
 
                   {challengeLoading ? (
-                    <div className="w-full max-w-lg space-y-2.5 pt-1">
-                      <PlaceholderBar className="h-4 w-full" />
-                      <PlaceholderBar className="h-4 w-5/6" />
-                      <div className="flex items-center gap-4 pt-1">
-                        <PlaceholderBar className="h-4 w-24" />
-                        <PlaceholderBar className="h-4 w-20" />
+                    <div className="w-full max-w-md space-y-2 pt-0.5">
+                      <PlaceholderBar className="h-3.5 w-full" />
+                      <PlaceholderBar className="h-3.5 w-4/5" />
+                      <div className="flex items-center gap-3 pt-0.5">
+                        <PlaceholderBar className="h-3.5 w-20" />
+                        <PlaceholderBar className="h-3.5 w-16" />
                       </div>
-                      <PlaceholderBar className="mt-3 h-10 w-36 rounded-lg bg-white/25 dark:bg-white/15" />
+                      <PlaceholderBar className="mt-2 h-9 w-32 rounded-lg bg-white/25 dark:bg-white/15" />
                     </div>
                   ) : (
                     <>
-                      <p className="text-[13px] sm:text-sm text-white max-w-lg line-clamp-2 pb-1 drop-shadow-sm">
+                      <p className="text-xs sm:text-[13px] text-white max-w-md line-clamp-2 pb-0.5 drop-shadow-sm">
                         {dailyChallenge.prompt}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-1">
-                        <div className="flex items-center gap-2 text-sm text-white">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-white">
                           <FiStar className="text-amber-400" />
                           <span>+{dailyChallenge.xpReward} XP</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-white">
+                        <div className="flex items-center gap-1.5 text-xs sm:text-sm text-white">
                           <FiClock className="text-sky-300" />
                           <span>~{dailyChallenge.timeEstimate}</span>
                         </div>
                         {latestDailyChallenge ? (
-                          <div className="flex items-center gap-2 text-sm text-white">
+                          <div className="flex items-center gap-1.5 text-xs sm:text-sm text-white">
                             <FiTrendingUp className="text-emerald-300" />
                             <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
                           </div>
@@ -320,7 +320,7 @@ export default function Dashboard() {
 
                       <button
                         onClick={() => navigate('/dashboard/daily-challenge')}
-                        className="mt-2 bg-white text-[#0a1128] px-5 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
+                        className="mt-1.5 bg-white text-[#0a1128] px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
                       >
                         Start Challenge <FiChevronRight />
                       </button>
