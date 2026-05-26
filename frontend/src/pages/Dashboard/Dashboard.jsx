@@ -239,14 +239,14 @@ export default function Dashboard() {
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <div className="max-w-[1600px] mx-auto space-y-8">
+          <div className="max-w-[1600px] mx-auto space-y-6">
             {error && !error.includes('authentication') ? (
               <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
                 Some dashboard details are still syncing. You can keep using the page while we retry in the background.
               </div>
             ) : null}
 
-            <header className="flex items-center justify-between pb-6 gap-3 sm:gap-4">
+            <header className="flex items-center justify-between pb-3 gap-3 sm:gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg sm:text-xl md:text-2xl lg:text-4xl font-normal tracking-tight text-[#3C83F6] dark:text-white truncate">
                   Welcome back, {userDisplayName}.
@@ -257,8 +257,8 @@ export default function Dashboard() {
               </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[45vh] md:min-h-[350px] shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-stretch">
+              <div className="lg:col-span-3 rounded-2xl flex flex-col justify-end relative overflow-hidden p-5 sm:p-6 md:p-7 min-h-[300px] md:min-h-[315px] shadow-sm">
                 <div
                   className="absolute inset-0 z-0"
                   style={{
@@ -269,7 +269,7 @@ export default function Dashboard() {
                 />
                 <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4 text-white">
+                <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 text-white">
                   <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
                     <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
                       <FiClock className="w-3.5 h-3.5 shrink-0" />
@@ -281,27 +281,27 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
+                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
                     {dailyChallenge.title}
                   </h1>
 
                   {challengeLoading ? (
-                    <div className="w-full max-w-xl space-y-3 pt-1">
+                    <div className="w-full max-w-lg space-y-2.5 pt-1">
                       <PlaceholderBar className="h-4 w-full" />
                       <PlaceholderBar className="h-4 w-5/6" />
-                      <div className="flex items-center gap-5 pt-2">
+                      <div className="flex items-center gap-4 pt-1">
                         <PlaceholderBar className="h-4 w-24" />
                         <PlaceholderBar className="h-4 w-20" />
                       </div>
-                      <PlaceholderBar className="mt-4 h-11 w-40 rounded-lg bg-white/25 dark:bg-white/15" />
+                      <PlaceholderBar className="mt-3 h-10 w-36 rounded-lg bg-white/25 dark:bg-white/15" />
                     </div>
                   ) : (
                     <>
-                      <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
+                      <p className="text-[13px] sm:text-sm text-white max-w-lg line-clamp-2 pb-1 drop-shadow-sm">
                         {dailyChallenge.prompt}
                       </p>
 
-                      <div className="flex items-center gap-5 mt-1.5">
+                      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-1">
                         <div className="flex items-center gap-2 text-sm text-white">
                           <FiStar className="text-amber-400" />
                           <span>+{dailyChallenge.xpReward} XP</span>
@@ -320,7 +320,7 @@ export default function Dashboard() {
 
                       <button
                         onClick={() => navigate('/dashboard/daily-challenge')}
-                        className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
+                        className="mt-2 bg-white text-[#0a1128] px-5 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
                       >
                         Start Challenge <FiChevronRight />
                       </button>
@@ -329,7 +329,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-4 h-full">
+              <div className="lg:col-span-2 flex flex-col gap-4 h-full">
                 <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col flex-1">
                   <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
                     <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
