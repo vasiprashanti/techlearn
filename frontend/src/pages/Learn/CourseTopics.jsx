@@ -190,18 +190,10 @@ const CourseTopics = () => {
             <button 
                 onClick={() => navigate('/learn')} 
                 className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-[#4d6f9c] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
-              >
+            >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to Learn</span>
             </button>
-            <div>
-              <h1 className="dashboard-page-title">
-                Course Player
-              </h1>
-              <p className="dashboard-page-subtitle mt-1 line-clamp-1">
-                {currentCourse.title} Chapters
-              </p>
-            </div>
           </div>
 
           <div className="flex items-center gap-4 sm:gap-6 relative z-50">
