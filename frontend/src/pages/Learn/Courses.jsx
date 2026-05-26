@@ -325,7 +325,6 @@ export default function Courses() {
               className="space-y-6 pt-4"
             >
               <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
-                <span className="w-1.5 h-6 rounded-full bg-[#3C83F6]" />
                 Expert-Led Courses
               </h3>
 
@@ -374,7 +373,6 @@ export default function Courses() {
                               <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
                               <div className="flex flex-col">
                                 <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
-                                <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] mt-0.5">Recurring</span>
                               </div>
                             </div>
                           </div>
