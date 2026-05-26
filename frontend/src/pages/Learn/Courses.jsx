@@ -379,7 +379,7 @@ export default function Courses() {
 
                           <button
                             onClick={() => handleWhatsAppClick(batch.title)}
-                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#00113b] dark:hover:!bg-[#001b5c]"
+                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa]"
                           >
                             <span>Join Waitlist</span>
                             <ArrowRight className="w-4 h-4" />

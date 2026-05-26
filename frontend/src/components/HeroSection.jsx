@@ -6,7 +6,7 @@ const HeroSection = () => {
   const [descriptionRef, isDescriptionInViewport] = useInViewport();
 
   return (
-    <div className="relative z-10 bg-[var(--tl-sky-50)] dark:bg-[var(--tl-sky-100)] backdrop-blur-xl border-b border-[var(--tl-sky-200)] dark:border-[var(--tl-sky-400)] overflow-hidden pt-20">
+    <div className="relative z-10 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa] dark:bg-[#020816] backdrop-blur-xl border-b border-[#8ec8ff]/30 dark:border-[#15366f]/45 overflow-hidden pt-20">
       <div className="container px-4 py-12 mx-auto max-w-7xl relative z-20">
         <div className="grid lg:grid-cols-[2fr_1fr] gap-12 items-center min-h-[480px]">
           {/* Left Content */}
