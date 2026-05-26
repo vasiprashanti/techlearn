@@ -247,7 +247,7 @@ const CourseTopics = () => {
 
         <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-[#bceaff]/70 dark:bg-[#001233]/70 backdrop-blur-2xl transition-all duration-500 ease-out"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
@@ -282,8 +282,8 @@ const CourseTopics = () => {
           >
             <div className="max-w-[800px] mx-auto pb-20">
 
-              {/* Reading Container Card */}
-              <div className="dashboard-surface rounded-[2rem] p-8 md:p-12 lg:p-16 shadow-sm min-h-[60vh]">
+              {/* Reading Content */}
+              <div className="p-8 md:p-12 lg:p-16 min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
