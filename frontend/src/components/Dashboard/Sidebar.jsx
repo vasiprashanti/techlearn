@@ -1,6 +1,7 @@
 import { AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext";
 import {
   FiX,
   FiSidebar,
@@ -25,6 +26,8 @@ const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
+  const { theme } = useTheme();
+  const logoSrc = theme === "dark" ? "/logoo2.png" : "/logoo.png";
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
@@ -119,7 +122,7 @@ const Sidebar = () => {
     <>
       <aside className="hidden lg:flex fixed left-0 top-0 z-50 h-screen w-[90px] flex-col items-center border-r border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#020b23]/95 backdrop-blur-xl py-4 shadow-[8px_0_24px_rgba(15,23,42,0.04)]">
         <NavLink to="/dashboard" aria-label="TechLearn Solutions" className="mb-5 flex h-[56px] w-[56px] items-center justify-center overflow-hidden rounded-2xl">
-          <img src="/logoo.png" alt="TechLearn Solutions" className="h-full w-full object-contain" />
+          <img src={logoSrc} alt="TechLearn Solutions" className="h-full w-full object-contain" />
         </NavLink>
         <div
           ref={desktopNavRef}
@@ -149,7 +152,7 @@ const Sidebar = () => {
               className="lg:hidden fixed left-0 top-0 bottom-0 w-[21rem] max-w-[88vw] bg-white dark:bg-[#020b23] border-r border-black/5 dark:border-white/10 z-50 shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <img src="/logoo.png" alt="TechLearn Solutions" className="h-12 w-12 object-contain" />
+                <img src={logoSrc} alt="TechLearn Solutions" className="h-12 w-12 object-contain" />
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
