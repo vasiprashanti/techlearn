@@ -176,7 +176,7 @@ const CourseTopics = () => {
       <ScrollProgress />
       
       {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-black" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
       <main className="flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
@@ -247,7 +247,7 @@ const CourseTopics = () => {
 
         <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
