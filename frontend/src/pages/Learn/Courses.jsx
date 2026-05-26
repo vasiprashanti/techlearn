@@ -24,6 +24,9 @@ const COURSE_TOPIC_ID_OVERRIDES = {
   'java programming': '6890f09830551d88a325f623',
   'core java': '6890f09830551d88a325f623',
   'java (core)': '6890f09830551d88a325f623',
+  'test course': '6995d2d6576b86926b74cc71',
+  'phase 2 course': '6a0f089f28624d4a125064b0',
+  'phase two course': '6a0f089f28624d4a125064b0',
 };
 
 const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
