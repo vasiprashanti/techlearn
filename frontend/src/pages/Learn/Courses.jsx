@@ -236,8 +236,8 @@ export default function Courses() {
   }
 
   return (
-    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:bg-[#020816] dark:text-[#8fd9ff] ${isDarkMode ? "dark" : "light"}`}>
-      <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto dark:bg-[#020816]">
+    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] ${isDarkMode ? "dark bg-[#020816]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`}>
+      <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
           <section className="pt-6 space-y-10">

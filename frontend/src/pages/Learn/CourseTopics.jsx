@@ -219,7 +219,7 @@ const CourseTopics = () => {
               <MotionDiv 
                 initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} 
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-gradient-to-br from-[#daf0fa]/80 via-[#bceaff]/80 to-[#daf0fa]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden"
+                className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden"
               >
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
@@ -257,7 +257,7 @@ const CourseTopics = () => {
 
         <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-gradient-to-br from-[#daf0fa]/80 via-[#bceaff]/80 to-[#daf0fa]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
