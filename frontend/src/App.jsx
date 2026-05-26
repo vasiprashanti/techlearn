@@ -11,7 +11,7 @@ import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
 
 // Motion for animations
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import FloatingCodeWords from './components/FloatingCodeWords'
 import FloatingCourseLogos from './components/FloatingCourseLogos'
@@ -125,9 +125,6 @@ import UserMcq from './pages/Mcq/UserMcq'
 // Homepage component
 const HomePage = () => {
   const navigate = useNavigate()
-  const bottomTextRef = useRef(null)
-  const [isBottomTextInViewport, setIsBottomTextInViewport] = useState(false)
-
   // Typewriter effect state
   const [displayedText, setDisplayedText] = useState("")
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -262,25 +259,6 @@ const HomePage = () => {
         } else {
           setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
         }
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
-      }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
-  }, [])
-
-  // Bottom text viewport detection
-  useEffect(() => {
-    const element = bottomTextRef.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsBottomTextInViewport(entry.isIntersecting)
       },
       {
         threshold: 0.3,
@@ -446,34 +424,22 @@ const HomePage = () => {
               </span>
             </h2>
           </a>
-          <div className="w-full max-w-[640px] flex-1 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 sm:p-6 md:p-7">
-            <div className="flex flex-col gap-4">
+          <div className="w-full max-w-[640px] flex-1 px-1 sm:px-2 md:px-4">
+            <div className="space-y-3 text-[13px] leading-relaxed text-[#355b8f] dark:text-[#b5ddff] sm:text-sm md:text-[15px]">
               <p className="text-sm font-medium text-[#2b5388] dark:text-[#96d8ff] sm:text-base">
                 {item.subtitle}
               </p>
 
-              <p className="text-[13px] leading-relaxed text-[#355b8f] dark:text-[#b5ddff] sm:text-sm md:text-[15px]">
-                {item.description}
-              </p>
+              <p>{item.description}</p>
 
-              {item.features && (
-                <ul className="grid gap-2">
-                  {item.features.map((feature, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 rounded-xl border border-[#9fcfff]/45 bg-[#dbf1ff]/70 px-3 py-2 text-xs text-[#315987] dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]/60 dark:text-[#a6d6ff] sm:text-[13px]"
-                    >
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3c83f6] dark:bg-[#8fd9ff]" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {item.features && item.features.map((feature, idx) => (
+                <p key={idx}>{feature}</p>
+              ))}
 
               {item.note && (
-                <div className="rounded-xl border border-[#ffe396] bg-[#fff6c9]/85 px-3 py-2 text-xs text-[#8b6e12] dark:border-[#8e6d1a]/50 dark:bg-[#5b450f]/45 dark:text-[#ffd778] sm:text-[13px]">
-                  <em>{item.note}</em>
-                </div>
+                <p className="italic text-[#8b6e12] dark:text-[#ffd778]">
+                  {item.note}
+                </p>
               )}
             </div>
           </div>
