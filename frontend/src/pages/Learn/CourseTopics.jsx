@@ -214,31 +214,41 @@ const CourseTopics = () => {
               <MotionDiv 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
                 onClick={() => setIsSyllabusOpen(false)} 
-                className="fixed inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-40" 
+                className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden" 
               />
               <MotionDiv 
-                initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} 
+                initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} 
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed top-0 right-0 w-full sm:w-96 h-screen bg-white/95 dark:bg-[#0a1128]/95 backdrop-blur-3xl border-l border-black/10 dark:border-white/10 z-50 flex flex-col shadow-2xl md:hidden"
+                className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-gradient-to-br from-[#daf0fa]/80 via-[#bceaff]/80 to-[#daf0fa]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden"
               >
-                <div className="p-6 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20">
+                <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                    <ChevronRight className="w-4 h-4 text-black/60 dark:text-white/60" />
+                    <ChevronLeft className="w-4 h-4 text-black/60 dark:text-white/60" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {currentCourse.topics.map((topic, index) => (
-                     <button 
-                      key={topic.id} 
-                      onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }} 
-                      className={`w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all duration-300 ${selectedTopic === index ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white border border-black/5 dark:border-white/5 shadow-sm' : 'text-black/60 dark:text-white/60 hover:bg-black/5 dark:hover:bg-white/5'}`}
-                     >
-                       <span className="text-sm font-medium line-clamp-2 pr-4 leading-relaxed">{topic.title}</span>
-                     </button>
-                  ))}
+                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  {currentCourse.topics.map((topic, index) => {
+                    const isActive = selectedTopic === index;
+
+                    return (
+                      <button
+                        key={topic.id}
+                        onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }}
+                        className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                          isActive
+                            ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#020b23] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                            : "border-transparent text-[#020b23]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                        }`}
+                      >
+                        <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
+                          {topic.title}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </MotionDiv>
             </>
@@ -247,7 +257,7 @@ const CourseTopics = () => {
 
         <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col border-r border-black/5 dark:border-white/5 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-gradient-to-br from-[#daf0fa]/80 via-[#bceaff]/80 to-[#daf0fa]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
@@ -260,8 +270,8 @@ const CourseTopics = () => {
                       onClick={() => setSelectedTopic(index)}
                       className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
-                          ? "border-white/30 bg-white text-[#020b23] shadow-lg dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                          : "border-transparent text-[#020b23]/50 hover:border-[#3C83F6]/20 hover:bg-white/95 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#020b23] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          : "border-transparent text-[#020b23]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">

@@ -236,7 +236,7 @@ export default function Courses() {
   }
 
   return (
-    <div className={`w-full font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:bg-black dark:text-[#8fd9ff] ${isDarkMode ? "dark" : "light"}`}>
       <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
@@ -341,7 +341,7 @@ export default function Courses() {
                         className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                       >
                         <div
-                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1"
+                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]"
                         >
                           <div className="flex justify-between items-center mb-6">
                             <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
@@ -363,15 +363,15 @@ export default function Courses() {
                           </h3>
 
                           <div className="grid grid-cols-2 gap-y-5 gap-x-8 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
-                            <div className="flex items-start gap-2.5">
-                              <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
-                              <div className="flex flex-col">
+                            <div className="flex items-center gap-2.5">
+                              <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
+                              <div className="flex items-center">
                                 <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
                               </div>
                             </div>
-                            <div className="flex items-start gap-2.5">
-                              <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee] mt-0.5" />
-                              <div className="flex flex-col">
+                            <div className="flex items-center gap-2.5">
+                              <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
+                              <div className="flex items-center">
                                 <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
                               </div>
                             </div>
@@ -379,7 +379,7 @@ export default function Courses() {
 
                           <button
                             onClick={() => handleWhatsAppClick(batch.title)}
-                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:hover:bg-[#001b5c]"
+                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#00113b] dark:hover:!bg-[#001b5c]"
                           >
                             <span>Join Waitlist</span>
                             <ArrowRight className="w-4 h-4" />
