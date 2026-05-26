@@ -13,8 +13,6 @@ const menuGroups = [
     title: "OVERVIEW",
     items: [
       { id: "admin", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
-      { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },
     ]
   },
   {
@@ -31,15 +29,16 @@ const menuGroups = [
       { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-4 h-4" /> },
       { id: "admin/codingroundupload", title: "Coding Rounds", icon: <FiTerminal className="w-4 h-4" /> },
       { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
-      { id: "resources", title: "Resources", icon: <FiFileText className="w-4 h-4" /> },
+      { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-4 h-4" /> },
       { id: "certificates", title: "Certificates", icon: <FiAward className="w-4 h-4" /> },
     ]
   },
   {
     title: "OPERATIONS",
     items: [
+      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
+      { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },
       { id: "submission-monitor", title: "Submission Monitor", icon: <FiMonitor className="w-4 h-4" /> },
-      { id: "notifications", title: "Notifications", icon: <FiBell className="w-4 h-4" /> },
       { id: "audit-logs", title: "Audit Logs", icon: <FiClipboard className="w-4 h-4" /> },
       { id: "reports", title: "Reports", icon: <FiPieChart className="w-4 h-4" /> },
     ]

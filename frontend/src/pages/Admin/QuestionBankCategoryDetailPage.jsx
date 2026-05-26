@@ -4,7 +4,6 @@ import { FiX, FiChevronDown, FiTrash2 } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import CategoryDetailPanel from '../../components/admin/question-bank/CategoryDetailPanel';
 import DynamicQuestionFormHost from '../../components/admin/question-bank/DynamicQuestionFormHost';
@@ -677,7 +676,7 @@ export const QuestionBankCategoryDetailPage = () => {
       {/* Page main container */}
       <main
         onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
-        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}
       >
         <div className="max-w-[1600px] mx-auto space-y-6">
           {questionsError && (
@@ -689,13 +688,9 @@ export const QuestionBankCategoryDetailPage = () => {
             </div>
           )}
 
-          {/* Sticky header */}
-          <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-            <div>
-              <h1 className="admin-page-title">{category?.title || 'Category Details'}</h1>
-            </div>
-            <AdminHeaderControls user={user} logout={logout} />
-          </header>
+          <div>
+            <h1 className="admin-page-title">{category?.title || 'Category Details'}</h1>
+          </div>
 
           {/* Core detail panel wrapping table */}
           <CategoryDetailPanel

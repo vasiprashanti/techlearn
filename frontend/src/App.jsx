@@ -106,7 +106,6 @@ import QuestionBankCategoryDetailPage from './pages/Admin/QuestionBankCategoryDe
 import Resources from './pages/AdminDashbaord/Resources';
 import Certificates from './pages/AdminDashbaord/Certificates';
 import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
-import Notifications from './pages/AdminDashbaord/Notifications';
 import AuditLogs from './pages/AdminDashbaord/AuditLogs';
 import Reports from './pages/AdminDashbaord/Reports';
 import Settings from './pages/AdminDashbaord/Settings';
@@ -616,11 +615,10 @@ function LayoutWrapper() {
     '/students', 
     '/question-bank', 
     '/track-templates', 
-    '/resources', 
+    '/admin/roadmaps', 
     '/certificates', 
     '/submission-monitor', 
-    '/notifications', 
-    '/audit-logs', 
+    '/audit-logs',  
     '/reports',
     '/settings'
   ];
@@ -646,10 +644,9 @@ function LayoutWrapper() {
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
-  const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
+  const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
-                     !location.pathname.startsWith('/daily-challenge/') &&
-                     !isDashboardRoute;
+                     !location.pathname.startsWith('/daily-challenge/');
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
@@ -777,10 +774,9 @@ function LayoutWrapper() {
 <Route path="/question-bank/:categoryId" element={<QuestionBankCategoryDetailPage />} />
 <Route path="/track-templates" element={<TrackTemplate />} />
 <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
-<Route path="/resources" element={<Resources />} />
+<Route path="/admin/roadmaps" element={<Resources />} />
 <Route path="/certificates" element={<Certificates />} />
 <Route path="/submission-monitor" element={<SubmissionMonitor />} />
-<Route path="/notifications" element={<Notifications />} />
 <Route path="/audit-logs" element={<AuditLogs />} />
 <Route path="/reports" element={<Reports />} />
 <Route path="/settings" element={<Settings />} />

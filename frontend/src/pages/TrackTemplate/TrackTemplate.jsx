@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
@@ -50,6 +49,9 @@ export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
@@ -489,15 +491,37 @@ export default function TrackTemplate() {
                   <div className="mt-1">
                     <ModernDatePicker
                       value={createTemplateForm.startDate}
-                      onChange={(nextDate) =>
-                        setCreateTemplateForm((prev) => ({
-                          ...prev,
-                          startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
-                        }))
-                      }
+                      onChange={(nextDate) => {
+                        setCreateTemplateForm((prev) => {
+                          let updatedEndDate = prev.endDate;
+                          let updatedTotalDays = prev.totalDays;
+                          if (nextDate) {
+                            const start = new Date(nextDate);
+                            if (!isNaN(start.getTime())) {
+                              if (prev.totalDays && Number(prev.totalDays) > 0) {
+                                const end = new Date(start);
+                                end.setDate(start.getDate() + Number(prev.totalDays));
+                                updatedEndDate = end.toISOString().slice(0, 10);
+                              } else if (prev.endDate) {
+                                const end = new Date(prev.endDate);
+                                if (!isNaN(end.getTime())) {
+                                  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+                                  updatedTotalDays = String(Math.max(1, diff));
+                                }
+                              }
+                            }
+                          }
+                          return {
+                            ...prev,
+                            startDate: nextDate,
+                            endDate: updatedEndDate,
+                            totalDays: updatedTotalDays,
+                          };
+                        });
+                      }}
                       placeholder="Select start date"
                       ariaLabel="Track start date"
+                      minDate={todayDate}
                     />
                   </div>
                 </div>
@@ -506,10 +530,27 @@ export default function TrackTemplate() {
                   <div className="mt-1">
                     <ModernDatePicker
                       value={createTemplateForm.endDate}
-                      onChange={(nextDate) => updateCreateTemplateField('endDate', nextDate)}
+                      onChange={(nextDate) => {
+                        setCreateTemplateForm((prev) => {
+                          let updatedTotalDays = prev.totalDays;
+                          if (prev.startDate && nextDate) {
+                            const start = new Date(prev.startDate);
+                            const end = new Date(nextDate);
+                            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                              const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+                              updatedTotalDays = String(Math.max(1, diff));
+                            }
+                          }
+                          return {
+                            ...prev,
+                            endDate: nextDate,
+                            totalDays: updatedTotalDays,
+                          };
+                        });
+                      }}
                       placeholder="Select end date"
                       ariaLabel="Track end date"
-                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : undefined}
+                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : todayDate}
                     />
                   </div>
                 </div>
@@ -539,7 +580,25 @@ export default function TrackTemplate() {
                     type="number"
                     min="1"
                     value={createTemplateForm.totalDays}
-                    onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
+                    onChange={(e) => {
+                      const nextDays = e.target.value;
+                      setCreateTemplateForm((prev) => {
+                        let updatedEndDate = prev.endDate;
+                        if (prev.startDate && nextDays && Number(nextDays) > 0) {
+                          const start = new Date(prev.startDate);
+                          if (!isNaN(start.getTime())) {
+                            const end = new Date(start);
+                            end.setDate(start.getDate() + Number(nextDays));
+                            updatedEndDate = end.toISOString().slice(0, 10);
+                          }
+                        }
+                        return {
+                          ...prev,
+                          totalDays: nextDays,
+                          endDate: updatedEndDate,
+                        };
+                      });
+                    }}
                     className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
@@ -643,17 +702,15 @@ export default function TrackTemplate() {
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
-            pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
+            pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
-            {/* Header — same as AdminDashboard */}
-            <header className={`sticky top-0 z-40 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div className="flex-1" />
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
+            <div>
+              <h1 className="admin-page-title">Track Templates</h1>
+            </div>
 
             {/* Search + Create Row */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
