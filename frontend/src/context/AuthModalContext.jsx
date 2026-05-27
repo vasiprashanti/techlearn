@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect } from 'react';
+import { createContext, lazy, Suspense, useContext, useEffect } from 'react';
 import { useAuthModals } from '../hooks/useAuthModals';
-import LoginModal from '../components/auth/LoginModal';
-import SignupModal from '../components/auth/SignupModal';
 import { authEvents } from '../utils/authEvents';
 
 const AuthModalContext = createContext();
+const LoginModal = lazy(() => import('../components/auth/LoginModal'));
+const SignupModal = lazy(() => import('../components/auth/SignupModal'));
 
 export const useAuthModalContext = () => {
   const context = useContext(AuthModalContext);
@@ -43,17 +43,22 @@ export const AuthModalProvider = ({ children }) => {
     <AuthModalContext.Provider value={authModals}>
       {children}
       
-      {/* Global Auth Modals */}
-      <LoginModal 
-        isOpen={authModals.isLoginOpen} 
-        onClose={authModals.closeModals} 
-        onSwitchToSignup={authModals.switchToSignup} 
-      />
-      <SignupModal 
-        isOpen={authModals.isSignupOpen} 
-        onClose={authModals.closeModals} 
-        onSwitchToLogin={authModals.switchToLogin} 
-      />
+      <Suspense fallback={null}>
+        {authModals.isLoginOpen && (
+          <LoginModal
+            isOpen={authModals.isLoginOpen}
+            onClose={authModals.closeModals}
+            onSwitchToSignup={authModals.switchToSignup}
+          />
+        )}
+        {authModals.isSignupOpen && (
+          <SignupModal
+            isOpen={authModals.isSignupOpen}
+            onClose={authModals.closeModals}
+            onSwitchToLogin={authModals.switchToLogin}
+          />
+        )}
+      </Suspense>
     </AuthModalContext.Provider>
   );
 };

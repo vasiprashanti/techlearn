@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useState, useEffect, useRef } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
@@ -9,117 +9,93 @@ import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
-
-// Motion for animations
-import { AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import FloatingCodeWords from './components/FloatingCodeWords'
-import FloatingCourseLogos from './components/FloatingCourseLogos'
-import LoadingScreen from './components/LoadingScreen'
 
-//Admin Dashboard
-import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
-import Sidebar from '../src/components/AdminDashbaord/Admin_Sidebar'
-import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
-import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
-import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
-import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
-import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
-import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
-import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
+const FloatingCourseLogos = lazy(() => import('./components/FloatingCourseLogos'))
+const Signup = lazy(() => import('./pages/Auth/Signup'))
+const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
+const Performance = lazy(() => import('./pages/Dashboard/Performance'))
+const DailyChallenge = lazy(() => import('./pages/Dashboard/DailyChallenge'))
+const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
+const Languages = lazy(() => import('./pages/Dashboard/Languages'))
+const Concepts = lazy(() => import('./pages/Dashboard/Concepts'))
+const ImportantConceptDetail = lazy(() => import('./pages/Dashboard/ImportantConceptDetail'))
+const ResourcesHub = lazy(() => import('./pages/Dashboard/ResourcesHub'))
+const Projects = lazy(() => import('./components/Dashboard/Projects'))
+const Profile = lazy(() => import('./components/Dashboard/Profile'))
+const Leaderboard = lazy(() => import('./pages/Dashboard/Leaderboard'))
+const UserCoding = lazy(() => import('./pages/Coding/UserCoding'))
+const UserMcq = lazy(() => import('./pages/Mcq/UserMcq'))
+const DailyChallengeAccess = lazy(() => import('./pages/DailyChallenge/DailyChallengeAccess'))
+const DailyChallengeInstructions = lazy(() => import('./pages/DailyChallenge/DailyChallengeInstructions'))
+const DailyChallengeTest = lazy(() => import('./pages/DailyChallenge/DailyChallengeTest'))
+const DailyChallengeResult = lazy(() => import('./pages/DailyChallenge/DailyChallengeResult'))
 
+const LearnMain = lazy(() => import('./pages/Learn/LearnMain'))
+const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
+const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
+const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
+const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
+const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
+const DsaQuestions = lazy(() => import('./pages/Learn/DsaQuestions'))
+const SqlQuestions = lazy(() => import('./pages/Learn/SqlQuestions'))
+const CoreCsQuestions = lazy(() => import('./pages/Learn/CoreCsQuestions'))
+const AptitudeQuestions = lazy(() => import('./pages/Learn/AptitudeQuestions'))
+const CompanyQuestions = lazy(() => import('./pages/Learn/CompanyQuestions'))
+const InterviewDsaQuestionDetail = lazy(() => import('./pages/Learn/InterviewDsaQuestionDetail'))
+const InterviewSqlQuestionDetail = lazy(() => import('./pages/Learn/InterviewSqlQuestionDetail'))
+const InterviewCoreCsQuestionDetail = lazy(() => import('./pages/Learn/InterviewCoreCsQuestionDetail'))
+const InterviewCompanyQuestionDetail = lazy(() => import('./pages/Learn/InterviewCompanyQuestionDetail'))
+const InterviewAptitudeQuestionDetail = lazy(() => import('./pages/Learn/InterviewAptitudeQuestionDetail'))
+const CompanyMockQuestionDetail = lazy(() => import('./pages/Learn/CompanyMockQuestionDetail'))
+const Exercises = lazy(() => import('./pages/Learn/Exercises'))
+const ExercisesList = lazy(() => import('./pages/Learn/ExercisesList'))
+const ExerciseDetail = lazy(() => import('./pages/Learn/ExerciseDetail'))
+const Certification = lazy(() => import('./pages/Learn/Certification'))
+const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayment'))
+const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 
-// Auth pages
-import Signup from './pages/Auth/Signup'
-import Dashboard from './pages/Dashboard/Dashboard'
-import Performance from './pages/Dashboard/Performance'
-import DailyChallenge from './pages/Dashboard/DailyChallenge'
-import DashboardSettings from './pages/Dashboard/Settings'
-import Languages from './pages/Dashboard/Languages'
-import Concepts from './pages/Dashboard/Concepts'
-import ImportantConceptDetail from './pages/Dashboard/ImportantConceptDetail'
-import ResourcesHub from './pages/Dashboard/ResourcesHub'
-import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
-import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
-import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
-import ResetPassword from './components/auth/ResetPassword';
-import Projects from '../src/components/Dashboard/Projects'
-import Leaderboard from './pages/Dashboard/Leaderboard'
-import UserCoding from './pages/Coding/UserCoding';
-import DailyChallengeAccess from './pages/DailyChallenge/DailyChallengeAccess';
-import DailyChallengeInstructions from './pages/DailyChallenge/DailyChallengeInstructions';
-import DailyChallengeTest from './pages/DailyChallenge/DailyChallengeTest';
-import DailyChallengeResult from './pages/DailyChallenge/DailyChallengeResult';
+const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
+const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
+const TrackTemplate = lazy(() => import('./pages/TrackTemplate/TrackTemplate'))
+const TrackTemplateDetails = lazy(() => import('./pages/TrackTemplate/TrackTemplateDetails'))
+const ChallengePage = lazy(() => import('./pages/ChallengePage'))
 
-// Learn components
-import LearnMain from './pages/Learn/LearnMain'
-import CourseDetails from './pages/Learn/CourseDetails'
-import CourseQuiz from './pages/Learn/CourseQuiz'
-import CourseTopics from './pages/Learn/CourseTopics'
-import LiveBatchDetails from './pages/Learn/LiveBatchDetails'
-import AllInterviewQuestions from './pages/Learn/AllInterviewQuestions'
-import DsaQuestions from './pages/Learn/DsaQuestions'
-import SqlQuestions from './pages/Learn/SqlQuestions'
-import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
-import AptitudeQuestions from './pages/Learn/AptitudeQuestions'
-import CompanyQuestions from './pages/Learn/CompanyQuestions'
-import InterviewDsaQuestionDetail from './pages/Learn/InterviewDsaQuestionDetail'
-import InterviewSqlQuestionDetail from './pages/Learn/InterviewSqlQuestionDetail'
-import InterviewCoreCsQuestionDetail from './pages/Learn/InterviewCoreCsQuestionDetail'
-import InterviewCompanyQuestionDetail from './pages/Learn/InterviewCompanyQuestionDetail'
-import InterviewAptitudeQuestionDetail from './pages/Learn/InterviewAptitudeQuestionDetail'
-import CompanyMockQuestionDetail from './pages/Learn/CompanyMockQuestionDetail'
-import Roadmaps from './pages/Resources/Roadmaps'
-import ResumeTemplates from './pages/Resources/ResumeTemplates'
+const BuildPageMain = lazy(() => import('./pages/Build/BuildPage'))
+const ProjectDetail = lazy(() => import('./pages/Build/ProjectDetail'))
+const ProjectPayment = lazy(() => import('./pages/Build/ProjectPayment'))
+const PaymentGateway = lazy(() => import('./pages/Build/PaymentGateway'))
+const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
-// Exercise components
-import Exercises from './pages/Learn/Exercises'
-import ExercisesList from './pages/Learn/ExercisesList'
-import ExerciseDetail from './pages/Learn/ExerciseDetail'
+const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
+const UploadTopicsPage = lazy(() => import('./pages/AdminDashbaord/UploadTopicsPage'))
+const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
+const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
+const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
+const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload'))
+const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage'))
+const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload'))
+const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics'))
+const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth'))
+const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges'))
+const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails'))
+const Batches = lazy(() => import('./pages/AdminDashbaord/Batches'))
+const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails'))
+const Students = lazy(() => import('./pages/AdminDashbaord/Students'))
+const QuestionBankAdminPage = lazy(() => import('./pages/Admin/QuestionBankAdminPage'))
+const QuestionBankCategoryDetailPage = lazy(() => import('./pages/Admin/QuestionBankCategoryDetailPage'))
+const Resources = lazy(() => import('./pages/AdminDashbaord/Resources'))
+const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates'))
+const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor'))
+const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs'))
+const Reports = lazy(() => import('./pages/AdminDashbaord/Reports'))
+const Settings = lazy(() => import('./pages/AdminDashbaord/Settings'))
 
-// Certification components
-import Certification from './pages/Learn/Certification'
-import CertificationPayment from './pages/Learn/CertificationPayment'
-
-// Compiler component
-import OnlineCompiler from './pages/Learn/OnlineCompiler'
-
-// Build components
-import BuildPageMain from './pages/Build/BuildPage'
-import ProjectDetail from './pages/Build/ProjectDetail'
-import MidProjectDetail from './pages/Build/MidProjectDetail'
-import ProjectPayment from './pages/Build/ProjectPayment'
-import PaymentGateway from './pages/Build/PaymentGateway'
-import UILibrary from './pages/Build/UILibrary'
-import Profile from './components/Dashboard/Profile'
-import EditProfile from './components/Dashboard/EditProfile'
-
-import Analytics from './pages/AdminDashbaord/Analytics';
-import SystemHealth from './pages/AdminDashbaord/SystemHealth';
-import Colleges from './pages/AdminDashbaord/Colleges';
-import CollegeDetails from './pages/AdminDashbaord/CollegeDetails';
-import Batches from './pages/AdminDashbaord/Batches';
-import BatchDetails from './pages/AdminDashbaord/BatchDetails';
-import Students from './pages/AdminDashbaord/Students';
-import QuestionBankAdminPage from './pages/Admin/QuestionBankAdminPage';
-import QuestionBankCategoryDetailPage from './pages/Admin/QuestionBankCategoryDetailPage';
-import Resources from './pages/AdminDashbaord/Resources';
-import Certificates from './pages/AdminDashbaord/Certificates';
-import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
-import AuditLogs from './pages/AdminDashbaord/AuditLogs';
-import Reports from './pages/AdminDashbaord/Reports';
-import Settings from './pages/AdminDashbaord/Settings';
-
-// Contact component
-import Contact from './pages/Contact/Contact'
-
-// About component
-import About from './pages/About/About'
-// Terms and Conditions componenet
-import TermsAndConditions from './pages/About/TermsAndConditons';
-
-import PrivacyPolicy from './pages/About/PrivacyPolicy';
-import UserMcq from './pages/Mcq/UserMcq'
+const Contact = lazy(() => import('./pages/Contact/Contact'))
+const About = lazy(() => import('./pages/About/About'))
+const TermsAndConditions = lazy(() => import('./pages/About/TermsAndConditons'))
+const PrivacyPolicy = lazy(() => import('./pages/About/PrivacyPolicy'))
 
 // Homepage component
 const HomePage = () => {
@@ -306,7 +282,9 @@ const HomePage = () => {
       {/* Hero Section */}
       <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
         {/* Floating Course Logos - Hero Section Only */}
-        <FloatingCourseLogos />
+        <Suspense fallback={null}>
+          <FloatingCourseLogos />
+        </Suspense>
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           {/* TECHLEARN Heading with Typewriter Effect */}
           <div className="mb-4">
@@ -584,7 +562,11 @@ const CareersPage = () => {
   }, []);
 
   if (loading) {
-    return <LoadingScreen showMessage={false} size={48} duration={800} />;
+    return (
+      <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-transparent dark:bg-transparent">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7ec9ff] border-t-transparent" />
+      </div>
+    );
   }
 
   return (
@@ -601,6 +583,14 @@ function FloatingCodeBackground() {
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
   return isAuthPage ? <FloatingCodeWords /> : null;
+}
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#7ec9ff] border-t-transparent" />
+    </div>
+  );
 }
 
 function LayoutWrapper() {
@@ -659,6 +649,7 @@ function LayoutWrapper() {
       {showNavbar && <Navbar />}
 
       <main className="flex-grow">
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<Navigate to="/signup" replace />} />
           <Route path="/signup" element={<Signup />} />
@@ -786,6 +777,7 @@ function LayoutWrapper() {
           
           <Route path="/about" element={<About />} />
         </Routes>
+        </Suspense>
       </main>
       
       {showFooter && <Footer />}
