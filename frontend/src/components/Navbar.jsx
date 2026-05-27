@@ -102,7 +102,7 @@ const Navbar = () => {
       <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
         
         {/* Logo */}
-        <div className="logo flex items-center gap-3">
+        <div className="logo flex items-center gap-3 lg:pl-1.5">
           {!hideLogo && (
             <>
               <Link to="/" className="logo flex items-center">

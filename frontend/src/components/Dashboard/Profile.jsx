@@ -104,14 +104,14 @@ const Profile = () => {
   return (
     <>
       <ScrollProgress />
-      <UserSidebarLayout maxWidthClass="max-w-[1280px]">
+      <UserSidebarLayout maxWidthClass="max-w-[640px]">
         <div className="space-y-8">
           
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
-                  My Profile.
+                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                  MY PROFILE
                 </span>
               </h1>
               <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
@@ -120,108 +120,15 @@ const Profile = () => {
             </motion.div>
           </header>
 
-          {/* Main Content Grid */}
-          <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content Stack (Optimized for 640px narrow width) */}
+          <div className="flex flex-col gap-8 w-full">
             
-            {/* Left Column - Form/Info Section */}
+            {/* Top Column - Avatar Profile display */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex-[1.25] space-y-8"
+              className="w-full flex flex-col"
             >
-              {/* Basic Info Card */}
-              <div className={dashboardCardClass}>
-                <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
-                    Basic Info
-                  </h2>
-                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-10">
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Full Name</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CalendarDays className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Date of Birth</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.dateOfBirth || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Gender</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 capitalize">
-                      {displayUser?.gender || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Mail className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.email || "No email provided"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Info Card */}
-              <div className={dashboardCardClass}>
-                <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
-                    Account Security
-                  </h2>
-                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-10">
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Shield className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Username</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.username || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Lock className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Password</p>
-                    </div>
-                    <div className="flex items-center pl-7 gap-2">
-                      <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
-                        ••••••••
-                      </p>
-                      <span className="ml-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right Column - Avatar Profile display */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full lg:w-80 flex flex-col"
-            >
-              <div className={`${dashboardCardClass} flex flex-1 flex-col items-center relative overflow-hidden`}>
+              <div className={`${dashboardCardClass} flex flex-col items-center relative overflow-hidden`}>
                 
                 {/* Decorative background blur */}
                 <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
@@ -258,12 +165,105 @@ const Profile = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard/settings')}
+                  onClick={() => navigate('/dashboard/profile/settings')}
                   className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
                 >
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
                 </button>
+              </div>
+            </motion.div>
+
+            {/* Bottom Column - Form/Info Section */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
+              className="w-full space-y-8"
+            >
+              {/* Basic Info Card */}
+              <div className={dashboardCardClass}>
+                <div className="flex items-center gap-3 mb-10">
+                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                    Basic Info
+                  </h2>
+                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Full Name</p>
+                    </div>
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
+                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
+                    </p>
+                  </div>
+
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CalendarDays className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Date of Birth</p>
+                    </div>
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
+                      {displayUser?.dateOfBirth || "Not specified"}
+                    </p>
+                  </div>
+
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Gender</p>
+                    </div>
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 capitalize">
+                      {displayUser?.gender || "Not specified"}
+                    </p>
+                  </div>
+
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Mail className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
+                    </div>
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 truncate">
+                      {displayUser?.email || "No email provided"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account Info Card */}
+              <div className={dashboardCardClass}>
+                <div className="flex items-center gap-3 mb-10">
+                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                    Account Security
+                  </h2>
+                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Shield className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Username</p>
+                    </div>
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
+                      {displayUser?.username || "Not specified"}
+                    </p>
+                  </div>
+
+                  <div className="group">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Lock className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Password</p>
+                    </div>
+                    <div className="flex items-center pl-7 gap-2">
+                      <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
+                        ••••••••
+                      </p>
+                      <span className="ml-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>

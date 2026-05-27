@@ -5,32 +5,21 @@ import {
   FiX,
   FiSidebar,
   FiGrid,
-  FiTarget,
   FiMap,
   FiPlayCircle,
-  FiCpu,
-  FiBarChart2,
   FiAward,
-  FiBook,
-  FiLayers,
-  FiFileText,
-  FiUser,
-  FiSettings,
-  FiDatabase,
-  FiCode,
-  FiBriefcase,
-  FiCheckCircle
+  FiUser
 } from "react-icons/fi";
 
 const menuGroups = [
   {
     title: "MAIN",
     items: [
-      { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "dashboard/roadmap", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
-      { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-4 h-4" /> },
-      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
-      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
+      { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/roadmap", title: "Roadmaps", icon: <FiMap className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
     ]
   }
 ];
@@ -73,34 +62,27 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
   };
 
   const renderNavLinks = (onClickAction = () => {}) => (
-    <div className="space-y-6 pb-12">
-      {menuGroups.map((group, idx) => (
-        <div key={idx} className="space-y-2">
-          <h4 className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[#17386c]/58 dark:text-white/72 px-4">
-            {group.title}
-          </h4>
-          <div className="space-y-0.5">
-            {group.items.map((item) => (
-              <NavLink
-                key={item.id}
-                to={`/${item.id}`}
-                end
-                onClick={onClickAction}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out
-                  ${
-                    isActive
-                      ? "bg-white/90 text-[#020b23] dark:bg-[#263a86] dark:text-white font-semibold shadow-lg border border-white/25 dark:border-[#5574c7]/55"
-                      : "text-[#17386c]/78 dark:text-white/72 hover:text-[#020b23] hover:bg-white/55 hover:shadow-md hover:border hover:border-[#3C83F6]/15 dark:hover:text-white dark:hover:bg-[#122449] dark:hover:shadow-lg dark:hover:border dark:hover:border-[#2c4a88]/55 font-normal border border-transparent dark:border-transparent"
-                  }`
-                }
-              >
-                {item.icon}
-                <span>{item.title}</span>
-              </NavLink>
-            ))}
-          </div>
-        </div>
+    <div className="flex flex-col items-center gap-3.5 py-4 w-full">
+      {menuGroups[0].items.map((item) => (
+        <NavLink
+          key={item.id}
+          to={`/${item.id}`}
+          end
+          onClick={onClickAction}
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
+            ${
+              isActive
+                ? "bg-[#0b3ef2] text-white font-semibold shadow-md shadow-blue-600/20 border border-blue-400/20"
+                : "text-[#2d4b7c] dark:text-slate-400 hover:text-[#0b3ef2] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
+            }`
+          }
+        >
+          <div className="shrink-0">{item.icon}</div>
+          <span className="text-[8px] md:text-[9.5px] font-medium tracking-wide text-center max-w-[80px] truncate leading-none">
+            {item.title}
+          </span>
+        </NavLink>
       ))}
     </div>
   );
@@ -120,27 +102,27 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         }
       `}</style>
 
-      <div className="hidden lg:flex flex-col fixed left-3 top-20 bg-[#daf0fa]/88 dark:bg-black/40 backdrop-blur-xl z-40 h-[calc(100vh-5.75rem)] overflow-hidden w-[15.75rem] pt-6 border border-white/35 dark:border-white/5 rounded-[2rem] shadow-[0_18px_45px_rgba(34,119,255,0.12)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.28)]">
-        <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3C83F6 transparent' }}>
-          <style>{`
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 1px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: transparent;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #3C83F6;
-              border-radius: 1px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #2563eb;
-            }
-          `}</style>
-          <div className="custom-scrollbar">
-            {renderNavLinks()}
+      {/* Slim vertical desktop sidebar with vertically centered navigation */}
+      <div className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 bg-[#bceaff] dark:bg-[#020b23] border-r border-[#1e2d5a]/10 dark:border-white/5 z-40 h-screen overflow-hidden w-[90px] pt-6 shadow-[10px_0_34px_rgba(0,0,0,0.15)] justify-between items-center pb-6">
+        {/* Adjusted top padding/spacer to push buttons slightly down */}
+        <div className="h-14 shrink-0"></div>
+
+        {/* Vertically Centered links */}
+        <div className="flex-1 flex flex-col justify-center items-center w-full">
+          <div ref={desktopNavRef} onScroll={handleDesktopScroll} className="w-full overflow-y-auto px-1" style={{ scrollbarWidth: 'none' }}>
+            <style>{`
+              .custom-scrollbar::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
+            <div className="custom-scrollbar">
+              {renderNavLinks()}
+            </div>
           </div>
         </div>
+
+        {/* Adjusted Bottom Spacer to balance the vertical centering */}
+        <div className="h-6 w-full shrink-0"></div>
       </div>
 
       <button
@@ -165,19 +147,22 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-72 bg-[#daf0fa] dark:bg-black/40 border-r border-black/5 dark:border-white/5 z-50 shadow-2xl flex flex-col"
+              className="lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#bceaff] dark:bg-[#020b23] border-r border-white/5 z-50 shadow-2xl flex flex-col pt-6"
             >
-              <div className="flex items-center justify-between px-4 pt-4 pb-2 mb-4">
-                <span className="text-sm font-semibold text-black/70 dark:text-white/70">Menu</span>
+              <div className="flex items-center justify-center mb-6 shrink-0 relative px-2">
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+                  className="absolute right-1 top-0 p-1 text-[#00185a] dark:text-slate-400 hover:text-white"
+                  aria-label="Close sidebar"
                 >
-                  <FiX className="w-5 h-5" />
+                  <FiX className="w-4 h-4" />
                 </button>
+                <div className="w-10 h-10 rounded-full border border-[#00185a]/15 dark:border-white/15 bg-white/10 dark:bg-white/5 flex items-center justify-center relative overflow-hidden select-none mt-2">
+                  <span className="font-poppins font-bold text-xs text-[#00185a] dark:text-white">tls</span>
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-hide">
+              <div className="flex-1 overflow-y-auto px-1 pb-6 scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
             </motion.div>

@@ -4,7 +4,7 @@ import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
 export default function InterviewQuestions() {
   return (
     <QuestionCatalogPage
-      pageTitle="All Interview Questions"
+      pageTitle="PRACTICE QUESTIONS"
       pageSubtitle="Practice and track your progress across topics."
       questions={interviewQuestionsCatalog}
     />

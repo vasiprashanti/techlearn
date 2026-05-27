@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Filter, Search, Code, Database, Cpu, Brain, Briefcase, ChevronRight, Flame } from 'lucide-react';
+import { Check, ChevronDown, Filter, Search, Code, Database, Cpu, Brain, Briefcase, ChevronRight, Flame, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 import { practiceAPI } from '../services/practiceApi';
@@ -282,67 +282,83 @@ export default function QuestionCatalogPage({
     }
   };
 
+  const showBackBtn = location.pathname.startsWith('/dashboard/practice/');
+
   return (
-      <UserSidebarLayout maxWidthClass="max-w-7xl">
+      <UserSidebarLayout maxWidthClass="max-w-[640px]">
         <section className="p-1 sm:p-2">
+          {showBackBtn && (
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/practice")}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Practice
+            </button>
+          )}
           <div className="mb-5">
-            <h1 className="dashboard-page-title">
-              {pageTitle}
+            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                {pageTitle?.toUpperCase()}
+              </span>
             </h1>
             <p className="dashboard-page-subtitle">
               {pageSubtitle}
             </p>
           </div>
 
-          <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[110px] relative overflow-hidden">
-              <div className="absolute right-2 bottom-2 text-orange-500/10 dark:text-orange-500/5">
-                <Flame className="w-16 h-16" />
-              </div>
-              <div className="flex items-center justify-between gap-2 z-10">
-                <p className="dashboard-micro-label">Practice Streak</p>
-                <Flame className="w-4 h-4 text-orange-500" />
-              </div>
-              <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff] z-10">
-                {practiceStats?.streak || 0} <span className="text-xs font-normal text-[#4c6f9a] dark:text-[#7fb8e2]">days</span>
-              </p>
-            </div>
-            
-            {effectivePracticeTracks.map((track) => (
-              <button
-                key={track.track}
-                type="button"
-                onClick={() => handleTrackNavigate(track.track)}
-                className="dashboard-surface p-4 text-left border border-transparent hover:border-[#3C83F6]/45 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between min-h-[110px]"
-              >
-                <div className="w-full flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="shrink-0">{track.icon}</span>
-                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff] truncate group-hover:text-[#3C83F6] transition-colors">
-                      {track.track}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8] shrink-0 font-medium">
-                    {track.accuracy || 0}%
-                  </span>
+          {!showBackBtn && (
+            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[110px] relative overflow-hidden">
+                <div className="absolute right-2 bottom-2 text-orange-500/10 dark:text-orange-500/5">
+                  <Flame className="w-16 h-16" />
                 </div>
-                
-                <div className="mt-3 w-full flex items-end justify-between">
-                  <div>
-                    <p className="text-[11px] text-[#4c6f9a] dark:text-[#7fb8e2] font-medium leading-none">
-                      {track.attempted || 0}/{track.total || 0} solved
-                    </p>
-                    {track.correct !== undefined && (
-                      <p className="text-[10px] text-[#4c6f9a]/75 dark:text-[#7fb8e2]/75 mt-1 leading-none">
-                        {track.correct} correct
+                <div className="flex items-center justify-between gap-2 z-10">
+                  <p className="dashboard-micro-label">Practice Streak</p>
+                  <Flame className="w-4 h-4 text-orange-500" />
+                </div>
+                <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff] z-10">
+                  {practiceStats?.streak || 0} <span className="text-xs font-normal text-[#4c6f9a] dark:text-[#7fb8e2]">days</span>
+                </p>
+              </div>
+              
+              {effectivePracticeTracks.map((track) => (
+                <button
+                  key={track.track}
+                  type="button"
+                  onClick={() => handleTrackNavigate(track.track)}
+                  className="dashboard-surface p-4 text-left border border-transparent hover:border-[#3C83F6]/45 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between min-h-[110px]"
+                >
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="shrink-0">{track.icon}</span>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff] truncate group-hover:text-[#3C83F6] transition-colors">
+                        {track.track}
                       </p>
-                    )}
+                    </div>
+                    <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8] shrink-0 font-medium">
+                      {track.accuracy || 0}%
+                    </span>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[#3C83F6] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
-                </div>
-              </button>
-            ))}
-          </div>
+                  
+                  <div className="mt-3 w-full flex items-end justify-between">
+                    <div>
+                      <p className="text-[11px] text-[#4c6f9a] dark:text-[#7fb8e2] font-medium leading-none">
+                        {track.attempted || 0}/{track.total || 0} solved
+                      </p>
+                      {track.correct !== undefined && (
+                        <p className="text-[10px] text-[#4c6f9a]/75 dark:text-[#7fb8e2]/75 mt-1 leading-none">
+                          {track.correct} correct
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#3C83F6] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="dashboard-surface dashboard-surface-strong relative z-30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

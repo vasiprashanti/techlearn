@@ -5,7 +5,8 @@ import { useTheme } from "../../context/ThemeContext";
 import {
   FiX, FiSidebar, FiGrid, FiBarChart2, FiActivity,
   FiHome, FiBookOpen, FiUsers, FiCode, FiGitCommit,
-  FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings, FiTerminal
+  FiFileText, FiAward, FiMonitor, FiBell, FiClipboard, FiPieChart, FiSettings, FiTerminal,
+  FiLayers
 } from "react-icons/fi";
 
 const menuGroups = [
@@ -16,40 +17,41 @@ const menuGroups = [
     ]
   },
   {
-    title: "ORGANIZATION",
-    items: [
-      { id: "colleges", title: "Colleges", icon: <FiHome className="w-4 h-4" /> },
-      { id: "batches", title: "Batches", icon: <FiBookOpen className="w-4 h-4" /> },
-      { id: "students", title: "Students", icon: <FiUsers className="w-4 h-4" /> },
-    ]
-  },
-  {
     title: "LEARNING",
     items: [
       { id: "question-bank", title: "Question Bank", icon: <FiCode className="w-4 h-4" /> },
       { id: "admin/codingroundupload", title: "Coding Rounds", icon: <FiTerminal className="w-4 h-4" /> },
       { id: "track-templates", title: "Track Templates", icon: <FiGitCommit className="w-4 h-4" /> },
       { id: "admin/roadmaps", title: "Roadmaps", icon: <FiFileText className="w-4 h-4" /> },
+      { id: "admin/courses", title: "Courses", icon: <FiBookOpen className="w-4 h-4" /> },
       { id: "certificates", title: "Certificates", icon: <FiAward className="w-4 h-4" /> },
+    ]
+  },
+  {
+    title: "ORGANIZATION",
+    items: [
+      { id: "batches", title: "Batches", icon: <FiLayers className="w-4 h-4" /> },
+      { id: "students", title: "Students", icon: <FiUsers className="w-4 h-4" /> },
+      { id: "colleges", title: "Colleges", icon: <FiHome className="w-4 h-4" /> },
     ]
   },
   {
     title: "OPERATIONS",
     items: [
-      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
-      { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },
       { id: "submission-monitor", title: "Submission Monitor", icon: <FiMonitor className="w-4 h-4" /> },
       { id: "audit-logs", title: "Audit Logs", icon: <FiClipboard className="w-4 h-4" /> },
       { id: "reports", title: "Reports", icon: <FiPieChart className="w-4 h-4" /> },
     ]
+  },
+  {
+    title: "SYSTEM",
+    items: [
+      { id: "settings", title: "Settings", icon: <FiSettings className="w-4 h-4" /> },
+      { id: "analytics", title: "Analytics", icon: <FiBarChart2 className="w-4 h-4" /> },
+      { id: "system-health", title: "System Health", icon: <FiActivity className="w-4 h-4" /> },
+    ]
   }
 ];
-
-const settingsItem = {
-  id: "settings",
-  title: "Settings",
-  icon: <FiSettings className="w-4 h-4" />,
-};
 
 const SCROLL_KEY = 'sidebar-scroll';
 
@@ -117,17 +119,6 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
           </div>
         </div>
       ))}
-
-      <div className="pt-2 border-t border-black/5 dark:border-white/5">
-        <NavLink
-          to={`/${settingsItem.id}`}
-          onClick={onClickAction}
-          className={({ isActive }) => getNavClass(isActive)}
-        >
-          {settingsItem.icon}
-          <span>{settingsItem.title}</span>
-        </NavLink>
-      </div>
     </div>
   );
 

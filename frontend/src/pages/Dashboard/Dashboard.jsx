@@ -235,11 +235,11 @@ export default function Dashboard() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          className={`flex-1 transition-all duration-300 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[16.5rem]'} pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+          className={`flex flex-1 flex-col items-center transition-all duration-300 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
           }`}
         >
-          <div className="max-w-[1600px] mx-auto space-y-8">
+          <div className="w-full max-w-[640px] space-y-6">
             {error && !error.includes('authentication') ? (
               <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
                 Some dashboard details are still syncing. You can keep using the page while we retry in the background.
@@ -247,9 +247,9 @@ export default function Dashboard() {
             ) : null}
 
             {/* Daily Challenge Card at the Top (Full Width) */}
-            <div className="rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[420px] shadow-sm mt-4">
+            <div className="rounded-2xl flex flex-col justify-end relative overflow-hidden p-6 sm:p-8 md:p-10 min-h-[320px] shadow-lg mt-4 border border-white/10 group">
               <div
-                className="absolute inset-0 z-0"
+                className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
                 style={{
                   backgroundImage: `url(${heroBg})`,
                   backgroundSize: 'cover',
@@ -258,8 +258,8 @@ export default function Dashboard() {
               />
               <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-              <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-2.5 md:space-y-4 text-white">
-                <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-1">
+              <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-4 text-white">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
                     <FiClock className="w-3.5 h-3.5 shrink-0" />
                     <span className="whitespace-nowrap">{todayFormatted}</span>
@@ -270,7 +270,7 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
+                <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-white tracking-tight drop-shadow-md leading-tight">
                   {dailyChallenge.title}
                 </h1>
 
@@ -286,22 +286,22 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-[13px] sm:text-sm text-white max-w-xl line-clamp-3 pb-1 drop-shadow-sm">
+                    <p className="text-[13px] sm:text-sm text-white/90 max-w-xl leading-relaxed font-light drop-shadow-sm">
                       {dailyChallenge.prompt}
                     </p>
 
-                    <div className="flex items-center gap-5 mt-1.5">
-                      <div className="flex items-center gap-2 text-sm text-white">
-                        <FiStar className="text-amber-400" />
+                    <div className="flex flex-wrap items-center gap-5 pt-2 w-full">
+                      <div className="flex items-center gap-2 text-sm text-white font-medium">
+                        <FiStar className="text-amber-400 w-4 h-4" />
                         <span>+{dailyChallenge.xpReward} XP</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-white">
-                        <FiClock className="text-sky-300" />
+                      <div className="flex items-center gap-2 text-sm text-white font-medium">
+                        <FiClock className="text-sky-300 w-4 h-4" />
                         <span>~{dailyChallenge.timeEstimate}</span>
                       </div>
                       {latestDailyChallenge ? (
-                        <div className="flex items-center gap-2 text-sm text-white">
-                          <FiTrendingUp className="text-emerald-300" />
+                        <div className="flex items-center gap-2 text-sm text-white font-medium">
+                          <FiTrendingUp className="text-emerald-300 w-4 h-4" />
                           <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
                         </div>
                       ) : null}
@@ -309,18 +309,18 @@ export default function Dashboard() {
 
                     <button
                       onClick={() => navigate('/dashboard/daily-challenge')}
-                      className="mt-3 bg-white text-[#0a1128] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 flex items-center gap-2"
+                      className="mt-2 bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-6 py-3 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 transform hover:-translate-y-0.5 shadow-md"
                     >
-                      Start Challenge <FiChevronRight />
+                      Go To Challenge <FiChevronRight className="w-4 h-4" />
                     </button>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Stats followed by Leaderboard under the Daily Challenge */}
-            <div className="grid grid-cols-1 gap-6 items-stretch">
-              <div className="order-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+            {/* Stats and Leaderboard side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
                 <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
                   <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
                   <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
@@ -366,22 +366,20 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="order-1 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
                 <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
                   <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
-                  <button onClick={() => navigate('/dashboard/performance')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    View Details
-                  </button>
+                  <span className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">OVERVIEW</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-4 md:gap-y-5 gap-x-2 my-auto">
+                <div className="grid grid-cols-2 gap-y-6 md:gap-y-8 gap-x-4 my-auto px-2 md:px-6">
                   {retroStats.map((stat) => (
-                    <div key={stat.title} className="flex flex-col items-center text-center gap-1.5 md:gap-2">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="shrink-0 scale-[0.70] origin-center">{stat.icon}</div>
-                        <span className="font-press-start text-xs md:text-sm text-black dark:text-white truncate">{stat.value}</span>
+                    <div key={stat.title} className="flex flex-col items-start text-left gap-2">
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0 scale-90 md:scale-100 origin-left">{stat.icon}</div>
+                        <span className="font-press-start text-sm md:text-base text-black dark:text-white truncate">{stat.value}</span>
                       </div>
-                      <span className="text-[10px] text-black/60 dark:text-white/60 font-medium tracking-wide uppercase">{stat.title}</span>
+                      <span className="text-[9px] md:text-[10px] text-black/40 dark:text-white/40 font-semibold tracking-widest uppercase mt-0.5">{stat.title}</span>
                     </div>
                   ))}
                 </div>

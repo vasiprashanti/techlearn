@@ -137,7 +137,7 @@ export default function DashboardSettings() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[640px]">
       <div className="space-y-8 py-2 px-1">
         
         {/* Top Header Section */}
@@ -152,8 +152,8 @@ export default function DashboardSettings() {
               Back to Profile
             </button>
             <h1 className="font-poppins tracking-tight leading-[0.92]">
-              <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
-                Account Settings.
+              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                ACCOUNT SETTINGS
               </span>
             </h1>
             <p className="mt-4 text-xs uppercase tracking-widest text-black/40 dark:text-white/40">

@@ -189,15 +189,15 @@ export default function Roadmaps() {
   }, [markdown]);
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[90rem]">
+    <UserSidebarLayout maxWidthClass="max-w-[640px]">
       <ScrollProgress />
 
       <div className="space-y-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-              <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">
-                {roadmapTitle}.
+              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                ROADMAP
               </span>
             </h1>
             <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">

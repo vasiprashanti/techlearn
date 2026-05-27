@@ -38,6 +38,7 @@ const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
 const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
 const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
 const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
+const PracticeHub = lazy(() => import('./pages/Learn/PracticeHub'))
 const DsaQuestions = lazy(() => import('./pages/Learn/DsaQuestions'))
 const SqlQuestions = lazy(() => import('./pages/Learn/SqlQuestions'))
 const CoreCsQuestions = lazy(() => import('./pages/Learn/CoreCsQuestions'))
@@ -663,7 +664,7 @@ function LayoutWrapper() {
             <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />
             <Route path="/daily-challenge/:linkId/result" element={<DailyChallengeResult />} />
             <Route path="/dashboard/roadmap" element={<Roadmaps />} />
-            <Route path="/dashboard/practice" element={<AllInterviewQuestions />} />
+            <Route path="/dashboard/practice" element={<PracticeHub />} />
             <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
             <Route path="/dashboard/practice/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
             <Route path="/dashboard/practice/aptitude" element={<AptitudeQuestions />} />
@@ -684,7 +685,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
-            <Route path="/dashboard/settings" element={<DashboardSettings />} />
+            <Route path="/dashboard/profile/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
             <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
@@ -712,7 +713,7 @@ function LayoutWrapper() {
           </Route>
           
           <Route path="/dashboard/profile" element={<Profile />} />
-          <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/settings" replace />} />
+          <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/profile/settings" replace />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />

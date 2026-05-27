@@ -153,13 +153,13 @@ const Leaderboard = () => {
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className={`flex-1 transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-[16.5rem]'} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto`}>
-        <div className="max-w-[1600px] mx-auto space-y-8">
+      <main className="flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto">
+        <div className="max-w-[640px] mx-auto space-y-8">
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="min-w-0">
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
-                  Leaderboard.
+                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                  LEADERBOARD
                 </span>
               </h1>
               <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
@@ -167,7 +167,6 @@ const Leaderboard = () => {
               </p>
             </MotionDiv>
           </header>
-
           <div className="max-w-5xl mx-auto pt-4 md:pt-10">
             <div className="flex flex-row justify-center items-end gap-2 sm:gap-4 md:gap-6 mb-12 md:mb-20 mt-8 md:mt-10 px-0 sm:px-4">
               {renderPodiumUser(topThree[1], 2, 0.2)}
