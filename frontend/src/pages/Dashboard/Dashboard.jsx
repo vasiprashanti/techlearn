@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   FiChevronRight,
   FiClock,
@@ -319,9 +318,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Leaderboard and Stats Cards Side-By-Side under the Daily Challenge */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+            {/* Stats followed by Leaderboard under the Daily Challenge */}
+            <div className="grid grid-cols-1 gap-6 items-stretch">
+              <div className="order-2 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
                 <div className="flex items-center justify-between mb-4 md:mb-6 shrink-0">
                   <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">LEADERBOARD</h3>
                   <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
@@ -367,7 +366,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
+              <div className="order-1 bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-black/5 dark:border-white/5 p-4 md:p-6 rounded-xl flex flex-col h-full min-h-[240px] justify-between">
                 <div className="flex items-center justify-between mb-4 md:mb-5 shrink-0">
                   <h3 className="font-press-start text-[10px] tracking-widest text-black/60 dark:text-white/70">STATS</h3>
                   <button onClick={() => navigate('/dashboard/performance')} className="text-[10px] font-medium text-[#3C83F6] dark:text-blue-400 hover:underline">
