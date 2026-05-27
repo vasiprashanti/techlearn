@@ -27,9 +27,8 @@ const menuGroups = [
     title: "MAIN",
     items: [
       { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-4 h-4" /> },
-      { id: "dashboard/roadmap", title: "Roadmap", icon: <FiMap className="w-4 h-4" /> },
+      { id: "dashboard/roadmap", title: "Roadmaps", icon: <FiMap className="w-4 h-4" /> },
       { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-4 h-4" /> },
-      { id: "dashboard/resources", title: "Resources", icon: <FiBook className="w-4 h-4" /> },
       { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-4 h-4" /> },
       { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-4 h-4" /> },
     ]

@@ -244,13 +244,10 @@ export default function Courses() {
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
               <div>
                 <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                  <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
-                    Courses.
-                  </span>
+                  <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
                 </h1>
-                <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4 max-w-4xl leading-relaxed">
-                  Pick a track, enroll in self-paced or expert-led learning courses, and start building skills.
-                </p>
+                <p className="text-sm sm:text-base md:text-lg text-[#6f8fb8] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">Fundamentals first. Brilliance next.</p>
+                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">Pick a track and start building skills</p>
               </div>
             </header>
 
@@ -263,7 +260,6 @@ export default function Courses() {
             {/* Subsection 1: Self-Paced Courses */}
             <div className="space-y-6">
               <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
-                <span className="w-1.5 h-6 rounded-full bg-[#3C83F6]" />
                 Self-Paced Courses
               </h3>
 

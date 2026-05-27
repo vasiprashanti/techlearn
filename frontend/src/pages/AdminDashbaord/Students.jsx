@@ -135,6 +135,7 @@ const Students = () => {
   const [bulkImportTrack, setBulkImportTrack] = useState('');
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [bulkImportReport, setBulkImportReport] = useState(null);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const searchInputRef = useRef(null);
   const bulkImportInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
@@ -340,11 +341,13 @@ const Students = () => {
         failures: ['Only CSV files are supported for bulk import.'],
       });
       event.target.value = '';
+      setIsBulkImportModalOpen(false);
       return;
     }
 
     setFormError('');
     setIsBulkImporting(true);
+    setIsBulkImportModalOpen(false); // Close the settings modal immediately upon starting import
 
     try {
       if (!bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack) {
@@ -517,6 +520,88 @@ const Students = () => {
         </div>
       )}
 
+      {isBulkImportModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkImportModalOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Bulk Import Students</h2>
+              <button onClick={() => setIsBulkImportModalOpen(false)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-black/60 dark:text-white/65">
+                Select the College, Batch, and Track to import the students into. All fields are mandatory.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">College*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportCollegeId}
+                      onChange={(e) => {
+                        setBulkImportCollegeId(e.target.value);
+                        setBulkImportBatchId('');
+                        setBulkImportTrack('');
+                      }}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">Select college</option>
+                      {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Batch*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportBatchId}
+                      onChange={(e) => {
+                        setBulkImportBatchId(e.target.value);
+                        setBulkImportTrack('');
+                      }}
+                      disabled={!bulkImportCollegeId}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
+                    >
+                      <option className={dropdownOptionClass} value="">Select batch</option>
+                      {filteredBulkImportBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportTrack}
+                      onChange={(e) => setBulkImportTrack(e.target.value)}
+                      disabled={!bulkImportCollegeId || !bulkImportBatchId}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
+                    >
+                      <option className={dropdownOptionClass} value="">Select track</option>
+                      {filteredBulkImportTrackOptions.map((track) => <option className={dropdownOptionClass} key={track} value={track}>{track}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+              </div>
+
+              {formError && <p className="text-xs text-red-500">{formError}</p>}
+              <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-2.5">
+                <button onClick={() => setIsBulkImportModalOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
+                <button onClick={triggerBulkImport} disabled={isBulkImporting || !bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack} className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FiUpload className="w-4 h-4" />
+                  {isBulkImporting ? 'Importing...' : 'Select CSV & Import'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -536,65 +621,16 @@ const Students = () => {
               </section>
             ) : (
             <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(250px,320px)_150px_150px_150px_160px] gap-2.5 items-center mt-1 justify-end">
-              <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-1">
+              <div className="relative w-full md:max-w-xs xl:max-w-sm">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                 <input type="text" placeholder="Search students..." value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full" />
               </div>
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportCollegeId}
-                    onChange={(e) => {
-                      setBulkImportCollegeId(e.target.value);
-                      setBulkImportBatchId('');
-                      setBulkImportTrack('');
-                    }}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full"
-                    title="Bulk import college"
-                  >
-                    <option className={dropdownOptionClass} value="">Import college</option>
-                    {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <button onClick={() => { setFormError(''); setIsBulkImportModalOpen(true); }} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiUpload className="w-3.5 h-3.5" />Bulk Import</button>
+                <button onClick={downloadBulkTemplate} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
+                <button onClick={openAddStudent} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
               </div>
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportBatchId}
-                    onChange={(e) => {
-                      setBulkImportBatchId(e.target.value);
-                      setBulkImportTrack('');
-                    }}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
-                    title="Bulk import batch"
-                    disabled={!bulkImportCollegeId}
-                  >
-                    <option className={dropdownOptionClass} value="">Import batch</option>
-                    {filteredBulkImportBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportTrack}
-                    onChange={(e) => setBulkImportTrack(e.target.value)}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
-                    title="Bulk import track"
-                    disabled={!bulkImportCollegeId || !bulkImportBatchId}
-                  >
-                    <option className={dropdownOptionClass} value="">Import track</option>
-                    {filteredBulkImportTrackOptions.map((track) => <option className={dropdownOptionClass} key={track} value={track}>{track}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <button onClick={openAddStudent} className="w-full flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:hidden">
@@ -658,10 +694,6 @@ const Students = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-base font-medium text-black/45 dark:text-white/45">Showing {filteredStudents.length} of {students.length} students</p>
-              <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                <button onClick={triggerBulkImport} disabled={isBulkImporting || !bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap disabled:cursor-not-allowed"><FiUpload className="w-3.5 h-3.5" />{isBulkImporting ? 'Importing...' : 'Bulk Import'}</button>
-                <button onClick={downloadBulkTemplate} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
-              </div>
             </div>
             </>
             )}
