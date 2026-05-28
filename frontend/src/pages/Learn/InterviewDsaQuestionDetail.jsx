@@ -138,85 +138,91 @@ export default function InterviewDsaQuestionDetail() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-6xl">
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <button
-            type="button"
-            onClick={() => navigate(dsaListPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
-            {question.title}
-          </h1>
-          <div className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
-            {question.subtitle} • {question.difficulty}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <div className="prose prose-slate max-w-none dark:prose-invert">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{details.statement}</ReactMarkdown>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Editor</div>
-              <div className="text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">Python</div>
-            </div>
-
+    <UserSidebarLayout maxWidthClass="max-w-7xl">
+      <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.34fr)_minmax(0,0.66fr)] lg:items-start">
+        <aside className="space-y-4 lg:sticky lg:top-24">
+          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
             <button
               type="button"
-              onClick={runCode}
-              disabled={isRunning}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-4 py-2 text-sm font-semibold text-[#082a5d] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#6fbfff]/40"
+              onClick={() => navigate(dsaListPath)}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
             >
-              <Play className="h-4 w-4" />
-              {isRunning ? 'Running...' : 'Run'}
+              <ArrowLeft className="h-4 w-4" />
+              Back
             </button>
-            {isDashboardContext ? (
-              <button
-                type="button"
-                onClick={markSolved}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Mark solved
-              </button>
+
+            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
+              {question.title}
+            </h1>
+            <div className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
+              {question.subtitle} • {question.difficulty}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 lg:max-h-[calc(100vh-18rem)] lg:overflow-auto">
+            <div className="prose prose-slate max-w-none dark:prose-invert">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{details.statement}</ReactMarkdown>
+            </div>
+          </div>
+        </aside>
+
+        <section className="space-y-4">
+          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Editor</div>
+                <div className="text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">Python</div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={runCode}
+                  disabled={isRunning}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-4 py-2 text-sm font-semibold text-[#082a5d] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#6fbfff]/40"
+                >
+                  <Play className="h-4 w-4" />
+                  {isRunning ? 'Running...' : 'Run'}
+                </button>
+                {isDashboardContext ? (
+                  <button
+                    type="button"
+                    onClick={markSolved}
+                    className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Mark solved
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            {submissionMessage ? (
+              <p className="mt-3 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{submissionMessage}</p>
             ) : null}
-          </div>
-          {submissionMessage ? (
-            <p className="mt-3 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{submissionMessage}</p>
-          ) : null}
 
-          <div className="mt-4 overflow-hidden rounded-xl border border-white/20 dark:border-gray-700/30">
-            <Editor
-              height="22rem"
-              defaultLanguage="python"
-              value={code}
-              theme={theme === 'dark' ? 'vs-dark' : 'light'}
-              onChange={(value) => setCode(value ?? '')}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                scrollBeyondLastLine: false,
-              }}
-            />
+            <div className="mt-4 overflow-hidden rounded-xl border border-white/20 dark:border-gray-700/30">
+              <Editor
+                height="34rem"
+                defaultLanguage="python"
+                value={code}
+                theme={theme === 'dark' ? 'vs-dark' : 'light'}
+                onChange={(value) => setCode(value ?? '')}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  scrollBeyondLastLine: false,
+                }}
+              />
+            </div>
           </div>
 
-          <div className="mt-4 rounded-xl border border-[#86c4ff]/40 bg-[#eaf6ff]/70 p-4 text-sm text-[#0d2a57] dark:border-[#6fbfff]/35 dark:bg-[#0b2f67]/55 dark:text-[#8fd9ff]">
+          <div className="rounded-2xl border border-[#86c4ff]/40 bg-[#eaf6ff]/70 p-4 text-sm text-[#0d2a57] shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/35 dark:bg-[#0b2f67]/55 dark:text-[#8fd9ff]">
             <div className="mb-2 font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Output</div>
-            <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">
+            <pre className="min-h-40 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed">
               {output || 'Run your code to see output here.'}
             </pre>
           </div>
-        </div>
+        </section>
       </div>
     </UserSidebarLayout>
   );
