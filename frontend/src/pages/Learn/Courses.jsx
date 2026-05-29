@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Clock, Calendar, ArrowRight, ArrowLeft, Code } from "lucide-react";
-import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI, dataAdapters } from "../../services/api";
 import { useTheme } from '../../context/ThemeContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
 import {
   Carousel,
   CarouselContent,
@@ -13,7 +12,6 @@ import {
 
 const COURSES_CACHE_KEY = 'learn-courses-cache-v1';
 const COURSES_CACHE_TTL_MS = 5 * 60 * 1000;
-const MotionButton = motion.button;
 const COURSE_TOPIC_ID_OVERRIDES = {
   'c': '6890c2acbc09eb4b5c346b9b',
   'c programming': '6890c2acbc09eb4b5c346b9b',
@@ -31,12 +29,16 @@ const COURSE_TOPIC_ID_OVERRIDES = {
 
 const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
 
-const getCourseTopicsPath = (course) => {
-  const overrideId =
+const getCourseTopicsId = (course) => {
+  return (
     COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.title)] ||
-    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.id)];
+    COURSE_TOPIC_ID_OVERRIDES[normalizeCourseKey(course.id)] ||
+    course.id
+  );
+};
 
-  return `/learn/courses/${overrideId || course.id}/topics`;
+const getCourseTopicsPath = (course) => {
+  return `/learn/courses/${getCourseTopicsId(course)}/topics`;
 };
 
 const readCachedCourses = () => {
@@ -210,16 +212,22 @@ export default function Courses() {
     window.open(whatsappUrl, '_blank');
   };
 
+  const prefetchCourseTopics = (course) => {
+    const topicCourseId = getCourseTopicsId(course);
+    if (!topicCourseId || readCachedCourseDetails(topicCourseId)) return;
+
+    courseAPI.getCourse(topicCourseId)
+      .then((response) => writeCachedCourseDetails(topicCourseId, response.course || response))
+      .catch(() => {
+        // Prefetch failures should never block navigation.
+      });
+  };
+
   // Custom navigation arrow button
   const NavArrow = ({ direction, onClick }) => {
     const isLeft = direction === 'left';
     return (
-      <MotionButton
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.8 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
+      <button
         type="button"
         onClick={onClick}
         className={`absolute z-30 top-1/2 -translate-y-1/2 p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#0a1128]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center ${
@@ -227,12 +235,23 @@ export default function Courses() {
         }`}
       >
         {isLeft ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
-      </MotionButton>
+      </button>
     );
   };
 
   if (loading) {
-    return <LoadingScreen showMessage={false} size={48} duration={800} />;
+    return (
+      <div className={`w-full min-h-screen px-4 sm:px-6 md:px-12 lg:px-16 pb-12 pt-24 ${isDarkMode ? "dark bg-[#020816]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`}>
+        <div className="mx-auto max-w-[1600px] space-y-10">
+          <div className="h-16 w-72 rounded-2xl bg-white/30 dark:bg-white/10 animate-pulse" />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="min-h-[260px] rounded-2xl border border-[#8ec8ff]/25 bg-white/25 dark:border-[#15366f]/45 dark:bg-[#020b23] animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -276,7 +295,12 @@ export default function Courses() {
                         className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
                       >
                         <div
-                          onClick={() => navigate(getCourseTopicsPath(course))}
+                          onMouseEnter={() => prefetchCourseTopics(course)}
+                          onFocus={() => prefetchCourseTopics(course)}
+                          onClick={() => {
+                            prefetchCourseTopics(course);
+                            navigate(getCourseTopicsPath(course));
+                          }}
                           className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1 h-full dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
                         >
                           <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
@@ -301,17 +325,13 @@ export default function Courses() {
                   </CarouselContent>
                 </Carousel>
 
-                <AnimatePresence>
-                  {canScrollPrevSelf && (
-                    <NavArrow direction="left" onClick={() => selfPacedApi?.scrollPrev()} />
-                  )}
-                </AnimatePresence>
+                {canScrollPrevSelf && (
+                  <NavArrow direction="left" onClick={() => selfPacedApi?.scrollPrev()} />
+                )}
 
-                <AnimatePresence>
-                  {canScrollNextSelf && (
-                    <NavArrow direction="right" onClick={() => selfPacedApi?.scrollNext()} />
-                  )}
-                </AnimatePresence>
+                {canScrollNextSelf && (
+                  <NavArrow direction="right" onClick={() => selfPacedApi?.scrollNext()} />
+                )}
               </div>
             </div>
 
@@ -386,17 +406,13 @@ export default function Courses() {
                   </CarouselContent>
                 </Carousel>
 
-                <AnimatePresence>
-                  {canScrollPrevExpert && (
-                    <NavArrow direction="left" onClick={() => expertLedApi?.scrollPrev()} />
-                  )}
-                </AnimatePresence>
+                {canScrollPrevExpert && (
+                  <NavArrow direction="left" onClick={() => expertLedApi?.scrollPrev()} />
+                )}
 
-                <AnimatePresence>
-                  {canScrollNextExpert && (
-                    <NavArrow direction="right" onClick={() => expertLedApi?.scrollNext()} />
-                  )}
-                </AnimatePresence>
+                {canScrollNextExpert && (
+                  <NavArrow direction="right" onClick={() => expertLedApi?.scrollNext()} />
+                )}
               </div>
             </div>
 

@@ -1,17 +1,53 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FiChevronRight,
-  FiClock,
-  FiStar,
-  FiTrendingUp,
-} from 'react-icons/fi';
+  ChevronRight,
+  Clock,
+  Star,
+  TrendingUp,
+} from 'lucide-react';
 import Sidebar from '../../components/Dashboard/Sidebar';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
-import heroBg from '../../assets/hero-bg.jpg';
+import heroBg from '../../assets/hero-bg-dashboard.webp';
+
+const DASHBOARD_HIGHLIGHTS_CACHE_KEY = 'techlearn-dashboard-highlights-cache-v1';
+const DASHBOARD_HIGHLIGHTS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readDashboardHighlightsCache = () => {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_HIGHLIGHTS_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || !parsed?.data) return null;
+    if (Date.now() - parsed.timestamp > DASHBOARD_HIGHLIGHTS_CACHE_TTL_MS) return null;
+
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+const writeDashboardHighlightsCache = (partialData) => {
+  try {
+    const current = readDashboardHighlightsCache() || {};
+    localStorage.setItem(
+      DASHBOARD_HIGHLIGHTS_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        data: {
+          ...current,
+          ...partialData,
+        },
+      })
+    );
+  } catch {
+    // Cache is only used to improve perceived load time.
+  }
+};
 
 const PixelStar = () => (
   <svg width="36" height="36" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" className="pixel-icon">
@@ -54,12 +90,13 @@ const PlaceholderBar = ({ className = '' }) => (
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [cachedHighlights] = useState(() => readDashboardHighlightsCache());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [leaderboardEntries, setLeaderboardEntries] = useState([]);
-  const [activeChallenge, setActiveChallenge] = useState(null);
-  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
-  const [challengeLoading, setChallengeLoading] = useState(true);
+  const [leaderboardEntries, setLeaderboardEntries] = useState(cachedHighlights?.leaderboardEntries || []);
+  const [activeChallenge, setActiveChallenge] = useState(cachedHighlights?.activeChallenge || null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(!cachedHighlights?.leaderboardEntries);
+  const [challengeLoading, setChallengeLoading] = useState(!cachedHighlights?.activeChallenge);
 
   const {
     user,
@@ -95,7 +132,9 @@ export default function Dashboard() {
         try {
           const leaderboardResponse = await leaderboardApi.getLeaderboard(5);
           if (!cancelled) {
-            setLeaderboardEntries(leaderboardResponse?.entries || []);
+            const entries = leaderboardResponse?.entries || [];
+            setLeaderboardEntries(entries);
+            writeDashboardHighlightsCache({ leaderboardEntries: entries });
           }
         } catch {
           if (!cancelled) {
@@ -112,7 +151,9 @@ export default function Dashboard() {
         try {
           const challengeResponse = await dailyChallengeAPI.getActive();
           if (!cancelled) {
-            setActiveChallenge(challengeResponse?.data || null);
+            const challenge = challengeResponse?.data || null;
+            setActiveChallenge(challenge);
+            writeDashboardHighlightsCache({ activeChallenge: challenge });
           }
         } catch {
           if (!cancelled) {
@@ -218,8 +259,7 @@ export default function Dashboard() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-            .font-press-start { font-family: 'Press Start 2P', cursive; line-height: 1.5; }
+            .font-press-start { font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1.5; font-weight: 700; }
             .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
           `,
         }}
@@ -261,7 +301,7 @@ export default function Dashboard() {
               <div className="z-10 flex flex-col items-start text-left w-full mt-auto space-y-4 text-white">
                 <div className="flex flex-wrap items-center gap-2.5">
                   <span className="text-[9px] sm:text-[10px] font-semibold text-white bg-white/16 backdrop-blur-md px-3 py-1 border border-white/20 rounded-full flex items-center gap-1.5 sm:gap-2">
-                    <FiClock className="w-3.5 h-3.5 shrink-0" />
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
                     <span className="whitespace-nowrap">{todayFormatted}</span>
                     <span className="opacity-65 text-[8px] sm:text-[9px] tracking-[0.22em] uppercase font-bold shrink-0">IST</span>
                   </span>
@@ -292,16 +332,16 @@ export default function Dashboard() {
 
                     <div className="flex flex-wrap items-center gap-5 pt-2 w-full">
                       <div className="flex items-center gap-2 text-sm text-white font-medium">
-                        <FiStar className="text-amber-400 w-4 h-4" />
+                        <Star className="text-amber-400 w-4 h-4" />
                         <span>+{dailyChallenge.xpReward} XP</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-white font-medium">
-                        <FiClock className="text-sky-300 w-4 h-4" />
+                        <Clock className="text-sky-300 w-4 h-4" />
                         <span>~{dailyChallenge.timeEstimate}</span>
                       </div>
                       {latestDailyChallenge ? (
                         <div className="flex items-center gap-2 text-sm text-white font-medium">
-                          <FiTrendingUp className="text-emerald-300 w-4 h-4" />
+                          <TrendingUp className="text-emerald-300 w-4 h-4" />
                           <span>Last accuracy: {latestDailyChallenge.accuracy || 0}%</span>
                         </div>
                       ) : null}
@@ -311,7 +351,7 @@ export default function Dashboard() {
                       onClick={() => navigate('/dashboard/daily-challenge')}
                       className="mt-2 bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-6 py-3 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 transform hover:-translate-y-0.5 shadow-md"
                     >
-                      Go To Challenge <FiChevronRight className="w-4 h-4" />
+                      Go To Challenge <ChevronRight className="w-4 h-4" />
                     </button>
                   </>
                 )}
@@ -437,9 +477,9 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center justify-between mt-4 border-t border-black/5 dark:border-white/5 pt-3">
                         <span className="text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
-                          <FiTrendingUp /> Completed
+                          <TrendingUp className="w-3 h-3" /> Completed
                         </span>
-                        <FiChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
+                        <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
                       </div>
                     </div>
                   ))}

@@ -1,9 +1,39 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
+const DASHBOARD_CACHE_KEY = 'techlearn-dashboard-cache-v1';
+const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const UserContext = createContext();
+
+const readCachedDashboard = () => {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || !parsed?.data) return null;
+    if (Date.now() - parsed.timestamp > DASHBOARD_CACHE_TTL_MS) return null;
+
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+const writeCachedDashboard = (data) => {
+  try {
+    localStorage.setItem(
+      DASHBOARD_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        data,
+      })
+    );
+  } catch {
+    // Cache is a performance hint only.
+  }
+};
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -56,60 +86,68 @@ export const UserProvider = ({ children }) => {
     }, 0);
   };
 
+  const applyDashboardData = (data) => {
+    if (!data) return;
+
+    // Update user data if API returns it
+    if (data.user) {
+      const storedUserData = localStorage.getItem('userData');
+      let currentRole = 'student';
+      try {
+        if (storedUserData) {
+          const parsed = JSON.parse(storedUserData);
+          currentRole = parsed.role || 'student';
+        }
+      } catch (e) {
+        console.error(e);
+      }
+
+      const updatedUser = {
+        ...data.user,
+        role: data.user.role || currentRole,
+      };
+      setUser(updatedUser);
+      localStorage.setItem('userData', JSON.stringify(updatedUser));
+    }
+
+    const totalXP = calculateTotalXP(data.courseXP);
+    setXp(totalXP);
+
+    const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];
+    setRecentExercises(exercises);
+
+    setActivities(data.calendarActivity || {});
+
+    setProgress({
+      courseProgress: data.totalCourseProgress?.progressPercent || 0,
+      goalsProgress: 40, // Placeholder
+      totalExercises: data.exerciseProgress?.totalExercises || 0,
+      completedExercises: data.exerciseProgress?.completedExercises || 0,
+      exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0
+    });
+    setLatestDailyChallenge(data.latestDailyChallenge || null);
+  };
+
   // Fetch user + dashboard data from API
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-  const { data } = await axios.get(`${BASE_URL}/dashboard`, {
+      const response = await fetch(`${BASE_URL}/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      const data = await response.json().catch(() => ({ message: 'Network error' }));
 
-      // Update user data if API returns it
-      if (data.user) {
-        const storedUserData = localStorage.getItem('userData');
-        let currentRole = 'student';
-        try {
-          if (storedUserData) {
-            const parsed = JSON.parse(storedUserData);
-            currentRole = parsed.role || 'student';
-          }
-        } catch (e) {
-          console.error(e);
-        }
-
-        const updatedUser = {
-          ...data.user,
-          role: data.user.role || currentRole,
-        };
-        setUser(updatedUser);
-        localStorage.setItem('userData', JSON.stringify(updatedUser));
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 
-      // Calculate total XP from courseXP field
-      const totalXP = calculateTotalXP(data.courseXP);
-      setXp(totalXP);
-
-      // Set recent exercises from completedExercises
-      const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];
-      setRecentExercises(exercises);
-
-      // Set calendar activities
-      setActivities(data.calendarActivity || {});
-
-      // Update progress with correct field mappings
-      setProgress({
-        courseProgress: data.totalCourseProgress?.progressPercent || 0,
-        goalsProgress: 40, // Placeholder
-        totalExercises: data.exerciseProgress?.totalExercises || 0,
-        completedExercises: data.exerciseProgress?.completedExercises || 0,
-        exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0
-      });
-      setLatestDailyChallenge(data.latestDailyChallenge || null);
+      writeCachedDashboard(data);
+      applyDashboardData(data);
 
     } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      setError(err.message);
       console.error('Fetch error:', err);
     } finally {
       setIsLoading(false);
@@ -123,6 +161,10 @@ export const UserProvider = ({ children }) => {
       const hasLocalUser = loadUserFromStorage();
 
       if (hasLocalUser) {
+        const cachedDashboard = readCachedDashboard();
+        if (cachedDashboard) {
+          applyDashboardData(cachedDashboard);
+        }
         setIsLoading(false);
       }
 

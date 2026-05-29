@@ -1,19 +1,42 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github-dark.css';
-import '../../styles/markdown.css';
 import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
-import LoadingScreen from "../../components/LoadingScreen";
 import { courseAPI } from "../../services/api";
 import { useTheme } from '../../context/ThemeContext';
+import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
 
-const MotionDiv = motion.div;
-const MotionH1 = motion.h1;
+const MarkdownContent = lazy(() => import('./MarkdownContent'));
+
+const CourseTopicsSkeleton = ({ isDarkMode }) => (
+  <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <ScrollProgress />
+    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#020816]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+    <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
+      <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
+        <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
+      </header>
+      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
+        <aside className="hidden md:flex min-h-0 flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
+          ))}
+        </aside>
+        <div className="min-h-0 overflow-hidden px-4 md:px-8 pb-10">
+          <div className="max-w-[800px] mx-auto p-8 md:p-12 lg:p-16">
+            <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
+            <div className="mt-10 space-y-4">
+              <div className="h-5 w-full rounded-full bg-white/30 dark:bg-white/10 animate-pulse" />
+              <div className="h-5 w-11/12 rounded-full bg-white/30 dark:bg-white/10 animate-pulse" />
+              <div className="h-5 w-5/6 rounded-full bg-white/30 dark:bg-white/10 animate-pulse" />
+              <div className="h-5 w-9/12 rounded-full bg-white/30 dark:bg-white/10 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+);
 
 const CourseTopics = () => {
   const { theme } = useTheme();
@@ -21,6 +44,7 @@ const CourseTopics = () => {
 
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const cachedCourse = readCachedCourseDetails(courseId);
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
   const [isCourseHeaderHidden, setIsCourseHeaderHidden] = useState(false);
@@ -30,26 +54,49 @@ const CourseTopics = () => {
   // Ref for the scrollable container
   const scrollContainerRef = useRef(null);
 
-  const [backendCourse, setBackendCourse] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [backendCourse, setBackendCourse] = useState(cachedCourse);
+  const [loading, setLoading] = useState(!cachedCourse);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchCourse = async () => {
       try {
-        setLoading(true);
+        const cached = readCachedCourseDetails(courseId);
+        if (cached) {
+          setBackendCourse(cached);
+          setLoading(false);
+        } else {
+          setLoading(true);
+        }
+
         const response = await courseAPI.getCourse(courseId);
         const courseData = response.course || response;
-        setBackendCourse(courseData);
-        setError(null);
+        writeCachedCourseDetails(courseId, courseData);
+
+        if (!cancelled) {
+          setBackendCourse(courseData);
+          setError(null);
+        }
       } catch (err) {
-        setError(err.message);
-        setBackendCourse(null);
+        if (!cancelled) {
+          setError(err.message);
+          if (!readCachedCourseDetails(courseId)) {
+            setBackendCourse(null);
+          }
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     if (courseId) fetchCourse();
+
+    return () => {
+      cancelled = true;
+    };
   }, [courseId]);
 
   const currentCourse = (() => {
@@ -111,7 +158,7 @@ const CourseTopics = () => {
     };
   }, []);
 
-  if (loading) return <><ScrollProgress /><LoadingScreen showMessage={false} size={48} duration={800} /></>;
+  if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
   if (error || !currentCourse) {
     return (
@@ -128,48 +175,6 @@ const CourseTopics = () => {
       </div>
     );
   }
-
-  const cleanHeadingText = (children) => {
-    if (typeof children === 'string') return children.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '');
-    if (Array.isArray(children)) return children.map(child => typeof child === 'string' ? child.replace(/^\d+\.\s*/, '').replace(/\s*-\s*\d+$/, '').replace(/\s*–\s*\d+$/, '') : child);
-    return children;
-  };
-
-  // Re-mapped Markdown Hierarchy: Markdown H1s and H2s are gracefully styled so they don't fight the Page Title
-  const markdownComponents = {
-    h1: ({children}) => <h2 className="text-2xl md:text-3xl font-medium text-black dark:text-white mt-12 mb-6 tracking-tight">{cleanHeadingText(children)}</h2>,
-    h2: ({children}) => <h3 className="text-xl md:text-2xl font-medium text-black dark:text-white mt-10 mb-4 tracking-tight">{cleanHeadingText(children)}</h3>,
-    h3: ({children}) => <h4 className="text-lg font-medium text-black/90 dark:text-white/90 mt-8 mb-4">{cleanHeadingText(children)}</h4>,
-    h4: ({children}) => <h5 className="text-[13px] font-bold text-black/60 dark:text-white/60 mt-6 mb-3 uppercase tracking-widest">{cleanHeadingText(children)}</h5>,
-    p: ({children}) => <p className="text-black/75 dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light">{children}</p>,
-    strong: ({children}) => <strong className="font-medium text-black dark:text-white">{children}</strong>,
-    a: ({children, href}) => <a href={href} className="text-[#3C83F6] hover:underline decoration-2 underline-offset-4 transition-all">{children}</a>,
-    blockquote: ({children}) => (
-      <blockquote className="my-8 pl-6 py-2 border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl">
-        <div className="text-black/60 dark:text-white/60 italic text-lg">{children}</div>
-      </blockquote>
-    ),
-    ul: ({children}) => <ul className="flex flex-col gap-3 my-8">{children}</ul>,
-    ol: ({children}) => <ol className="list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-black/75 dark:text-white/75 text-base md:text-lg font-light">{children}</ol>,
-    li: ({children}) => (
-      <li className="flex items-start gap-4 text-base md:text-lg text-black/75 dark:text-white/75 font-light">
-        <div className="w-1.5 h-1.5 rounded-full bg-[#3C83F6] dark:bg-white/50 mt-[0.6rem] shrink-0 shadow-sm" />
-        <span className="flex-1">{children}</span>
-      </li>
-    ),
-    code: ({inline, className, children, ...props}) => {
-      if (inline) return <code className="bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-blue-200 px-1.5 py-0.5 rounded-md text-[13px] font-mono border border-[#3C83F6]/20 dark:border-white/10" {...props}>{children}</code>;
-      return <code className={className} {...props}>{children}</code>;
-    },
-    pre: ({children}) => (
-      <div className="my-10 relative group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-[#3C83F6]/20 to-[#2563eb]/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition duration-500"></div>
-        <pre className="relative bg-[#0a1128] dark:bg-black/80 border border-black/10 dark:border-white/10 rounded-2xl p-6 md:p-8 overflow-x-auto text-[13px] leading-relaxed font-mono text-slate-300 shadow-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {children}
-        </pre>
-      </div>
-    ),
-  };
 
   return (
     <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
@@ -208,19 +213,15 @@ const CourseTopics = () => {
         </header>
 
         {/* Syllabus Drawer */}
-        <AnimatePresence>
-          {isSyllabusOpen && (
-            <>
-              <MotionDiv 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
-                onClick={() => setIsSyllabusOpen(false)} 
-                className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden" 
-              />
-              <MotionDiv 
-                initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} 
-                transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden"
-              >
+        {isSyllabusOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close syllabus"
+              onClick={() => setIsSyllabusOpen(false)}
+              className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden"
+            />
+            <div className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
@@ -250,10 +251,9 @@ const CourseTopics = () => {
                     );
                   })}
                 </div>
-              </MotionDiv>
-            </>
-          )}
-        </AnimatePresence>
+            </div>
+          </>
+        )}
 
         <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
           <aside
@@ -300,23 +300,20 @@ const CourseTopics = () => {
                 {/* Swapped out useInViewport for a Framer Motion component tied to a key.
                   This forces React to completely unmount and re-animate the title whenever the selectedTopic changes.
                 */}
-                <MotionH1 
+                <h1
                   key={selectedTopic}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
                   className="text-3xl md:text-4xl lg:text-5xl font-medium text-black dark:text-white tracking-tight leading-[1.2]"
                 >
                   {currentTopic?.title}
-                </MotionH1>
+                </h1>
               </div>
 
               {/* Dynamic Content - Added CSS rules to strictly strip top margin from the very first Markdown element */}
               {currentTopic?.hasNotes && currentTopic?.notesContent ? (
                 <div className="w-full [&>*:first-child]:mt-0 [&>*:first-child>*:first-child]:mt-0">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
-                    {currentTopic.notesContent}
-                  </ReactMarkdown>
+                  <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-white/20 dark:bg-white/5" />}>
+                    <MarkdownContent>{currentTopic.notesContent}</MarkdownContent>
+                  </Suspense>
                 </div>
               ) : currentTopic?.hasNotes ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center h-full">

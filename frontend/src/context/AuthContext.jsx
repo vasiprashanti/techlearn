@@ -1,6 +1,40 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI } from '../services/api';
 import { useNavigate } from 'react-router-dom';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+const handleAuthResponse = async (response) => {
+  const payload = await response.json().catch(() => ({ message: 'Network error' }));
+
+  if (!response.ok) {
+    throw new Error(payload.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return payload;
+};
+
+const authAPI = {
+  register: async (userData) => {
+    const response = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+    return handleAuthResponse(response);
+  },
+  login: async (credentials) => {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+    return handleAuthResponse(response);
+  },
+};
 
 // Initial state
 const initialState = {

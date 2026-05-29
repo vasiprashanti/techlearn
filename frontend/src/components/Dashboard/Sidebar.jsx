@@ -1,32 +1,31 @@
-import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  FiX,
-  FiSidebar,
-  FiGrid,
-  FiMap,
-  FiPlayCircle,
-  FiAward,
-  FiUser
-} from "react-icons/fi";
+  Award,
+  LayoutDashboard,
+  Map,
+  PanelLeftOpen,
+  PlayCircle,
+  User,
+  X,
+} from "lucide-react";
 
 const menuGroups = [
   {
     title: "MAIN",
     items: [
-      { id: "dashboard", title: "Dashboard", icon: <FiGrid className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/roadmap", title: "Roadmaps", icon: <FiMap className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/practice", title: "Practice", icon: <FiPlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <FiAward className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
-      { id: "dashboard/profile", title: "Profile", icon: <FiUser className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard", title: "Dashboard", icon: <LayoutDashboard className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/roadmap", title: "Roadmaps", icon: <Map className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/practice", title: "Practice", icon: <PlayCircle className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/leaderboard", title: "Leaderboard", icon: <Award className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
+      { id: "dashboard/profile", title: "Profile", icon: <User className="w-[18px] h-[18px] md:w-5 md:h-5" /> },
     ]
   }
 ];
 
 const SCROLL_KEY = 'student-sidebar-scroll';
 
-const Sidebar = ({ isCollapsed, onToggle }) => {
+const Sidebar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
@@ -129,33 +128,25 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
         onClick={() => setMobileMenuOpen(true)}
         className="lg:hidden fixed top-24 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
       >
-        <FiSidebar className="w-[22px] h-[22px]" />
+        <PanelLeftOpen className="w-[22px] h-[22px]" />
       </button>
 
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileMenuOpen(false)}
-              className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#bceaff] dark:bg-[#020b23] border-r border-white/5 z-50 shadow-2xl flex flex-col pt-6"
-            >
+      {mobileMenuOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close sidebar overlay"
+            onClick={() => setMobileMenuOpen(false)}
+            className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          />
+          <div className="lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#bceaff] dark:bg-[#020b23] border-r border-white/5 z-50 shadow-2xl flex flex-col pt-6 transition-transform duration-200 ease-out">
               <div className="flex items-center justify-center mb-6 shrink-0 relative px-2">
                 <button
                   onClick={() => setMobileMenuOpen(false)}
                   className="absolute right-1 top-0 p-1 text-[#00185a] dark:text-slate-400 hover:text-white"
                   aria-label="Close sidebar"
                 >
-                  <FiX className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </button>
                 <div className="w-10 h-10 rounded-full border border-[#00185a]/15 dark:border-white/15 bg-white/10 dark:bg-white/5 flex items-center justify-center relative overflow-hidden select-none mt-2">
                   <span className="font-poppins font-bold text-xs text-[#00185a] dark:text-white">tls</span>
@@ -165,10 +156,9 @@ const Sidebar = ({ isCollapsed, onToggle }) => {
               <div className="flex-1 overflow-y-auto px-1 pb-6 scrollbar-hide">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </div>
+        </>
+      )}
     </>
   );
 };

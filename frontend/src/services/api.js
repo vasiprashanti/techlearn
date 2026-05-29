@@ -7,21 +7,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
-  console.log('🌐 Response received:', {
-    status: response.status,
-    statusText: response.statusText,
-    url: response.url,
-    headers: Object.fromEntries(response.headers.entries())
-  });
-
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'Network error' }));
-    console.error('❌ API Error:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      error
-    });
 
     // Handle 401 Unauthorized - clear token and redirect to login
     if (response.status === 401) {
@@ -83,21 +70,13 @@ export const courseAPI = {
   // Get all courses
   getAllCourses: async () => {
     const url = `${API_BASE}/courses`;
-    console.log('🚀 Making request to:', url);
-    console.log('📋 Request headers:', getAuthHeaders());
 
-    try {
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
-      const data = await handleResponse(response);
-      console.log('✅ Courses data received:', data);
-      // Backend returns { count, courses }, we need just the courses array
-      return data.courses || [];
-    } catch (error) {
-      console.error('❌ getAllCourses failed:', error);
-      throw error;
-    }
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleResponse(response);
+    // Backend returns { count, courses }, we need just the courses array
+    return data.courses || [];
   },
 
   // Get specific course by ID
@@ -128,41 +107,31 @@ export const courseAPI = {
 
   // Submit individual quiz answer (new flow)
   submitQuizAnswer: async (courseId, topicId, questionId, selectedOption, quizId = null) => {
-    try {
-      let actualQuizId = quizId;
+    let actualQuizId = quizId;
 
-      // If quizId is not provided, try to get it from course data
+    // If quizId is not provided, try to get it from course data
+    if (!actualQuizId) {
+      const courseData = await courseAPI.getCourse(courseId);
+      const topic = courseData.topics?.find(t => t._id === topicId || t.topicId === topicId);
+      actualQuizId = topic?.quizId;
+
       if (!actualQuizId) {
-        console.log('Quiz ID not provided, fetching from course data...');
-        const courseData = await courseAPI.getCourse(courseId);
-        const topic = courseData.topics?.find(t => t._id === topicId || t.topicId === topicId);
-        actualQuizId = topic?.quizId;
-
-        if (!actualQuizId) {
-          console.error('Quiz ID not found in course data. Course topics:', courseData.topics);
-          console.error('Looking for topicId:', topicId);
-          throw new Error('Quiz ID not found for this topic. Please ensure the quiz data is properly seeded.');
-        }
+        throw new Error('Quiz ID not found for this topic. Please ensure the quiz data is properly seeded.');
       }
-
-      console.log('Submitting quiz answer:', { courseId, quizId: actualQuizId, questionId, selectedOption });
-
-      // Submit the answer with the correct quizId
-      const response = await fetch(`${API_BASE}/courses/${courseId}/quiz/submit`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          quizId: actualQuizId,
-          questionId,
-          selectedOption
-        }),
-      });
-
-      return handleResponse(response);
-    } catch (error) {
-      console.error('Error in submitQuizAnswer:', error);
-      throw error;
     }
+
+    // Submit the answer with the correct quizId
+    const response = await fetch(`${API_BASE}/courses/${courseId}/quiz/submit`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        quizId: actualQuizId,
+        questionId,
+        selectedOption
+      }),
+    });
+
+    return handleResponse(response);
   },
 };
 
@@ -246,8 +215,6 @@ export const exerciseAPI = {
       headers: getAuthHeaders(),
     });
     const data = await handleResponse(response);
-    // Debug log: compare this with Postman response
-    console.log('🧩 [exerciseAPI.getExercises] Raw backend data:', data);
     return data;
   },
 
@@ -482,26 +449,13 @@ export const apiStatus = {
   checkHealth: async () => {
     try {
       const healthUrl = `${API_BASE.replace('/api', '')}/`;
-      console.log('🏥 Health check URL:', healthUrl);
 
       const response = await fetch(healthUrl, {
         method: 'GET',
       });
 
-      console.log('🏥 Health check response:', {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🏥 Health check data:', data);
-      }
-
       return response.ok;
-    } catch (error) {
-      console.error('❌ Backend health check failed:', error);
+    } catch {
       return false;
     }
   },
