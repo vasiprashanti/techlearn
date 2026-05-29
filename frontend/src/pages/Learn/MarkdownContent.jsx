@@ -11,22 +11,22 @@ const cleanHeadingText = (children) => {
 };
 
 const markdownComponents = {
-  h1: ({children}) => <h2 className="text-2xl md:text-3xl font-medium text-black dark:text-white mt-12 mb-6 tracking-tight">{cleanHeadingText(children)}</h2>,
-  h2: ({children}) => <h3 className="text-xl md:text-2xl font-medium text-black dark:text-white mt-10 mb-4 tracking-tight">{cleanHeadingText(children)}</h3>,
-  h3: ({children}) => <h4 className="text-lg font-medium text-black/90 dark:text-white/90 mt-8 mb-4">{cleanHeadingText(children)}</h4>,
-  h4: ({children}) => <h5 className="text-[13px] font-bold text-black/60 dark:text-white/60 mt-6 mb-3 uppercase tracking-widest">{cleanHeadingText(children)}</h5>,
-  p: ({children}) => <p className="text-black/75 dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light">{children}</p>,
-  strong: ({children}) => <strong className="font-medium text-black dark:text-white">{children}</strong>,
+  h1: ({children}) => <h2 className="text-2xl md:text-3xl font-medium text-[#00113b] dark:text-white mt-12 mb-6 tracking-tight">{cleanHeadingText(children)}</h2>,
+  h2: ({children}) => <h3 className="text-xl md:text-2xl font-medium text-[#00113b] dark:text-white mt-10 mb-4 tracking-tight">{cleanHeadingText(children)}</h3>,
+  h3: ({children}) => <h4 className="text-lg font-medium text-[#00113b]/90 dark:text-white/90 mt-8 mb-4">{cleanHeadingText(children)}</h4>,
+  h4: ({children}) => <h5 className="text-[13px] font-bold text-[#00113b]/60 dark:text-white/60 mt-6 mb-3 uppercase tracking-widest">{cleanHeadingText(children)}</h5>,
+  p: ({children}) => <p className="text-[#00113b]/75 dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light">{children}</p>,
+  strong: ({children}) => <strong className="font-medium text-[#00113b] dark:text-white">{children}</strong>,
   a: ({children, href}) => <a href={href} className="text-[#3C83F6] hover:underline decoration-2 underline-offset-4 transition-all">{children}</a>,
   blockquote: ({children}) => (
     <blockquote className="my-8 pl-6 py-2 border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl">
-      <div className="text-black/60 dark:text-white/60 italic text-lg">{children}</div>
+      <div className="text-[#00113b]/60 dark:text-white/60 italic text-lg">{children}</div>
     </blockquote>
   ),
   ul: ({children}) => <ul className="flex flex-col gap-3 my-8">{children}</ul>,
-  ol: ({children}) => <ol className="list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-black/75 dark:text-white/75 text-base md:text-lg font-light">{children}</ol>,
+  ol: ({children}) => <ol className="list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-[#00113b]/75 dark:text-white/75 text-base md:text-lg font-light">{children}</ol>,
   li: ({children}) => (
-    <li className="flex items-start gap-4 text-base md:text-lg text-black/75 dark:text-white/75 font-light">
+    <li className="flex items-start gap-4 text-base md:text-lg text-[#00113b]/75 dark:text-white/75 font-light">
       <div className="w-1.5 h-1.5 rounded-full bg-[#3C83F6] dark:bg-white/50 mt-[0.6rem] shrink-0 shadow-sm" />
       <span className="flex-1">{children}</span>
     </li>

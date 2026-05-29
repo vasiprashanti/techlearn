@@ -72,8 +72,8 @@ const Sidebar = () => {
             `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
               isActive
-                ? "bg-[#0b3ef2] text-white font-semibold shadow-md shadow-blue-600/20 border border-blue-400/20"
-                : "text-[#2d4b7c] dark:text-slate-400 hover:text-[#0b3ef2] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
+                ? "bg-[#e4f6ff] text-[#00113b] font-semibold shadow-md shadow-blue-600/10 border border-[#7ec9ff]/35 dark:bg-[#0b3ef2] dark:text-white dark:shadow-blue-600/20 dark:border-blue-400/20"
+                : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
             }`
           }
         >
@@ -143,13 +143,13 @@ const Sidebar = () => {
               <div className="flex items-center justify-center mb-6 shrink-0 relative px-2">
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="absolute right-1 top-0 p-1 text-[#00185a] dark:text-slate-400 hover:text-white"
+                  className="absolute right-1 top-0 p-1 text-[#00113b] dark:text-slate-400 hover:text-white"
                   aria-label="Close sidebar"
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="w-10 h-10 rounded-full border border-[#00185a]/15 dark:border-white/15 bg-white/10 dark:bg-white/5 flex items-center justify-center relative overflow-hidden select-none mt-2">
-                  <span className="font-poppins font-bold text-xs text-[#00185a] dark:text-white">tls</span>
+                <div className="w-10 h-10 rounded-full border border-[#00113b]/15 dark:border-white/15 bg-white/10 dark:bg-white/5 flex items-center justify-center relative overflow-hidden select-none mt-2">
+                  <span className="font-poppins font-bold text-xs text-[#00113b] dark:text-white">tls</span>
                 </div>
               </div>
 

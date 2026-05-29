@@ -136,7 +136,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
           >
             Learn
           </Link>
@@ -146,7 +146,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
           >
             Dashboard
           </Link>
@@ -160,7 +160,7 @@ const Navbar = () => {
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px]
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
                   ${isUserMenuOpen ? 'after:w-full' : 'after:w-0'}
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f] hover:text-[#001a5c]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
               >
@@ -201,7 +201,7 @@ const Navbar = () => {
               className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out
                 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
                 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
-                ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+                ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             >
               Log In
             </button>
@@ -211,7 +211,7 @@ const Navbar = () => {
           <button
             onClick={toggleTheme}
             className={`text-[15px] transition-colors duration-300 p-1.5 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
@@ -222,7 +222,7 @@ const Navbar = () => {
         <button
           type="button"
           className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
-            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
+            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
           }`}
           onClick={toggleMenu}
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -250,7 +250,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
           >
             Learn
           </Link>
@@ -261,7 +261,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
           >
             Dashboard
           </Link>
@@ -272,7 +272,7 @@ const Navbar = () => {
             <div className="py-2.5">
               <div
                 className={`text-[14px] mb-2 ${
-                  isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
+                  isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
                 }`}
               >
                 Hi, {user?.firstName || user?.email || 'User'}
@@ -285,7 +285,7 @@ const Navbar = () => {
                 className={`relative block py-2.5 text-[14px] transition-colors duration-300 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
               >
                 Log Out
               </button>
@@ -300,7 +300,7 @@ const Navbar = () => {
                 className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
               >
                 Log In
               </button>
@@ -313,7 +313,7 @@ const Navbar = () => {
           <button
             onClick={toggleTheme}
             className={`text-[15px] transition-colors duration-300 p-1.5 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             aria-label="Toggle dark mode"
           >
             {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}

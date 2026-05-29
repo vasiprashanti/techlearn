@@ -22,12 +22,28 @@ const COURSE_TOPIC_ID_OVERRIDES = {
   'java programming': '6890f09830551d88a325f623',
   'core java': '6890f09830551d88a325f623',
   'java (core)': '6890f09830551d88a325f623',
-  'test course': '6995d2d6576b86926b74cc71',
-  'phase 2 course': '6a0f089f28624d4a125064b0',
-  'phase two course': '6a0f089f28624d4a125064b0',
 };
 
 const normalizeCourseKey = (value = '') => value.toString().trim().toLowerCase();
+
+const HIDDEN_COURSE_KEYS = new Set([
+  '6995d2d6576b86926b74cc71',
+  '6a0f089f28624d4a125064b0',
+  'test course',
+  'phase 2 course',
+  'phase two course',
+]);
+
+const isUserVisibleCourse = (course) => {
+  const courseKeys = [
+    course?.title,
+    course?.id,
+    course?._id,
+    course?.courseId,
+  ].map(normalizeCourseKey);
+
+  return !courseKeys.some((key) => HIDDEN_COURSE_KEYS.has(key));
+};
 
 const getCourseTopicsId = (course) => {
   return (
@@ -50,7 +66,7 @@ const readCachedCourses = () => {
     if (!parsed?.timestamp || !Array.isArray(parsed?.courses)) return null;
     if (Date.now() - parsed.timestamp > COURSES_CACHE_TTL_MS) return null;
 
-    return parsed.courses;
+    return parsed.courses.filter(isUserVisibleCourse);
   } catch {
     return null;
   }
@@ -128,7 +144,9 @@ export default function Courses() {
           setLoading(true);
         }
         const backendCourses = await courseAPI.getAllCourses();
-        const adaptedCourses = backendCourses.map(course => dataAdapters.adaptCourse(course));
+        const adaptedCourses = backendCourses
+          .map(course => dataAdapters.adaptCourse(course))
+          .filter(isUserVisibleCourse);
         setCoursesData(adaptedCourses);
         writeCachedCourses(adaptedCourses);
         setError(null);

@@ -10,7 +10,12 @@
   }
 
   body {
-    @apply text-gray-900 antialiased;
+    @apply antialiased;
+    color: #00113b;
+  }
+
+  .dark body {
+    color: #e0e6f5;
   }
 }
 
@@ -34,7 +39,7 @@
 
   .dashboard-page-title {
     @apply text-2xl font-semibold tracking-tight sm:text-[2rem];
-    color: #0d2a57;
+    color: #00113b;
   }
 
   .dark .dashboard-page-title {
@@ -95,7 +100,7 @@
     @apply h-11 w-full rounded-[1.1rem] border px-4 text-sm outline-none transition;
     border-color: rgba(134, 196, 255, 0.4);
     background: rgba(242, 250, 255, 0.92);
-    color: #0d2a57;
+    color: #00113b;
   }
 
   .dashboard-input-surface::placeholder {
@@ -182,6 +187,71 @@
 
 /* Custom utility styles */
 @layer utilities {
+  html:not(.dark) .text-black,
+  html:not(.dark) .text-gray-900,
+  html:not(.dark) .text-slate-900 {
+    color: #00113b !important;
+  }
+
+  html:not(.dark) .text-\[\#0d2a57\],
+  html:not(.dark) .text-\[\#020b23\],
+  html:not(.dark) .text-\[\#00184f\],
+  html:not(.dark) .text-\[\#00185a\] {
+    color: #00113b !important;
+  }
+
+  html:not(.dark) .text-black\/20 {
+    color: rgba(0, 17, 59, 0.2) !important;
+  }
+
+  html:not(.dark) .text-black\/30 {
+    color: rgba(0, 17, 59, 0.3) !important;
+  }
+
+  html:not(.dark) .text-black\/35 {
+    color: rgba(0, 17, 59, 0.35) !important;
+  }
+
+  html:not(.dark) .text-black\/40 {
+    color: rgba(0, 17, 59, 0.4) !important;
+  }
+
+  html:not(.dark) .text-black\/45 {
+    color: rgba(0, 17, 59, 0.45) !important;
+  }
+
+  html:not(.dark) .text-black\/50 {
+    color: rgba(0, 17, 59, 0.5) !important;
+  }
+
+  html:not(.dark) .text-black\/55 {
+    color: rgba(0, 17, 59, 0.55) !important;
+  }
+
+  html:not(.dark) .text-black\/60 {
+    color: rgba(0, 17, 59, 0.6) !important;
+  }
+
+  html:not(.dark) .text-black\/70 {
+    color: rgba(0, 17, 59, 0.7) !important;
+  }
+
+  html:not(.dark) .text-black\/75 {
+    color: rgba(0, 17, 59, 0.75) !important;
+  }
+
+  html:not(.dark) .text-black\/80 {
+    color: rgba(0, 17, 59, 0.8) !important;
+  }
+
+  html:not(.dark) .text-black\/90 {
+    color: rgba(0, 17, 59, 0.9) !important;
+  }
+
+  html:not(.dark) .hover\:text-black:hover {
+    color: #00113b !important;
+  }
+
   .text-gradient {
     @apply bg-gradient-to-r from-primary-600 to-purple-600 bg-clip-text text-transparent;
   }
@@ -543,7 +613,7 @@
     line-height: 1.05 !important;
     font-weight: 600 !important;
     letter-spacing: -0.03em !important;
-    color: #0d2a57 !important;
+    color: #00113b !important;
   }
 
   .admin-dashboard-typography main > div > section:first-of-type > div:first-child[class*="rounded-2xl"] p {
@@ -608,7 +678,7 @@
   .admin-dashboard-typography select {
     border-color: rgba(134, 196, 255, 0.4) !important;
     background: rgba(242, 250, 255, 0.92) !important;
-    color: #0d2a57 !important;
+    color: #00113b !important;
     border-radius: 1.1rem !important;
   }
 

@@ -9,7 +9,7 @@ import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/c
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
-  <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+  <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#020816]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
     <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
@@ -162,7 +162,7 @@ const CourseTopics = () => {
 
   if (error || !currentCourse) {
     return (
-      <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+      <div className={`flex min-h-full w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
          <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
         <div className="flex-1 flex items-center justify-center relative z-10">
           <div className="dashboard-surface text-center p-12 shadow-sm">
@@ -177,7 +177,7 @@ const CourseTopics = () => {
   }
 
   return (
-    <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-full w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
       
       {/* Unified Background */}
@@ -207,7 +207,7 @@ const CourseTopics = () => {
               className="md:hidden flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
             >
               <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-black/70 dark:text-white/70 font-semibold">Chapters</span>
+              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-[#00113b]/70 dark:text-white/70 font-semibold">Chapters</span>
             </button>
           </div>
         </header>
@@ -227,7 +227,7 @@ const CourseTopics = () => {
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
                   </div>
                   <button onClick={() => setIsSyllabusOpen(false)} className="w-8 h-8 rounded-full flex items-center justify-center bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
-                    <ChevronLeft className="w-4 h-4 text-black/60 dark:text-white/60" />
+                    <ChevronLeft className="w-4 h-4 text-[#00113b]/60 dark:text-white/60" />
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -240,8 +240,8 @@ const CourseTopics = () => {
                         onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }}
                         className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                           isActive
-                            ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#020b23] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                            : "border-transparent text-[#020b23]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                            ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                            : "border-transparent text-[#00113b]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                         }`}
                       >
                         <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -270,8 +270,8 @@ const CourseTopics = () => {
                       onClick={() => setSelectedTopic(index)}
                       className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
-                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#020b23] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                          : "border-transparent text-[#020b23]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#020b23] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          : "border-transparent text-[#00113b]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -302,7 +302,7 @@ const CourseTopics = () => {
                 */}
                 <h1
                   key={selectedTopic}
-                  className="text-3xl md:text-4xl lg:text-5xl font-medium text-black dark:text-white tracking-tight leading-[1.2]"
+                  className="text-3xl md:text-4xl lg:text-5xl font-medium text-[#00113b] dark:text-white tracking-tight leading-[1.2]"
                 >
                   {currentTopic?.title}
                 </h1>
@@ -318,13 +318,13 @@ const CourseTopics = () => {
               ) : currentTopic?.hasNotes ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center h-full">
                   <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-black/5 to-black/10 dark:from-white/5 dark:to-white/10 flex items-center justify-center mb-6 shadow-inner border border-white/20 dark:border-white/5">
-                    <AlertCircle className="w-8 h-8 text-black/30 dark:text-white/30" />
+                    <AlertCircle className="w-8 h-8 text-[#00113b]/30 dark:text-white/30" />
                   </div>
-                  <h3 className="text-lg font-medium text-black dark:text-white mb-2">Notes are being compiled</h3>
-                  <p className="text-sm text-black/50 dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
+                  <h3 className="text-lg font-medium text-[#00113b] dark:text-white mb-2">Notes are being compiled</h3>
+                  <p className="text-sm text-[#00113b]/50 dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
                 </div>
               ) : (
-                <div className="text-black/75 dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
+                <div className="text-[#00113b]/75 dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
                   {currentTopic?.content.theory}
                 </div>
               )}
@@ -333,12 +333,12 @@ const CourseTopics = () => {
               {/* Premium Navigation Footer */}
               <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-black/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
+                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#00113b]/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
                 </button>
               ) : <div className="w-24" />}
 
-              <span className="text-[10px] uppercase tracking-widest font-bold text-black/40 dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-[#00113b]/40 dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
                 {selectedTopic + 1} / {totalTopics}
               </span>
 
