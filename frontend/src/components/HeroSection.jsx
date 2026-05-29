@@ -47,9 +47,10 @@ const HeroSection = () => {
           <div className="relative flex items-center justify-center lg:justify-end">
             <div className="relative transition-transform duration-300 hover:scale-105 hover:rotate-[5deg]">
               <img
-                src="/book.gif"
+                src="/book-optimized.webp"
                 alt="Learning Books Animation"
                 className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain filter drop-shadow-2xl"
+                fetchPriority="high"
               />
             </div>
           </div>

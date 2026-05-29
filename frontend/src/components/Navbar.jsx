@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
@@ -108,14 +109,14 @@ const Navbar = () => {
               <Link to="/" className="logo flex items-center">
                 <div className="relative" style={{ height: '48px', minWidth: '120px' }}>
                   <img
-                    src="/logoo.png"
+                    src="/logoo-small.webp"
                     alt="Light Logo"
                     className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
                       isDarkMode ? 'opacity-0' : 'opacity-100'
                     }`}
                   />
                   <img
-                    src="/logoo2.png"
+                    src="/logoo2-small.webp"
                     alt="Dark Logo"
                     className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
                       isDarkMode ? 'opacity-100' : 'opacity-0'
@@ -213,7 +214,7 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
           </button>
         </nav>
 
@@ -315,7 +316,7 @@ const Navbar = () => {
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
           </button>
         </div>
       </nav>

@@ -122,6 +122,10 @@ export const UserProvider = ({ children }) => {
       const hasToken = Boolean(localStorage.getItem('token'));
       const hasLocalUser = loadUserFromStorage();
 
+      if (hasLocalUser) {
+        setIsLoading(false);
+      }
+
       if (!hasToken && !hasLocalUser) {
         setUser({ firstName: 'Guest', lastName: '', email: '' });
         setIsLoading(false);

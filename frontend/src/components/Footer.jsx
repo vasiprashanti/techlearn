@@ -110,8 +110,9 @@ const Footer = () => {
       {/* Bottom Logo Section - Full width on desktop, contained on mobile */}
       <div className="absolute bottom-0 left-0 w-full pointer-events-none select-none px-4 sm:px-0">
         <img
-          src="/logo-no-bg.jpg"
+          src="/logo-no-bg-small.webp"
           alt="TechLearn Solutions"
+          loading="lazy"
           className="w-full max-w-full h-12 object-contain sm:h-32 md:h-56 sm:object-cover object-bottom"
           draggable="false"
         />
