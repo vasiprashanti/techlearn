@@ -126,9 +126,9 @@ const Sidebar = () => {
 
       <button
         onClick={() => setMobileMenuOpen(true)}
-        className="lg:hidden fixed top-24 left-5 z-[45] p-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-all"
+        className="lg:hidden fixed top-20 left-5 z-[45] p-2.5 rounded-full backdrop-blur-xl bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] border border-black/5 dark:border-[#15366f]/45 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3C83F6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.24)] transition-all duration-300"
       >
-        <PanelLeftOpen className="w-[22px] h-[22px]" />
+        <PanelLeftOpen className="w-[20px] h-[20px]" />
       </button>
 
       {mobileMenuOpen && (
@@ -140,20 +140,17 @@ const Sidebar = () => {
             className="lg:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
           />
           <div className="lg:hidden fixed left-0 top-0 bottom-0 w-24 bg-[#bceaff] dark:bg-[#020b23] border-r border-white/5 z-50 shadow-2xl flex flex-col pt-6 transition-transform duration-200 ease-out">
-              <div className="flex items-center justify-center mb-6 shrink-0 relative px-2">
+              <div className="flex items-center justify-end shrink-0 relative px-2 h-8">
                 <button
                   onClick={() => setMobileMenuOpen(false)}
-                  className="absolute right-1 top-0 p-1 text-[#00113b] dark:text-slate-400 hover:text-white"
+                  className="absolute right-2 top-0 p-1 text-[#00113b] dark:text-slate-400 hover:text-white"
                   aria-label="Close sidebar"
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="w-10 h-10 rounded-full border border-[#00113b]/15 dark:border-white/15 bg-white/10 dark:bg-white/5 flex items-center justify-center relative overflow-hidden select-none mt-2">
-                  <span className="font-poppins font-bold text-xs text-[#00113b] dark:text-white">tls</span>
-                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-1 pb-6 scrollbar-hide">
+              <div className="flex-1 flex flex-col justify-center items-center overflow-y-auto px-1 pb-6 scrollbar-hide w-full">
                 {renderNavLinks(() => setMobileMenuOpen(false))}
               </div>
           </div>

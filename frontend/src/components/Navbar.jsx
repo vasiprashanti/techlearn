@@ -233,7 +233,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation Menu */}
       <nav
-        className={`md:hidden ${isMenuOpen ? 'flex' : 'hidden'} flex-col gap-2 px-5 py-2 z-[999] 
+        className={`md:hidden ${isMenuOpen ? 'flex' : 'hidden'} flex-col gap-0.5 px-4 py-1.5 z-[999] 
           transition-all duration-300 backdrop-blur-md border-b border-white/20 dark:border-gray-700/20 
           w-full absolute top-full left-0 
           ${
@@ -246,7 +246,7 @@ const Navbar = () => {
           <Link
             to="/learn"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
@@ -257,7 +257,7 @@ const Navbar = () => {
           <Link
             to="/dashboard"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
@@ -269,9 +269,9 @@ const Navbar = () => {
 
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
-            <div className="py-2.5">
+            <div className="py-1.5">
               <div
-                className={`text-[14px] mb-2 ${
+                className={`text-[14px] mb-1 ${
                   isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
                 }`}
               >
@@ -282,7 +282,7 @@ const Navbar = () => {
                   closeMenu();
                   logout();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-colors duration-300 
+                className={`relative block py-1.5 text-[14px] transition-colors duration-300 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 
                   ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
@@ -291,13 +291,13 @@ const Navbar = () => {
               </button>
             </div>
           ) : (
-            <div className="py-2.5 w-full flex justify-start">
+            <div className="py-1.5 w-full flex justify-start">
               <button
                 onClick={() => {
                   closeMenu();
                   openLogin();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+                className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
                   ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
@@ -309,10 +309,10 @@ const Navbar = () => {
         </div>
 
         {/* Dark Mode Toggle - Mobile */}
-        <div className="w-full flex justify-start">
+        <div className="w-full flex justify-start py-1">
           <button
             onClick={toggleTheme}
-            className={`text-[15px] transition-colors duration-300 p-1.5 
+            className={`text-[15px] transition-colors duration-300 p-1 
               ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             aria-label="Toggle dark mode"
           >
