@@ -80,7 +80,7 @@ export default function InterviewDsaQuestionDetail() {
 
   if (!question || !details) {
     return (
-      <UserSidebarLayout maxWidthClass="max-w-5xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <div className="rounded-2xl border border-white/20 bg-white/70 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
           <button
             type="button"
@@ -138,7 +138,7 @@ export default function InterviewDsaQuestionDetail() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,0.34fr)_minmax(0,0.66fr)] lg:items-start">
         <aside className="space-y-4 lg:sticky lg:top-24">
           <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">

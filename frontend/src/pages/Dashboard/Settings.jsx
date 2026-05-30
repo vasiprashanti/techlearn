@@ -137,7 +137,7 @@ export default function DashboardSettings() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[640px]">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-8 py-2 px-1">
         
         {/* Top Header Section */}

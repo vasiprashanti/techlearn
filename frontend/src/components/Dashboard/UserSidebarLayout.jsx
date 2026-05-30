@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import Sidebar from './Sidebar';
 
-export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-7xl' }) {
+export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[1400px]' }) {
   const { theme } = useTheme();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -29,19 +29,19 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-7xl
       <div
         className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
           isDarkMode
-            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
-            : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'
+            ? 'bg-[#020816]'
+            : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'
         }`}
       />
 
       {showSidebar ? <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} /> : null}
 
       <main
-        className={`flex-1 transition-all duration-700 ease-in-out z-10 ${
+        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 ${
           showSidebar ? 'lg:ml-[90px]' : ''
         } pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
       >
-        <div className={`mx-auto ${maxWidthClass}`}>{children}</div>
+        <div className={`w-full mx-auto ${maxWidthClass}`}>{children}</div>
       </main>
     </div>
   );

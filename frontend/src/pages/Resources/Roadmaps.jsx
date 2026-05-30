@@ -189,7 +189,7 @@ export default function Roadmaps() {
   }, [markdown]);
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[640px]">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <ScrollProgress />
 
       <div className="space-y-8">
@@ -207,21 +207,6 @@ export default function Roadmaps() {
         </header>
 
         <section>
-          <div className="mb-6 grid gap-3 sm:grid-cols-3">
-            <div className="dashboard-inner-surface px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Sections</p>
-              <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.sections}</p>
-            </div>
-            <div className="dashboard-inner-surface px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Words</p>
-              <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.words}</p>
-            </div>
-            <div className="dashboard-inner-surface px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4a79ab] dark:text-[#9ed0ff]">Checkpoints</p>
-              <p className="mt-2 text-2xl font-bold text-[#0f2d5d] dark:text-[#dff3ff]">{roadmapMetrics.checkboxes}</p>
-            </div>
-          </div>
-
           <article className="dashboard-surface p-6 md:p-8 lg:p-10 xl:flex xl:h-[40rem] xl:flex-col">
             {loading ? (
               <div className="flex min-h-[360px] items-center justify-center xl:flex-1">

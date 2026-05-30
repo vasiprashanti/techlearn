@@ -58,7 +58,7 @@ export default function PracticeHub() {
   ];
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[640px]">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-6 px-1 py-2">
         <header className="pb-4">
           <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">

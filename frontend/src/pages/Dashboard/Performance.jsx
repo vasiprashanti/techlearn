@@ -58,7 +58,7 @@ export default function Performance() {
   const navigate = useNavigate();
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-8">
         <motion.section
           initial={{ opacity: 0, y: 14 }}

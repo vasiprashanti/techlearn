@@ -91,8 +91,8 @@ export default function EditProfile() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[1100px]">
-      <div className="mx-auto max-w-[1100px] space-y-8">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+      <div className="mx-auto max-w-[1400px] space-y-8">
         <header className="flex flex-col justify-between gap-4 border-b border-black/5 pb-6 dark:border-white/5 md:flex-row md:items-end">
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <button

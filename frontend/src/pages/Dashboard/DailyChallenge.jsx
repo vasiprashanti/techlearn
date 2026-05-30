@@ -93,7 +93,7 @@ export default function DailyChallenge() {
   ];
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[640px]">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-6">
         {/* Navigation & Header */}
         <motion.section
@@ -162,13 +162,13 @@ export default function DailyChallenge() {
         </motion.div>
 
         {/* Side-by-Side Content Grid for Challenge Card & Pipeline Timeline */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start w-full">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start w-full">
           {/* Main Algorithmic Mission Card */}
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="dashboard-surface p-5 sm:p-6 border border-[#3C83F6]/20 shadow-md relative overflow-hidden group h-full flex flex-col justify-between"
+            className="md:col-span-9 dashboard-surface p-5 sm:p-6 border border-[#3C83F6]/20 shadow-md relative overflow-hidden group h-full flex flex-col justify-between"
           >
             {/* Subtle background glow effect */}
             <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-3xl group-hover:bg-blue-500/15 dark:group-hover:bg-blue-500/8 transition-all duration-700 pointer-events-none" />
@@ -242,7 +242,7 @@ export default function DailyChallenge() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="dashboard-surface p-5 sm:p-6 border border-[#c4e8ff]/25 dark:border-white/5 h-full flex flex-col justify-between"
+            className="md:col-span-3 dashboard-surface p-5 sm:p-6 border border-[#c4e8ff]/25 dark:border-white/5 h-full flex flex-col justify-between"
           >
             <div>
               <div className="mb-4">

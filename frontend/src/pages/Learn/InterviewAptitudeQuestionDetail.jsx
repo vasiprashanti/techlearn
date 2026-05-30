@@ -70,7 +70,7 @@ export default function InterviewAptitudeQuestionDetail() {
 
   if (!question) {
     return (
-      <UserSidebarLayout maxWidthClass="max-w-5xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
           <button
             type="button"
@@ -87,7 +87,7 @@ export default function InterviewAptitudeQuestionDetail() {
   }
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-5xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-4">
         <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
           <button

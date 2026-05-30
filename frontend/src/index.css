@@ -72,8 +72,8 @@
   }
 
   .dark .dashboard-surface {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgba(0, 0, 0, 0.4);
+    border-color: rgba(21, 54, 111, 0.45);
+    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%);
     box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
   }
 
@@ -82,7 +82,7 @@
   }
 
   .dark .dashboard-surface-strong {
-    background: rgba(0, 0, 0, 0.4);
+    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%);
   }
 
   .dashboard-inner-surface {
@@ -650,13 +650,23 @@
     box-shadow: 0 12px 34px rgba(60, 131, 246, 0.08);
   }
 
+  .admin-dashboard-typography .fixed.inset-0.-z-10 {
+    background: linear-gradient(135deg, #bceaff 0%, #9adfff 50%, #bceaff 100%) !important;
+  }
+
+  .dark .admin-dashboard-typography .fixed.inset-0.-z-10 {
+    background: #020816 !important;
+  }
+
   .dark .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"],
   .dark .admin-dashboard-typography section > div[class*="rounded-2xl"][class*="border"][class*="bg-white"],
   .dark .admin-dashboard-typography :is(article, div)[class*="rounded-xl"][class*="border"][class*="bg-white"],
-  .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"] {
-    border-color: rgba(255, 255, 255, 0.05) !important;
-    background: rgba(0, 0, 0, 0.4) !important;
-    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24);
+  .dark .admin-dashboard-typography section :is(div, article)[class*="rounded-xl"][class*="border"][class*="bg-white"],
+  .dark .admin-dashboard-typography :is(article, div)[class*="bg-[#0f1f43]"],
+  .dark .admin-dashboard-typography div[class*="bg-[#0f1f43]"] {
+    border-color: rgba(21, 54, 111, 0.45) !important;
+    background: linear-gradient(135deg, #020b23 0%, #001233 50%, #0a1128 100%) !important;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.24) !important;
   }
 
   .admin-dashboard-typography :is(article, div)[class*="rounded-2xl"][class*="border"][class*="bg-white"]:hover,

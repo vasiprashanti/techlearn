@@ -183,7 +183,7 @@ export default function ImportantConceptDetail() {
 
   if (!concept || !detail) {
     return (
-      <UserSidebarLayout maxWidthClass="max-w-5xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <button
           type="button"
           onClick={() => navigate(backPath)}
@@ -200,7 +200,7 @@ export default function ImportantConceptDetail() {
   }
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-5xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-6">
         <button
           type="button"

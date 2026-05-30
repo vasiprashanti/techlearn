@@ -285,7 +285,7 @@ export default function QuestionCatalogPage({
   const showBackBtn = location.pathname.startsWith('/dashboard/practice/');
 
   return (
-      <UserSidebarLayout maxWidthClass="max-w-[640px]">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <section className="p-1 sm:p-2">
           {showBackBtn && (
             <button

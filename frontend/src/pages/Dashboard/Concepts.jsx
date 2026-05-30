@@ -38,7 +38,7 @@ const Concepts = () => {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-8">
         
         {/* Header Section with Brand Gradient and Back Button */}

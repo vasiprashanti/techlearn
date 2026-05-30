@@ -21,6 +21,7 @@ const Leaderboard = () => {
   const { theme } = useTheme();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [leaderboardData, setLeaderboardData] = useState({
     entries: [],
     currentUser: null,
@@ -30,6 +31,10 @@ const Leaderboard = () => {
   const [error, setError] = useState('');
 
   const isDarkMode = theme === 'dark';
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -149,12 +154,16 @@ const Leaderboard = () => {
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
       <ScrollProgress />
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-[#020816]' : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'}`} />
 
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-      <main className="flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto">
-        <div className="max-w-[640px] mx-auto space-y-8">
+      <main
+        className={`flex flex-col items-center flex-1 transition-all duration-700 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-auto ${
+          mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+        }`}
+      >
+        <div className="w-full max-w-[1400px] space-y-8">
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <MotionDiv initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="min-w-0">
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">

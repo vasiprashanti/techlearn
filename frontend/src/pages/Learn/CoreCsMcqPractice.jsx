@@ -109,7 +109,7 @@ export default function CoreCsMcqPractice() {
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/core-cs');
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-5xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-4">
         <div className="px-1 py-2">
           <h1 className="dashboard-page-title">

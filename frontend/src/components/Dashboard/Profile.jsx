@@ -104,7 +104,7 @@ const Profile = () => {
   return (
     <>
       <ScrollProgress />
-      <UserSidebarLayout maxWidthClass="max-w-[640px]">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <div className="space-y-8">
           
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
@@ -120,64 +120,13 @@ const Profile = () => {
             </motion.div>
           </header>
 
-          {/* Main Content Stack (Optimized for 640px narrow width) */}
-          <div className="flex flex-col gap-8 w-full">
+          {/* Main Content Grid (Responsive two-column grid) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-8 w-full items-start">
             
-            {/* Top Column - Avatar Profile display */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="w-full flex flex-col"
-            >
-              <div className={`${dashboardCardClass} flex flex-col items-center relative overflow-hidden`}>
-                
-                {/* Decorative background blur */}
-                <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
-
-                <div className="relative mb-8 mt-4 group">
-                  <div className="w-48 h-48 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
-                      <img
-                        src={selectedAvatar}
-                        alt="Avatar"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => setIsSelectingAvatar(true)}
-                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
-                    title="Change Avatar"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <h2 className="relative z-10 mb-1 text-center text-2xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
-                  {userName}
-                </h2>
-                <div className="relative z-10 mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                  <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
-                    Student Account
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/profile/settings')}
-                  className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
-                </button>
-              </div>
-            </motion.div>
-
-            {/* Bottom Column - Form/Info Section */}
+            {/* Left Column - Info & Security Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full space-y-8"
+              className="w-full space-y-8 order-2 lg:order-1"
             >
               {/* Basic Info Card */}
               <div className={dashboardCardClass}>
@@ -266,6 +215,58 @@ const Profile = () => {
                 </div>
               </div>
             </motion.div>
+
+            {/* Right Column - Avatar Profile display */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+              className="w-full flex flex-col order-1 lg:order-2 lg:h-full"
+            >
+              <div className={`${dashboardCardClass} flex flex-col items-center justify-center relative overflow-hidden lg:h-full`}>
+                
+                {/* Decorative background blur */}
+                <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
+
+                <div className="relative mb-8 mt-4 group">
+                  <div className="w-48 h-48 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
+                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
+                      <img
+                        src={selectedAvatar}
+                        alt="Avatar"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={() => setIsSelectingAvatar(true)}
+                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
+                    title="Change Avatar"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <h2 className="relative z-10 mb-1 text-center text-2xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
+                  {userName}
+                </h2>
+                <div className="relative z-10 mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                  <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
+                    Student Account
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/profile/settings')}
+                  className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </button>
+              </div>
+            </motion.div>
+
           </div>
         </div>
       </UserSidebarLayout>

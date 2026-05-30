@@ -75,7 +75,7 @@ const ResumeTemplates = () => {
   }, []);
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <ScrollProgress />
       <div className="space-y-8">
         

@@ -45,7 +45,7 @@ export default function ResourcesHub() {
   const isDarkMode = theme === 'dark';
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-6xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-8 py-2 px-1">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">

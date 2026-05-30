@@ -273,7 +273,7 @@ export default function Courses() {
   }
 
   return (
-    <div className={`w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] ${isDarkMode ? "dark bg-[#020816]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`}>
+    <div className="w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] bg-transparent">
       <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
@@ -296,7 +296,7 @@ export default function Courses() {
 
             {/* Subsection 1: Self-Paced Courses */}
             <div className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
+              <h3 className="text-xl md:text-2xl font-poppins italic tracking-tight uppercase flex items-center gap-2 brand-heading-primary">
                 Self-Paced Courses
               </h3>
 
@@ -358,7 +358,7 @@ export default function Courses() {
               ref={onlineCoursesSectionRef}
               className="space-y-6 pt-4"
             >
-              <h3 className="text-xl md:text-2xl font-bold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff] flex items-center gap-2">
+              <h3 className="text-xl md:text-2xl font-poppins italic tracking-tight uppercase flex items-center gap-2 brand-heading-primary">
                 Expert-Led Courses
               </h3>
 
@@ -392,7 +392,7 @@ export default function Courses() {
                             </span>
                           </div>
 
-                          <h3 className="text-xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2c7de4] dark:group-hover:text-[#9adfff] transition-colors mb-6">
+                          <h3 className="text-xl font-medium text-center text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2c7de4] dark:group-hover:text-[#9adfff] transition-colors mb-6">
                             {batch.title}
                           </h3>
 

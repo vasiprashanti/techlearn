@@ -140,7 +140,7 @@ export default function CompanyMockQuestionDetail() {
   }
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <section className="space-y-6">
         <button
           type="button"

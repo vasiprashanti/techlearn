@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { HiOutlineUpload } from "react-icons/hi";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext";
+import { FiChevronDown, FiPlus, FiArrowLeft, FiClock, FiFileText } from "react-icons/fi";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -17,17 +19,47 @@ export default function UploadTopicsPage() {
 
   const [searchParams] = useSearchParams();
   const courseId = searchParams.get("courseId");
+  const navigate = useNavigate();
 
-  // update topics
-  React.useEffect(() => {
+  // Theme & layout states
+  const { theme } = useTheme();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const isDarkMode = theme === "dark";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch course name if courseId is available
+  useEffect(() => {
+    if (courseId) {
+      const token = localStorage.getItem("token");
+      fetch(`${BASE_URL}/courses/${courseId}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data?.course?.title) {
+            setCourseName(data.course.title);
+          }
+        })
+        .catch(err => console.error("Error loading course:", err));
+    }
+  }, [courseId]);
+
+  // update topics count
+  useEffect(() => {
     const count = parseInt(numTopics, 10) || 0;
     setTopics((prevTopics) =>
       Array.from({ length: count }, (_, i) => prevTopics[i] || {
         title: `Topic ${i + 1}: `,
         file: null,
         status: "",
-  mcqFile: null, // Changed from quiz text to quiz file
-  mcqStatus: ""
+        mcqFile: null,
+        mcqStatus: ""
       })
     );
   }, [numTopics]);
@@ -62,7 +94,7 @@ export default function UploadTopicsPage() {
     }));
   };
 
-  // NEW: MCQ file upload handler
+  // MCQ file upload handler
   const handleMcqFileUpload = (idx, file) => {
     setTopics((prev) => {
       const updated = [...prev];
@@ -91,25 +123,21 @@ export default function UploadTopicsPage() {
       // Step 1: Upload all topic files and quiz files to /dashboard/files
       const formData = new FormData();
       
-      // Add topic notes files with correct field names (notesFile${index})
       topics.forEach((topic, index) => {
         if (topic.file) {
           formData.append(`notesFile${index}`, topic.file);
         }
       });
 
-      // Add MCQ files with field names (mcqFile${index})
       topics.forEach((topic, index) => {
         if (topic.mcqFile) {
           formData.append(`mcqFile${index}`, topic.mcqFile);
         }
       });
 
-      // Add titles array as JSON string
       const topicTitles = topics.map(topic => topic.title);
       formData.append("titles", JSON.stringify(topicTitles));
 
-      // Add MCQ files info (for topics that have MCQ files)
       const mcqFilesInfo = topics.map((topic, index) => ({
         index,
         hasMcq: !!topic.mcqFile,
@@ -119,12 +147,10 @@ export default function UploadTopicsPage() {
 
       const token = localStorage.getItem("token");
       
-      // Only proceed if we have files to upload
       if (!topics.some(t => t.file) && !exerciseFile) {
         throw new Error("Please upload at least one file before submitting.");
       }
 
-      // Upload files and get processed response
       const filesRes = await fetch(`${BASE_URL}/dashboard/files`, {
         method: "POST",
         headers: {
@@ -141,7 +167,6 @@ export default function UploadTopicsPage() {
       const filesData = await filesRes.json();
       console.log("Files upload response:", filesData);
 
-      // Step 2: Upload exercise file to separate endpoint if exists
       let exerciseData = null;
       if (exerciseFile) {
         const exerciseFormData = new FormData();
@@ -164,10 +189,8 @@ export default function UploadTopicsPage() {
         console.log("Exercise upload response:", exerciseData);
       }
 
-      // Step 3: Extract topics from the response
       const processedTopics = filesData.topics || [];
       
-      // Step 4: Use the processed topics data for the final API call
       const finalTopics = processedTopics.map((processedTopic, index) => {
         const userTopic = topics[index] || {};
         
@@ -181,12 +204,10 @@ export default function UploadTopicsPage() {
         };
       });
 
-      // Step 5: POST topics to /courses/:courseId/topics with the processed data
       const payload = {
         topics: finalTopics,
         exerciseFileName: exerciseFile ? exerciseFile.name : "",
         processedTopics: processedTopics,
-        // Include exercise data if available
         ...(exerciseData && { exerciseData: exerciseData }),
       };
 
@@ -211,8 +232,12 @@ export default function UploadTopicsPage() {
       console.log("Topics creation response:", topicsData);
 
       setMessage("Topics and files uploaded successfully!");
+      
+      // Navigate back to course topics list after short delay
+      setTimeout(() => {
+        navigate(`/admin/topics/${courseId}`);
+      }, 1500);
 
-      // Step 6: Cleanup temp files from server
       try {
         await fetch(`${BASE_URL}/dashboard/notes/exercises/cleanup`, {
           method: "DELETE",
@@ -225,7 +250,6 @@ export default function UploadTopicsPage() {
         console.warn("Cleanup failed:", cleanupErr.message);
       }
 
-
     } catch (err) {
       console.error("Upload error:", err);
       setMessage("Error uploading topics: " + err.message);
@@ -234,253 +258,308 @@ export default function UploadTopicsPage() {
     }
   };
 
+  const categoryFormInputClass = "mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
+
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
-      <Sidebar />
-      <div className="flex-1 flex justify-center items-start lg:items-center min-h-screen px-4 sm:px-6 lg:px-8 py-4 sm:py-8 lg:py-0 pt-28 sm:pt-32 md:pt-28 lg:pt-0 lg:mt-24">
-        <div className="bg-white/50 dark:bg-gray-800/70 backdrop-blur rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 max-w-full sm:max-w-4xl lg:max-w-5xl w-full max-h-[90vh] lg:max-h-none overflow-y-auto lg:overflow-visible">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold brand-heading-primary mb-2">
-            Upload Topics for Course
-          </h1>
-          {!courseId && (
-            <div className="text-red-500 text-xs sm:text-sm font-medium mb-2">
-              No course selected. Please create or select a course to upload topics.
-            </div>
-          )}
-          {message && (
-            <div className={`mb-3 p-2 rounded text-xs sm:text-sm ${message.startsWith("Error") ? "bg-red-200 text-red-700" : "bg-green-200 text-green-700"}`}>
-              {message}
-            </div>
-          )}
+    <div
+      className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${
+        isDarkMode ? "dark" : "light"
+      }`}
+    >
+      <div className="fixed inset-0 -z-10 transition-colors duration-1000" />
 
-          <form onSubmit={handleSubmit}>
-            {/* Course Name & Number of Topics inputs */}
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mt-6 lg:mt-8 mb-4">
-              <div className="flex-1">
-                <label className="block text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">Course Name</label>
-                <input
-                  value={courseName}
-                  onChange={e => setCourseName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter course name"
-                  required
-                  disabled
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs sm:text-sm font-semibold mb-2 text-light-text/80 dark:text-dark-text/70">Number of Topics</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={numTopics}
-                  onChange={e => setNumTopics(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter topics count"
-                  required
-                />
-              </div>
+      <Sidebar
+        onToggle={setSidebarCollapsed}
+        isCollapsed={sidebarCollapsed}
+      />
+
+      <main
+        className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 
+          ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} 
+          pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
+          ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
+        `}
+      >
+        <div className="max-w-4xl mx-auto space-y-8">
+          
+          {/* Header styled exactly like the Roadmaps header */}
+          <header className="flex flex-col sm:flex-row sm:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+            <div>
+              <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                  UPLOAD TOPICS
+                </span>
+              </h1>
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
+                Configure curriculum topics, upload study notes, and MCQs
+              </p>
             </div>
+            
+            <button
+              onClick={() => navigate("/admin/courses")}
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-black/10 dark:border-white/10 px-4 text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 text-slate-700 dark:text-white/70 shadow-sm shrink-0 w-auto self-start sm:self-auto transition"
+            >
+              <FiArrowLeft className="w-3.5 h-3.5" />
+              Back to Courses
+            </button>
+          </header>
 
-            {/* Topic Details Section */}
-            <h2 className="text-base sm:text-lg font-semibold mt-6 lg:mt-8 mb-4 text-light-text/80 dark:text-dark-text/70">Topic Details</h2>
+          <section className="space-y-6">
+            
+            {/* Form wrapper in a beautiful premium card */}
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-6 sm:p-8 shadow-sm">
+              
+              {!courseId && (
+                <div className="mb-4 p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 text-xs sm:text-sm font-semibold">
+                  No active course selected. Please return to the courses list to begin configuring.
+                </div>
+              )}
+              {message && (
+                <div className={`mb-4 p-3.5 rounded-xl border font-semibold text-xs sm:text-sm ${message.startsWith("Error") ? "border-red-500/20 bg-red-500/10 text-red-500" : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"}`}>
+                  {message}
+                </div>
+              )}
 
-            {/* Mobile/Tablet Card View */}
-            <div className="block lg:hidden space-y-4">
-              {topics.map((topic, i) => (
-                <div key={i} className="bg-white/50 dark:bg-gray-800/70 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Topic {i + 1}</h3>
-                    <button
-                      type="button"
-                      className="text-xs px-2 py-1 rounded bg-blue-200 hover:bg-blue-300 dark:bg-blue-800 dark:hover:bg-blue-700 text-blue-900 dark:text-blue-200 font-semibold transition"
-                      onClick={() => handleMcqToggle(i)}
-                    >
-                      {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
-                    </button>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                
+                {/* Course Name & Number of Topics inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Course Name</label>
+                    <input
+                      value={courseName || "Loading Course Details..."}
+                      className={`${categoryFormInputClass} opacity-60 cursor-not-allowed`}
+                      required
+                      disabled
+                    />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Topic Title</label>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Number of Topics</label>
                     <input
-                      value={topic.title}
-                      onChange={e => handleTopicTitleChange(i, e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      type="number"
+                      min="1"
+                      value={numTopics}
+                      onChange={e => setNumTopics(e.target.value)}
+                      placeholder="e.g. 5, 8, 12 topics"
+                      className={categoryFormInputClass}
                       required
                     />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">Upload Notes File</label>
-                      <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-1 text-sm">
-                        <HiOutlineUpload className="inline text-base" />
-                        <input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          onChange={e => handleFileUpload(i, e.target.files?.[0] || null)}
-                        />
-                        Upload .md
-                      </label>
-                    </div>
-                    {topic.status && (
-                      <div className="text-xs text-gray-600 dark:text-gray-400 max-w-32 truncate">
-                        {topic.status}
-                      </div>
-                    )}
-                  </div>
-                  {mcqInputOpen[i] && (
-                    <div className="border-l-4 border-green-300 dark:border-green-700 pl-3 bg-green-50/50 dark:bg-green-900/20 rounded-r-lg py-2">
-                      <label className="block text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                        Upload MCQ File:
-                      </label>
-                      <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1 text-sm">
-                        <HiOutlineUpload className="inline text-base" />
-                        <input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
-                        />
-                        Upload MCQ .md
-                      </label>
-                      {topic.mcqStatus && (
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          {topic.mcqStatus}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
-              ))}
-              {topics.length === 0 && (
-                <div className="text-center py-8 text-gray-400 italic text-sm">
-                  Add number of topics above...
-                </div>
-              )}
-            </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden lg:block rounded-xl overflow-x-auto bg-white/50 dark:bg-gray-800/70">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-white/30 dark:bg-gray-800/70">
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Topic Title</th>
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Upload Notes File</th>
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Status</th>
-                    <th className="px-4 py-3 text-left text-light-text/80 dark:text-dark-text/70">Quiz File</th>
-                  </tr>
-                </thead>
-                <tbody>
+                {/* Topic Details Section Header */}
+                <div className="pt-4 border-t border-black/5 dark:border-white/10">
+                  <h3 className="admin-section-heading">Topic Curriculum Details</h3>
+                </div>
+
+                {/* Mobile/Tablet Card View */}
+                <div className="block lg:hidden space-y-4">
                   {topics.map((topic, i) => (
-                    <React.Fragment key={i}>
-                      <tr>
-                        <td className="px-4 py-2">
-                          <input
-                            value={topic.title}
-                            onChange={e => handleTopicTitleChange(i, e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            required
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-1">
-                            <HiOutlineUpload className="inline text-lg" />
+                    <div key={i} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f5fbff] dark:bg-[#122b52] p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-[#0d2a57] dark:text-[#8fd9ff]">Topic {i + 1}</h4>
+                        <button
+                          type="button"
+                          className="text-xs px-2.5 py-1 rounded-lg bg-green-500/10 text-green-600 dark:text-green-300 font-semibold border border-green-500/20 transition hover:bg-green-500/20"
+                          onClick={() => handleMcqToggle(i)}
+                        >
+                          {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
+                        </button>
+                      </div>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Topic Title</label>
+                        <input
+                          value={topic.title}
+                          onChange={e => handleTopicTitleChange(i, e.target.value)}
+                          className={categoryFormInputClass}
+                          required
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-3 pt-2">
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45 block mb-1">Study Notes (.md)</label>
+                          <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-1.5 text-xs">
+                            <HiOutlineUpload className="inline text-base" />
                             <input
                               type="file"
                               accept=".md"
                               className="hidden"
                               onChange={e => handleFileUpload(i, e.target.files?.[0] || null)}
                             />
-                            Upload
+                            Upload Notes
                           </label>
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 text-xs">
-                          {topic.status || (topic.file ? `Uploaded: ${topic.file.name}` : "")}
-                        </td>
-                        <td className="px-4 py-2">
-                          <button
-                            type="button"
-                            className="text-xs px-3 py-1 rounded bg-green-200 hover:bg-green-300 dark:bg-green-800 dark:hover:bg-green-700 text-green-900 dark:text-green-200 font-semibold transition"
-                            onClick={() => handleMcqToggle(i)}
-                          >
-                            {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
-                          </button>
-                        </td>
-                      </tr>
+                        </div>
+                        {topic.status && (
+                          <div className="text-xs text-slate-500 max-w-40 truncate" title={topic.status}>
+                            {topic.status}
+                          </div>
+                        )}
+                      </div>
                       {mcqInputOpen[i] && (
-                        <tr>
-                          <td colSpan={4} className="pl-8 border-l-4 border-green-300 dark:border-green-700 bg-transparent">
-                            <div className="flex flex-col gap-2 py-2">
-                              <label className="ml-2 font-medium text-xs text-green-800 dark:text-green-100 mb-1">
-                                Upload MCQ File:
+                        <div className="border-l-4 border-green-500/30 pl-3 bg-green-500/5 dark:bg-green-950/20 rounded-r-xl py-3 space-y-2 mt-2">
+                          <label className="admin-micro-label text-green-700 dark:text-green-300 block">
+                            MCQ Quiz File (.md)
+                          </label>
+                          <label className="cursor-pointer font-semibold text-green-600 dark:text-green-400 hover:underline inline-flex items-center gap-1.5 text-xs">
+                            <HiOutlineUpload className="inline text-base" />
+                            <input
+                              type="file"
+                              accept=".md"
+                              className="hidden"
+                              onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
+                            />
+                            Upload MCQ File
+                          </label>
+                          {topic.mcqStatus && (
+                            <p className="text-xs text-green-600 dark:text-green-400 truncate max-w-full">
+                              {topic.mcqStatus}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {topics.length === 0 && (
+                    <div className="text-center py-10 text-slate-400 italic text-xs border border-dashed border-black/10 dark:border-white/10 rounded-xl bg-black/5 dark:bg-white/5">
+                      Configure the number of topics above to generate forms.
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden lg:block rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
+                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[300px]">Topic Title</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[180px]">Upload Notes</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[240px]">File Status</th>
+                        <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[160px]">Quiz Options</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/10 dark:divide-white/10">
+                      {topics.map((topic, i) => (
+                        <React.Fragment key={i}>
+                          <tr className="hover:bg-white/30 dark:hover:bg-white/[0.02]">
+                            <td className="px-4 py-3">
+                              <input
+                                value={topic.title}
+                                onChange={e => handleTopicTitleChange(i, e.target.value)}
+                                className={categoryFormInputClass}
+                                required
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-1.5">
+                                <HiOutlineUpload className="inline text-lg" />
+                                <input
+                                  type="file"
+                                  accept=".md"
+                                  className="hidden"
+                                  onChange={e => handleFileUpload(i, e.target.files?.[0] || null)}
+                                />
+                                Upload .md
                               </label>
-                              <div className="flex items-center gap-4">
-                                <label className="cursor-pointer font-medium text-green-700 hover:underline inline-flex items-center gap-1">
-                                  <HiOutlineUpload className="inline text-base" />
-                                  <input
-                                    type="file"
-                                    accept=".md"
-                                    className="hidden"
-                                    onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
-                                  />
-                                  Upload MCQ .md
-                                </label>
-                                {topic.mcqStatus && (
-                                  <span className="text-xs text-green-600 dark:text-green-400">
-                                    {topic.mcqStatus}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 text-xs truncate max-w-[240px]" title={topic.status}>
+                              {topic.status || (topic.file ? `Uploaded: ${topic.file.name}` : "--")}
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                type="button"
+                                className="text-xs px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-300 font-semibold transition hover:bg-green-500/20"
+                                onClick={() => handleMcqToggle(i)}
+                              >
+                                {topic.mcqFile ? "Change MCQ" : "Add MCQ"}
+                              </button>
+                            </td>
+                          </tr>
+                          {mcqInputOpen[i] && (
+                            <tr className="bg-green-500/[0.02]">
+                              <td colSpan={4} className="pl-12 border-l-4 border-green-500/30 py-3">
+                                <div className="flex flex-col gap-2">
+                                  <label className="admin-micro-label text-green-700 dark:text-green-300">
+                                    MCQ Quiz Upload (.md File)
+                                  </label>
+                                  <div className="flex items-center gap-4">
+                                    <label className="cursor-pointer font-semibold text-green-600 dark:text-green-400 hover:underline inline-flex items-center gap-1.5 text-xs">
+                                      <HiOutlineUpload className="inline text-base" />
+                                      <input
+                                        type="file"
+                                        accept=".md"
+                                        className="hidden"
+                                        onChange={e => handleMcqFileUpload(i, e.target.files?.[0] || null)}
+                                      />
+                                      Upload MCQ File
+                                    </label>
+                                    {topic.mcqStatus && (
+                                      <span className="text-xs text-green-600 dark:text-green-400">
+                                        {topic.mcqStatus}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      ))}
+                      {topics.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="text-center py-12 text-slate-400 italic text-sm">
+                            Configure the number of topics above to generate forms.
                           </td>
                         </tr>
                       )}
-                    </React.Fragment>
-                  ))}
-                  {topics.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="text-center py-8 text-gray-400 italic">
-                        Add number of topics above...
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Exercise file upload UI */}
+                <div className="mt-8 pt-6 border-t border-black/5 dark:border-white/10 space-y-3">
+                  <h3 className="admin-section-heading">Course Exercise Syllabus</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
+                      <HiOutlineUpload className="inline text-lg" />
+                      <input
+                        type="file"
+                        accept=".md"
+                        className="hidden"
+                        onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
+                      />
+                      Upload Exercise File (.md)
+                    </label>
+                    {exerciseStatus && (
+                      <p className="text-xs sm:text-sm text-slate-500 max-w-md truncate" title={exerciseStatus}>
+                        {exerciseStatus}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Form Submit controls */}
+                <div className="flex items-center justify-end gap-3 pt-6 border-t border-black/5 dark:border-white/10 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/admin/courses")}
+                    className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white rounded-xl px-6 py-2.5 text-sm font-semibold shadow hover:bg-blue-700 transition w-full sm:w-auto disabled:opacity-75"
+                    disabled={loading || !courseId}
+                  >
+                    {loading ? "Uploading files..." : "Save curriculum"}
+                  </button>
+                </div>
+              </form>
             </div>
 
-            {/* Exercise file upload UI */}
-            <div className="mt-8 border-t border-gray-300 dark:border-gray-700 pt-6">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 text-light-text/80 dark:text-dark-text/70">
-                Exercise File
-              </h2>
-              <label className="cursor-pointer font-medium text-blue-700 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-                <HiOutlineUpload className="inline text-lg" />
-                <input
-                  type="file"
-                  accept=".md"
-                  className="hidden"
-                  onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
-                />
-                Upload Exercise File (.md)
-              </label>
-              {exerciseStatus && (
-                <p className="mt-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400 max-w-md truncate">
-                  {exerciseStatus}
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end mt-6">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white rounded-lg px-4 sm:px-6 py-2 text-sm sm:text-base font-semibold shadow hover:bg-blue-700 transition w-full sm:w-auto"
-                disabled={loading || !courseId}
-              >
-                {loading ? "Uploading..." : "Submit"}
-              </button>
-            </div>
-          </form>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
