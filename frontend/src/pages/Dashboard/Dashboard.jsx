@@ -56,19 +56,19 @@ const writeDashboardHighlightsCache = (partialData) => {
 };
 
 const PixelStar = () => (
-  <img src={pixelStarImg} alt="Star XP" className="w-[50px] h-[50px] object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+  <img src={pixelStarImg} alt="Star XP" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
 );
 
 const PixelQuestion = () => (
-  <img src={pixelQuestionImg} alt="Solved" className="w-[50px] h-[50px] object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+  <img src={pixelQuestionImg} alt="Solved" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
 );
 
 const PixelFlame = () => (
-  <img src={pixelFlameImg} alt="Streak" className="w-[50px] h-[50px] object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+  <img src={pixelFlameImg} alt="Streak" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
 );
 
 const PixelArrow = () => (
-  <img src={pixelArrowImg} alt="Arrow" className="w-[60px] h-[60px] object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+  <img src={pixelArrowImg} alt="Arrow" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
 );
 
 const PlaceholderBar = ({ className = '' }) => (
@@ -113,6 +113,7 @@ export default function Dashboard() {
       const storedUser = JSON.parse(localStorage.getItem("userData"));
       if (!storedUser || !storedUser.id) return;
 
+      const token = localStorage.getItem("token");
       const userId = storedUser.id;
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/users/user/${userId}`,
@@ -120,6 +121,7 @@ export default function Dashboard() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({ photoUrl: avatarUrl }),
         }
@@ -129,8 +131,8 @@ export default function Dashboard() {
 
       await res.json();
 
-      // Update localStorage with new photoUrl
-      const updatedUser = { ...storedUser, photoUrl: avatarUrl };
+      // Update localStorage with new photoUrl and avatar
+      const updatedUser = { ...storedUser, photoUrl: avatarUrl, avatar: avatarUrl };
       localStorage.setItem("userData", JSON.stringify(updatedUser));
       
       // Refresh UserContext state
@@ -245,7 +247,12 @@ export default function Dashboard() {
     }
   }, []);
   const displayUser = user || storedUser;
-  const photoUrl = displayUser?.photoUrl || "/profile_avatars/avatar1.png";
+  let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/nobackgroundavatar1.png";
+  // Dynamically rewrite to the backgroundless version if user has an old avatar set
+  if (rawPhotoUrl && rawPhotoUrl.includes('/profile_avatars/') && !rawPhotoUrl.includes('nobackground')) {
+    rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
+  }
+  const photoUrl = rawPhotoUrl;
   const collegeName = displayUser?.collegeName || "TechLearn Student";
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
@@ -352,12 +359,11 @@ export default function Dashboard() {
               </div>
             ) : null}
 
-            {/* Row 1 Grid: Daily Challenge (left) and Daily Tasks (right) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+            <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
-              {/* Daily Challenge Card - Spans 7 columns for wider visual width */}
-              <div className="lg:col-span-7 flex flex-col">
-                <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-5 sm:p-6 md:p-8 min-h-[220px] lg:h-[240px] shadow-lg border border-[#15366f]/45 group">
+              {/* Daily Challenge Card - Spans 5/8 width on lg */}
+              <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
+                <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
                   <div
                     className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
                     style={{
@@ -370,16 +376,16 @@ export default function Dashboard() {
 
                   {/* Top Header Row */}
                   <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
-                    <h1 className="font-press-start text-[9px] sm:text-[11px] md:text-[13px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
+                    <h1 className="font-press-start text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
                       Daily Challenge
                     </h1>
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="font-press-start text-[4.5px] sm:text-[5px] md:text-[6px] text-white bg-white/16 backdrop-blur-md px-1.5 py-0.5 border border-white/20 rounded-full flex items-center gap-0.5">
+                      <span className="font-press-start text-[4.5px] sm:text-[5.5px] md:text-[6.5px] text-white bg-black/55 backdrop-blur-md px-1.5 h-5.5 sm:h-6 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm uppercase">
                         <Clock className="w-2 h-2 shrink-0" />
-                        <span className="whitespace-nowrap relative top-[0.7px]">{todayFormatted}</span>
+                        <span className="whitespace-nowrap leading-none relative top-[0.5px]">{todayFormatted.toUpperCase()} IST</span>
                       </span>
-                      <span className="font-press-start text-[4.5px] sm:text-[5px] md:text-[6px] tracking-[0.24em] uppercase font-bold text-white bg-rose-500/72 backdrop-blur-md px-1.5 py-0.5 rounded-full shadow-sm whitespace-nowrap">
-                        Resets in 14h 22m
+                      <span className="font-press-start text-[4.5px] sm:text-[5.5px] md:text-[6.5px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-1.5 h-5.5 sm:h-6 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                        <span className="relative top-[0.5px]">Resets in 14h 22m</span>
                       </span>
                     </div>
                   </div>
@@ -392,11 +398,11 @@ export default function Dashboard() {
                       </div>
                     ) : (
                       <>
-                        {/* Button at bottom right */}
+                        {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
                         <div className="flex w-full justify-end pt-1">
                           <button
                             onClick={() => navigate('/dashboard/daily-challenge')}
-                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2.5 rounded-xl font-press-start text-[8px] md:text-[9px] font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2.5 rounded-md font-press-start text-[7px] md:text-[8px] font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                           >
                             Go to Daily challenge <ChevronRight className="w-3 h-3" />
                           </button>
@@ -407,32 +413,128 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="lg:col-span-5 border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-3.5 sm:p-4 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[240px]">
+              {/* Stats Overview Card - Spans 3/8 width on lg - Redesigned into two halves */}
+              <div className="w-full lg:col-span-3 order-3 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between relative">
+                
+                {/* Top Half Section: Avatar on left, Headings on right - Centered layout - pushed down with pt-4 */}
+                <div className="flex items-center justify-center gap-4 shrink-0 w-full px-1.5 pt-4 pb-1">
+                  {/* Left Column: Avatar + Edit Link - Expanded Size */}
+                  <div className="flex flex-col items-center justify-end shrink-0 relative w-20 h-16">
+                    <img
+                      src={photoUrl}
+                      alt="Avatar"
+                      className="w-20 h-20 object-contain select-none absolute bottom-2"
+                    />
+                    <button
+                      onClick={() => {
+                        setPendingAvatar(photoUrl);
+                        setIsSelectingAvatar(true);
+                      }}
+                      className="font-press-start text-[6px] md:text-[7px] text-[#00113b] dark:text-[#8fd9ff] hover:underline leading-none transition-colors z-10"
+                    >
+                      Edit
+                    </button>
+                  </div>
+
+                  {/* Right Column: Name & College */}
+                  <div className="text-left flex-1 min-w-0">
+                    <h2 className="font-press-start text-[10px] md:text-[11px] lg:text-xs text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                      {userDisplayName}
+                    </h2>
+                    <p className="font-press-start text-[8px] md:text-[9.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
+                      {collegeName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom Half Section: 2x2 Stats Grid (Icon left, Text right) - Shipped flush left - pushed down with mt-2 */}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-1 px-1 py-0.5 mt-2 flex-1 items-center w-full justify-items-start pl-1 sm:pl-2">
+                  {retroStats.map((stat) => (
+                    <div key={stat.title} className="flex items-center gap-2">
+                      <div className="shrink-0">{stat.icon}</div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-press-start text-[8px] md:text-[9px] text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
+                        <span className="font-press-start text-[6.5px] md:text-[7.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium">{stat.title}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
+              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    VIEW FULL
+                  </button>
+                </div>
+                <div className="flex-1 flex flex-col justify-around gap-1 py-1">
+                  {leaderboardLoading
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <div
+                          key={`leaderboard-loading-${index}`}
+                          className="flex items-center gap-2 py-1 px-1 rounded-sm"
+                        >
+                          <PlaceholderBar className="h-2 w-6" />
+                          <PlaceholderBar className="h-2.5 flex-1 rounded-md" />
+                          <PlaceholderBar className="h-2 w-10" />
+                        </div>
+                      ))
+                    : featuredLeaderboard.map((student) => (
+                        <div
+                          key={student.userId}
+                          className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
+                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          <div
+                            className={`w-6 font-press-start text-[7px] md:text-[8.5px] text-left shrink-0 ${
+                              student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
+                            }`}
+                          >
+                            #{student.rank}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`font-press-start text-[7px] md:text-[8.5px] truncate ml-1 leading-relaxed ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
+                              {student.name}
+                            </h4>
+                          </div>
+                          <div className="font-press-start text-[7px] md:text-[8.5px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
+                            {student.totalXp.toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                </div>
+              </div>
+
+              {/* Daily Tasks Card - Spans 5/8 width on lg */}
+              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0 mb-1">
                   <div className="flex items-center gap-1.5">
-                    {/* Pixel checklist icon indicator */}
-                    <span className={`w-1.5 h-1.5 rounded-sm inline-block animate-pulse shadow-md transition-colors duration-300 ${
-                      taskProgress === 100 ? 'bg-emerald-500 shadow-[0_0_8px_#10B981]' : 'bg-[#3C83F6] dark:bg-[#8fd9ff] shadow-[0_0_8px_#3C83F6]'
-                    }`} />
-                    <h3 className="font-press-start text-[11px] md:text-[13px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
+                    <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                   </div>
-                  <span className="font-press-start text-[9px] md:text-[10px] text-[#3C83F6] dark:text-[#E0B0FF] bg-[#3C83F6]/10 dark:bg-white/10 px-1.5 py-0.5 rounded shadow-sm">
+                  <span className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-[#E0B0FF] bg-[#3C83F6]/10 dark:bg-white/10 px-1.5 py-0.5 rounded shadow-sm">
                     {completedTasks}/{totalTasks}
                   </span>
                 </div>
 
-                {/* Task List */}
-                <div className="flex-1 flex flex-col gap-0.5 justify-center my-0.5">
+                {/* Task List - Staged background elements added back */}
+                <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
                   {dailyTasks.map(task => (
                     <button
                       key={task.id}
                       onClick={() => toggleTask(task.id)}
-                      className="flex items-center justify-between w-full text-left py-1.5 px-2 rounded-xl transition-all duration-300 transform active:scale-98 group hover:bg-black/5 dark:hover:bg-white/5"
+                      className={`flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border transition-all duration-300 transform active:scale-98 group ${
+                        task.completed
+                          ? 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10'
+                          : 'border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30 hover:border-[#3C83F6]/30 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5'
+                      }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {/* Beautiful custom pixel checkbox - Rounded-none to make it a square */}
-                        <div className={`w-3.5 h-3.5 rounded-none border flex items-center justify-center shrink-0 transition-all duration-300 ${
+                        {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
+                        <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-all duration-300 ${
                           task.completed
                             ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_6px_#10B981]'
                             : 'border-black/20 dark:border-white/20 bg-white/40 dark:bg-black/40 group-hover:border-[#3C83F6] shadow-inner'
@@ -444,7 +546,7 @@ export default function Dashboard() {
                           )}
                         </div>
                         {/* Task text */}
-                        <span className={`font-press-start text-[8px] md:text-[9.5px] truncate transition-all duration-300 ${
+                        <span className={`font-press-start text-[7px] md:text-[8.5px] truncate transition-all duration-300 ${
                           task.completed
                             ? 'line-through text-black/30 dark:text-white/30'
                             : 'text-black/80 dark:text-white/95'
@@ -475,178 +577,68 @@ export default function Dashboard() {
                 </div>
               </div>
 
-            </div>
-
-            {/* Row 2 Grid: Leaderboard and Stats Card (Reduced Height: lg:h-[310px] / min-h-[290px]) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-              
-              {/* Leaderboard Card */}
-              <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[290px] lg:h-[310px] justify-between">
-                <div className="flex items-center justify-between mb-2 shrink-0">
-                  <h3 className="font-press-start text-[11px] md:text-[13px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
-                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[8px] md:text-[9.5px] text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    View Full
+              {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}
+              <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
+                <div className="flex items-center justify-between mb-4 shrink-0">
+                  <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
+                  <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    View All History
                   </button>
                 </div>
-                <div className="flex-1 flex flex-col justify-around gap-1 py-1">
-                  {leaderboardLoading
-                    ? Array.from({ length: 5 }).map((_, index) => (
-                        <div
-                          key={`leaderboard-loading-${index}`}
-                          className="flex items-center gap-2.5 py-1 px-2 -mx-2 rounded-lg"
-                        >
-                          <PlaceholderBar className="h-2.5 w-6" />
-                          <PlaceholderBar className="h-3 flex-1 rounded-md" />
-                          <PlaceholderBar className="h-2.5 w-12" />
-                        </div>
-                      ))
-                    : featuredLeaderboard.map((student) => (
-                        <div
-                          key={student.userId}
-                          className={`flex items-center gap-2.5 py-1 px-2 -mx-2 rounded-xl transition-colors ${
-                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                          }`}
-                        >
-                          <div
-                            className={`w-9 font-press-start text-[10px] md:text-xs text-right shrink-0 ${
-                              student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
-                            }`}
-                          >
-                            #{student.rank}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`font-press-start text-[10px] md:text-xs truncate ml-2 leading-relaxed ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
-                              {student.name}
-                            </h4>
-                          </div>
-                          <div className="font-press-start text-[10px] md:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
-                            {student.totalXp.toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
-                </div>
-              </div>
 
-              {/* Stats Overview Card - Reduced Height and Matched Fonts */}
-              <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[290px] lg:h-[310px] justify-between relative">
-                
-                {/* Top Section: Avatar left, Name/College right - centered and shifted slightly left */}
-                <div className="flex items-center justify-center gap-4 shrink-0 w-full pl-2 md:pl-4">
-                  {/* Left Column: Avatar + Edit Link */}
-                  <div className="flex flex-col items-center shrink-0">
-                    <img
-                      src={photoUrl}
-                      alt="Avatar"
-                      className="w-16 h-16 object-contain select-none"
-                    />
-                    <button
-                      onClick={() => {
-                        setPendingAvatar(photoUrl);
-                        setIsSelectingAvatar(true);
-                      }}
-                      className="font-press-start text-[7px] md:text-[8px] text-[#00113b] dark:text-[#8fd9ff] hover:underline mt-1 leading-none transition-colors"
-                    >
-                      Edit
-                    </button>
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div
+                        key={`exercise-loading-${index}`}
+                        className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 rounded-xl min-h-[110px] animate-pulse"
+                      >
+                        <PlaceholderBar className="h-3 w-20" />
+                        <PlaceholderBar className="mt-3 h-3.5 w-full rounded-md" />
+                        <PlaceholderBar className="mt-2 h-3.5 w-4/5 rounded-md" />
+                        <div className="mt-6 border-t border-black/5 dark:border-white/5 pt-2">
+                          <PlaceholderBar className="h-2.5 w-24" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  {/* Right Column: Name & College */}
-                  <div className="text-left pl-1">
-                    <h2 className="font-press-start text-[10px] md:text-xs lg:text-sm text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide">
-                      {userDisplayName}
-                    </h2>
-                    <p className="font-press-start text-[8px] md:text-[9.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-relaxed">
-                      {collegeName}
-                    </p>
+                ) : !recentExercises || recentExercises.length === 0 ? (
+                  <div className="py-10 flex flex-col items-center justify-center border border-black/5 dark:border-white/5 rounded-lg border-dashed">
+                    <p className="font-press-start text-[8px] md:text-[9.5px] tracking-widest uppercase text-black/30 dark:text-white/30">No recent activity recorded</p>
                   </div>
-                </div>
-
-                {/* Middle Section: 2x2 Stats Grid (Icon left, Text right) */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4 px-2 py-2 flex-1 items-center w-full justify-items-start pl-6 md:pl-10">
-                  {retroStats.map((stat) => (
-                    <div key={stat.title} className="flex items-center gap-2.5">
-                      <div className="shrink-0 scale-75 md:scale-90">{stat.icon}</div>
-                      <div className="flex flex-col text-left">
-                        <span className="font-press-start text-[10px] md:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
-                        <span className="font-press-start text-[7.5px] md:text-[8.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium">{stat.title}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bottom Section: capsule View Profile Button */}
-                <div className="pt-1 shrink-0">
-                  <button
-                    onClick={() => navigate('/dashboard/profile')}
-                    className="px-6 py-2 bg-[#00113b] dark:bg-[#00113b] text-white hover:brightness-110 active:scale-98 rounded-xl font-press-start text-[8px] font-bold tracking-wider transition-all shadow-md flex items-center justify-center mx-auto w-fit"
-                  >
-                    VIEW PROFILE
-                  </button>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Bottom Section: Recent Activity & Exercises */}
-            <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
-              <div className="flex items-center justify-between mb-4 shrink-0">
-                <h3 className="font-press-start text-[11px] md:text-[13px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
-                <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[8px] md:text-[9.5px] text-[#3C83F6] dark:text-blue-400 hover:underline">
-                  View All History
-                </button>
-              </div>
-
-              {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div
-                      key={`exercise-loading-${index}`}
-                      className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 rounded-xl min-h-[110px] animate-pulse"
-                    >
-                      <PlaceholderBar className="h-3 w-20" />
-                      <PlaceholderBar className="mt-3 h-3.5 w-full rounded-md" />
-                      <PlaceholderBar className="mt-2 h-3.5 w-4/5 rounded-md" />
-                      <div className="mt-6 border-t border-black/5 dark:border-white/5 pt-2">
-                        <PlaceholderBar className="h-2.5 w-24" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : !recentExercises || recentExercises.length === 0 ? (
-                <div className="py-10 flex flex-col items-center justify-center border border-black/5 dark:border-white/5 rounded-lg border-dashed">
-                  <p className="font-press-start text-[8px] md:text-[9.5px] tracking-widest uppercase text-black/30 dark:text-white/30">No recent activity recorded</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {recentExercises.slice(0, 3).map((exercise, index) => (
-                    <div
-                      key={`${exercise.id || exercise.title}-${index}`}
-                      className="p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 transition-all duration-300 rounded-xl cursor-pointer group flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md"
-                      onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-1.5">
-                          <span className="font-press-start text-[7px] md:text-[8px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
-                            {exercise.courseTitle || 'Course'}
-                          </span>
-                          <span className="font-press-start text-[7px] md:text-[8px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
-                            +{exercise.xp || 0} XP
-                          </span>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {recentExercises.slice(0, 3).map((exercise, index) => (
+                      <div
+                        key={`${exercise.id || exercise.title}-${index}`}
+                        className="p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 transition-all duration-300 rounded-xl cursor-pointer group flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md"
+                        onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-1.5">
+                            <span className="font-press-start text-[6.5px] md:text-[7.5px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                              {exercise.courseTitle || 'Course'}
+                            </span>
+                            <span className="font-press-start text-[6.5px] md:text-[7.5px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
+                              +{exercise.xp || 0} XP
+                            </span>
+                          </div>
+                          <h4 className="font-press-start text-[8.5px] md:text-[10px] text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                            {exercise.title || 'Untitled Exercise'}
+                          </h4>
                         </div>
-                        <h4 className="font-press-start text-[10px] md:text-xs text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
-                          {exercise.title || 'Untitled Exercise'}
-                        </h4>
+                        <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
+                          <span className="font-press-start text-[6.5px] md:text-[7.5px] text-black/50 dark:text-white/50 flex items-center gap-1">
+                            <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Completed
+                          </span>
+                          <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
-                        <span className="font-press-start text-[7.5px] md:text-[8.5px] text-black/50 dark:text-white/50 flex items-center gap-1">
-                          <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Completed
-                        </span>
-                        <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </main>
@@ -673,7 +665,7 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-4 gap-4 my-6">
               {Array.from({ length: 8 }, (_, i) => {
-                const avatarUrl = `/profile_avatars/avatar${i + 1}.png`;
+                const avatarUrl = `/profile_avatars/nobackgroundavatar${i + 1}.png`;
                 const isSelected = avatarUrl === (pendingAvatar || photoUrl);
                 return (
                   <button

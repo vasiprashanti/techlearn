@@ -54,7 +54,8 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     lastName: String(user?.lastName || "").trim() || fallbackLastName,
     name: displayName || "Student",
     email: user?.email || "",
-    avatar: user?.avatar || "",
+    avatar: user?.avatar || user?.photoUrl || "",
+    photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
   };
 };
@@ -73,7 +74,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar email firstName lastName name role").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({

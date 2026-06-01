@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { invalidateDashboardCache } from "./dashboardController.js";
 // import sendMail from "../utils/mailer.js"; // Uncomment if using it
 
 // JWT token generator
@@ -159,7 +160,10 @@ export const updateUserProfile = async (req, res) => {
   try {
     const updatedFields = {};
 
-    if (photoUrl) updatedFields.photoUrl = photoUrl;
+    if (photoUrl) {
+      updatedFields.photoUrl = photoUrl;
+      updatedFields.avatar = photoUrl;
+    }
     if (firstName) updatedFields.firstName = firstName;
     if (lastName) updatedFields.lastName = lastName;
     if (dateOfBirth) updatedFields.dateOfBirth = dateOfBirth;
@@ -172,6 +176,9 @@ export const updateUserProfile = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    // Invalidate dashboard cache for this user so they get the fresh profile avatar
+    invalidateDashboardCache(id);
 
     res.json({
       message: "User profile updated successfully",

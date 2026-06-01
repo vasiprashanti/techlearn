@@ -17,7 +17,11 @@ const AVATAR_PATH = "/profile_avatars";
 const getInitialAvatar = () => {
   const storedUser = JSON.parse(localStorage.getItem("userData"));
   if (storedUser?.photoUrl) {
-    return storedUser.photoUrl;
+    let url = storedUser.photoUrl;
+    if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
+      url = url.replace('/nobackgroundavatar', '/avatar');
+    }
+    return url;
   }
   return `${AVATAR_PATH}/avatar1.png`;
 };
@@ -25,7 +29,7 @@ const getInitialAvatar = () => {
 const Profile = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { user, isLoading } = useUser();
+  const { user, isLoading, refetchUserData } = useUser();
   
   const isDarkMode = theme === 'dark';
   
@@ -33,16 +37,21 @@ const Profile = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
-    // Only update if there's no avatar already selected and user data is available
+    if (hasInitialized) return;
     const storedUser = JSON.parse(localStorage.getItem("userData"));
-    if (storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(storedUser.photoUrl);
-    } else if (user?.photoUrl && !storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(user.photoUrl);
+    const activePhoto = user?.photoUrl || storedUser?.photoUrl;
+    if (activePhoto) {
+      let url = activePhoto;
+      if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
+        url = url.replace('/nobackgroundavatar', '/avatar');
+      }
+      setSelectedAvatar(url);
+      setHasInitialized(true);
     }
-  }, [user?.photoUrl, selectedAvatar]);
+  }, [user?.photoUrl, hasInitialized]);
 
   const handleAvatarSelect = async (avatarUrl) => {
     setSelectedAvatar(avatarUrl);
@@ -56,6 +65,7 @@ const Profile = () => {
         throw new Error("User ID not found in localStorage");
       }
 
+      const token = localStorage.getItem("token");
       const userId = storedUser.id;
 
       const res = await fetch(
@@ -64,6 +74,7 @@ const Profile = () => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({ photoUrl: avatarUrl }),
         }
@@ -75,9 +86,13 @@ const Profile = () => {
 
       await res.json();
 
-      // Update localStorage with new photoUrl
-      const updatedUser = { ...storedUser, photoUrl: avatarUrl };
+      // Update localStorage with new photoUrl and avatar
+      const updatedUser = { ...storedUser, photoUrl: avatarUrl, avatar: avatarUrl };
       localStorage.setItem("userData", JSON.stringify(updatedUser));
+      
+      if (refetchUserData) {
+        await refetchUserData();
+      }
       
     } catch (error) {
       console.error("Error updating avatar:", error);
@@ -348,7 +363,7 @@ const Profile = () => {
                 </button>
                 <button
                   onClick={() => handleAvatarSelect(pendingAvatar || selectedAvatar)}
-                  disabled={!pendingAvatar || pendingAvatar === selectedAvatar}
+                  disabled={!pendingAvatar || pendingAvatar.replace('nobackgroundavatar', 'avatar') === selectedAvatar.replace('nobackgroundavatar', 'avatar')}
                   className="px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md"
                 >
                   Save Changes
