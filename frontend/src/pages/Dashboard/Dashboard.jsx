@@ -332,7 +332,8 @@ export default function Dashboard() {
         dangerouslySetInnerHTML={{
           __html: `
             @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-            .font-press-start { font-family: "Press Start 2P", "Courier New", monospace; line-height: 1.6; }
+            .font-press-start { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.4; }
+            .font-pixel-header { font-family: "Press Start 2P", "Courier New", monospace; line-height: 1.6; }
             .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
           `,
         }}
@@ -376,16 +377,16 @@ export default function Dashboard() {
 
                   {/* Top Header Row */}
                   <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
-                    <h1 className="font-press-start text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
+                    <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
                       Daily Challenge
                     </h1>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <span className="font-press-start text-[4.5px] sm:text-[5.5px] md:text-[6.5px] text-white bg-black/55 backdrop-blur-md px-1.5 h-5.5 sm:h-6 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm uppercase">
-                        <Clock className="w-2 h-2 shrink-0" />
-                        <span className="whitespace-nowrap leading-none relative top-[0.5px]">{todayFormatted.toUpperCase()} IST</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
                       </span>
-                      <span className="font-press-start text-[4.5px] sm:text-[5.5px] md:text-[6.5px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-1.5 h-5.5 sm:h-6 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                        <span className="relative top-[0.5px]">Resets in 14h 22m</span>
+                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                        <span>Resets in 14h 22m</span>
                       </span>
                     </div>
                   </div>
@@ -402,7 +403,7 @@ export default function Dashboard() {
                         <div className="flex w-full justify-end pt-1">
                           <button
                             onClick={() => navigate('/dashboard/daily-challenge')}
-                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2.5 rounded-md font-press-start text-[7px] md:text-[8px] font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                           >
                             Go to Daily challenge <ChevronRight className="w-3 h-3" />
                           </button>
@@ -430,31 +431,31 @@ export default function Dashboard() {
                         setPendingAvatar(photoUrl);
                         setIsSelectingAvatar(true);
                       }}
-                      className="font-press-start text-[6px] md:text-[7px] text-[#00113b] dark:text-[#8fd9ff] hover:underline leading-none transition-colors z-10"
+                      className="font-press-start text-[8px] sm:text-[9.5px] text-[#00113b] dark:text-[#8fd9ff] hover:underline leading-none transition-colors z-10"
                     >
-                      Edit
+                      EDIT
                     </button>
                   </div>
 
                   {/* Right Column: Name & College */}
-                  <div className="text-left flex-1 min-w-0">
-                    <h2 className="font-press-start text-[10px] md:text-[11px] lg:text-xs text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                  <div className="text-left flex-1 min-w-0 -mt-6">
+                    <h2 className="font-press-start text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
                       {userDisplayName}
                     </h2>
-                    <p className="font-press-start text-[8px] md:text-[9.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
+                    <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
                       {collegeName}
                     </p>
                   </div>
                 </div>
 
                 {/* Bottom Half Section: 2x2 Stats Grid (Icon left, Text right) - Shipped flush left - pushed down with mt-2 */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-1 px-1 py-0.5 mt-2 flex-1 items-center w-full justify-items-start pl-1 sm:pl-2">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-1 px-1 py-0.5 mt-2 flex-1 items-center w-full justify-items-start pl-4 sm:pl-6">
                   {retroStats.map((stat) => (
                     <div key={stat.title} className="flex items-center gap-2">
                       <div className="shrink-0">{stat.icon}</div>
                       <div className="flex flex-col text-left">
-                        <span className="font-press-start text-[8px] md:text-[9px] text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
-                        <span className="font-press-start text-[6.5px] md:text-[7.5px] text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium">{stat.title}</span>
+                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
+                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
                       </div>
                     </div>
                   ))}
@@ -464,8 +465,8 @@ export default function Dashboard() {
               {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
               <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
                 <div className="flex items-center justify-between mb-2 shrink-0">
-                  <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
-                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-blue-400 hover:underline">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
                     VIEW FULL
                   </button>
                 </div>
@@ -489,18 +490,18 @@ export default function Dashboard() {
                           }`}
                         >
                           <div
-                            className={`w-6 font-press-start text-[7px] md:text-[8.5px] text-left shrink-0 ${
-                              student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/40 dark:text-white/40'
+                            className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
+                              student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
                             }`}
                           >
                             #{student.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className={`font-press-start text-[7px] md:text-[8.5px] truncate ml-1 leading-relaxed ${student.isUser ? 'text-[#3C83F6] dark:text-white' : 'text-black dark:text-white'}`}>
+                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
                               {student.name}
-                            </h4>
+                            </div>
                           </div>
-                          <div className="font-press-start text-[7px] md:text-[8.5px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0">
+                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
                             {student.totalXp.toLocaleString()}
                           </div>
                         </div>
@@ -513,9 +514,9 @@ export default function Dashboard() {
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0 mb-1">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                   </div>
-                  <span className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-[#E0B0FF] bg-[#3C83F6]/10 dark:bg-white/10 px-1.5 py-0.5 rounded shadow-sm">
+                  <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
                     {completedTasks}/{totalTasks}
                   </span>
                 </div>
@@ -526,18 +527,14 @@ export default function Dashboard() {
                     <button
                       key={task.id}
                       onClick={() => toggleTask(task.id)}
-                      className={`flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border transition-all duration-300 transform active:scale-98 group ${
-                        task.completed
-                          ? 'border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10'
-                          : 'border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30 hover:border-[#3C83F6]/30 hover:bg-[#3C83F6]/5 dark:hover:bg-white/5'
-                      }`}
+                      className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.2)] transition-all duration-300 transform active:scale-98 group"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
-                        <div className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center shrink-0 transition-all duration-300 ${
+                        <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
                           task.completed
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-[0_0_6px_#10B981]'
-                            : 'border-black/20 dark:border-white/20 bg-white/40 dark:bg-black/40 group-hover:border-[#3C83F6] shadow-inner'
+                            ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                            : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
                         }`}>
                           {task.completed && (
                             <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
@@ -546,10 +543,10 @@ export default function Dashboard() {
                           )}
                         </div>
                         {/* Task text */}
-                        <span className={`font-press-start text-[7px] md:text-[8.5px] truncate transition-all duration-300 ${
+                        <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
                           task.completed
-                            ? 'line-through text-black/30 dark:text-white/30'
-                            : 'text-black/80 dark:text-white/95'
+                            ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                            : 'text-[#00113b] dark:text-white'
                         }`}>
                           {task.text}
                         </span>
@@ -559,18 +556,14 @@ export default function Dashboard() {
                 </div>
 
                 {/* Premium Retro Neon Progress Bar */}
-                <div className="mt-1 shrink-0 pt-1 border-t border-black/5 dark:border-white/5 w-full">
-                  <div className="flex justify-between items-center text-[7px] font-bold text-black/55 dark:text-white/55 font-press-start mb-0.5">
-                    <span>PROGRESS</span>
-                    <span className="text-[#3C83F6] dark:text-[#8fd9ff]">{taskProgress}%</span>
+                <div className="mt-1 shrink-0 w-full">
+                  <div className="flex justify-between items-center font-press-start mb-0.5">
+                    <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">{taskProgress}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden p-0.5 border border-black/5 dark:border-white/10 shadow-inner">
+                  <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
                     <div 
-                      className={`h-full rounded-full transition-all duration-500 ease-out ${
-                        taskProgress === 100 
-                          ? 'bg-gradient-to-r from-emerald-400 to-green-500 shadow-[0_0_8px_#10B981]' 
-                          : 'bg-gradient-to-r from-[#3C83F6] to-[#00d2ff] shadow-[0_0_6px_#3C83F6]'
-                      }`}
+                      className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
                       style={{ width: `${taskProgress}%` }}
                     />
                   </div>
@@ -580,8 +573,8 @@ export default function Dashboard() {
               {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}
               <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-4 shrink-0">
-                  <h3 className="font-press-start text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
-                  <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[7px] md:text-[8px] text-[#3C83F6] dark:text-blue-400 hover:underline">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
+                  <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
                     View All History
                   </button>
                 </div>
@@ -616,19 +609,19 @@ export default function Dashboard() {
                       >
                         <div>
                           <div className="flex justify-between items-start mb-1.5">
-                            <span className="font-press-start text-[6.5px] md:text-[7.5px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                            <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
                               {exercise.courseTitle || 'Course'}
                             </span>
-                            <span className="font-press-start text-[6.5px] md:text-[7.5px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
+                            <span className="font-press-start text-[10px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
                               +{exercise.xp || 0} XP
                             </span>
                           </div>
-                          <h4 className="font-press-start text-[8.5px] md:text-[10px] text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                          <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
                             {exercise.title || 'Untitled Exercise'}
                           </h4>
                         </div>
                         <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
-                          <span className="font-press-start text-[6.5px] md:text-[7.5px] text-black/50 dark:text-white/50 flex items-center gap-1">
+                          <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
                             <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Completed
                           </span>
                           <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
