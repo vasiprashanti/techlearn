@@ -163,9 +163,15 @@ const BatchDetails = () => {
                           <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
                         ) : (
                           track.days.map((dayItem, index) => (
-                            <div key={`${track.name}-${index}`} className="flex items-center gap-2 text-xs">
-                              <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] w-10 shrink-0">Day {index + 1}</span>
-                              <span className="text-black/80 dark:text-white/80 break-words">{dayItem}</span>
+                            <div key={`${track.name}-${index}`} className="flex flex-col gap-1 text-xs border-b border-black/[0.03] dark:border-white/[0.03] py-1.5 last:border-0">
+                              <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] shrink-0">Day {index + 1}</span>
+                              <div className="flex flex-wrap gap-1 mt-0.5">
+                                {(dayItem || '').split(', ').map((qTitle, qIdx) => (
+                                  <span key={qIdx} className="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#12285a] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-200 border border-black/5 dark:border-white/5 shadow-sm break-words max-w-full">
+                                    {qTitle}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           ))
                         )}

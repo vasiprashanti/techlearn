@@ -1,3 +1,4 @@
+import TrackTemplate from "../../models/TrackTemplate.js";
 import mongoose from "mongoose";
 import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
@@ -446,10 +447,14 @@ export const getBatchDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    const [tracks, students, submissions] = await Promise.all([
+    const [tracks, students, submissions, trackTemplates] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Student.find({ batchId }).lean(),
       Submission.find({ batchId }).lean(),
+      TrackTemplate.find({ batchId })
+        .populate("dayAssignments.questionId", "title")
+        .populate("dayAssignments.tasks.questionId", "title")
+        .lean(),
     ]);
 
     const avgScore =
@@ -484,23 +489,65 @@ export const getBatchDetail = async (req, res) => {
         accuracy: avgScore,
         avgScore,
         avgStreakDays: avgStreak,
-        tracks: tracks.length > 0
-          ? tracks.map((track) => ({
-              id: track._id,
-              name: `${track.trackType} Track`,
-              questionsAssigned: track.orderedQuestionIds?.length || 0,
-              days: (track.orderedQuestionIds || []).map((question) => question.title),
-            }))
-          : batch.assignedTrack
-          ? [
+        tracks: (() => {
+          const templateTracks = (trackTemplates || []).map((template) => {
+            let days = [];
+            let questionsAssigned = 0;
+            const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
+            if (template.trackType === "Daily Task") {
+              sortedDays.forEach((day) => {
+                const titles = (day.tasks || []).map((t) => t.questionId?.title).filter(Boolean);
+                if (titles.length > 0) {
+                  days.push(titles.join(", "));
+                  questionsAssigned += titles.length;
+                }
+              });
+            } else {
+              sortedDays.forEach((day) => {
+                if (day.questionId?.title) {
+                  days.push(day.questionId.title);
+                  questionsAssigned += 1;
+                }
+              });
+            }
+            return {
+              id: template._id,
+              name: template.name || `${template.trackType} Track`,
+              questionsAssigned,
+              days,
+            };
+          }).filter((t) => t.questionsAssigned > 0);
+
+          const merged = [...templateTracks];
+          const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
+          
+          if (tracks && tracks.length > 0) {
+            tracks.forEach((track) => {
+              if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
+                merged.push({
+                  id: track._id,
+                  name: `${track.trackType} Track`,
+                  questionsAssigned: track.orderedQuestionIds.length,
+                  days: (track.orderedQuestionIds || []).map((q) => q.title || "Untitled Question"),
+                });
+              }
+            });
+          }
+
+          if (merged.length > 0) return merged;
+
+          if (batch.assignedTrack) {
+            return [
               {
                 id: `assigned-${batch._id}`,
                 name: String(batch.assignedTrack).trim(),
                 questionsAssigned: 0,
                 days: [],
               },
-            ]
-          : [],
+            ];
+          }
+          return [];
+        })(),
         studentsTable: students.map((student) => {
           const studentSubs = submissions.filter(
             (submission) => String(submission.studentId) === String(student._id)

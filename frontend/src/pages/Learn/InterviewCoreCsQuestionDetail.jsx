@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, X } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
@@ -17,19 +17,121 @@ export default function InterviewCoreCsQuestionDetail() {
   const location = useLocation();
 
   const sourceParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isDailyMode = sourceParams.get('mode') === 'daily';
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/core-cs/');
   const sourcePath = sourceParams.get('from');
-  const backPath = isDashboardContext
-    ? sourcePath === '/dashboard/practice' || sourcePath === '/dashboard/practice/core-cs'
-      ? sourcePath
-      : '/dashboard/practice/core-cs'
-    : '/learn/interview-questions/core-cs';
+  const backPath = isDailyMode
+    ? '/dashboard'
+    : isDashboardContext
+      ? sourcePath === '/dashboard/practice' || sourcePath === '/dashboard/practice/core-cs'
+        ? sourcePath
+        : '/dashboard/practice/core-cs'
+      : '/learn/interview-questions/core-cs';
 
-  const question = useMemo(() => coreCsMcqs.find((q) => q.id === questionId) || null, [questionId]);
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dailyTasksList, setDailyTasksList] = useState([]);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    const localQ = coreCsMcqs.find((q) => q.id === questionId);
+    if (localQ) {
+      setQuestion(localQ);
+      setLoading(false);
+      return;
+    }
+
+    practiceAPI.getQuestionById(questionId)
+      .then((data) => {
+        if (!cancelled && data) {
+          const options = (data.options || []).map(opt => opt.optionText);
+          const correctIndex = (data.options || []).findIndex(opt => opt.isCorrect);
+          setQuestion({
+            id: String(data._id),
+            tag: data.categoryTitle || 'Core CS',
+            difficulty: data.difficulty || 'Easy',
+            question: data.title || '',
+            options: options.length > 0 ? options : ['A', 'B', 'C', 'D'],
+            correctIndex: correctIndex !== -1 ? correctIndex : 0,
+            explanation: data.explanation || data.content?.explanation || 'No explanation provided.'
+          });
+        }
+        if (!cancelled) setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load Core CS question details:", err);
+        if (!cancelled) {
+          setQuestion(null);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [questionId]);
 
   const [selectedOption, setSelectedOption] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submissionMessage, setSubmissionMessage] = useState('');
+
+  useEffect(() => {
+    setSelectedOption(null);
+    setShowFeedback(false);
+    setSubmissionMessage('');
+  }, [questionId]);
+  
+  const fetchDailyTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/daily-task/today`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload?.success && payload?.data?.tasks) {
+          setDailyTasksList(payload.data.tasks);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching daily tasks:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isDailyMode) {
+      fetchDailyTasks();
+      setIsSubmitted(false);
+    }
+  }, [questionId, isDailyMode]);
+
+  const dailySequence = useMemo(() => {
+    if (!isDailyMode) return [];
+    return dailyTasksList.filter(t => t.taskType === 'MCQ' || t.taskType === 'Core CS');
+  }, [dailyTasksList, isDailyMode]);
+
+  const currentTaskIndex = useMemo(() => {
+    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
+  }, [dailySequence, questionId]);
+
+  const isCurrentQuestionCompleted = useMemo(() => {
+    if (isSubmitted) return true;
+    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
+      return dailySequence[currentTaskIndex].status === 'Completed';
+    }
+    return false;
+  }, [dailySequence, currentTaskIndex, isSubmitted]);
+
+  if (loading) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-gray-900 dark:text-white">Loading question...</div>
+        </div>
+      </UserSidebarLayout>
+    );
+  }
 
   if (!question) {
     return (
@@ -110,6 +212,7 @@ export default function InterviewCoreCsQuestionDetail() {
                           isCorrect: idx === question.correctIndex,
                         });
                         setSubmissionMessage('Practice progress saved.');
+                        setIsSubmitted(true);
                       } catch (error) {
                         setSubmissionMessage(error?.message || 'Could not save practice progress.');
                       }
@@ -149,6 +252,28 @@ export default function InterviewCoreCsQuestionDetail() {
           {submissionMessage ? (
             <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{submissionMessage}</p>
           ) : null}
+
+          {isDailyMode && isCurrentQuestionCompleted && (
+            <div className="mt-4">
+              {currentTaskIndex < dailySequence.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/dashboard/practice/core-cs/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Next Question
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Finish Daily Task
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </UserSidebarLayout>

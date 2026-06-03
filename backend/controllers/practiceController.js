@@ -142,6 +142,98 @@ export const recordPracticeSubmission = async (req, res) => {
       submittedAt: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
     });
 
+    // Intercept for Daily Task tracking
+    try {
+      const email = req.user.email.toLowerCase().trim();
+      const student = await mongoose.model("Student").findOne({ email });
+      if (student && student.batchId) {
+        const batch = await mongoose.model("Batch").findById(student.batchId);
+        if (batch && batch.assignedDailyTaskTrack) {
+          const trackTemplate = await mongoose.model("TrackTemplate").findById(batch.assignedDailyTaskTrack);
+          if (trackTemplate) {
+            const getISTDateParts = (date) => {
+              const d = new Date(date);
+              const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+              return {
+                year: istDate.getUTCFullYear(),
+                month: istDate.getUTCMonth(),
+                date: istDate.getUTCDate(),
+              };
+            };
+            const combineDateAndTime = (date, timeString = "00:00") => {
+              const { year, month, date: day } = getISTDateParts(date);
+              const [hours, minutes] = String(timeString || "00:00")
+                .split(":")
+                .map((val) => Number(val || 0));
+              const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
+              return new Date(utcTime - 5.5 * 60 * 60 * 1000);
+            };
+            const releaseStart = combineDateAndTime(trackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+            const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+            
+            let attempt = await mongoose.model("DailyTaskAttempt").findOne({
+              userId: req.user._id,
+              batchId: batch._id,
+              trackId: trackTemplate._id,
+              dayNumber,
+            });
+            
+            if (attempt) {
+              const taskIndex = attempt.tasksProgress.findIndex(
+                (t) => String(t.questionId) === String(questionIdRaw)
+              );
+              
+              if (taskIndex !== -1 && attempt.tasksProgress[taskIndex].status !== "Completed") {
+                const task = attempt.tasksProgress[taskIndex];
+                task.status = "Completed";
+                task.completedAt = new Date();
+                
+                const totalTasksCount = attempt.tasksProgress.length;
+                const completedTasksCount = attempt.tasksProgress.filter((t) => t.status === "Completed").length;
+                const justCompletedDay = (completedTasksCount === totalTasksCount) && !attempt.isFullyCompleted;
+                
+                if (completedTasksCount === totalTasksCount) {
+                  attempt.isFullyCompleted = true;
+                }
+                
+                await attempt.save();
+                
+                // Award XP
+                const { calculateTaskXP, TASK_XP } = await import("../services/xpService.js");
+                let xpEarned = calculateTaskXP({ taskType: task.taskType, hintsUsed: task.hintsUsed });
+                let bonusXp = 0;
+                if (justCompletedDay) {
+                  bonusXp += TASK_XP.ALL_COMPLETED_BONUS;
+                  const skippedAny = attempt.tasksProgress.some((t) => t.status === "Not Started");
+                  if (!skippedAny) {
+                    bonusXp += TASK_XP.NO_SKIP_BONUS;
+                  }
+                }
+                const totalXpAdded = xpEarned + bonusXp;
+                
+                let progress = await mongoose.model("UserProgress").findOne({ userId: req.user._id });
+                if (!progress) {
+                  progress = new (mongoose.model("UserProgress"))({
+                    userId: req.user._id,
+                    courseXP: new Map(),
+                    exerciseXP: new Map(),
+                    completedExercises: [],
+                  });
+                }
+                
+                const courseIdKey = String(trackTemplate._id);
+                const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
+                progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
+                await progress.save();
+              }
+            }
+          }
+        }
+      }
+    } catch (dtError) {
+      console.error("Daily task automatic submission completion failed:", dtError);
+    }
+
     return res.status(201).json({ success: true, data: submission });
   } catch (error) {
     console.error("recordPracticeSubmission error:", error);

@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import CodingRound from "../models/CodingRound.js";
 import College from "../models/College.js";
@@ -21,16 +22,26 @@ export const DAILY_CHALLENGE_RULES = {
 const DEMO_COLLEGE_NAME = "Public Demo College";
 const DEMO_BATCH_NAME = "Public Demo Batch";
 
+const getISTDateParts = (date) => {
+  const d = new Date(date);
+  const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+  return {
+    year: istDate.getUTCFullYear(),
+    month: istDate.getUTCMonth(),
+    date: istDate.getUTCDate(),
+  };
+};
+
 export const startOfDay = (date = new Date()) => {
-  const value = new Date(date);
-  value.setHours(0, 0, 0, 0);
-  return value;
+  const { year, month, date: day } = getISTDateParts(date);
+  const utcTime = Date.UTC(year, month, day, 0, 0, 0, 0);
+  return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
 export const endOfDay = (date = new Date()) => {
-  const value = new Date(date);
-  value.setHours(23, 59, 59, 999);
-  return value;
+  const { year, month, date: day } = getISTDateParts(date);
+  const utcTime = Date.UTC(year, month, day, 23, 59, 59, 999);
+  return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
 export const normalizeTrackType = (value = "") => {
@@ -57,13 +68,12 @@ export const mapQuestionToProblem = (question) => ({
 });
 
 const combineDateAndTime = (date, timeString = "00:00") => {
-  const baseDate = new Date(date);
+  const { year, month, date: day } = getISTDateParts(date);
   const [hours, minutes] = String(timeString || "00:00")
     .split(":")
     .map((value) => Number(value || 0));
-
-  baseDate.setHours(hours || 0, minutes || 0, 0, 0);
-  return baseDate;
+  const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
+  return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
 const ensureDemoBatch = async () => {
@@ -206,7 +216,10 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  const releaseStart = combineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
+  const trackTemplate = batch.assignedDailyChallengeTrack
+    ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyChallengeTrack)
+    : null;
+  const releaseStart = combineDateAndTime(trackTemplate?.startDate || batch.startDate, batch.releaseTime || "00:00");
   const batchEnd = endOfDay(batch.expiryDate);
   const now = new Date();
 

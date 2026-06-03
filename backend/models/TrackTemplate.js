@@ -1,5 +1,21 @@
 import mongoose from "mongoose";
 
+const taskAssignmentSchema = new mongoose.Schema(
+  {
+    taskType: {
+      type: String,
+      enum: ["Coding", "SQL", "MCQ", "Aptitude", "Core CS", "Debugging"],
+      required: true,
+    },
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const trackTemplateDaySchema = new mongoose.Schema(
   {
     dayNumber: {
@@ -10,7 +26,11 @@ const trackTemplateDaySchema = new mongoose.Schema(
     questionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Question",
-      required: true,
+      required: false,
+    },
+    tasks: {
+      type: [taskAssignmentSchema],
+      default: [],
     },
   },
   { _id: false }
@@ -45,6 +65,11 @@ const trackTemplateSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    trackType: {
+      type: String,
+      enum: ["Daily Challenge", "Daily Task"],
+      default: "Daily Challenge",
     },
     description: {
       type: String,

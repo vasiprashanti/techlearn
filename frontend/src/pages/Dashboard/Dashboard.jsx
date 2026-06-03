@@ -88,20 +88,94 @@ export default function Dashboard() {
   const [activeChallenge, setActiveChallenge] = useState(cachedHighlights?.activeChallenge || null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(!cachedHighlights?.leaderboardEntries);
   const [challengeLoading, setChallengeLoading] = useState(!cachedHighlights?.activeChallenge);
-  const [dailyTasks, setDailyTasks] = useState([
-    { id: 1, text: "Solve today's Daily Challenge", completed: false },
-    { id: 2, text: "Complete at least 1 DSA problem", completed: false },
-    { id: 3, text: "Review SQL or Core CS concepts", completed: false },
-    { id: 4, text: "Check your place on the Leaderboard", completed: false }
-  ]);
+  const [dailyTasks, setDailyTasks] = useState([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [isFullyCompleted, setIsFullyCompleted] = useState(false);
+  const [taskProgress, setTaskProgress] = useState(0);
 
-  const toggleTask = (id) => {
-    setDailyTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const loadTodayTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/daily-task/today`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload?.success && payload?.data) {
+          const list = (payload.data.tasks || []).map((t) => ({
+            id: t.questionId,
+            text: t.title,
+            type: t.taskType,
+            completed: t.status === "Completed",
+          }));
+          setDailyTasks(list);
+          setIsFullyCompleted(payload.data.isFullyCompleted);
+          setTaskProgress(payload.data.progressPercent);
+        }
+      }
+      setTasksLoaded(true);
+    } catch (error) {
+      console.error("Failed to load daily tasks:", error);
+      setTasksLoaded(true);
+    }
   };
+
+  useEffect(() => {
+    loadTodayTasks();
+  }, []);
+
+  // Group the daily tasks for the checklist display
+  const groupedTasks = useMemo(() => {
+    const groups = {};
+    dailyTasks.forEach((task) => {
+      let categoryGroup = task.type;
+      if (task.type === "Coding" || task.type === "Debugging") categoryGroup = "Coding";
+      else if (task.type === "MCQ" || task.type === "Core CS") categoryGroup = "MCQ";
+      else if (task.type === "SQL") categoryGroup = "SQL";
+      else if (task.type === "Aptitude") categoryGroup = "Aptitude";
+
+      if (!groups[categoryGroup]) {
+        groups[categoryGroup] = {
+          type: categoryGroup,
+          text: `${categoryGroup} Task`,
+          questions: [],
+        };
+      }
+      groups[categoryGroup].questions.push(task);
+    });
+
+    return Object.values(groups).map((group) => {
+      const completedCount = group.questions.filter((q) => q.completed).length;
+      const totalCount = group.questions.length;
+      return {
+        type: group.type,
+        text: group.text,
+        completed: totalCount > 0 && completedCount === totalCount,
+        questions: group.questions,
+      };
+    });
+  }, [dailyTasks]);
+
+  const handleGroupClick = (group) => {
+    const nextUncompleted = group.questions.find((q) => !q.completed) || group.questions[0];
+    if (!nextUncompleted) return;
+
+    if (group.type === "Coding") {
+      navigate(`/dashboard/practice/dsa/${nextUncompleted.id}?mode=daily`);
+    } else if (group.type === "SQL") {
+      navigate(`/dashboard/practice/sql/${nextUncompleted.id}?mode=daily`);
+    } else if (group.type === "Aptitude") {
+      navigate(`/dashboard/practice/aptitude/${nextUncompleted.id}?mode=daily`);
+    } else {
+      navigate(`/dashboard/practice/core-cs/${nextUncompleted.id}?mode=daily`);
+    }
+  };
+
 
   const completedTasks = dailyTasks.filter(t => t.completed).length;
   const totalTasks = dailyTasks.length;
-  const taskProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const [streak, setStreak] = useState(0);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
@@ -521,50 +595,68 @@ export default function Dashboard() {
                   </span>
                 </div>
 
-                {/* Task List - Staged background elements added back */}
+                 {/* Task List - Staged background elements added back */}
                 <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
-                  {dailyTasks.map(task => (
-                    <button
-                      key={task.id}
-                      onClick={() => toggleTask(task.id)}
-                      className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.2)] transition-all duration-300 transform active:scale-98 group"
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
-                        <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                          task.completed
-                            ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
-                            : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
-                        }`}>
-                          {task.completed && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
+                  {groupedTasks.length > 0 ? (
+                    groupedTasks.map(group => (
+                      <div
+                        key={group.type}
+                        onClick={() => handleGroupClick(group)}
+                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
+                          <div
+                            className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                              group.completed
+                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                            }`}
+                          >
+                            {group.completed && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          {/* Task text */}
+                          <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
+                            group.completed
+                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                              : 'text-[#00113b] dark:text-white'
+                          }`}>
+                            {group.text}
+                          </span>
                         </div>
-                        {/* Task text */}
-                        <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
-                          task.completed
-                            ? 'line-through text-[#00113b]/30 dark:text-white/30'
-                            : 'text-[#00113b] dark:text-white'
-                        }`}>
-                          {task.text}
-                        </span>
                       </div>
-                    </button>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-3">
+                      <svg className="w-8 h-8 text-slate-400/80 dark:text-slate-500 mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                        No tasks assigned for today.
+                      </p>
+                      <p className="font-press-start text-[8px] text-slate-400/60 dark:text-slate-500 mt-1">
+                        You're all caught up!
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Premium Retro Neon Progress Bar */}
                 <div className="mt-1 shrink-0 w-full">
                   <div className="flex justify-between items-center font-press-start mb-0.5">
                     <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">{taskProgress}%</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
+                      {totalTasks > 0 ? `${taskProgress}%` : "No tasks"}
+                    </span>
                   </div>
                   <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
                     <div 
                       className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
-                      style={{ width: `${taskProgress}%` }}
+                      style={{ width: `${totalTasks > 0 ? taskProgress : 0}%` }}
                     />
                   </div>
                 </div>

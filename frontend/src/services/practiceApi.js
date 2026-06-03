@@ -22,6 +22,13 @@ export const practiceAPI = {
     return handleResponse(response);
   },
 
+  getQuestionById: async (questionId) => {
+    const response = await fetch(`${API_BASE}/question-bank/questions/${questionId}`, {
+      headers: buildHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   getStats: async () => {
     const response = await fetch(`${API_BASE}/practice/stats`, {
       headers: buildHeaders(),

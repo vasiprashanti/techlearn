@@ -25,36 +25,102 @@ export default function InterviewDsaQuestionDetail() {
 
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/dsa/');
   const sourceParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isDailyMode = sourceParams.get('mode') === 'daily';
   const dsaSourcePath = sourceParams.get('from');
-  const dsaListPath = isDashboardContext
-    ? dsaSourcePath === '/dashboard/practice' || dsaSourcePath === '/dashboard/practice/dsa'
-      ? dsaSourcePath
-      : '/dashboard/practice/dsa'
-    : '/learn/interview-questions/dsa';
+  const dsaListPath = isDailyMode
+    ? '/dashboard'
+    : isDashboardContext
+      ? dsaSourcePath === '/dashboard/practice' || dsaSourcePath === '/dashboard/practice/dsa'
+        ? dsaSourcePath
+        : '/dashboard/practice/dsa'
+      : '/learn/interview-questions/dsa';
 
   const [liveQuestions, setLiveQuestions] = useState([]);
+  const [dailyTasksList, setDailyTasksList] = useState([]);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const fetchDailyTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/daily-task/today`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload?.success && payload?.data?.tasks) {
+          setDailyTasksList(payload.data.tasks);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching daily tasks:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isDailyMode) {
+      fetchDailyTasks();
+      setIsSubmitted(false);
+    }
+  }, [questionId, isDailyMode]);
+
+  const dailySequence = useMemo(() => {
+    if (!isDailyMode) return [];
+    return dailyTasksList.filter(t => t.taskType === 'Coding' || t.taskType === 'Debugging');
+  }, [dailyTasksList, isDailyMode]);
+
+  const currentTaskIndex = useMemo(() => {
+    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
+  }, [dailySequence, questionId]);
+
+  const isCurrentQuestionCompleted = useMemo(() => {
+    if (isSubmitted) return true;
+    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
+      return dailySequence[currentTaskIndex].status === 'Completed';
+    }
+    return false;
+  }, [dailySequence, currentTaskIndex, isSubmitted]);
+
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    practiceAPI.getQuestions('DSA')
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) setLiveQuestions(data);
-      })
-      .catch(() => {
-        if (!cancelled) setLiveQuestions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    setLoading(true);
 
-  const question = useMemo(() => {
-    return (
-      interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'DSA') ||
-      liveQuestions.find((q) => String(q.id) === String(questionId) && q.topic === 'DSA') ||
-      null
-    );
-  }, [questionId, liveQuestions]);
+    const localQ = interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'DSA');
+    if (localQ) {
+      setQuestion(localQ);
+      setLoading(false);
+      return;
+    }
+
+    practiceAPI.getQuestionById(questionId)
+      .then((data) => {
+        if (!cancelled && data) {
+          setQuestion({
+            id: String(data._id),
+            title: data.title,
+            subtitle: data.categoryTitle || data.trackType || 'DSA',
+            difficulty: data.difficulty || 'Easy',
+            description: data.description || '',
+            solutionCode: data.solutionCode || '',
+            inputFormat: data.inputFormat || '',
+            outputFormat: data.outputFormat || '',
+            topic: 'DSA'
+          });
+        }
+        if (!cancelled) setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load DSA question details:", err);
+        if (!cancelled) {
+          setQuestion(null);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [questionId]);
 
   const details = useMemo(() => {
     if (!question) return null;
@@ -77,6 +143,16 @@ export default function InterviewDsaQuestionDetail() {
     setCode(details?.starterCode || '');
     setOutput('');
   }, [questionId, details?.starterCode]);
+
+  if (loading) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-gray-900 dark:text-white">Loading question...</div>
+        </div>
+      </UserSidebarLayout>
+    );
+  }
 
   if (!question || !details) {
     return (
@@ -132,6 +208,7 @@ export default function InterviewDsaQuestionDetail() {
         isCorrect: true,
       });
       setSubmissionMessage('Practice progress saved.');
+      setIsSubmitted(true);
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
@@ -194,6 +271,28 @@ export default function InterviewDsaQuestionDetail() {
                     Mark solved
                   </button>
                 ) : null}
+
+                {isDailyMode && isCurrentQuestionCompleted && (
+                  <div className="mt-2">
+                    {currentTaskIndex < dailySequence.length - 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/dashboard/practice/dsa/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`)}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                      >
+                        Next Question
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/dashboard')}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                      >
+                        Finish Daily Task
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             {submissionMessage ? (

@@ -17,15 +17,61 @@ export default function InterviewAptitudeQuestionDetail() {
   const location = useLocation();
 
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isDailyMode = searchParams.get('mode') === 'daily';
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/aptitude/');
   const aptitudeSourcePath = searchParams.get('from');
-  const backPath = isDashboardContext
-    ? aptitudeSourcePath === '/dashboard/practice' || aptitudeSourcePath === '/dashboard/practice/aptitude'
-      ? aptitudeSourcePath
-      : '/dashboard/practice/aptitude'
-    : '/learn/interview-questions/aptitude';
+  const backPath = isDailyMode
+    ? '/dashboard'
+    : isDashboardContext
+      ? aptitudeSourcePath === '/dashboard/practice' || aptitudeSourcePath === '/dashboard/practice/aptitude'
+        ? aptitudeSourcePath
+        : '/dashboard/practice/aptitude'
+      : '/learn/interview-questions/aptitude';
 
   const [liveQuestions, setLiveQuestions] = useState([]);
+  const [dailyTasksList, setDailyTasksList] = useState([]);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  const fetchDailyTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/daily-task/today`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload?.success && payload?.data?.tasks) {
+          setDailyTasksList(payload.data.tasks);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching daily tasks:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (isDailyMode) {
+      fetchDailyTasks();
+      setIsSubmitted(false);
+    }
+  }, [questionId, isDailyMode]);
+
+  const dailySequence = useMemo(() => {
+    if (!isDailyMode) return [];
+    return dailyTasksList.filter(t => t.taskType === 'Aptitude');
+  }, [dailyTasksList, isDailyMode]);
+
+  const currentTaskIndex = useMemo(() => {
+    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
+  }, [dailySequence, questionId]);
+
+  const isCurrentQuestionCompleted = useMemo(() => {
+    if (isSubmitted) return true;
+    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
+      return dailySequence[currentTaskIndex].status === 'Completed';
+    }
+    return false;
+  }, [dailySequence, currentTaskIndex, isSubmitted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,13 +87,44 @@ export default function InterviewAptitudeQuestionDetail() {
     };
   }, []);
 
-  const question = useMemo(() => {
-    return (
-      interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'Aptitude') ||
-      liveQuestions.find((q) => String(q.id) === String(questionId) && q.topic === 'Aptitude') ||
-      null
-    );
-  }, [questionId, liveQuestions]);
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    const localQ = interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'Aptitude');
+    if (localQ) {
+      setQuestion(localQ);
+      setLoading(false);
+      return;
+    }
+
+    practiceAPI.getQuestionById(questionId)
+      .then((data) => {
+        if (!cancelled && data) {
+          setQuestion({
+            id: String(data._id),
+            title: data.title,
+            subtitle: data.categoryTitle || 'Aptitude',
+            difficulty: data.difficulty || 'Easy',
+            description: data.description || '',
+            topic: 'Aptitude'
+          });
+        }
+        if (!cancelled) setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load Aptitude question details:", err);
+        if (!cancelled) {
+          setQuestion(null);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [questionId]);
 
   const notes = useMemo(() => {
     if (!question) return '';
@@ -63,10 +140,21 @@ export default function InterviewAptitudeQuestionDetail() {
     try {
       await practiceAPI.recordSubmission({ questionId: question.id, track: 'Aptitude', isCorrect: true });
       setSubmissionMessage('Practice progress saved.');
+      setIsSubmitted(true);
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
   };
+
+  if (loading) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-gray-900 dark:text-white">Loading question...</div>
+        </div>
+      </UserSidebarLayout>
+    );
+  }
 
   if (!question) {
     return (
@@ -115,6 +203,28 @@ export default function InterviewAptitudeQuestionDetail() {
               Mark solved
             </button>
           ) : null}
+
+          {isDailyMode && isCurrentQuestionCompleted && (
+            <div className="mt-4">
+              {currentTaskIndex < dailySequence.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/dashboard/practice/aptitude/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Next Question
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Finish Daily Task
+                </button>
+              )}
+            </div>
+          )}
           {submissionMessage ? (
             <p className="mt-2 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{submissionMessage}</p>
           ) : null}

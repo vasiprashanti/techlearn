@@ -3,6 +3,10 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import Category from "../models/Category.js";
 import mongoose from "mongoose";
+import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
+import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
+import TrackTemplate from "../models/TrackTemplate.js";
+import User from "../models/User.js";
 
 const buildSubmissionFilter = ({
   batchId,
@@ -395,6 +399,50 @@ export const getBatchStats = async (req, res) => {
       submissionsPerDay: Math.round(totalSubmissions / 30), // Rough estimate
     };
 
+    // Daily Challenge Completion Rates
+    const totalChallengeAttempts = await DailyChallengeAttempt.countDocuments({ batchId });
+    const completedChallengeAttempts = await DailyChallengeAttempt.countDocuments({
+      batchId,
+      status: { $in: ["submitted", "auto_submitted"] }
+    });
+    const dailyChallengeCompletionRate = totalChallengeAttempts > 0 
+      ? Math.round((completedChallengeAttempts / totalChallengeAttempts) * 100) 
+      : 0;
+
+    // Daily Task Completion Rates
+    const totalTaskAttempts = await DailyTaskAttempt.countDocuments({ batchId });
+    const completedTaskAttempts = await DailyTaskAttempt.countDocuments({
+      batchId,
+      isFullyCompleted: true
+    });
+    const dailyTaskCompletionRate = totalTaskAttempts > 0
+      ? Math.round((completedTaskAttempts / totalTaskAttempts) * 100)
+      : 0;
+
+    // Active Students
+    const activeStudentsCount = await Student.countDocuments({ batchId, status: "Active" });
+
+    // Consistency Metric (e.g. Average tasks completed per day assignment)
+    const consistencyAgg = await DailyTaskAttempt.aggregate([
+      { $match: { batchId } },
+      { $project: { 
+          completedTasks: { 
+            $size: { 
+              $filter: { 
+                input: "$tasksProgress", 
+                as: "task", 
+                cond: { $eq: ["$$task.status", "Completed"] } 
+              } 
+            } 
+          } 
+        } 
+      },
+      { $group: { _id: null, avgCompleted: { $avg: "$completedTasks" } } }
+    ]);
+    const averageTasksCompletedPerDay = consistencyAgg[0]?.avgCompleted 
+      ? Number(consistencyAgg[0].avgCompleted.toFixed(1)) 
+      : 0;
+
     res.json({
       success: true,
       data: {
@@ -410,6 +458,10 @@ export const getBatchStats = async (req, res) => {
         topPerformers,
         categoryStats,
         timingAnalytics,
+        dailyChallengeCompletionRate,
+        dailyTaskCompletionRate,
+        activeStudentsCount,
+        averageTasksCompletedPerDay,
         submissionTypeBreakdown:
           String(includeAllTypes).toLowerCase() === "true" || categoryType
             ? await buildCategoryTypeBreakdown(filter)
@@ -508,6 +560,53 @@ export const getStudentProgress = async (req, res) => {
       },
     ]);
 
+    let targetUserId = student.userId;
+    if (!targetUserId) {
+      const linkedUser = await User.findOne({ email: student.email.toLowerCase().trim() }).select("_id").lean();
+      targetUserId = linkedUser?._id;
+    }
+
+    const attempts = targetUserId 
+      ? await DailyTaskAttempt.find({ userId: targetUserId }).populate("tasksProgress.questionId", "title").lean() 
+      : [];
+
+    const batch = await Batch.findById(student.batchId);
+    let currentDayNumber = 1;
+    if (batch) {
+      const releaseStart = new Date(batch.startDate);
+      const now = new Date();
+      currentDayNumber = Math.max(1, Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+    }
+
+    const completedTasks = [];
+    const pendingTasks = [];
+    const skippedTasks = [];
+    const history = [];
+
+    for (const attempt of attempts) {
+      for (const task of attempt.tasksProgress) {
+        const taskInfo = {
+          dayNumber: attempt.dayNumber,
+          questionId: task.questionId?._id || task.questionId,
+          title: task.questionId?.title || `${task.taskType} Task`,
+          taskType: task.taskType,
+          status: task.status,
+          hintsUsed: task.hintsUsed,
+          completedAt: task.completedAt
+        };
+
+        history.push(taskInfo);
+
+        if (task.status === "Completed") {
+          completedTasks.push(taskInfo);
+        } else if (attempt.dayNumber < currentDayNumber) {
+          skippedTasks.push(taskInfo);
+        } else {
+          pendingTasks.push(taskInfo);
+        }
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -521,6 +620,10 @@ export const getStudentProgress = async (req, res) => {
         totalScore: Math.round(scoreData.totalScore),
         averageScore: Math.round(scoreData.avgScore * 100) / 100,
         categoryProgress,
+        completedTasks,
+        pendingTasks,
+        skippedTasks,
+        history,
       },
     });
   } catch (error) {

@@ -28,6 +28,8 @@ import {
 
 const normalizeTrackType = (value = "") => {
   const normalized = String(value).trim().toLowerCase();
+  if (normalized.includes("daily challenge")) return "Daily Challenge";
+  if (normalized.includes("daily task")) return "Daily Task";
   if (normalized.includes("dsa")) return "DSA";
   if (normalized.includes("sql")) return "SQL";
   return "Core";
@@ -75,15 +77,26 @@ const resolveTemplateSchedule = ({ startDate, endDate, totalDays, durationDays }
 const syncTemplateToTrack = async (template) => {
   if (!template?.batchId) return;
 
-  const orderedQuestionIds = [...(template.dayAssignments || [])]
-    .sort((a, b) => a.dayNumber - b.dayNumber)
-    .map((assignment) => assignment.questionId)
-    .filter(Boolean);
+  const normalizedType = (template.trackType === "Daily Challenge" || template.trackType === "Daily Task")
+    ? template.trackType
+    : normalizeTrackType(template.category);
+  let orderedQuestionIds = [];
+  if (normalizedType === "Daily Task") {
+    orderedQuestionIds = (template.dayAssignments || [])
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .flatMap((assignment) => (assignment.tasks || []).map((t) => t.questionId))
+      .filter(Boolean);
+  } else {
+    orderedQuestionIds = [...(template.dayAssignments || [])]
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .map((assignment) => assignment.questionId)
+      .filter(Boolean);
+  }
 
   await Track.findOneAndUpdate(
     {
       batchId: template.batchId,
-      trackType: normalizeTrackType(template.category),
+      trackType: normalizedType,
     },
     {
       $set: {
@@ -91,8 +104,18 @@ const syncTemplateToTrack = async (template) => {
         orderedQuestionIds,
       },
     },
-    { new: true }
+    { new: true, upsert: true }
   );
+
+  if (normalizedType === "Daily Challenge") {
+    await Batch.findByIdAndUpdate(template.batchId, {
+      $set: { assignedDailyChallengeTrack: template._id },
+    });
+  } else if (normalizedType === "Daily Task") {
+    await Batch.findByIdAndUpdate(template.batchId, {
+      $set: { assignedDailyTaskTrack: template._id },
+    });
+  }
 };
 
 const logTrackTemplateEvent = async ({ verb, action, detail, actor, metadata = {}, entityId = null }) => {
@@ -612,6 +635,21 @@ export const createTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Assigned batch not found." });
     }
 
+    const trackType = req.body.trackType || "Daily Challenge";
+    if (trackType === "Daily Challenge" || trackType === "Daily Task") {
+      const existing = await TrackTemplate.findOne({
+        batchId,
+        trackType,
+        status: "Active",
+      });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `A batch cannot have multiple ${trackType} tracks simultaneously.`,
+        });
+      }
+    }
+
     const schedule = resolveTemplateSchedule(req.body);
     if (schedule.error) {
       return res.status(400).json({ success: false, message: schedule.error });
@@ -619,6 +657,7 @@ export const createTrackTemplate = async (req, res) => {
 
     const template = await TrackTemplate.create({
       name: name.trim(),
+      trackType: req.body.trackType || "Daily Challenge",
       description: description?.trim() || `${schedule.totalDays}-day ${category} track template`,
       category: category.trim(),
       startDate: schedule.startDate,
@@ -656,16 +695,33 @@ export const getTrackTemplateDetail = async (req, res) => {
     const template = await TrackTemplate.findById(templateId)
       .populate("batchId", "name")
       .populate("dayAssignments.questionId")
+      .populate("dayAssignments.tasks.questionId")
       .lean();
     if (!template) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const categorySlug = CATEGORY_SLUG_BY_TITLE[template.category] || slugifyCategory(template.category);
-    const category = await Category.findOne({ slug: categorySlug }).lean();
-    const questionFilter = category
-      ? { $or: [{ categoryId: category._id }, { categorySlug: category.slug }], status: "Active", isActive: { $ne: false } }
-      : { categorySlug, status: "Active", isActive: { $ne: false } };
+    let questionFilter = { status: "Active", isActive: { $ne: false } };
+    if (template.trackType === "Daily Task") {
+      if (template.category && template.category !== "Daily Task") {
+        const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
+        if (categoriesList.length > 0) {
+          const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+          const categoryIds = dbCategories.map((c) => c._id);
+          const categorySlugs = dbCategories.map((c) => c.slug);
+          questionFilter.$or = [
+            { categoryId: { $in: categoryIds } },
+            { categorySlug: { $in: categorySlugs } },
+          ];
+        }
+      }
+    } else {
+      const categorySlug = CATEGORY_SLUG_BY_TITLE[template.category] || slugifyCategory(template.category);
+      const category = await Category.findOne({ slug: categorySlug }).lean();
+      questionFilter = category
+        ? { $or: [{ categoryId: category._id }, { categorySlug: category.slug }], status: "Active", isActive: { $ne: false } }
+        : { categorySlug, status: "Active", isActive: { $ne: false } };
+    }
     const availableQuestions = await Question.find(questionFilter).populate("categoryId", "title slug categoryType").lean();
 
     return res.status(200).json({
@@ -684,6 +740,15 @@ export const getTrackTemplateDetail = async (req, res) => {
         batchId: template.batchId?._id || template.batchId,
         assignedBatch: template.batchId?.name || "",
         versionHistory: template.versionHistory || [],
+        trackType: template.trackType || "Daily Challenge",
+        dayAssignments: (template.dayAssignments || []).map((assignment) => ({
+          dayNumber: assignment.dayNumber,
+          tasks: (assignment.tasks || []).map((t) => ({
+            taskType: t.taskType,
+            questionId: t.questionId?._id || t.questionId,
+            questionTitle: t.questionId?.title || "Task Question",
+          })),
+        })),
         assignedQuestions: (template.dayAssignments || [])
           .sort((a, b) => a.dayNumber - b.dayNumber)
           .map((assignment) => ({
@@ -715,6 +780,23 @@ export const updateTrackTemplate = async (req, res) => {
     const template = await TrackTemplate.findById(templateId);
     if (!template) {
       return res.status(404).json({ success: false, message: "Track template not found." });
+    }
+
+    const nextTrackType = req.body.trackType || template.trackType;
+    const nextBatchId = req.body.batchId || template.batchId;
+    if (nextTrackType === "Daily Challenge" || nextTrackType === "Daily Task") {
+      const existing = await TrackTemplate.findOne({
+        _id: { $ne: templateId },
+        batchId: nextBatchId,
+        trackType: nextTrackType,
+        status: "Active",
+      });
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: `A batch cannot have multiple ${nextTrackType} tracks simultaneously.`,
+        });
+      }
     }
 
     if (req.body.name) template.name = req.body.name.trim();
@@ -792,6 +874,23 @@ export const deleteTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
+    // Clean up references in Batch
+    await Batch.updateMany(
+      { assignedDailyTaskTrack: templateId },
+      { $unset: { assignedDailyTaskTrack: "" } }
+    );
+    await Batch.updateMany(
+      { assignedDailyChallengeTrack: templateId },
+      { $unset: { assignedDailyChallengeTrack: "" } }
+    );
+
+    // Clean up corresponding synced Track
+    const normalizedType = template.trackType === "Daily Task" ? "Daily Task" : "Daily Challenge";
+    await Track.deleteMany({
+      batchId: template.batchId,
+      trackType: normalizedType,
+    });
+
     await writeAuditLog({
       verb: "Deleted",
       entityType: "TrackTemplate",
@@ -811,35 +910,63 @@ export const deleteTrackTemplate = async (req, res) => {
 export const assignTrackTemplateDay = async (req, res) => {
   try {
     const { templateId } = req.params;
-    const { dayNumber, questionId } = req.body;
+    const { dayNumber, questionId, taskType } = req.body;
     if (!assertObjectId(templateId, "templateId", res) || !assertObjectId(questionId, "questionId", res)) return;
-
-    const validation = await validateTrackTemplateQuestionAssignment({ templateId, dayNumber, questionId });
-    if (!validation.valid) {
-      await logTrackTemplateValidationFailure({
-        templateId,
-        action: "Assign track template day rejected",
-        detail: validation.message,
-        actor: req.user,
-        metadata: { dayNumber, questionId },
-      });
-      return res.status(validation.status || 400).json({ success: false, message: validation.message });
-    }
 
     const template = await TrackTemplate.findById(templateId);
     if (!template) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const { normalizedDayNumber } = validation;
+    const normalizedDayNumber = Number(dayNumber);
 
-    const existingIndex = template.dayAssignments.findIndex(
-      (assignment) => assignment.dayNumber === normalizedDayNumber
-    );
-    if (existingIndex >= 0) {
-      template.dayAssignments[existingIndex].questionId = questionId;
+    if (template.trackType === "Daily Task") {
+      if (!taskType) {
+        return res.status(400).json({ success: false, message: "taskType is required for Daily Tasks." });
+      }
+
+      const existingDayIndex = template.dayAssignments.findIndex(
+        (assignment) => assignment.dayNumber === normalizedDayNumber
+      );
+
+      if (existingDayIndex >= 0) {
+        const dayAssignment = template.dayAssignments[existingDayIndex];
+        const existingTaskIndex = dayAssignment.tasks.findIndex(
+          (t) => String(t.questionId) === String(questionId) && t.taskType === taskType
+        );
+
+        if (existingTaskIndex === -1) {
+          dayAssignment.tasks.push({ taskType, questionId });
+        }
+      } else {
+        template.dayAssignments.push({
+          dayNumber: normalizedDayNumber,
+          tasks: [{ taskType, questionId }],
+        });
+      }
     } else {
-      template.dayAssignments.push({ dayNumber: normalizedDayNumber, questionId });
+      const validation = await validateTrackTemplateQuestionAssignment({ templateId, dayNumber, questionId });
+      if (!validation.valid) {
+        await logTrackTemplateValidationFailure({
+          templateId,
+          action: "Assign track template day rejected",
+          detail: validation.message,
+          actor: req.user,
+          metadata: { dayNumber, questionId },
+        });
+        return res.status(validation.status || 400).json({ success: false, message: validation.message });
+      }
+
+      const { normalizedDayNumber: valDayNumber } = validation;
+
+      const existingIndex = template.dayAssignments.findIndex(
+        (assignment) => assignment.dayNumber === valDayNumber
+      );
+      if (existingIndex >= 0) {
+        template.dayAssignments[existingIndex].questionId = questionId;
+      } else {
+        template.dayAssignments.push({ dayNumber: valDayNumber, questionId });
+      }
     }
 
     template.dayAssignments.sort((a, b) => a.dayNumber - b.dayNumber);

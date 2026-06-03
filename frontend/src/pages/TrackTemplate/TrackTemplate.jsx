@@ -68,6 +68,7 @@ export default function TrackTemplate() {
   const [templateFormError, setTemplateFormError] = useState('');
   const [createTemplateForm, setCreateTemplateForm] = useState({
     name: '',
+    trackType: 'Daily Challenge',
     category: '',
     description: '',
     startDate: '',
@@ -205,7 +206,15 @@ export default function TrackTemplate() {
   };
 
   const updateCreateTemplateField = (field, value) => {
-    setCreateTemplateForm((prev) => ({ ...prev, [field]: value }));
+    setCreateTemplateForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'trackType' && value === 'Daily Task') {
+        next.category = 'Daily Task';
+      } else if (field === 'trackType' && prev.trackType === 'Daily Task' && value !== 'Daily Task') {
+        next.category = '';
+      }
+      return next;
+    });
   };
 
   const closeCreateTemplateModal = () => {
@@ -214,6 +223,7 @@ export default function TrackTemplate() {
     setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
+      trackType: 'Daily Challenge',
       category: '',
       description: '',
       startDate: '',
@@ -230,6 +240,7 @@ export default function TrackTemplate() {
     setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
+      trackType: 'Daily Challenge',
       category: '',
       description: '',
       startDate: '',
@@ -246,6 +257,7 @@ export default function TrackTemplate() {
     setEditingTemplateId(track.id);
     setCreateTemplateForm({
       name: track.name || '',
+      trackType: track.trackType || 'Daily Challenge',
       category: track.category || '',
       description: track.description || '',
       startDate: formatDateInput(track.startDate),
@@ -260,7 +272,10 @@ export default function TrackTemplate() {
   };
 
   const submitTemplate = async () => {
-    if (!createTemplateForm.name.trim() || !createTemplateForm.category) {
+    const isDailyTask = createTemplateForm.trackType === 'Daily Task';
+    const effectiveCategory = isDailyTask ? (createTemplateForm.category || 'Daily Task') : createTemplateForm.category;
+
+    if (!createTemplateForm.name.trim() || !effectiveCategory) {
       setTemplateFormError('Template name and category are required.');
       return;
     }
@@ -288,8 +303,9 @@ export default function TrackTemplate() {
 
     const payload = {
       name: createTemplateForm.name.trim(),
-      category: createTemplateForm.category,
-      description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+      trackType: createTemplateForm.trackType || 'Daily Challenge',
+      category: effectiveCategory,
+      description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
       startDate: createTemplateForm.startDate,
       endDate: createTemplateForm.endDate,
       batchId: createTemplateForm.batchId,
@@ -453,24 +469,80 @@ export default function TrackTemplate() {
               </div>
 
               <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Track Type*</label>
                 <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
-                    value={createTemplateForm.category}
-                    onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                    value={createTemplateForm.trackType || 'Daily Challenge'}
+                    onChange={(e) => updateCreateTemplateField('trackType', e.target.value)}
                     className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                   >
-                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
-                    {questionCategories.map((category) => (
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={category} value={category}>{category}</option>
-                    ))}
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Challenge">Daily Challenge (Single Timed DSA)</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Task">Daily Task (Multi-Task/Day)</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
-                {questionCategories.length === 0 && (
-                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
-                    No categories available. Add a question category first.
-                  </p>
+              </div>
+
+              <div>
+                {createTemplateForm.trackType === 'Daily Task' ? (
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Select Categories to Include* (Multiple allowed)</label>
+                    <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto">
+                      {questionCategories.map((cat) => {
+                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task'
+                          ? createTemplateForm.category.split(',').map((c) => c.trim())
+                          : [];
+                        const isChecked = selectedList.includes(cat);
+                        return (
+                          <label key={cat} className="flex items-center gap-2 text-sm text-slate-800 dark:text-white cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-1 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                let nextList = [...selectedList];
+                                if (e.target.checked) {
+                                  if (!nextList.includes(cat)) {
+                                    nextList.push(cat);
+                                  }
+                                } else {
+                                  nextList = nextList.filter((c) => c !== cat);
+                                }
+                                const nextCategoryVal = nextList.length > 0 ? nextList.join(', ') : 'Daily Task';
+                                updateCreateTemplateField('category', nextCategoryVal);
+                              }}
+                              className="rounded border-black/10 text-[#3C83F6] focus:ring-[#3C83F6]"
+                            />
+                            <span>{cat}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-black/45 dark:text-white/45">
+                      If no categories are selected, it defaults to including all categories.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                      <select
+                        value={createTemplateForm.category}
+                        onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                        className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
+                        {questionCategories.map((category) => (
+                          <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                    {questionCategories.length === 0 && (
+                      <p className="mt-2 text-xs text-black/45 dark:text-white/45">
+                        No categories available. Add a question category first.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
