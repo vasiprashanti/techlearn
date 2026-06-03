@@ -32,6 +32,7 @@ const Sidebar = () => {
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
+    location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname === '/dashboard/profile' ||
     location.pathname.startsWith('/dashboard/profile/');
 
@@ -68,14 +69,17 @@ const Sidebar = () => {
           to={`/${item.id}`}
           end
           onClick={onClickAction}
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
+          className={({ isActive }) => {
+            const isRoadmapAlias = item.id === 'dashboard/roadmap' && location.pathname.startsWith('/resources/roadmaps');
+            const isCurrent = isActive || isRoadmapAlias;
+
+            return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
-              isActive
+              isCurrent
                 ? "bg-[#e4f6ff] text-[#00113b] font-semibold shadow-md shadow-blue-600/10 border border-[#7ec9ff]/35 dark:bg-[#0b3ef2] dark:text-white dark:shadow-md dark:shadow-blue-600/20 dark:border-blue-400/20"
                 : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
-            }`
-          }
+            }`;
+          }}
         >
           <div className="shrink-0">{item.icon}</div>
           <span className="text-[8px] md:text-[9.5px] font-medium tracking-wide text-center max-w-[80px] truncate leading-none">
