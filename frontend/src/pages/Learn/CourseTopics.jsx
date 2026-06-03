@@ -194,7 +194,7 @@ const CourseTopics = () => {
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
-                className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-[#4d6f9c] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
+                className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-[#00113b] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
             >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to Learn</span>
@@ -207,7 +207,7 @@ const CourseTopics = () => {
               className="md:hidden flex items-center gap-2 px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full transition-colors"
             >
               <BookOpen className="w-4 h-4 text-[#3C83F6] dark:text-white" />
-              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-[#00113b]/70 dark:text-white/70 font-semibold">Chapters</span>
+              <span className="hidden sm:inline text-[10px] uppercase tracking-widest text-[#00113b] dark:text-white/70 font-semibold">Chapters</span>
             </button>
           </div>
         </header>
@@ -241,7 +241,7 @@ const CourseTopics = () => {
                         className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                           isActive
                             ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                            : "border-transparent text-[#00113b]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                            : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                         }`}
                       >
                         <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -271,7 +271,7 @@ const CourseTopics = () => {
                       className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
                           ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                          : "border-transparent text-[#00113b]/55 hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                          : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -321,10 +321,10 @@ const CourseTopics = () => {
                     <AlertCircle className="w-8 h-8 text-[#00113b]/30 dark:text-white/30" />
                   </div>
                   <h3 className="text-lg font-medium text-[#00113b] dark:text-white mb-2">Notes are being compiled</h3>
-                  <p className="text-sm text-[#00113b]/50 dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
+                  <p className="text-sm text-[#00113b] dark:text-white/50 max-w-sm">The curriculum team is currently writing the detailed reading material for this topic.</p>
                 </div>
               ) : (
-                <div className="text-[#00113b]/75 dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
+                <div className="text-[#00113b] dark:text-white/75 leading-[1.8] font-light text-lg whitespace-pre-line">
                   {currentTopic?.content.theory}
                 </div>
               )}
@@ -333,12 +333,12 @@ const CourseTopics = () => {
               {/* Premium Navigation Footer */}
               <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#00113b]/60 dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
+                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#00113b] dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
                 </button>
               ) : <div className="w-24" />}
 
-              <span className="text-[10px] uppercase tracking-widest font-bold text-[#00113b]/40 dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-[#00113b] dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
                 {selectedTopic + 1} / {totalTopics}
               </span>
 

@@ -32,12 +32,16 @@ export const getCourseTopicsForDashboard = async (req, res) => {
     }
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Invalid course Id" });
-    const topics = await Topic.find({ _id: { $in: course.topicIds } });
+    const topics = await Topic.find({ _id: { $in: course.topicIds } }).populate(
+      "notesId",
+    );
     // Map to return topicId and topicName only
     const formattedTopics = topics.map((t) => ({
       topicId: t._id,
       topicName: t.title,
       topicSlug: t.slug,
+      notesId: t.notesId?._id || null,
+      notesContent: t.notesId?.parsedContent || "",
     }));
     return res.status(200).json({ topics: formattedTopics });
   } catch (error) {
@@ -52,6 +56,8 @@ export const editTopicDetails = async (req, res) => {
   try {
     const { topicId } = req.params;
     const { topicName, courseTitle } = req.body;
+    const notesBody = String(req.body.notesBody || "").trim();
+    const hasNotesBody = notesBody.length > 0;
     const files = req.files || [];
 
     // Find topic
@@ -73,8 +79,13 @@ export const editTopicDetails = async (req, res) => {
     }
 
     // If no files provided and only updating course/topic title, return success
-    if ((!files || files.length === 0) && (courseTitle || topicName)) {
+    if ((!files || files.length === 0) && !hasNotesBody && (courseTitle || topicName)) {
       await topic.save();
+      const existingNotes = await Notes.findOne({ topicId });
+      if (existingNotes) {
+        await syncNotesQuestionBankEntry({ notes: existingNotes, topic, actor: req.user });
+        await existingNotes.save();
+      }
       return res.json({
         message: "Title updated successfully",
         topic: topic,
@@ -104,9 +115,9 @@ export const editTopicDetails = async (req, res) => {
     let notes = await Notes.findOne({ topicId });
 
     // If files are provided but no notes exist, create new notes
-    if (!notes && (notesFile || mcqFile)) {
+    if (!notes && (notesFile || mcqFile || notesBody)) {
       notes = new Notes({
-        parsedContent: notesContent ? notesContent.content : "",
+        parsedContent: notesContent ? notesContent.content : notesBody,
         topicId: topicId,
         checkpointMcqs: [],
       });
@@ -129,6 +140,14 @@ export const editTopicDetails = async (req, res) => {
     // Only update parsedContent if a new notes file is uploaded
     if (notesContent) {
       notes.parsedContent = notesContent.content;
+    } else if (hasNotesBody) {
+      if (!notesBody) {
+        return res.status(400).json({
+          message: "Notes content cannot be empty.",
+          error: "NOTES_BODY_REQUIRED",
+        });
+      }
+      notes.parsedContent = notesBody;
     }
     // Always update checkpointMcqs if a new MCQ file is uploaded
     if (checkpointMcqs) {

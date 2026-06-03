@@ -28,7 +28,7 @@ module.exports = {
         'dark-bg-end': '#0a1128',
 
         // Text Colors
-        'light-text': '#1f2937',
+        'light-text': '#00113b',
         'dark-text': '#f9fafb',
       },
       backgroundImage: {

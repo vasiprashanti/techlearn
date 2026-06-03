@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI } from '../../services/adminApi';
-import { FiSearch, FiPlus, FiX, FiEdit2, FiTrash2, FiChevronDown, FiMap, FiUpload } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiX, FiEdit2, FiTrash2, FiChevronDown, FiMap, FiUpload, FiEye } from 'react-icons/fi';
 
 const createRoadmapForm = () => ({
   title: '',
@@ -46,6 +48,7 @@ export default function Resources() {
   const [batchOptions, setBatchOptions] = useState([]);
   const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
   const [editingRoadmapId, setEditingRoadmapId] = useState(null);
+  const [viewingRoadmap, setViewingRoadmap] = useState(null);
   const [roadmapForm, setRoadmapForm] = useState(createRoadmapForm());
   const [roadmapFormError, setRoadmapFormError] = useState('');
   const [isSavingRoadmap, setIsSavingRoadmap] = useState(false);
@@ -353,6 +356,51 @@ export default function Resources() {
         </div>
       )}
 
+      {viewingRoadmap && (
+        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setViewingRoadmap(null)} />
+          <div className="relative w-full max-w-5xl max-h-[88vh] overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-black/10 dark:border-white/10 px-6 py-5">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{viewingRoadmap.title}</h2>
+                  <span className="rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                    {viewingRoadmap.status || 'Active'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[#5f7592] dark:text-slate-300">{viewingRoadmap.description || 'No description'}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(viewingRoadmap.assignedBatches || []).length > 0 ? (
+                    viewingRoadmap.assignedBatches.map((batch) => (
+                      <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
+                        {batch.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[#5f7592] dark:text-slate-300">No batches assigned</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingRoadmap(null)}
+                className="shrink-0 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
+                aria-label="Close roadmap preview"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[62vh] overflow-y-auto px-6 py-6">
+              <div className="prose prose-slate max-w-none dark:prose-invert prose-headings:text-[#0f1f3d] dark:prose-headings:text-white prose-p:text-[#31445f] dark:prose-p:text-slate-300 prose-li:text-[#31445f] dark:prose-li:text-slate-300 prose-a:text-[#3C83F6] prose-pre:bg-[#071831] prose-pre:text-slate-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {viewingRoadmap.markdownBody || 'No roadmap content available.'}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -406,6 +454,9 @@ export default function Resources() {
                       </div>
                     )}
                     <div className="mt-3 flex items-center justify-end gap-2">
+                      <button onClick={() => setViewingRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${roadmap.title}`}>
+                        <FiEye className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => openEditRoadmapModal(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${roadmap.title}`}>
                         <FiEdit2 className="w-3.5 h-3.5" />
                       </button>

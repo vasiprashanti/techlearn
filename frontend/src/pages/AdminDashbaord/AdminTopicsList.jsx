@@ -25,6 +25,7 @@ const AdminTopicsList = () => {
   const [editingTopic, setEditingTopic] = useState(null);
   const [editTopicForm, setEditTopicForm] = useState({
     topicName: "",
+    notesBody: "",
     notesFile: null,
     mcqFile: null,
   });
@@ -71,6 +72,7 @@ const AdminTopicsList = () => {
     setEditingTopic(topic);
     setEditTopicForm({
       topicName: topic.topicName || "",
+      notesBody: topic.notesContent || "",
       notesFile: null,
       mcqFile: null,
     });
@@ -104,6 +106,7 @@ const AdminTopicsList = () => {
     try {
       const formData = new FormData();
       formData.append("topicName", editTopicForm.topicName.trim());
+      formData.append("notesBody", editTopicForm.notesBody);
       if (editTopicForm.notesFile) {
         formData.append("notesFile", editTopicForm.notesFile);
       }
@@ -127,7 +130,7 @@ const AdminTopicsList = () => {
 
       setTopics(prev => prev.map(t =>
         String(t.topicId) === String(editingTopic.topicId)
-          ? { ...t, topicName: editTopicForm.topicName.trim() }
+          ? { ...t, topicName: editTopicForm.topicName.trim(), notesContent: editTopicForm.notesBody }
           : t
       ));
 
@@ -250,7 +253,7 @@ const AdminTopicsList = () => {
       {showEditModal && editingTopic && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => { setShowEditModal(false); setEditingTopic(null); }} />
-          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-3xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
                 Edit Topic Details
@@ -286,6 +289,20 @@ const AdminTopicsList = () => {
                     {editTopicForm.notesFile ? editTopicForm.notesFile.name : "No file chosen"}
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes Markdown</label>
+                <textarea
+                  value={editTopicForm.notesBody}
+                  onChange={(e) => setEditTopicForm(prev => ({ ...prev, notesBody: e.target.value }))}
+                  rows={9}
+                  placeholder="Edit the markdown notes shown on the Learn page"
+                  className={`${categoryFormInputClass} min-h-[180px] resize-y font-mono text-xs leading-6`}
+                />
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">
+                  Edit titles, subtitles, descriptions, lists, tables, and note content directly here.
+                </p>
               </div>
 
               <div>

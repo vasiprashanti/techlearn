@@ -11,6 +11,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || "";
 const EditTopicForm = () => {
   const { courseId, topicId } = useParams();
   const [topicName, setTopicName] = useState("");
+  const [notesBody, setNotesBody] = useState("");
   const [notesFile, setNotesFile] = useState(null);
   const [mcqFile, setMcqFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,6 +42,7 @@ const EditTopicForm = () => {
         if (matchingTopic?.topicName) {
           setTopicName(matchingTopic.topicName);
         }
+        setNotesBody(matchingTopic?.notesContent || "");
       } catch (err) {
         console.error("Failed to load topic details:", err);
       }
@@ -56,6 +58,7 @@ const EditTopicForm = () => {
     try {
       const formData = new FormData();
       formData.append("topicName", topicName);
+      formData.append("notesBody", notesBody);
       if (notesFile) formData.append("notesFile", notesFile);
       if (mcqFile) formData.append("mcqFile", mcqFile);
       const token = localStorage.getItem("token");
@@ -99,7 +102,7 @@ const EditTopicForm = () => {
           ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
         `}
       >
-        <div className="max-w-xl mx-auto space-y-8">
+        <div className="max-w-3xl mx-auto space-y-8">
           
           {/* Header */}
           <header className="flex flex-col sm:flex-row sm:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
@@ -174,6 +177,20 @@ const EditTopicForm = () => {
                       </p>
                     )}
                   </div>
+                </div>
+
+                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2">
+                  <h3 className="admin-section-heading">Study Notes Markdown</h3>
+                  <textarea
+                    value={notesBody}
+                    onChange={(e) => setNotesBody(e.target.value)}
+                    rows={12}
+                    placeholder="Edit the markdown notes shown on the Learn page"
+                    className={`${categoryFormInputClass} min-h-[240px] resize-y font-mono text-xs leading-6`}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                    Edit titles, subtitles, descriptions, lists, tables, and note content directly here.
+                  </p>
                 </div>
 
                 {/* MCQ File upload */}
