@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Loader2,
   Map,
+  X,
 } from 'lucide-react';
 import ScrollProgress from '../../components/ScrollProgress';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
@@ -274,18 +275,30 @@ export default function Roadmaps() {
   const parsedRoadmap = useMemo(() => parseRoadmapMarkdown(markdown), [markdown]);
 
   useEffect(() => {
-    if (!parsedRoadmap.steps.length) {
+    if (!activeStepId) return;
+    if (!parsedRoadmap.steps.some((step) => step.id === activeStepId)) {
       setActiveStepId('');
-      return;
     }
+  }, [activeStepId, parsedRoadmap.steps]);
 
-    setActiveStepId((currentId) => {
-      if (parsedRoadmap.steps.some((step) => step.id === currentId)) return currentId;
-      return parsedRoadmap.steps[0].id;
-    });
-  }, [parsedRoadmap.steps]);
+  useEffect(() => {
+    if (!activeStepId) return undefined;
 
-  const activeStep = parsedRoadmap.steps.find((step) => step.id === activeStepId) || parsedRoadmap.steps[0];
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setActiveStepId('');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeStepId]);
+
+  const activeStep = parsedRoadmap.steps.find((step) => step.id === activeStepId);
 
   const heroTitle = roadmapTitle !== 'Roadmap' ? roadmapTitle : parsedRoadmap.title || 'Roadmap';
   const heroDescription =
@@ -360,8 +373,6 @@ export default function Roadmaps() {
               <div className="space-y-10 md:space-y-14">
                 {parsedRoadmap.steps.map((step, index) => {
                   const isRight = index % 2 === 1;
-                  const isActive = step.id === activeStep?.id;
-
                   return (
                     <motion.div
                       key={step.id}
@@ -376,20 +387,15 @@ export default function Roadmaps() {
                       <button
                         type="button"
                         onClick={() => setActiveStepId(step.id)}
-                        className={`group relative w-full rounded-[1.05rem] border px-6 py-6 text-left shadow-sm transition duration-300 md:min-h-[112px] ${
+                        className={`group relative w-full rounded-[1.05rem] border border-[#dfeefa] bg-[#ffffff] px-6 py-7 text-left text-[#00113b] shadow-sm shadow-[#3c83f6]/[0.05] transition duration-300 hover:-translate-y-0.5 hover:border-[#c5e3ff] hover:bg-[#ffffff] hover:shadow-[0_18px_40px_rgba(60,131,246,0.12)] dark:border-[#16345f] dark:bg-[#06142f] dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[126px] ${
                           isRight ? 'md:col-start-3' : 'md:col-start-1'
-                        } ${
-                          isActive
-                            ? 'border-[#0b3ef2]/30 bg-white text-[#00113b] shadow-[0_18px_40px_rgba(60,131,246,0.13)] dark:border-[#78cfff]/28 dark:bg-[#06142f] dark:text-white'
-                            : 'border-[#d4ecff] bg-white/72 text-[#00113b] hover:-translate-y-0.5 hover:border-[#9fd2ff] hover:bg-white dark:border-[#16345f] dark:bg-[#06142f]/78 dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d]'
                         }`}
-                        aria-expanded={isActive}
+                        aria-expanded={step.id === activeStepId}
                       >
                         <span className="block text-[11px] font-bold uppercase tracking-[0.16em] text-[#0b3ef2] dark:text-[#89d6ff]">
                           {step.label}
                         </span>
                         <span className="mt-3 block pr-10 text-xl font-semibold tracking-tight sm:text-2xl">{step.title}</span>
-                        <span className="mt-3 block text-sm leading-6 text-[#00113b]/55 dark:text-white/55">{step.preview}</span>
                         <span className="absolute right-6 top-7 inline-flex h-8 w-8 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0b3ef2] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
                           <ArrowRight className="h-5 w-5" />
                         </span>
@@ -402,30 +408,57 @@ export default function Roadmaps() {
 
             <AnimatePresence mode="wait">
               {activeStep && (
-                <motion.section
-                  key={activeStep.id}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.25 }}
-                  className="mx-auto max-w-4xl rounded-[1.35rem] border border-[#d4ecff] bg-white/68 p-6 shadow-[0_18px_45px_rgba(60,131,246,0.12)] dark:border-[#16345f] dark:bg-[#06142f]/82 md:p-8"
+                <motion.div
+                  key="roadmap-detail-drawer"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-[80] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="roadmap-detail-title"
                 >
-                  <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[#9fd2ff]/45 pb-5 dark:border-[#28537f]/70">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-[#8ec8ff]/80 bg-[#e4f6ff]/90 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#00113b] dark:border-[#325f8c] dark:bg-[#09204b] dark:text-[#8fd9ff]">
-                      <CheckCircle2 className="h-4 w-4 text-[#0b3ef2] dark:text-[#8fd9ff]" />
-                      {activeStep.label}
-                    </span>
-                    <h2 className="text-xl font-semibold tracking-tight text-[#00113b] dark:text-white md:text-2xl">
-                      {activeStep.title}
-                    </h2>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label="Close roadmap details"
+                    onClick={() => setActiveStepId('')}
+                    className="absolute inset-0 cursor-default"
+                  />
 
-                  <div className="roadmap-markdown max-h-[32rem] overflow-y-auto pr-2 [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#7abdf2]/70 dark:[&::-webkit-scrollbar-thumb]:bg-[#5e9dd0]/70">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
-                      {activeStep.body}
-                    </ReactMarkdown>
-                  </div>
-                </motion.section>
+                  <motion.aside
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                    className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-[#e4f6ff] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setActiveStepId('')}
+                      className="absolute right-6 top-6 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#00113b] transition hover:bg-[#00113b]/8 dark:text-white dark:hover:bg-white/10"
+                      aria-label="Close roadmap details"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+
+                    <div className="pr-12">
+                      <span className="mb-5 inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[#0b3ef2] dark:text-[#8fd9ff]">
+                        <CheckCircle2 className="h-4 w-4" />
+                        {activeStep.label}
+                      </span>
+                      <h2 id="roadmap-detail-title" className="text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
+                        {activeStep.title}
+                      </h2>
+                    </div>
+
+                    <div className="roadmap-markdown mt-10">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]} components={markdownComponents}>
+                        {activeStep.body}
+                      </ReactMarkdown>
+                    </div>
+                  </motion.aside>
+                </motion.div>
               )}
             </AnimatePresence>
           </>
