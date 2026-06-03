@@ -414,7 +414,7 @@ export default function Roadmaps() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="fixed inset-0 z-[80] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
+                  className="fixed inset-0 z-[2000] flex justify-end bg-[#00113b]/55 backdrop-blur-[1px]"
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby="roadmap-detail-title"
