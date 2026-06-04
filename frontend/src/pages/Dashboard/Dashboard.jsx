@@ -428,11 +428,7 @@ export default function Dashboard() {
           }`}
         >
           <div className="w-full max-w-[1400px] space-y-8">
-            {error && !error.includes('authentication') ? (
-              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-                Some dashboard details are still syncing. You can keep using the page while we retry in the background.
-              </div>
-            ) : null}
+
 
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
