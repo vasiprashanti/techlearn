@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const FloatingCourseLogos = lazy(() => import('../components/FloatingCourseLogos'))
+const FloatingCodeWords = lazy(() => import('../components/FloatingCodeWords'))
 
 // Homepage component
 const HomePage = () => {
@@ -187,9 +187,9 @@ const HomePage = () => {
     <div className="bg-transparent dark:bg-transparent relative">
       {/* Hero Section */}
       <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
-        {/* Floating Course Logos - Hero Section Only */}
+        {/* Falling Code Words - Hero Section Only */}
         <Suspense fallback={null}>
-          <FloatingCourseLogos />
+          <FloatingCodeWords />
         </Suspense>
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           {/* TECHLEARN Heading with Typewriter Effect */}
