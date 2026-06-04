@@ -240,9 +240,9 @@ const HomePage = () => {
             </h2>
           </div>
 
-          {/* Start for Free Button */}
+          {/* Start Coding Button */}
           <button
-            onClick={() => navigate('/learn')}
+            onClick={() => navigate('/compiler')}
             className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
             style={{
               backgroundColor: '#ffffffac',
@@ -259,7 +259,7 @@ const HomePage = () => {
               e.target.style.color = '#001242'
             }}
           >
-            Start for Free
+            Start Coding
           </button>
         </div>
       </div>

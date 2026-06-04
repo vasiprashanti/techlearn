@@ -109,7 +109,7 @@ const SectionCard = ({ section, index }) => {
         navigate('/learn/exercises');
         break;
       case 'compiler':
-        navigate('/learn/compiler');
+        navigate('/compiler');
         break;
       case 'certification':
         navigate('/learn/certification');
