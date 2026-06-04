@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptySubmissionState } from '../../data/adminEmptyStates';
 import { FiSearch, FiMonitor, FiCheckCircle, FiClock, FiPlayCircle, FiXCircle, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
@@ -30,7 +29,19 @@ const statusConfig = {
   'Wrong Answer': { Icon: FiXCircle,     label: 'text-rose-500 dark:text-rose-400' },
   'Running':      { Icon: FiPlayCircle,  label: 'text-[#3C83F6] dark:text-blue-400' },
   'TLE':          { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
+  'Passed':       { Icon: FiCheckCircle, label: 'text-emerald-500 dark:text-emerald-400' },
+  'Failed':       { Icon: FiXCircle,     label: 'text-rose-500 dark:text-rose-400' },
+  'Timeout':      { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
+  'Error':        { Icon: FiAlertCircle, label: 'text-rose-500 dark:text-rose-400' },
+  'Pending':      { Icon: FiClock,       label: 'text-[#3C83F6] dark:text-blue-400' },
 };
+
+const fallbackStatusConfig = {
+  Icon: FiAlertCircle,
+  label: 'text-slate-500 dark:text-slate-300',
+};
+
+const getSubmissionStatusConfig = (status) => statusConfig[status] || fallbackStatusConfig;
 
 const langPill = 'inline-flex items-center justify-center min-w-[56px] h-6 px-2.5 rounded-full text-xs font-semibold bg-[#dce9f6] dark:bg-white/10 text-[#1f3652] dark:text-white/85';
 
@@ -170,22 +181,12 @@ export default function SubmissionMonitor() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div className="max-w-[1400px] mx-auto space-y-4">
 
-            {/* Header */}
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div>
-                <h1 className="admin-page-title">Submission Monitor</h1>
-
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
-
-            <section className="space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Submission Monitor</h2>
-              <p className="text-xs text-[#5f7590] dark:text-white/60">Live student submissions and judge results</p>
-            </section>
+            <div>
+              <h1 className="admin-page-title">Submission Monitor</h1>
+            </div>
 
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -194,19 +195,22 @@ export default function SubmissionMonitor() {
                 { label: 'Accepted',      value: submissionKpis.accepted, icon: FiCheckCircle },
                 { label: 'Success Rate',  value: `${submissionKpis.successRate}%`, icon: FiCheckCircle },
                 { label: 'Avg Exec Time', value: submissionKpis.avgExecutionTime, icon: FiClock },
-              ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#6d8198] dark:text-white/70">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-semibold leading-none tracking-tight text-[#0e2240] dark:text-white">{value}</p>
-                      <p className="mt-1 text-xs font-medium text-[#567089] dark:text-white/60">{label}</p>
+              ].map(({ label, value, icon }) => {
+                const KpiIcon = icon;
+                return (
+                  <div key={label} className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#6d8198] dark:text-white/70">
+                        <KpiIcon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-semibold leading-none tracking-tight text-[#0e2240] dark:text-white">{value}</p>
+                        <p className="mt-1 text-xs font-medium text-[#567089] dark:text-white/60">{label}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Toolbar */}
@@ -214,11 +218,11 @@ export default function SubmissionMonitor() {
               <div className="relative w-full md:max-w-[520px]">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40 pointer-events-none" />
                 <input type="text" placeholder="Search by student or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30" />
+                  className="dashboard-input-surface h-10 rounded-full pl-11 pr-4 text-[13px] sm:text-sm leading-none" />
               </div>
               <button
                 onClick={() => setTableSearch('')}
-                className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-1.5 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-[#5e748d] dark:text-white/70 hover:bg-[#f0f5fb] dark:hover:bg-white/[0.04] transition-colors"
+                className="dashboard-secondary-btn w-full sm:w-auto h-10 shrink-0 px-3.5 text-xs"
               >
                 <FiRefreshCw className="w-3.5 h-3.5" />
                 Refresh
@@ -228,7 +232,7 @@ export default function SubmissionMonitor() {
             {/* Mobile Cards */}
             <div className="grid grid-cols-1 gap-3 lg:hidden">
               {filteredSubs.map((s) => {
-                const sc = statusConfig[s.status];
+                const sc = getSubmissionStatusConfig(s.status);
                 const StatusIcon = sc.Icon;
                 return (
                   <article
@@ -299,7 +303,7 @@ export default function SubmissionMonitor() {
                 </thead>
                 <tbody className="divide-y divide-black/8 dark:divide-white/10">
                   {filteredSubs.map(s => {
-                    const sc = statusConfig[s.status];
+                    const sc = getSubmissionStatusConfig(s.status);
                     const StatusIcon = sc.Icon;
                     return (
                       <tr onClick={() => setSelectedSubmission(s)} key={s.id} className="group hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors cursor-pointer">

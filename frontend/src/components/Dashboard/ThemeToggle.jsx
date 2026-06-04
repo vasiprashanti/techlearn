@@ -1,4 +1,3 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useTheme } from '../../context/ThemeContext';
 
 const ThemeToggle = () => {
@@ -7,14 +6,11 @@ const ThemeToggle = () => {
   return (
     <button
       onClick={toggleTheme}
-      className={`text-[15px] transition-colors duration-300 ${
-        theme === 'dark' ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'
-      }`}
+      className="w-8 h-8 flex items-center justify-center border border-black/10 dark:border-white/10 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors"
       aria-label="Toggle theme"
     >
-      <FontAwesomeIcon icon={theme === 'light' ? 'moon' : 'sun'} />
+      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${theme === 'dark' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-black'}`} />
     </button>
-    
   );
 };
 

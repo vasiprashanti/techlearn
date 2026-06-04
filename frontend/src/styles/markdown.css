@@ -363,3 +363,14 @@
     min-width: 500px;
   }
 }
+
+html:not(.dark) .markdown-content :is(h1, h2, h3, h4, h5, h6, p, li, strong, td) {
+  color: #00113b !important;
+  -webkit-text-fill-color: #00113b !important;
+  background: none !important;
+}
+
+html:not(.dark) .markdown-content code:not(pre code) {
+  color: #00113b !important;
+  border-color: rgba(0, 17, 59, 0.2);
+}

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
@@ -51,6 +50,9 @@ export default function TrackTemplate() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
 
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -66,6 +68,7 @@ export default function TrackTemplate() {
   const [templateFormError, setTemplateFormError] = useState('');
   const [createTemplateForm, setCreateTemplateForm] = useState({
     name: '',
+    trackType: 'Daily Challenge',
     category: '',
     description: '',
     startDate: '',
@@ -203,7 +206,15 @@ export default function TrackTemplate() {
   };
 
   const updateCreateTemplateField = (field, value) => {
-    setCreateTemplateForm((prev) => ({ ...prev, [field]: value }));
+    setCreateTemplateForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'trackType' && value === 'Daily Task') {
+        next.category = 'Daily Task';
+      } else if (field === 'trackType' && prev.trackType === 'Daily Task' && value !== 'Daily Task') {
+        next.category = '';
+      }
+      return next;
+    });
   };
 
   const closeCreateTemplateModal = () => {
@@ -212,6 +223,7 @@ export default function TrackTemplate() {
     setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
+      trackType: 'Daily Challenge',
       category: '',
       description: '',
       startDate: '',
@@ -228,6 +240,7 @@ export default function TrackTemplate() {
     setTemplateFormError('');
     setCreateTemplateForm({
       name: '',
+      trackType: 'Daily Challenge',
       category: '',
       description: '',
       startDate: '',
@@ -244,6 +257,7 @@ export default function TrackTemplate() {
     setEditingTemplateId(track.id);
     setCreateTemplateForm({
       name: track.name || '',
+      trackType: track.trackType || 'Daily Challenge',
       category: track.category || '',
       description: track.description || '',
       startDate: formatDateInput(track.startDate),
@@ -258,7 +272,10 @@ export default function TrackTemplate() {
   };
 
   const submitTemplate = async () => {
-    if (!createTemplateForm.name.trim() || !createTemplateForm.category) {
+    const isDailyTask = createTemplateForm.trackType === 'Daily Task';
+    const effectiveCategory = isDailyTask ? (createTemplateForm.category || 'Daily Task') : createTemplateForm.category;
+
+    if (!createTemplateForm.name.trim() || !effectiveCategory) {
       setTemplateFormError('Template name and category are required.');
       return;
     }
@@ -286,8 +303,9 @@ export default function TrackTemplate() {
 
     const payload = {
       name: createTemplateForm.name.trim(),
-      category: createTemplateForm.category,
-      description: createTemplateForm.description.trim() || `${totalDays}-day ${createTemplateForm.category} track template`,
+      trackType: createTemplateForm.trackType || 'Daily Challenge',
+      category: effectiveCategory,
+      description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
       startDate: createTemplateForm.startDate,
       endDate: createTemplateForm.endDate,
       batchId: createTemplateForm.batchId,
@@ -451,24 +469,80 @@ export default function TrackTemplate() {
               </div>
 
               <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                <label className="admin-micro-label text-black/50 dark:text-white/50">Track Type*</label>
                 <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
-                    value={createTemplateForm.category}
-                    onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                    value={createTemplateForm.trackType || 'Daily Challenge'}
+                    onChange={(e) => updateCreateTemplateField('trackType', e.target.value)}
                     className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                   >
-                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
-                    {questionCategories.map((category) => (
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={category} value={category}>{category}</option>
-                    ))}
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Challenge">Daily Challenge (Single Timed DSA)</option>
+                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Task">Daily Task (Multi-Task/Day)</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                 </div>
-                {questionCategories.length === 0 && (
-                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">
-                    No categories available. Add a question category first.
-                  </p>
+              </div>
+
+              <div>
+                {createTemplateForm.trackType === 'Daily Task' ? (
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Select Categories to Include* (Multiple allowed)</label>
+                    <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto">
+                      {questionCategories.map((cat) => {
+                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task'
+                          ? createTemplateForm.category.split(',').map((c) => c.trim())
+                          : [];
+                        const isChecked = selectedList.includes(cat);
+                        return (
+                          <label key={cat} className="flex items-center gap-2 text-sm text-slate-800 dark:text-white cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 p-1 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                let nextList = [...selectedList];
+                                if (e.target.checked) {
+                                  if (!nextList.includes(cat)) {
+                                    nextList.push(cat);
+                                  }
+                                } else {
+                                  nextList = nextList.filter((c) => c !== cat);
+                                }
+                                const nextCategoryVal = nextList.length > 0 ? nextList.join(', ') : 'Daily Task';
+                                updateCreateTemplateField('category', nextCategoryVal);
+                              }}
+                              className="rounded border-black/10 text-[#3C83F6] focus:ring-[#3C83F6]"
+                            />
+                            <span>{cat}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-black/45 dark:text-white/45">
+                      If no categories are selected, it defaults to including all categories.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Category*</label>
+                    <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                      <select
+                        value={createTemplateForm.category}
+                        onChange={(e) => updateCreateTemplateField('category', e.target.value)}
+                        className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
+                        {questionCategories.map((category) => (
+                          <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                    {questionCategories.length === 0 && (
+                      <p className="mt-2 text-xs text-black/45 dark:text-white/45">
+                        No categories available. Add a question category first.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -489,15 +563,37 @@ export default function TrackTemplate() {
                   <div className="mt-1">
                     <ModernDatePicker
                       value={createTemplateForm.startDate}
-                      onChange={(nextDate) =>
-                        setCreateTemplateForm((prev) => ({
-                          ...prev,
-                          startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
-                        }))
-                      }
+                      onChange={(nextDate) => {
+                        setCreateTemplateForm((prev) => {
+                          let updatedEndDate = prev.endDate;
+                          let updatedTotalDays = prev.totalDays;
+                          if (nextDate) {
+                            const start = new Date(nextDate);
+                            if (!isNaN(start.getTime())) {
+                              if (prev.totalDays && Number(prev.totalDays) > 0) {
+                                const end = new Date(start);
+                                end.setDate(start.getDate() + Number(prev.totalDays));
+                                updatedEndDate = end.toISOString().slice(0, 10);
+                              } else if (prev.endDate) {
+                                const end = new Date(prev.endDate);
+                                if (!isNaN(end.getTime())) {
+                                  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+                                  updatedTotalDays = String(Math.max(1, diff));
+                                }
+                              }
+                            }
+                          }
+                          return {
+                            ...prev,
+                            startDate: nextDate,
+                            endDate: updatedEndDate,
+                            totalDays: updatedTotalDays,
+                          };
+                        });
+                      }}
                       placeholder="Select start date"
                       ariaLabel="Track start date"
+                      minDate={todayDate}
                     />
                   </div>
                 </div>
@@ -506,10 +602,27 @@ export default function TrackTemplate() {
                   <div className="mt-1">
                     <ModernDatePicker
                       value={createTemplateForm.endDate}
-                      onChange={(nextDate) => updateCreateTemplateField('endDate', nextDate)}
+                      onChange={(nextDate) => {
+                        setCreateTemplateForm((prev) => {
+                          let updatedTotalDays = prev.totalDays;
+                          if (prev.startDate && nextDate) {
+                            const start = new Date(prev.startDate);
+                            const end = new Date(nextDate);
+                            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+                              const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
+                              updatedTotalDays = String(Math.max(1, diff));
+                            }
+                          }
+                          return {
+                            ...prev,
+                            endDate: nextDate,
+                            totalDays: updatedTotalDays,
+                          };
+                        });
+                      }}
                       placeholder="Select end date"
                       ariaLabel="Track end date"
-                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : undefined}
+                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : todayDate}
                     />
                   </div>
                 </div>
@@ -539,7 +652,25 @@ export default function TrackTemplate() {
                     type="number"
                     min="1"
                     value={createTemplateForm.totalDays}
-                    onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
+                    onChange={(e) => {
+                      const nextDays = e.target.value;
+                      setCreateTemplateForm((prev) => {
+                        let updatedEndDate = prev.endDate;
+                        if (prev.startDate && nextDays && Number(nextDays) > 0) {
+                          const start = new Date(prev.startDate);
+                          if (!isNaN(start.getTime())) {
+                            const end = new Date(start);
+                            end.setDate(start.getDate() + Number(nextDays));
+                            updatedEndDate = end.toISOString().slice(0, 10);
+                          }
+                        }
+                        return {
+                          ...prev,
+                          totalDays: nextDays,
+                          endDate: updatedEndDate,
+                        };
+                      });
+                    }}
                     className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
@@ -643,17 +774,15 @@ export default function TrackTemplate() {
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
-            pt-0 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
+            pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden
             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
-            {/* Header — same as AdminDashboard */}
-            <header className={`sticky top-0 z-40 -mx-6 md:-mx-12 lg:-mx-16 px-6 md:px-12 lg:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div className="flex-1" />
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
+            <div>
+              <h1 className="admin-page-title">Track Templates</h1>
+            </div>
 
             {/* Search + Create Row */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">

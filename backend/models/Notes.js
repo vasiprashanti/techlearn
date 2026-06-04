@@ -12,6 +12,16 @@ const notesSchema = new mongoose.Schema(
       ref: "Topic",
       required: true,
     },
+    questionBankId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Question",
+      required: false,
+    },
+    categoryType: {
+      type: String,
+      enum: ["Coding", "MCQ", "Notes"],
+      default: "Notes",
+    },
     checkpointMcqs: [
       {
         question: { type: String, required: true },

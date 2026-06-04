@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Mail, CalendarDays, Lock, Camera, ArrowLeft,
-  X, CheckCircle, Shield 
+  X, CheckCircle, Shield, Settings 
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
+import UserSidebarLayout from "./UserSidebarLayout";
 
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
@@ -16,7 +17,11 @@ const AVATAR_PATH = "/profile_avatars";
 const getInitialAvatar = () => {
   const storedUser = JSON.parse(localStorage.getItem("userData"));
   if (storedUser?.photoUrl) {
-    return storedUser.photoUrl;
+    let url = storedUser.photoUrl;
+    if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
+      url = url.replace('/nobackgroundavatar', '/avatar');
+    }
+    return url;
   }
   return `${AVATAR_PATH}/avatar1.png`;
 };
@@ -24,7 +29,7 @@ const getInitialAvatar = () => {
 const Profile = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { user, isLoading } = useUser();
+  const { user, isLoading, refetchUserData } = useUser();
   
   const isDarkMode = theme === 'dark';
   
@@ -32,16 +37,21 @@ const Profile = () => {
   const [selectedAvatar, setSelectedAvatar] = useState(getInitialAvatar);
   const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   useEffect(() => {
-    // Only update if there's no avatar already selected and user data is available
+    if (hasInitialized) return;
     const storedUser = JSON.parse(localStorage.getItem("userData"));
-    if (storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(storedUser.photoUrl);
-    } else if (user?.photoUrl && !storedUser?.photoUrl && selectedAvatar === `${AVATAR_PATH}/avatar1.png`) {
-      setSelectedAvatar(user.photoUrl);
+    const activePhoto = user?.photoUrl || storedUser?.photoUrl;
+    if (activePhoto) {
+      let url = activePhoto;
+      if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
+        url = url.replace('/nobackgroundavatar', '/avatar');
+      }
+      setSelectedAvatar(url);
+      setHasInitialized(true);
     }
-  }, [user?.photoUrl, selectedAvatar]);
+  }, [user?.photoUrl, hasInitialized]);
 
   const handleAvatarSelect = async (avatarUrl) => {
     setSelectedAvatar(avatarUrl);
@@ -55,6 +65,7 @@ const Profile = () => {
         throw new Error("User ID not found in localStorage");
       }
 
+      const token = localStorage.getItem("token");
       const userId = storedUser.id;
 
       const res = await fetch(
@@ -63,6 +74,7 @@ const Profile = () => {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({ photoUrl: avatarUrl }),
         }
@@ -74,9 +86,13 @@ const Profile = () => {
 
       await res.json();
 
-      // Update localStorage with new photoUrl
-      const updatedUser = { ...storedUser, photoUrl: avatarUrl };
+      // Update localStorage with new photoUrl and avatar
+      const updatedUser = { ...storedUser, photoUrl: avatarUrl, avatar: avatarUrl };
       localStorage.setItem("userData", JSON.stringify(updatedUser));
+      
+      if (refetchUserData) {
+        await refetchUserData();
+      }
       
     } catch (error) {
       console.error("Error updating avatar:", error);
@@ -89,7 +105,7 @@ const Profile = () => {
   
   const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
   const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
-  const dashboardCardClass = "rounded-[2rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 md:p-12";
+  const dashboardCardClass = "dashboard-surface p-8 md:p-12";
 
   if (isLoading) {
     return (
@@ -101,45 +117,31 @@ const Profile = () => {
   }
 
   return (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <>
       <ScrollProgress />
-      
-      {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
-
-      <main className="flex-1 transition-all duration-700 ease-in-out z-10 pt-24 pb-12 px-6 md:px-12 lg:px-16">
-        <div className="max-w-[1280px] mx-auto space-y-8">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="space-y-8">
           
-          {/* Top Header */}
           <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <button
-                type="button"
-                onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </button>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
                 <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
-                  My Profile.
+                  MY PROFILE
                 </span>
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-2">
+              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
                 Manage your personal information
               </p>
             </motion.div>
-
           </header>
 
-          {/* Main Content Grid */}
-          <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content Grid (Responsive two-column grid) */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-8 w-full items-start">
             
-            {/* Left Column - Form/Info Section */}
+            {/* Left Column - Info & Security Section */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="flex-1 space-y-8"
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
+              className="w-full space-y-8 order-2 lg:order-1"
             >
               {/* Basic Info Card */}
               <div className={dashboardCardClass}>
@@ -150,7 +152,7 @@ const Profile = () => {
                   <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
                       <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
@@ -186,7 +188,7 @@ const Profile = () => {
                       <Mail className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
                       <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
                     </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
+                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 truncate">
                       {displayUser?.email || "No email provided"}
                     </p>
                   </div>
@@ -202,7 +204,7 @@ const Profile = () => {
                   <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
                       <Shield className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
@@ -231,10 +233,10 @@ const Profile = () => {
 
             {/* Right Column - Avatar Profile display */}
             <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full lg:w-96 flex flex-col"
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
+              className="w-full flex flex-col order-1 lg:order-2 lg:h-full"
             >
-              <div className={`${dashboardCardClass} flex flex-1 flex-col items-center relative overflow-hidden`}>
+              <div className={`${dashboardCardClass} flex flex-col items-center justify-center relative overflow-hidden lg:h-full`}>
                 
                 {/* Decorative background blur */}
                 <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
@@ -271,18 +273,19 @@ const Profile = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard/profile/edit')}
-                  className="relative z-10 mt-5 inline-flex items-center rounded-xl bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-5 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-[#082a5d] shadow-md transition hover:scale-[1.02] hover:shadow-lg"
+                  onClick={() => navigate('/dashboard/profile/settings')}
+                  className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
                 >
-                  Edit Profile
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
                 </button>
               </div>
             </motion.div>
+
           </div>
         </div>
-      </main>
+      </UserSidebarLayout>
 
-      {/* Avatar Selection Modal (Glassmorphism UI) */}
       <AnimatePresence>
         {isSelectingAvatar && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -360,7 +363,7 @@ const Profile = () => {
                 </button>
                 <button
                   onClick={() => handleAvatarSelect(pendingAvatar || selectedAvatar)}
-                  disabled={!pendingAvatar || pendingAvatar === selectedAvatar}
+                  disabled={!pendingAvatar || pendingAvatar.replace('nobackgroundavatar', 'avatar') === selectedAvatar.replace('nobackgroundavatar', 'avatar')}
                   className="px-8 py-3.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black rounded-xl text-[10px] uppercase tracking-widest font-bold shadow-md hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-md"
                 >
                   Save Changes
@@ -370,7 +373,7 @@ const Profile = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 };
 

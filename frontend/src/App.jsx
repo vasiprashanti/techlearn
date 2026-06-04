@@ -1,610 +1,103 @@
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
+import ExternalLinkHandler from './components/ExternalLinkHandler'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
 import { UserProvider } from './context/UserContext'
 import PrivateRoute from './Routes/PrivateRoute'
 import AdminPrivateRoute from './Routes/AdminPrivateRoute'
-
-// Motion for animations
-import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import FloatingCodeWords from './components/FloatingCodeWords'
-import FloatingCourseLogos from './components/FloatingCourseLogos'
-import LoadingScreen from './components/LoadingScreen'
 
-//Admin Dashboard
-import AdminDashboard from './pages/AdminDashbaord/AdminDashboard';
-import Sidebar from '../src/components/AdminDashbaord/Admin_Sidebar'
-import UploadTopicsPage from '../src/pages/AdminDashbaord/UploadTopicsPage'
-import Courses_Admin from "../src/pages/AdminDashbaord/Courses";
-import AdminTopicsList from "../src/pages/AdminDashbaord/AdminTopicsList";
-import EditTopicForm from "../src/pages/AdminDashbaord/EditTopicForm";
-import McqUpload from "../src/pages/AdminDashbaord/McqUpload"
-import UploadExercisesPage from "../src/pages/AdminDashbaord/UploadExercisesPage";
-import CodingRoundUpload from '../src/pages/AdminDashbaord/CodingRoundUpload';
+const HomePage = lazy(() => import('./pages/HomePage'))
+const Signup = lazy(() => import('./pages/Auth/Signup'))
+const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
+const Performance = lazy(() => import('./pages/Dashboard/Performance'))
+const DailyChallenge = lazy(() => import('./pages/Dashboard/DailyChallenge'))
+const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
+const Languages = lazy(() => import('./pages/Dashboard/Languages'))
+const Concepts = lazy(() => import('./pages/Dashboard/Concepts'))
+const ImportantConceptDetail = lazy(() => import('./pages/Dashboard/ImportantConceptDetail'))
+const ResourcesHub = lazy(() => import('./pages/Dashboard/ResourcesHub'))
+const Projects = lazy(() => import('./components/Dashboard/Projects'))
+const Profile = lazy(() => import('./components/Dashboard/Profile'))
+const Leaderboard = lazy(() => import('./pages/Dashboard/Leaderboard'))
+const UserCoding = lazy(() => import('./pages/Coding/UserCoding'))
+const UserMcq = lazy(() => import('./pages/Mcq/UserMcq'))
+const DailyChallengeAccess = lazy(() => import('./pages/DailyChallenge/DailyChallengeAccess'))
+const DailyChallengeInstructions = lazy(() => import('./pages/DailyChallenge/DailyChallengeInstructions'))
+const DailyChallengeTest = lazy(() => import('./pages/DailyChallenge/DailyChallengeTest'))
+const DailyChallengeResult = lazy(() => import('./pages/DailyChallenge/DailyChallengeResult'))
 
+const LearnMain = lazy(() => import('./pages/Learn/LearnMain'))
+const CourseDetails = lazy(() => import('./pages/Learn/CourseDetails'))
+const CourseQuiz = lazy(() => import('./pages/Learn/CourseQuiz'))
+const CourseTopics = lazy(() => import('./pages/Learn/CourseTopics'))
+const LiveBatchDetails = lazy(() => import('./pages/Learn/LiveBatchDetails'))
+const AllInterviewQuestions = lazy(() => import('./pages/Learn/AllInterviewQuestions'))
+const PracticeHub = lazy(() => import('./pages/Learn/PracticeHub'))
+const DsaQuestions = lazy(() => import('./pages/Learn/DsaQuestions'))
+const SqlQuestions = lazy(() => import('./pages/Learn/SqlQuestions'))
+const CoreCsQuestions = lazy(() => import('./pages/Learn/CoreCsQuestions'))
+const AptitudeQuestions = lazy(() => import('./pages/Learn/AptitudeQuestions'))
+const CompanyQuestions = lazy(() => import('./pages/Learn/CompanyQuestions'))
+const InterviewDsaQuestionDetail = lazy(() => import('./pages/Learn/InterviewDsaQuestionDetail'))
+const InterviewSqlQuestionDetail = lazy(() => import('./pages/Learn/InterviewSqlQuestionDetail'))
+const InterviewCoreCsQuestionDetail = lazy(() => import('./pages/Learn/InterviewCoreCsQuestionDetail'))
+const InterviewCompanyQuestionDetail = lazy(() => import('./pages/Learn/InterviewCompanyQuestionDetail'))
+const InterviewAptitudeQuestionDetail = lazy(() => import('./pages/Learn/InterviewAptitudeQuestionDetail'))
+const CompanyMockQuestionDetail = lazy(() => import('./pages/Learn/CompanyMockQuestionDetail'))
+const Exercises = lazy(() => import('./pages/Learn/Exercises'))
+const ExercisesList = lazy(() => import('./pages/Learn/ExercisesList'))
+const ExerciseDetail = lazy(() => import('./pages/Learn/ExerciseDetail'))
+const Certification = lazy(() => import('./pages/Learn/Certification'))
+const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayment'))
+const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
 
-// Auth pages
-import Login from './pages/Auth/Login'
-import Signup from './pages/Auth/Signup'
-import Dashboard from './pages/Dashboard/Dashboard'
-import Performance from './pages/Dashboard/Performance'
-import DailyChallenge from './pages/Dashboard/DailyChallenge'
-import DashboardSettings from './pages/Dashboard/Settings'
-import Languages from './pages/Dashboard/Languages'
-import Concepts from './pages/Dashboard/Concepts'
-import ImportantConceptDetail from './pages/Dashboard/ImportantConceptDetail'
-import TrackTemplate from './pages/TrackTemplate/TrackTemplate' // <-- NEW: Added TrackTemplate
-import TrackTemplateDetails from './pages/TrackTemplate/TrackTemplateDetails'
-import ChallengePage from './pages/ChallengePage' // <-- NEW: Added ChallengePage
-import ResetPassword from './components/auth/ResetPassword';
-import Projects from '../src/components/Dashboard/Projects'
-import Leaderboard from './pages/Dashboard/Leaderboard'
-import UserCoding from './pages/Coding/UserCoding';
+const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
+const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
+const TrackTemplate = lazy(() => import('./pages/TrackTemplate/TrackTemplate'))
+const TrackTemplateDetails = lazy(() => import('./pages/TrackTemplate/TrackTemplateDetails'))
+const ChallengePage = lazy(() => import('./pages/ChallengePage'))
 
-// Learn components
-import LearnMain from './pages/Learn/LearnMain'
-import CourseDetails from './pages/Learn/CourseDetails'
-import CourseQuiz from './pages/Learn/CourseQuiz'
-import CourseTopics from './pages/Learn/CourseTopics'
-import LiveBatchDetails from './pages/Learn/LiveBatchDetails'
-import AllInterviewQuestions from './pages/Learn/AllInterviewQuestions'
-import DsaQuestions from './pages/Learn/DsaQuestions'
-import SqlQuestions from './pages/Learn/SqlQuestions'
-import CoreCsQuestions from './pages/Learn/CoreCsQuestions'
-import AptitudeQuestions from './pages/Learn/AptitudeQuestions'
-import CompanyQuestions from './pages/Learn/CompanyQuestions'
-import InterviewDsaQuestionDetail from './pages/Learn/InterviewDsaQuestionDetail'
-import InterviewSqlQuestionDetail from './pages/Learn/InterviewSqlQuestionDetail'
-import InterviewCoreCsQuestionDetail from './pages/Learn/InterviewCoreCsQuestionDetail'
-import InterviewCompanyQuestionDetail from './pages/Learn/InterviewCompanyQuestionDetail'
-import InterviewAptitudeQuestionDetail from './pages/Learn/InterviewAptitudeQuestionDetail'
-import CompanyMockQuestionDetail from './pages/Learn/CompanyMockQuestionDetail'
-import Roadmaps from './pages/Resources/Roadmaps'
-import ResumeTemplates from './pages/Resources/ResumeTemplates'
+const BuildPageMain = lazy(() => import('./pages/Build/BuildPage'))
+const ProjectDetail = lazy(() => import('./pages/Build/ProjectDetail'))
+const ProjectPayment = lazy(() => import('./pages/Build/ProjectPayment'))
+const PaymentGateway = lazy(() => import('./pages/Build/PaymentGateway'))
+const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
-// Exercise components
-import Exercises from './pages/Learn/Exercises'
-import ExercisesList from './pages/Learn/ExercisesList'
-import ExerciseDetail from './pages/Learn/ExerciseDetail'
+const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
+const UploadTopicsPage = lazy(() => import('./pages/AdminDashbaord/UploadTopicsPage'))
+const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
+const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
+const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
+const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload'))
+const UploadExercisesPage = lazy(() => import('./pages/AdminDashbaord/UploadExercisesPage'))
+const CodingRoundUpload = lazy(() => import('./pages/AdminDashbaord/CodingRoundUpload'))
+const Analytics = lazy(() => import('./pages/AdminDashbaord/Analytics'))
+const SystemHealth = lazy(() => import('./pages/AdminDashbaord/SystemHealth'))
+const Colleges = lazy(() => import('./pages/AdminDashbaord/Colleges'))
+const CollegeDetails = lazy(() => import('./pages/AdminDashbaord/CollegeDetails'))
+const Batches = lazy(() => import('./pages/AdminDashbaord/Batches'))
+const BatchDetails = lazy(() => import('./pages/AdminDashbaord/BatchDetails'))
+const Students = lazy(() => import('./pages/AdminDashbaord/Students'))
+const QuestionBankAdminPage = lazy(() => import('./pages/Admin/QuestionBankAdminPage'))
+const QuestionBankCategoryDetailPage = lazy(() => import('./pages/Admin/QuestionBankCategoryDetailPage'))
+const Resources = lazy(() => import('./pages/AdminDashbaord/Resources'))
+const Certificates = lazy(() => import('./pages/AdminDashbaord/Certificates'))
+const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMonitor'))
+const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs'))
+const Reports = lazy(() => import('./pages/AdminDashbaord/Reports'))
+const Settings = lazy(() => import('./pages/AdminDashbaord/Settings'))
 
-// Certification components
-import Certification from './pages/Learn/Certification'
-import CertificationPayment from './pages/Learn/CertificationPayment'
-
-// Compiler component
-import OnlineCompiler from './pages/Learn/OnlineCompiler'
-
-// Build components
-import BuildPageMain from './pages/Build/BuildPage'
-import ProjectDetail from './pages/Build/ProjectDetail'
-import MidProjectDetail from './pages/Build/MidProjectDetail'
-import ProjectPayment from './pages/Build/ProjectPayment'
-import PaymentGateway from './pages/Build/PaymentGateway'
-import UILibrary from './pages/Build/UILibrary'
-import Profile from './components/Dashboard/Profile'
-import EditProfile from './components/Dashboard/EditProfile'
-
-import Analytics from './pages/AdminDashbaord/Analytics';
-import SystemHealth from './pages/AdminDashbaord/SystemHealth';
-import Colleges from './pages/AdminDashbaord/Colleges';
-import CollegeDetails from './pages/AdminDashbaord/CollegeDetails';
-import Batches from './pages/AdminDashbaord/Batches';
-import BatchDetails from './pages/AdminDashbaord/BatchDetails';
-import Students from './pages/AdminDashbaord/Students';
-import QuestionBank from './pages/AdminDashbaord/QuestionBank';
-import QuestionCategoryDetails from './pages/AdminDashbaord/QuestionCategoryDetails';
-import Resources from './pages/AdminDashbaord/Resources';
-import Certificates from './pages/AdminDashbaord/Certificates';
-import SubmissionMonitor from './pages/AdminDashbaord/SubmissionMonitor';
-import Notifications from './pages/AdminDashbaord/Notifications';
-import AuditLogs from './pages/AdminDashbaord/AuditLogs';
-import Reports from './pages/AdminDashbaord/Reports';
-import Settings from './pages/AdminDashbaord/Settings';
-
-// Contact component
-import Contact from './pages/Contact/Contact'
-
-// About component
-import About from './pages/About/About'
-// Terms and Conditions componenet
-import TermsAndConditions from './pages/About/TermsAndConditons';
-
-import PrivacyPolicy from './pages/About/PrivacyPolicy';
-import UserMcq from './pages/Mcq/UserMcq'
-
-// Homepage component
-const HomePage = () => {
-  const navigate = useNavigate()
-  const bottomTextRef = useRef(null)
-  const [isBottomTextInViewport, setIsBottomTextInViewport] = useState(false)
-
-  // Typewriter effect state
-  const [displayedText, setDisplayedText] = useState("")
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const [isTyping, setIsTyping] = useState(false)
-  const fullText = "Techlearn;"
-  const headingRef = useRef(null)
-
-  // Stats animation state
-  const statsRef = useRef(null)
-  const [animatedStats, setAnimatedStats] = useState({
-    courses: 0,
-    batches: 0,
-    students: 0,
-    rating: 0
-  })
-
-  // Marquee refs for intersection observer
-  const marqueeRefs = useRef([])
-
-  // Stats data
-  const statsData = [
-    { target: 10, label: "Courses Offered", suffix: "+" },
-    { target: 400, label: "Batches Completed", suffix: "+" },
-    { target: 5101, label: "Students Trained", suffix: "+" },
-    { target: 4.6, label: "Google Rating", isDecimal: true }
-  ]
-
-  // Marquee sections data
-  const marqueeData = [
-    {
-      title: "tech PREP",
-      subtitle: "Struggling with technical rounds or job interviews?",
-      description: "Tech Prep is your comprehensive solution for mastering technical interviews and landing your dream job. Our carefully curated curriculum covers data structures, algorithms, system design, and behavioral interview techniques. With real-world coding challenges, mock interviews, and personalized feedback from industry experts, you'll build the confidence and skills needed to excel in any technical interview. From FAANG companies to startups, our proven methodology has helped thousands of students secure positions at top tech companies.",
-      features: ["Placement-focused courses with 90% success rate", "Live classes with real hiring patterns from top companies", "1-on-1 mock interviews with industry professionals", "Comprehensive system design workshops"],
-      link: "/learn"
-    },
-    {
-      title: "mini PROJECTS",
-      subtitle: "Mini Projects — because upskilling is what we do.",
-      description: "Transform your learning journey with hands-on mini projects that bridge the gap between theory and practice. Each project is carefully designed to reinforce fundamental concepts while building real-world applications that showcase your skills to potential employers. From simple calculators to complex web applications, you'll progressively build a diverse portfolio that demonstrates your growth as a developer. Our project-based learning approach ensures you not only understand the concepts but can apply them effectively in professional environments.",
-      features: ["20+ guided mini projects across different technologies", "Step-by-step tutorials with code explanations", "Portfolio-ready projects with deployment guides", "Peer code reviews and feedback sessions"],
-      link: "/build",
-      reverse: true
-    },
-    {
-      title: "summer INTERN",
-      subtitle: "Join live internships in Web Dev, UI/UX Design, or Content Creation.",
-      description: "Gain invaluable real-world experience through our comprehensive internship program designed to bridge the gap between academic learning and professional development. Work on live projects with established companies, receive personalized mentorship from industry veterans, and build a professional network that will accelerate your career. Our internships offer hands-on experience in cutting-edge technologies, collaborative team environments, and the opportunity to contribute to meaningful projects that impact real users and businesses.",
-      features: ["3-6 month structured internship programs", "Direct mentorship from senior developers and designers", "Real client projects with measurable impact", "Certificate of completion and LinkedIn recommendations"],
-      note: "Summer positions filled — Winter applications open in November.",
-      link: "/careers"
-    },
-    {
-      title: "design LAB",
-      subtitle: "DesignLab is our open-source UI library with ready-to-use buttons, loaders, forms, toggles, radios, and more.",
-      description: "Revolutionize your development workflow with our comprehensive open-source UI component library, meticulously crafted to accelerate your design and development process. DesignLab provides production-ready, accessible, and customizable components that follow modern design principles and best practices. From elegant buttons and smooth animations to complex form elements and interactive toggles, every component is built with performance, accessibility, and developer experience in mind. Save countless hours of development time while maintaining consistent, professional design standards across all your projects.",
-      features: ["50+ production-ready UI components", "Full accessibility compliance (WCAG 2.1)", "Dark mode support and theme customization", "React, Vue, and vanilla JavaScript versions"],
-      link: "/build",
-      reverse: true
-    }
-  ]
-
-  // Custom viewport detection for typewriter - triggers every time
-  useEffect(() => {
-    const element = headingRef.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isTyping) {
-          setIsTyping(true)
-          setDisplayedText("")
-          setCurrentIndex(0)
-        } else if (!entry.isIntersecting && isTyping) {
-          setIsTyping(false)
-          setDisplayedText("")
-          setCurrentIndex(0)
-        }
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
-      }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
-  }, [isTyping])
-
-  // Typewriter animation
-  useEffect(() => {
-    if (isTyping && currentIndex < fullText.length) {
-      const isMobile = window.innerWidth <= 480
-      const charDelay = isMobile ? 120 : 75
-
-      const timeout = setTimeout(() => {
-        setDisplayedText(prev => prev + fullText[currentIndex])
-        setCurrentIndex(prev => prev + 1)
-      }, charDelay)
-
-      return () => clearTimeout(timeout)
-    }
-  }, [currentIndex, fullText, isTyping])
-
-  // Custom viewport detection for stats
-  useEffect(() => {
-    const element = statsRef.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
-
-          statsData.forEach((stat, index) => {
-            const increment = stat.isDecimal ? 0.1 : Math.ceil(stat.target / 50)
-            let count = 0
-
-            const timer = setInterval(() => {
-              count += increment
-              if (count >= stat.target) {
-                count = stat.target
-                clearInterval(timer)
-              }
-
-              setAnimatedStats(prev => ({
-                ...prev,
-                [index === 0 ? 'courses' : index === 1 ? 'batches' : index === 2 ? 'students' : 'rating']: count
-              }))
-            }, 30)
-          })
-        } else {
-          setAnimatedStats({ courses: 0, batches: 0, students: 0, rating: 0 })
-        }
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
-      }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
-  }, [])
-
-  // Bottom text viewport detection
-  useEffect(() => {
-    const element = bottomTextRef.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsBottomTextInViewport(entry.isIntersecting)
-      },
-      {
-        threshold: 0.3,
-        rootMargin: '0px'
-      }
-    )
-
-    observer.observe(element)
-    return () => observer.unobserve(element)
-  }, [])
-
-  // Marquee animation intersection observer
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const title = entry.target.querySelector('.marquee-title, .marquee-title-2')
-        if (title) {
-          if (entry.isIntersecting) {
-            title.classList.add('animate')
-          } else {
-            title.classList.remove('animate')
-          }
-        }
-      })
-    }, {
-      threshold: 0.3
-    })
-
-    marqueeRefs.current.forEach(header => {
-      if (header) {
-        observer.observe(header)
-      }
-    })
-
-    return () => {
-      marqueeRefs.current.forEach(header => {
-        if (header) {
-          observer.unobserve(header)
-        }
-      })
-    }
-  }, [])
-
-  return (
-    <div className="bg-transparent dark:bg-transparent relative">
-      {/* Hero Section */}
-      <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
-        {/* Floating Course Logos - Hero Section Only */}
-        <FloatingCourseLogos />
-        <div className="relative z-10 flex flex-col items-center justify-center text-center">
-          {/* TECHLEARN Heading with Typewriter Effect */}
-          <div className="mb-4">
-            <div
-              ref={headingRef}
-              className="font-bold text-[#001862] dark:text-[#ffffffde] font-poppins relative"
-              style={{
-                fontWeight: 700,
-                lineHeight: 1.2,
-                marginBottom: '10px',
-                marginTop: '10%',
-                fontSize: 'clamp(42px, 8vw, 110px)',
-                textAlign: 'center'
-              }}
-            >
-              <span
-                style={{
-                  visibility: 'hidden',
-                  whiteSpace: 'nowrap'
-                }}
-                aria-hidden="true"
-              >
-                {fullText}
-              </span>
-              <span
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.1em'
-                }}
-              >
-                {displayedText}
-              </span>
-            </div>
-            <h2
-              className="font-medium text-[#002d88] dark:text-[#ffffffde] font-poppins"
-              style={{
-                fontWeight: 500,
-                marginTop: '10px',
-                fontSize: 'clamp(15px, 3vw, 25px)'
-              }}
-            >
-              Don't Just Use Technology, Build It.
-            </h2>
-          </div>
-
-          {/* Start for Free Button */}
-          <button
-            onClick={() => navigate('/learn')}
-            className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
-            style={{
-              backgroundColor: '#ffffffac',
-              color: '#001242',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#001242'
-              e.target.style.color = '#ffffff'
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#ffffffac'
-              e.target.style.color = '#001242'
-            }}
-          >
-            Start for Free
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="flex items-start justify-center px-6 pt-16 pb-8">
-        <div
-          ref={statsRef}
-          className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-16 w-full max-w-4xl"
-        >
-          {statsData.map((stat, index) => (
-            <div key={index} className="text-center">
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-light text-[#000c3e] dark:text-[#ffffffde]">
-                {stat.isDecimal
-                  ? animatedStats.rating.toFixed(1)
-                  : Math.floor(index === 0 ? animatedStats.courses : index === 1 ? animatedStats.batches : animatedStats.students)
-                }{stat.suffix || ''}
-              </h2>
-              <p className="text-sm md:text-base text-[#000234] dark:text-[#ffffff] mt-2 font-inter">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Marquee Sections */}
-      {marqueeData.map((item, index) => (
-        <div
-          key={index}
-          className={item.reverse ? "marquee-header-2" : "marquee-header"}
-          ref={el => marqueeRefs.current[index] = el}
-        >
-          <a
-            href={item.link}
-            className="marquee-link"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate(item.link);
-            }}
-          >
-            <h2 className={item.reverse ? "marquee-title-2" : "marquee-title"}>
-              <span>
-                <i>{item.title.split(' ')[0]}</i> {item.title.split(' ').slice(1).join(' ')}
-              </span>
-            </h2>
-          </a>
-          <div className="w-full max-w-[640px] flex-1 rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70 sm:p-6 md:p-7">
-            <div className="flex flex-col gap-4">
-              <p className="text-sm font-medium text-[#2b5388] dark:text-[#96d8ff] sm:text-base">
-                {item.subtitle}
-              </p>
-
-              <p className="text-[13px] leading-relaxed text-[#355b8f] dark:text-[#b5ddff] sm:text-sm md:text-[15px]">
-                {item.description}
-              </p>
-
-              {item.features && (
-                <ul className="grid gap-2">
-                  {item.features.map((feature, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start gap-2 rounded-xl border border-[#9fcfff]/45 bg-[#dbf1ff]/70 px-3 py-2 text-xs text-[#315987] dark:border-[#6bb8ec]/35 dark:bg-[#0d366f]/60 dark:text-[#a6d6ff] sm:text-[13px]"
-                    >
-                      <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3c83f6] dark:bg-[#8fd9ff]" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {item.note && (
-                <div className="rounded-xl border border-[#ffe396] bg-[#fff6c9]/85 px-3 py-2 text-xs text-[#8b6e12] dark:border-[#8e6d1a]/50 dark:bg-[#5b450f]/45 dark:text-[#ffd778] sm:text-[13px]">
-                  <em>{item.note}</em>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
-
-      {/* Reviews Section */}
-      <div className="py-2 md:py-16">
-        {/* Desktop: Two column layout with vertical scrolling */}
-        <div className="hidden md:flex h-screen overflow-hidden">
-          {/* Left column scrolling up */}
-          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
-            <div className="flex flex-col gap-4 animate-scroll-up">
-              {/* First set of reviews */}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
-              ].map((review, index) => (
-                <div key={`left-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." }
-              ].map((review, index) => (
-                <div key={`left-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Center heading */}
-          <div className="flex-none flex items-center justify-center px-5">
-            <h2 className="text-3xl lg:text-4xl font-bold text-center brand-heading-primary">
-              <span className="italic">learn</span> REVIEWS
-            </h2>
-          </div>
-
-          {/* Right column scrolling down */}
-          <div className="flex-1 flex flex-col justify-start items-center overflow-hidden relative">
-            <div className="flex flex-col gap-4 animate-scroll-down">
-              {/* First set of reviews */}
-              {[
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`right-first-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {[
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`right-second-${index}`} className="bg-transparent border-none rounded-3xl p-5 min-h-[90px] w-80 max-w-sm mx-auto">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-2">{review.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile: Horizontal scrolling layout */}
-        <div className="md:hidden">
-          {/* Mobile heading */}
-          <div className="text-center mb-2">
-            <h2 className="text-2xl font-bold brand-heading-primary">
-              <span className="italic">learn</span> REVIEWS
-            </h2>
-          </div>
-
-          {/* Horizontal scrolling reviews */}
-          <div className="overflow-hidden pb-4 w-full">
-            <div className="flex gap-4 animate-scroll-horizontal" style={{width: 'max-content'}}>
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`first-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
-                </div>
-              ))}
-              {[
-                { name: "Daksh Mavani", text: "I had got myself enrolled in C language course as a beginner. We were given enough theory on all aspects of course so that we would be aware of all important concepts." },
-                { name: "Loknath", text: "Through her experience ma'am has explained the concepts in a way in which everyone can understand easily. If one has pure interest in learning, he/she will thoroughly understand." },
-                { name: "Sudhakar Reddy", text: "The tutor was really good and explained each and every topic clearly with personal care." },
-                { name: "Pavan Vinayak", text: "TechLearn Solutions is an exceptional coding institution that provides comprehensive and engaging programming education." },
-                { name: "Prakash", text: "Best institute for beginners to learn any programming language. The faculty was highly knowledgeable with personalized attention." },
-                { name: "Samuel Jude Philips", text: "Many people don't know about this centre due to its location but you'll go in as a beginner with zero knowledge and walk out confidently with all the necessary knowledge acquired!" },
-                { name: "Prasanna", text: "Mam explains the class in a very good way. She takes many real-time examples and makes the topic clear to understand so that it makes us easy to take an interview." },
-                { name: "Teja", text: "Very easy to understand the concept and faculty explain doubts very easily. Thank you Techlearn Solutions." },
-                { name: "Rajani", text: "It was a great experience to be back in classroom after almost 25 years. Prashanthi Ma'm is subject expert with good grasp on fundamentals." },
-                { name: "Shradha", text: "Very good learning experience. I have learnt C language in Techlearn Solutions and I feel really confident with the coding part." }
-              ].map((review, index) => (
-                <div key={`second-${index}`} className="bg-transparent border-none rounded-3xl p-4 min-h-[120px] w-72 flex-shrink-0">
-                  <div className="font-bold mb-2 text-[#490096] dark:text-purple-300">{review.name}</div>
-                  <div className="text-[#00195a] dark:text-gray-300 text-sm leading-relaxed line-clamp-3">{review.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+const Contact = lazy(() => import('./pages/Contact/Contact'))
+const About = lazy(() => import('./pages/About/About'))
+const TermsAndConditions = lazy(() => import('./pages/About/TermsAndConditons'))
+const PrivacyPolicy = lazy(() => import('./pages/About/PrivacyPolicy'))
 
 const CareersPage = () => {
   const [loading, setLoading] = useState(true);
@@ -615,7 +108,11 @@ const CareersPage = () => {
   }, []);
 
   if (loading) {
-    return <LoadingScreen showMessage={false} size={48} duration={800} />;
+    return (
+      <div className="min-h-screen pt-24 pb-16 flex items-center justify-center bg-transparent dark:bg-transparent">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#7ec9ff] border-t-transparent" />
+      </div>
+    );
   }
 
   return (
@@ -634,6 +131,41 @@ function FloatingCodeBackground() {
   return isAuthPage ? <FloatingCodeWords /> : null;
 }
 
+function DelayedAnalytics() {
+  useEffect(() => {
+    if (window.__techlearnAnalyticsLoaded) return undefined;
+
+    const loadAnalytics = () => {
+      if (window.__techlearnAnalyticsLoaded) return;
+      window.__techlearnAnalyticsLoaded = true;
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function gtag() {
+        window.dataLayer.push(arguments);
+      };
+      window.gtag('js', new Date());
+      window.gtag('config', 'G-C1SXKD3LMD');
+
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = 'https://www.googletagmanager.com/gtag/js?id=G-C1SXKD3LMD';
+      document.head.appendChild(script);
+    };
+
+    const timeoutId = window.setTimeout(loadAnalytics, 5000);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  return null;
+}
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#7ec9ff] border-t-transparent" />
+    </div>
+  );
+}
+
 function LayoutWrapper() {
   const location = useLocation();
 
@@ -646,11 +178,10 @@ function LayoutWrapper() {
     '/students', 
     '/question-bank', 
     '/track-templates', 
-    '/resources', 
+    '/admin/roadmaps', 
     '/certificates', 
     '/submission-monitor', 
-    '/notifications', 
-    '/audit-logs', 
+    '/audit-logs',  
     '/reports',
     '/settings'
   ];
@@ -672,15 +203,17 @@ function LayoutWrapper() {
     location.pathname.startsWith('/core-prep/important-concepts') ||
     location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname.startsWith('/resources/resume-templates') ||
-    location.pathname.startsWith('/learn/courses') ||
-    location.pathname.startsWith('/learn/exercises');
+    location.pathname.startsWith('/learn/exercises') ||
+    location.pathname === '/dashboard/profile' ||
+    location.pathname.startsWith('/dashboard/profile/');
 
-  const showNavbar = !['/admin', '/mcq', '/admin/codingroundupload'].includes(location.pathname) && 
+  const showNavbar = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
-                     !isDashboardRoute;
+                     !location.pathname.startsWith('/daily-challenge/');
 
   const showFooter = !['/mcq'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
+                     !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute &&
                      !isStudentSidebarRoute;
 
@@ -688,17 +221,22 @@ function LayoutWrapper() {
     <div className="relative z-10 flex flex-col min-h-screen">
       {showNavbar && <Navbar />}
 
-      <main className="flex-grow">
-        <Routes>
-          <Route path="/login" element={<Login />} />
+      <Suspense fallback={<main className="flex-grow"><RouteFallback /></main>}>
+        <main className="flex-grow">
+          <Routes>
+          <Route path="/login" element={<Navigate to="/signup" replace />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
+            <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
+            <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
+            <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />
+            <Route path="/daily-challenge/:linkId/result" element={<DailyChallengeResult />} />
             <Route path="/dashboard/roadmap" element={<Roadmaps />} />
-            <Route path="/dashboard/practice" element={<AllInterviewQuestions />} />
+            <Route path="/dashboard/practice" element={<PracticeHub />} />
             <Route path="/dashboard/practice/core-cs" element={<CoreCsQuestions />} />
             <Route path="/dashboard/practice/core-cs/:questionId" element={<InterviewCoreCsQuestionDetail />} />
             <Route path="/dashboard/practice/aptitude" element={<AptitudeQuestions />} />
@@ -712,15 +250,14 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
+             <Route path="/dashboard/resources" element={<ResourcesHub />} />
             <Route path="/dashboard/resources/free-courses" element={<Navigate to="/learn" replace />} />
             <Route path="/dashboard/resources/important-concepts" element={<Concepts />} />
             <Route path="/dashboard/resources/important-concepts/:conceptId" element={<ImportantConceptDetail />} />
             <Route path="/dashboard/resources/free-certifications" element={<Certification />} />
             <Route path="/dashboard/resources/resume-templates" element={<ResumeTemplates />} />
             <Route path="/dashboard/account" element={<Navigate to="/dashboard/profile" replace />} />
-            <Route path="/dashboard/profile" element={<Profile />} />
-            <Route path="/dashboard/profile/edit" element={<EditProfile />} />
-            <Route path="/dashboard/settings" element={<DashboardSettings />} />
+            <Route path="/dashboard/profile/settings" element={<DashboardSettings />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/learn/interview-questions" element={<AllInterviewQuestions />} />
             <Route path="/learn/interview-questions/dsa" element={<DsaQuestions />} />
@@ -747,7 +284,8 @@ function LayoutWrapper() {
             <Route path="/track/:trackId/day/:dayId" element={<ChallengePage />} />
           </Route>
           
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/dashboard/profile" element={<Profile />} />
+          <Route path="/dashboard/profile/edit" element={<Navigate to="/dashboard/profile/settings" replace />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/learn" element={<LearnMain />} />
@@ -794,14 +332,15 @@ function LayoutWrapper() {
 <Route path="/batches" element={<Batches />} />
 <Route path="/batches/:batchId" element={<BatchDetails />} />
 <Route path="/students" element={<Students />} />
-<Route path="/question-bank" element={<QuestionBank />} />
-<Route path="/question-bank/:categorySlug" element={<QuestionCategoryDetails />} />
+<Route path="/admin/question-bank" element={<QuestionBankAdminPage />} />
+<Route path="/admin/question-bank/:categoryId" element={<QuestionBankCategoryDetailPage />} />
+<Route path="/question-bank" element={<QuestionBankAdminPage />} />
+<Route path="/question-bank/:categoryId" element={<QuestionBankCategoryDetailPage />} />
 <Route path="/track-templates" element={<TrackTemplate />} />
 <Route path="/track-templates/:templateId" element={<TrackTemplateDetails />} />
-<Route path="/resources" element={<Resources />} />
+<Route path="/admin/roadmaps" element={<Resources />} />
 <Route path="/certificates" element={<Certificates />} />
 <Route path="/submission-monitor" element={<SubmissionMonitor />} />
-<Route path="/notifications" element={<Notifications />} />
 <Route path="/audit-logs" element={<AuditLogs />} />
 <Route path="/reports" element={<Reports />} />
 <Route path="/settings" element={<Settings />} />
@@ -810,10 +349,11 @@ function LayoutWrapper() {
           </Route>
           
           <Route path="/about" element={<About />} />
-        </Routes>
-      </main>
-      
-      {showFooter && <Footer />}
+          </Routes>
+        </main>
+
+        {showFooter && <Footer />}
+      </Suspense>
     </div>
   );
 }
@@ -826,6 +366,8 @@ export default function App() {
           <AuthModalProvider>
             
               <ScrollToTop />
+              <ExternalLinkHandler />
+              <DelayedAnalytics />
               <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
                 <FloatingCodeBackground />
                 <LayoutWrapper />

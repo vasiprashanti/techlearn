@@ -51,7 +51,7 @@ export default function InterviewCompanyQuestionDetail() {
 
   if (!question) {
     return (
-      <UserSidebarLayout maxWidthClass="max-w-5xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <div className="rounded-2xl border border-white/20 bg-white/70 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
           <button
             type="button"
@@ -68,7 +68,7 @@ export default function InterviewCompanyQuestionDetail() {
   }
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-5xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-4">
         <div className="rounded-2xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
           <button

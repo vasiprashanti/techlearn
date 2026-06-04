@@ -7,6 +7,8 @@ import nodemailer from "nodemailer";
 import admin from "../utils/firebaseAdmin.js";
 
 import User from "../models/User.js";
+import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -18,6 +20,56 @@ function generateToken(id) {
   return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
+const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
+
+const mapUserToStudentCohort = async (user) => {
+  if (!user?.email) return { user, student: null, batch: null };
+
+  const student = await Student.findOne({ email: normalizeEmail(user.email) });
+  if (!student) return { user, student: null, batch: null };
+
+  const batch = await Batch.findById(student.batchId).lean();
+  if (!batch) {
+    const error = new Error("Your cohort exists, but the assigned batch was not found.");
+    error.status = 404;
+    throw error;
+  }
+
+  let changed = false;
+  if (!student.userId || String(student.userId) !== String(user._id)) {
+    student.userId = user._id;
+    await student.save();
+  }
+
+  if (!user.batchId || String(user.batchId) !== String(student.batchId)) {
+    user.batchId = student.batchId;
+    changed = true;
+  }
+
+  if (batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
+    user.startDate = batch.startDate;
+    changed = true;
+  }
+
+  if (changed) {
+    await user.save();
+  }
+
+  return { user, student, batch };
+};
+
+const formatAuthUser = (user, student = null, batch = null) => ({
+  id: user._id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  photoUrl: user.photoUrl || "",
+  role: user.role,
+  isClub: user.isClub,
+  batchId: user.batchId || student?.batchId || null,
+  startDate: user.startDate || batch?.startDate || null,
+});
+
 /* ========== REGISTER ========== */
 router.post("/register", async function register(req, res) {
   try {
@@ -27,7 +79,7 @@ router.post("/register", async function register(req, res) {
       return res.status(400).json({ message: "Please fill all fields" });
     }
 
-    const formattedEmail = email.trim().toLowerCase();
+    const formattedEmail = normalizeEmail(email);
     const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
     if (!emailRegex.test(formattedEmail)) {
       return res
@@ -72,14 +124,13 @@ router.post("/register", async function register(req, res) {
 router.post("/login", async function login(req, res) {
   try {
     const { email, password } = req.body;
-    const formattedEmail = email.trim().toLowerCase();
-
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Please provide email and password" });
     }
 
+    const formattedEmail = normalizeEmail(email);
     const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
     if (!emailRegex.test(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
@@ -90,7 +141,7 @@ router.post("/login", async function login(req, res) {
       return res.status(400).json({ message: "User not found" });
     }
 
-    if (!user.password) {
+    if (!user.password || ["google", "firebase"].includes(user.authProvider)) {
       return res.status(400).json({ message: "Please log in with Google" });
     }
 
@@ -102,14 +153,7 @@ router.post("/login", async function login(req, res) {
     const token = generateToken(user._id);
     return res.status(200).json({
       message: "Login successful",
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        email: user.email,
-        photoUrl: user.photoUrl || "",
-        role: user.role,
-        isClub: user.isClub,
-      },
+      user: formatAuthUser(user),
       token,
     });
   } catch (err) {
@@ -123,37 +167,60 @@ router.post("/login", async function login(req, res) {
 router.post("/google", async function googleLogin(req, res) {
   const { token } = req.body;
   try {
+    if (!token) {
+      return res.status(400).json({ message: "Google login failed: missing Google token." });
+    }
+
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const { email, name } = ticket.getPayload();
+    const { email, name, picture } = ticket.getPayload();
+    const formattedEmail = normalizeEmail(email);
 
-    let user = await User.findOne({ email });
-    if (!user) {
-      user = await User.create({
-        firstName: name.split(" ")[0],
-        lastName: name.split(" ")[1] || "",
-        email,
-        password: "",
-      });
+    if (!formattedEmail) {
+      return res.status(400).json({ message: "Google login failed: email was not provided by Google." });
     }
 
-    const jwtToken = generateToken(user._id);
+    const [firstName, ...rest] = String(name || formattedEmail.split("@")[0]).split(" ");
+
+    let user = await User.findOne({ email: formattedEmail });
+    if (!user) {
+      try {
+        user = await User.create({
+          firstName: firstName || "Student",
+          lastName: rest.join(" "),
+          email: formattedEmail,
+          password: "",
+          authProvider: "google",
+          photoUrl: picture || "",
+        });
+      } catch (error) {
+        if (error?.code === 11000) {
+          user = await User.findOne({ email: formattedEmail });
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      user.authProvider = user.authProvider === "local" ? user.authProvider : "google";
+      if (picture && !user.photoUrl) user.photoUrl = picture;
+      await user.save();
+    }
+
+    const mapped = await mapUserToStudentCohort(user);
+    const jwtToken = generateToken(mapped.user._id);
     return res.status(200).json({
       message: "Google login successful",
       token: jwtToken,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-      },
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
     });
   } catch (err) {
     console.error("Google login error:", err);
-    return res.status(401).json({ message: "Google authentication failed" });
+    return res.status(err.status || 401).json({
+      message: err.message || "Google login failed. Please try again.",
+    });
   }
 });
 
@@ -162,9 +229,13 @@ router.post("/firebase", async (req, res) => {
   const { idToken } = req.body;
   try {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const { email, name } = decodedToken;
+    const { email, name, picture } = decodedToken;
     const [firstName, ...rest] = name?.split(" ") || ["", ""];
     const lastName = rest.join(" ");
+
+    const ADMIN_UIDS = ["AQX8cieAI6NNMtVvNRlT47WxdLu1"];
+    const isAdmin = ADMIN_UIDS.includes(decodedToken.uid);
+    const assignedRole = isAdmin ? "admin" : "user";
 
     if (!email) {
       return res
@@ -172,32 +243,44 @@ router.post("/firebase", async (req, res) => {
         .json({ message: "Email is required from Firebase" });
     }
 
-    let user = await User.findOne({ email });
+    const formattedEmail = normalizeEmail(email);
+    let user = await User.findOne({ email: formattedEmail });
 
     if (!user) {
-      user = await User.create({
-        firstName,
-        lastName,
-        email,
-        password: "",
-      });
+      try {
+        user = await User.create({
+          firstName,
+          lastName,
+          email: formattedEmail,
+          password: "",
+          authProvider: "firebase",
+          photoUrl: picture || "",
+          role: assignedRole,
+        });
+      } catch (error) {
+        if (error?.code === 11000) {
+          user = await User.findOne({ email: formattedEmail });
+        } else {
+          throw error;
+        }
+      }
+    } else {
+      if (isAdmin && user.role !== "admin") user.role = "admin";
+      if (picture && !user.photoUrl) user.photoUrl = picture;
+      if (user.authProvider !== "local") user.authProvider = "firebase";
+      await user.save();
     }
 
-    const token = generateToken(user._id);
+    const mapped = await mapUserToStudentCohort(user);
+    const token = generateToken(mapped.user._id);
     return res.status(200).json({
       message: "Firebase login successful",
       token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-      },
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
     });
   } catch (err) {
     console.error("Firebase login error: ", err);
-    return res.status(401).json({ message: "Firebase authentication failed!" });
+    return res.status(err.status || 401).json({ message: err.message || "Google login failed. Please try again." });
   }
 });
 

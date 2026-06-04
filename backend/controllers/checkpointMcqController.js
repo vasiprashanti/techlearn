@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Notes from "../models/Notes.js";
 import UserProgress from "../models/UserProgress.js";
 import Topic from "../models/Topic.js";
+import Submission from "../models/Submission.js";
 
 export const submitCheckpointMcq = async (req, res) => {
   try {
@@ -118,6 +119,35 @@ export const submitCheckpointMcq = async (req, res) => {
 
       await userProgress.save();
 
+      // Create a canonical Submission record for analytics if Notes is bridged to Question bank
+      try {
+        if (notes.questionBankId && mongoose.Types.ObjectId.isValid(notes.questionBankId)) {
+          const existing = await Submission.findOne({
+            studentId: userId,
+            questionId: notes.questionBankId,
+            snapshotConstraints: `checkpoint:${checkpointMcqId}`,
+          });
+
+          if (!existing) {
+            const sub = new Submission({
+              studentId: userId,
+              questionId: notes.questionBankId,
+              categoryId: topic ? topic.categoryId : null,
+              categoryType: "Notes",
+              totalScore: xpAwarded,
+              status: isCorrect ? "Passed" : "Failed",
+              submittedAt: new Date(),
+              snapshotConstraints: `checkpoint:${checkpointMcqId}`,
+              submissionType: "track_question",
+            });
+            await sub.save();
+          }
+        }
+      } catch (e) {
+        // Non-fatal: do not block user response on analytics write failures
+        console.error("checkpoint MCQ submission sync failed:", e.message);
+      }
+
       // Get updated courseXP for frontend display
       const courseXPObject = {};
       if (userProgress.courseXP) {
@@ -231,6 +261,7 @@ export const getMcqByCourseId = async (req, res) => {
     return res.status(200).json({
       parsedContent: notes.parsedContent,
       checkpointMcqs: mcqsWithoutAnswer,
+      notesQuestionBankId: notes.questionBankId || null,
     });
   } catch (err) {
     console.error("getMcqByCourseId error:", err);

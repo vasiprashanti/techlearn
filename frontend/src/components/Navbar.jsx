@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Moon, Sun } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuthModalContext } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +9,6 @@ const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { openLogin } = useAuthModalContext();
   const { isAuthenticated, user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
@@ -44,6 +44,20 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    setIsVisible(true);
+    setLastScrollY(window.scrollY);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const handleCourseContentScroll = (event) => {
+      setIsVisible(!event.detail?.isScrolled);
+    };
+
+    window.addEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
+    return () => window.removeEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
+  }, []);
 
   useEffect(() => {
     if (!isUserMenuOpen) return undefined;
@@ -89,20 +103,20 @@ const Navbar = () => {
       <nav className="flex justify-between items-center px-4 md:px-15 py-2.5 md:py-8 bg-transparent relative z-[1000]">
         
         {/* Logo */}
-        <div className="logo flex items-center gap-3">
+        <div className="logo flex items-center gap-3 lg:pl-1.5">
           {!hideLogo && (
             <>
               <Link to="/" className="logo flex items-center">
                 <div className="relative" style={{ height: '48px', minWidth: '120px' }}>
                   <img
-                    src="/logoo.png"
+                    src="/logoo-small.webp"
                     alt="Light Logo"
                     className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
                       isDarkMode ? 'opacity-0' : 'opacity-100'
                     }`}
                   />
                   <img
-                    src="/logoo2.png"
+                    src="/logoo2-small.webp"
                     alt="Dark Logo"
                     className={`absolute top-0 left-0 h-12 md:h-19 w-auto transition-all duration-300 ${
                       isDarkMode ? 'opacity-100' : 'opacity-0'
@@ -122,7 +136,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
           >
             Learn
           </Link>
@@ -132,7 +146,7 @@ const Navbar = () => {
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
           >
             Dashboard
           </Link>
@@ -146,7 +160,7 @@ const Navbar = () => {
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px]
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
                   ${isUserMenuOpen ? 'after:w-full' : 'after:w-0'}
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f] hover:text-[#001a5c]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
               >
@@ -187,7 +201,7 @@ const Navbar = () => {
               className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out
                 hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
                 after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out
-                ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+                ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             >
               Log In
             </button>
@@ -197,10 +211,10 @@ const Navbar = () => {
           <button
             onClick={toggleTheme}
             className={`text-[15px] transition-colors duration-300 p-1.5 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
           </button>
         </nav>
 
@@ -208,7 +222,7 @@ const Navbar = () => {
         <button
           type="button"
           className={`md:hidden flex justify-center items-center cursor-pointer transition-all duration-300 p-1 ${
-            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00184f]'
+            isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
           }`}
           onClick={toggleMenu}
           aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -219,7 +233,7 @@ const Navbar = () => {
 
       {/* Mobile Navigation Menu */}
       <nav
-        className={`md:hidden ${isMenuOpen ? 'flex' : 'hidden'} flex-col gap-2 px-5 py-2 z-[999] 
+        className={`md:hidden ${isMenuOpen ? 'flex' : 'hidden'} flex-col gap-0.5 px-4 py-1.5 z-[999] 
           transition-all duration-300 backdrop-blur-md border-b border-white/20 dark:border-gray-700/20 
           w-full absolute top-full left-0 
           ${
@@ -232,22 +246,22 @@ const Navbar = () => {
           <Link
             to="/learn"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
           >
             Learn
           </Link>
           <Link
             to="/dashboard"
             onClick={closeMenu}
-            className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+            className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
           >
             Dashboard
           </Link>
@@ -255,10 +269,10 @@ const Navbar = () => {
 
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
-            <div className="py-2.5">
+            <div className="py-1.5">
               <div
-                className={`text-[14px] mb-2 ${
-                  isDarkMode ? 'text-[#e0e6f5]' : 'text-black'
+                className={`text-[14px] mb-1 ${
+                  isDarkMode ? 'text-[#e0e6f5]' : 'text-[#00113b]'
                 }`}
               >
                 Hi, {user?.firstName || user?.email || 'User'}
@@ -268,25 +282,25 @@ const Navbar = () => {
                   closeMenu();
                   logout();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-colors duration-300 
+                className={`relative block py-1.5 text-[14px] transition-colors duration-300 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
               >
                 Log Out
               </button>
             </div>
           ) : (
-            <div className="py-2.5 w-full flex justify-start">
+            <div className="py-1.5 w-full flex justify-start">
               <button
                 onClick={() => {
                   closeMenu();
                   openLogin();
                 }}
-                className={`relative block py-2.5 text-[14px] transition-all duration-300 ease-in-out 
+                className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
                   hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 
                   after:w-0 after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
-                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-black hover:text-[#333]'}`}
+                  ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
               >
                 Log In
               </button>
@@ -295,14 +309,14 @@ const Navbar = () => {
         </div>
 
         {/* Dark Mode Toggle - Mobile */}
-        <div className="w-full flex justify-start">
+        <div className="w-full flex justify-start py-1">
           <button
             onClick={toggleTheme}
-            className={`text-[15px] transition-colors duration-300 p-1.5 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00184f]'}`}
+            className={`text-[15px] transition-colors duration-300 p-1 
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
             aria-label="Toggle dark mode"
           >
-            <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+            {isDarkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
           </button>
         </div>
       </nav>

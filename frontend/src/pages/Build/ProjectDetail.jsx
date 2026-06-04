@@ -2,7 +2,6 @@ import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import useMiniProjects from "../../hooks/useMiniProjects";
 import useMidProjects from "../../hooks/useMidProjects";
-import LoadingScreen from "../../components/Loader/Loader3D";
 import { useNavigate } from 'react-router-dom';
 
 const headingStyle = {

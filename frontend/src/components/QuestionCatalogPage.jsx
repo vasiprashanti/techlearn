@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Filter, Search } from 'lucide-react';
+import { Check, ChevronDown, Filter, Search, Code, Database, Cpu, Brain, Briefcase, ChevronRight, Flame, ArrowLeft } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
+import { practiceAPI } from '../services/practiceApi';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
@@ -27,7 +28,7 @@ function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
       <button
         type="button"
         onClick={onToggle}
-        className="flex h-11 min-w-[138px] items-center justify-between gap-2 rounded-full border border-[#cfdeea] bg-[#edf5fa] px-4 text-sm font-medium text-[#5b7087] shadow-[0_8px_20px_rgba(125,157,189,0.09)] transition hover:border-[#bdd2e3] hover:bg-[#f3f8fb]"
+        className="dashboard-inner-surface flex h-11 min-w-[138px] items-center justify-between gap-2 rounded-full px-4 text-sm font-medium text-[#5b7087] dark:text-[#9cd6ff]"
       >
         <span className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-[#6a88a7]" />
@@ -37,7 +38,7 @@ function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-20 mt-3 w-40 overflow-hidden rounded-2xl border border-[#d5e5f0] bg-[#f8fbfd] shadow-[0_18px_48px_rgba(76,114,152,0.14)]">
+        <div className="dashboard-surface dashboard-surface-strong absolute right-0 z-20 mt-3 w-40 overflow-hidden">
           <div className="py-2">
             {options.map((option) => {
               const selected = value === option;
@@ -80,6 +81,8 @@ export default function QuestionCatalogPage({
   const [selectedTag, setSelectedTag] = useState('All');
   const [showAllTags, setShowAllTags] = useState(false);
   const [openMenu, setOpenMenu] = useState(null);
+  const [remoteQuestions, setRemoteQuestions] = useState([]);
+  const [practiceStats, setPracticeStats] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -90,6 +93,43 @@ export default function QuestionCatalogPage({
     setSelectedTag('All');
     setShowAllTags(false);
   }, [selectedTopic, lockedTopic]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const isDashboardPracticeRoute = location.pathname.startsWith('/dashboard/practice');
+
+    practiceAPI
+      .getQuestions(lockedTopic)
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) setRemoteQuestions(data);
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteQuestions([]);
+      });
+
+    if (isDashboardPracticeRoute) {
+      practiceAPI
+        .getStats()
+        .then((data) => {
+          if (!cancelled) setPracticeStats(data);
+        })
+        .catch(() => {
+          if (!cancelled) setPracticeStats(null);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lockedTopic, location.pathname]);
+
+  const displayQuestions = useMemo(() => {
+    const merged = new Map();
+    [...questions, ...remoteQuestions].forEach((question) => {
+      if (question?.id) merged.set(String(question.id), question);
+    });
+    return [...merged.values()];
+  }, [questions, remoteQuestions]);
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -104,16 +144,16 @@ export default function QuestionCatalogPage({
 
   const availableTags = useMemo(() => {
     const pool = selectedTopic === 'All Topics'
-      ? questions
-      : questions.filter((question) => question.topic === selectedTopic);
+        ? displayQuestions
+        : displayQuestions.filter((question) => question.topic === selectedTopic);
 
     return Array.from(new Set(pool.map((question) => question.subtitle))).sort((a, b) =>
       a.localeCompare(b)
     );
-  }, [questions, selectedTopic]);
+  }, [displayQuestions, selectedTopic]);
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter((question) => {
+    return displayQuestions.filter((question) => {
       const matchesSearch =
         !searchTerm ||
         question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,12 +171,61 @@ export default function QuestionCatalogPage({
 
       return matchesSearch && matchesDifficulty && matchesTopic && matchesTag;
     });
-  }, [questions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
+  }, [displayQuestions, searchTerm, selectedDifficulty, selectedTopic, selectedTag]);
 
   const visibleTags = useMemo(() => {
     if (showAllTags) return availableTags;
     return availableTags.slice(0, INITIAL_VISIBLE_TAGS);
   }, [availableTags, showAllTags]);
+
+  const effectivePracticeTracks = useMemo(() => {
+    const defaultTracks = {
+      'DSA': { track: 'DSA', attempted: 0, total: 0, accuracy: 0, icon: <Code className="w-4 h-4 text-blue-500" /> },
+      'SQL': { track: 'SQL', attempted: 0, total: 0, accuracy: 0, icon: <Database className="w-4 h-4 text-sky-500" /> },
+      'Core CS': { track: 'Core CS', attempted: 0, total: 0, accuracy: 0, icon: <Cpu className="w-4 h-4 text-slate-500" /> },
+      'Aptitude': { track: 'Aptitude', attempted: 0, total: 0, accuracy: 0, icon: <Brain className="w-4 h-4 text-indigo-500" /> },
+      'Company': { track: 'Company', attempted: 0, total: 0, accuracy: 0, icon: <Briefcase className="w-4 h-4 text-orange-500" /> },
+    };
+
+    const visibleTotals = displayQuestions.reduce((accumulator, question) => {
+      const topic = question.topic === 'Company' ? 'Company' : question.topic;
+      if (['DSA', 'Core CS', 'SQL', 'Aptitude', 'Company'].includes(topic)) {
+        accumulator[topic] = (accumulator[topic] || 0) + 1;
+      }
+      return accumulator;
+    }, {});
+
+    if (practiceStats?.tracks) {
+      practiceStats.tracks.forEach((t) => {
+        const key = t.track === 'Company' ? 'Company' : t.track;
+        if (defaultTracks[key]) {
+          defaultTracks[key].attempted = t.attempted || 0;
+          defaultTracks[key].correct = t.correct || 0;
+          defaultTracks[key].accuracy = t.accuracy || 0;
+          defaultTracks[key].total = t.total || 0;
+        }
+      });
+    }
+
+    Object.keys(defaultTracks).forEach((key) => {
+      defaultTracks[key].total = Math.max(defaultTracks[key].total, visibleTotals[key] || 0);
+    });
+
+    return Object.values(defaultTracks);
+  }, [displayQuestions, practiceStats]);
+
+  const handleTrackNavigate = (trackName) => {
+    const routeMap = {
+      'DSA': '/dashboard/practice/dsa',
+      'SQL': '/dashboard/practice/sql',
+      'Core CS': '/dashboard/practice/core-cs',
+      'Aptitude': '/dashboard/practice/aptitude',
+      'Company': '/dashboard/practice/company-based',
+    };
+    if (routeMap[trackName]) {
+      navigate(routeMap[trackName]);
+    }
+  };
 
   const handleRowOpen = (question) => {
     if (!question?.topic || !question?.id) return;
@@ -193,28 +282,94 @@ export default function QuestionCatalogPage({
     }
   };
 
+  const showBackBtn = location.pathname.startsWith('/dashboard/practice/');
+
   return (
-    <UserSidebarLayout maxWidthClass="max-w-7xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <section className="p-1 sm:p-2">
+          {showBackBtn && (
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/practice")}
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Practice
+            </button>
+          )}
           <div className="mb-5">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-[2rem]">
-              {pageTitle}
+            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
+              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                {pageTitle?.toUpperCase()}
+              </span>
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            <p className="dashboard-page-subtitle">
               {pageSubtitle}
             </p>
           </div>
 
-          <div className="relative z-30 rounded-[1.375rem] border border-white/20 bg-white/60 p-3 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-800/60 sm:p-4">
+          {!showBackBtn && (
+            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[110px] relative overflow-hidden">
+                <div className="absolute right-2 bottom-2 text-orange-500/10 dark:text-orange-500/5">
+                  <Flame className="w-16 h-16" />
+                </div>
+                <div className="flex items-center justify-between gap-2 z-10">
+                  <p className="dashboard-micro-label">Practice Streak</p>
+                  <Flame className="w-4 h-4 text-orange-500" />
+                </div>
+                <p className="mt-2 text-3xl font-semibold text-[#0d2a57] dark:text-[#dff3ff] z-10">
+                  {practiceStats?.streak || 0} <span className="text-xs font-normal text-[#4c6f9a] dark:text-[#7fb8e2]">days</span>
+                </p>
+              </div>
+              
+              {effectivePracticeTracks.map((track) => (
+                <button
+                  key={track.track}
+                  type="button"
+                  onClick={() => handleTrackNavigate(track.track)}
+                  className="dashboard-surface p-4 text-left border border-transparent hover:border-[#3C83F6]/45 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between min-h-[110px]"
+                >
+                  <div className="w-full flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="shrink-0">{track.icon}</span>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff] truncate group-hover:text-[#3C83F6] transition-colors">
+                        {track.track}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8] shrink-0 font-medium">
+                      {track.accuracy || 0}%
+                    </span>
+                  </div>
+                  
+                  <div className="mt-3 w-full flex items-end justify-between">
+                    <div>
+                      <p className="text-[11px] text-[#4c6f9a] dark:text-[#7fb8e2] font-medium leading-none">
+                        {track.attempted || 0}/{track.total || 0} solved
+                      </p>
+                      {track.correct !== undefined && (
+                        <p className="text-[10px] text-[#4c6f9a]/75 dark:text-[#7fb8e2]/75 mt-1 leading-none">
+                          {track.correct} correct
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#3C83F6] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="dashboard-surface dashboard-surface-strong relative z-30 p-3 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <label className="relative flex-1">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f82ac] dark:text-[#81bde6]" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search questions..."
-                  className="h-11 w-full rounded-full border border-white/20 bg-white/70 pl-11 pr-4 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:ring-4 focus:ring-blue-200/40 dark:border-gray-700/20 dark:bg-gray-900/40 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:border-blue-600 dark:focus:ring-blue-900/30"
+                  className="dashboard-input-surface rounded-full pl-11 pr-4"
                 />
               </label>
 
@@ -235,7 +390,7 @@ export default function QuestionCatalogPage({
 
             {showTopicFilter && (
               <div className="mt-3 space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">Topics</p>
+                <p className="dashboard-micro-label">Topics</p>
                 <div className="question-catalog-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                   {topicOptions.map((topic) => {
                     const active = selectedTopic === topic;
@@ -246,8 +401,8 @@ export default function QuestionCatalogPage({
                         onClick={() => setSelectedTopic(topic)}
                         className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition border ${
                           active
-                            ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-700/50 dark:bg-blue-900/30 dark:text-blue-200'
-                            : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                            ? 'border-blue-200 bg-blue-50 text-blue-800 dark:border-[#6bb8ec]/32 dark:bg-[#0d366f] dark:text-white'
+                            : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#081a3e] dark:text-[#d7efff] dark:hover:bg-[#0d366f]/72'
                         }`}
                       >
                         {topic}
@@ -260,7 +415,7 @@ export default function QuestionCatalogPage({
 
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
+                <p className="dashboard-micro-label">
                   {selectedTopic === 'Company' ? 'Companies' : 'Subtopics'}
                 </p>
                 {availableTags.length > INITIAL_VISIBLE_TAGS && (
@@ -280,8 +435,8 @@ export default function QuestionCatalogPage({
                   onClick={() => setSelectedTag('All')}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                     selectedTag === 'All'
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-700/50 dark:bg-emerald-900/30 dark:text-emerald-200'
-                      : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-400/32 dark:bg-[#0b3b35] dark:text-[#f1fff9]'
+                      : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#081a3e] dark:text-[#d7efff] dark:hover:bg-[#0d366f]/72'
                   }`}
                 >
                   {selectedTopic === 'Company' ? 'All Companies' : 'All Subtopics'}
@@ -295,8 +450,8 @@ export default function QuestionCatalogPage({
                       onClick={() => setSelectedTag(tag)}
                       className={`rounded-full px-4 py-2 text-sm font-medium transition border ${
                         active
-                          ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-200'
-                          : 'border-white/10 bg-white/40 text-gray-700 hover:bg-white/60 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-200 dark:hover:bg-gray-800/60'
+                          ? 'border-slate-200 bg-slate-50 text-slate-800 dark:border-[#6bb8ec]/32 dark:bg-[#0d366f] dark:text-white'
+                          : 'border-[#9fcfff]/45 bg-[#edf7ff] text-[#3f5f87] hover:bg-[#f5fbff] dark:border-[#6bb8ec]/24 dark:bg-[#081a3e] dark:text-[#d7efff] dark:hover:bg-[#0d366f]/72'
                       }`}
                     >
                       {tag}
@@ -307,11 +462,11 @@ export default function QuestionCatalogPage({
             </div>
           </div>
 
-          <div className="relative z-0 mt-5 overflow-hidden rounded-[1.375rem] border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+          <div className="dashboard-surface relative z-0 mt-5 overflow-hidden">
             <div className="question-catalog-scroll max-h-[62vh] overflow-y-auto overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white/50 text-left text-xs font-semibold uppercase tracking-[0.08em] text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                  <tr className="bg-white/45 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[#5f7592] dark:bg-[#0b214d]/65 dark:text-[#9bc5e8]">
                     <th className="w-14 px-4 py-4">#</th>
                     <th className="px-4 py-4">Title</th>
                     <th className="w-36 px-4 py-4">Difficulty</th>
@@ -323,12 +478,12 @@ export default function QuestionCatalogPage({
                     <tr
                       key={question.id}
                       onClick={() => handleRowOpen(question)}
-                      className="cursor-pointer border-t border-white/10 text-sm text-gray-800 transition hover:bg-white/40 dark:border-gray-700/30 dark:text-gray-200 dark:hover:bg-gray-800/40"
+                      className="cursor-pointer border-t border-white/10 text-sm text-[#1a365d] transition hover:bg-white/32 dark:border-[#1e3f73]/38 dark:text-[#d7efff] dark:hover:bg-[#0f2c60]/44"
                     >
-                      <td className="px-4 py-4 text-gray-500 dark:text-gray-400">{index + 1}</td>
+                      <td className="px-4 py-4 text-[#6d86a4] dark:text-[#88b8df]">{index + 1}</td>
                       <td className="px-4 py-4">
-                        <div className="font-medium text-gray-900 dark:text-white">{question.title}</div>
-                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">{question.subtitle}</div>
+                        <div className="font-medium text-[#0d2a57] dark:text-[#dff3ff]">{question.title}</div>
+                        <div className="mt-1 text-xs text-[#5f7592] dark:text-[#88b8df]">{question.subtitle}</div>
                       </td>
                       <td className="px-4 py-4">
                         <span
@@ -352,7 +507,7 @@ export default function QuestionCatalogPage({
                   ))}
                   {filteredQuestions.length === 0 && (
                     <tr>
-                      <td colSpan="4" className="px-4 py-10 text-center text-sm text-gray-600 dark:text-gray-300">
+                      <td colSpan="4" className="px-4 py-10 text-center text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
                         No questions match the selected filters.
                       </td>
                     </tr>
@@ -361,8 +516,8 @@ export default function QuestionCatalogPage({
               </table>
             </div>
 
-            <div className="border-t border-white/10 bg-white/40 px-4 py-3 text-sm text-gray-600 dark:border-gray-700/30 dark:bg-gray-900/30 dark:text-gray-300">
-              Showing {filteredQuestions.length} of {questions.length} questions
+            <div className="border-t border-white/10 bg-white/32 px-4 py-3 text-sm text-[#4c6f9a] dark:border-[#1e3f73]/38 dark:bg-[#0b214d]/58 dark:text-[#7fb8e2]">
+              Showing {filteredQuestions.length} of {displayQuestions.length} questions
             </div>
           </div>
         </section>

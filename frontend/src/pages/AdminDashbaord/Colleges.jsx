@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyColleges } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
 
@@ -60,7 +60,8 @@ const Colleges = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [colleges, setColleges] = useState(emptyColleges);
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('colleges', emptyColleges));
+  const [isLoadingColleges, setIsLoadingColleges] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('colleges', emptyColleges)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -88,12 +89,19 @@ const Colleges = () => {
       .getColleges()
       .then((remoteColleges) => {
         if (!cancelled) {
-          setColleges(preferRemoteData(remoteColleges, emptyColleges));
+          const normalized = preferRemoteData(remoteColleges, emptyColleges);
+          setColleges(normalized);
+          writeAdminSessionCache('colleges', normalized);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setColleges(emptyColleges);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingColleges(false);
         }
       });
 
@@ -259,7 +267,7 @@ const Colleges = () => {
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsFormOpen(false)} />
           <div className="relative w-full max-w-xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingCollege ? 'Edit College' : 'Add College'}</h2>
+                  <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">{editingCollege ? 'Edit College' : 'Add College'}</h2>
               <button onClick={() => setIsFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
             <div className="p-6 space-y-4">
@@ -388,19 +396,25 @@ const Colleges = () => {
 
         <main
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
-          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
         >
           <div className="max-w-[1600px] mx-auto space-y-6 sm:space-y-8">
 
             {/* Header */}
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? 'bg-[#daf0fa]/78 dark:bg-[#001233]/76' : 'bg-[#daf0fa]/92 dark:bg-[#001233]/90'}`}>
-              <div>
-                <h1 className="admin-page-title">Colleges</h1>
+            <div>
+              <h1 className="admin-page-title">Colleges</h1>
+            </div>
 
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
-
+            {isLoadingColleges ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading colleges..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
             {/* Top Section */}
             <section className="space-y-4 sm:space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
@@ -431,7 +445,7 @@ const Colleges = () => {
                     <div className="flex-1 hidden sm:block" />
                     <button
                       onClick={openCreate}
-                      className="h-10 sm:h-9 w-full sm:w-auto px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors ml-0 sm:ml-auto"
+                      className="h-10 sm:h-9 w-full sm:w-auto px-5 sm:px-7 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-sm font-semibold whitespace-nowrap shrink-0 flex items-center justify-center gap-1.5 transition-colors ml-0 sm:ml-auto"
                       style={{ minWidth: 0 }}
                     >
                       <FiPlus className="w-3.5 h-3.5" />
@@ -443,7 +457,7 @@ const Colleges = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                 <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-                  <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
+                    <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
                     <FiHome className="w-5 h-5" />
                   </div>
                   <div>
@@ -473,7 +487,7 @@ const Colleges = () => {
 
                     <div className="flex items-start justify-between min-h-[40px] sm:min-h-[36px]">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white dark:text-white flex items-center justify-center text-base font-semibold border border-[#3C83F6]/20 dark:border-white/10 shadow-sm">
+                        <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] flex items-center justify-center text-base font-semibold border border-[#3C83F6]/20 dark:border-[#bceaff]/30 shadow-sm">
                           {college.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
@@ -540,7 +554,7 @@ const Colleges = () => {
                     <div className="mt-auto">
                       <button
                         onClick={() => navigate(`/colleges/${college.id}`, { state: { college } })}
-                        className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
+                        className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
                       >
                         View College
                         <FiArrowUpRight className="w-4 h-4" />
@@ -551,6 +565,8 @@ const Colleges = () => {
               })}
             </div>
 
+            </>
+            )}
           </div>
         </main>
       </div>

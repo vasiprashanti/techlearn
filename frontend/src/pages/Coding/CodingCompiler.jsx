@@ -3,7 +3,6 @@ import { Play, RotateCcw, Sun, Moon, ChevronDown } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { useTheme } from "../../context/ThemeContext";
 import ScrollProgress from "../../components/ScrollProgress";
-import { compilerAPI } from "../../services/api";
 import axios from "axios";
 import { useParams } from "react-router-dom";
 
@@ -564,7 +563,7 @@ const CodingCompiler = ({ user, contestData }) => {
         {/* Logo */}
         <div className="flex items-center">
           <img
-            src={theme === "light" ? "/logoo.png" : "/logoo2.png"}
+            src={theme === "light" ? "/logoo-small.webp" : "/logoo2-small.webp"}
             alt="Logo"
             className="h-8 w-auto object-contain"
             onError={(e) => {

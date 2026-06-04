@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyAnalyticsState } from '../../data/adminEmptyStates';
 import {
@@ -188,24 +187,18 @@ const Analytics = () => {
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 
             ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} 
-            pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden
+            pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden
             ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
 
-            {/* Header */}
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div>
-                <h1 className="admin-page-title">Analytics</h1>
-
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
+            <div>
+              <h1 className="admin-page-title">Analytics</h1>
+            </div>
 
             {/* Platform Overview */}
-            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 rounded-xl p-4 md:p-5">
-              <h2 className="admin-section-heading mb-3">Platform Overview</h2>
+            <section className="space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
                 {analyticsState.platformOverview.map((kpi, i) => {
                   const Icon = platformOverviewIconMap[kpi.label] || FiBarChart2;

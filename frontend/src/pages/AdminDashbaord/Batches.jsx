@@ -3,11 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyBatches } from '../../data/adminEmptyStates';
-import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome, FiBookOpen, FiMoreHorizontal } from 'react-icons/fi';
+
+const DEFAULT_TRACK_OPTIONS = [
+  { value: 'DSA', label: 'DSA' },
+  { value: 'Core', label: 'Core CS' },
+  { value: 'SQL', label: 'SQL' },
+];
+
+const getTodayIsoDate = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -94,6 +108,133 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
     </div>
   );
 };
+const getBatchTheme = (status) => {
+  switch (status) {
+    case 'Active':
+      return {
+        topTint: 'bg-[#d2e9e5] dark:bg-[#204744]',
+        iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]',
+        iconColor: 'text-[#129775] dark:text-emerald-300',
+      };
+    case 'Draft':
+      return {
+        topTint: 'bg-[#d9ddee] dark:bg-[#223454]',
+        iconBg: 'bg-[#e6ebf5] dark:bg-[#2f4466]',
+        iconColor: 'text-[#3c83f6] dark:text-blue-300',
+      };
+    case 'Expired':
+    case 'Archived':
+      return {
+        topTint: 'bg-[#efe6d2] dark:bg-[#4f4228]',
+        iconBg: 'bg-[#f8f0df] dark:bg-[#625133]',
+        iconColor: 'text-[#d17d00] dark:text-amber-300',
+      };
+    default:
+      return {
+        topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]',
+        iconBg: 'bg-[#e7f0f6] dark:bg-[#30495f]',
+        iconColor: 'text-[#3c83f6] dark:text-blue-300',
+      };
+  }
+};
+
+const BatchCard = ({ batch, onEdit, onDelete, navigate }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const theme = getBatchTheme(batch.status);
+
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      if (!event.target.closest(`.batch-actions-${batch.id}`)) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, [batch.id]);
+
+  return (
+    <article className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group">
+      <div className={`absolute right-3 top-3 z-20 batch-actions-${batch.id}`}>
+        <button
+          type="button"
+          className="w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+          onClick={(event) => {
+            event.stopPropagation();
+            setMenuOpen(!menuOpen);
+          }}
+          aria-label="Open batch actions"
+        >
+          <FiMoreHorizontal className="w-4 h-4" />
+        </button>
+
+        {menuOpen && (
+          <div className="absolute right-0 top-9 w-40 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                onEdit(batch);
+              }}
+              className="w-full text-left px-3.5 py-2.5 text-sm transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                onDelete(batch);
+              }}
+              className="w-full text-left px-3.5 py-2.5 text-sm transition-colors text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint}`}>
+        <div className="flex items-start gap-2.5">
+          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
+            <FiBookOpen className={`w-5 h-5 ${theme.iconColor}`} />
+          </div>
+          <div className="min-h-[64px] flex-1 min-w-0">
+            <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white truncate">{batch.name}</h3>
+            <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300 line-clamp-2">{batch.college || 'Unassigned College'}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                {batch.track || 'No Track'}
+              </span>
+              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+                {batch.status || 'Draft'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent">
+        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
+          <span>Start Date</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{batch.start}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
+          <span>End Date</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{batch.end}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
+          <span>Students</span>
+          <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{batch.students || 0}</span>
+        </div>
+
+        <button
+          onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
+          className="mt-4 w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs md:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+        >
+          View Batch
+        </button>
+      </div>
+    </article>
+  );
+};
 
 const Batches = () => {
   const { theme } = useTheme();
@@ -101,9 +242,9 @@ const Batches = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [batches, setBatches] = useState(emptyBatches);
-  const [colleges, setColleges] = useState([]);
-  const [trackOptions, setTrackOptions] = useState([]);
+  const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
+  const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -127,32 +268,26 @@ const Batches = () => {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+  const todayIsoDate = getTodayIsoDate();
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
-  const batchFormInputClass = 'mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
+  const batchFormInputClass = 'mt-1 w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges, remoteTrackTemplates] = await Promise.all([
+    const [remoteBatches, remoteColleges] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
-      adminAPI.getTrackTemplates(),
     ]);
 
-    setBatches(preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch));
-    setColleges(
-      preferRemoteData(remoteColleges, []).map((college) => ({
-        id: college.id || college._id,
-        name: college.name || 'Untitled College',
-      }))
-    );
-    setTrackOptions(
-      Array.from(
-        new Set(
-          preferRemoteData(remoteTrackTemplates, [])
-            .map((template) => String(template?.name || '').trim())
-            .filter(Boolean)
-        )
-      )
-    );
+    const normalizedBatches = preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch);
+    const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({
+      id: college.id || college._id,
+      name: college.name || 'Untitled College',
+    }));
+
+    setBatches(normalizedBatches);
+    setColleges(normalizedColleges);
+    writeAdminSessionCache('batches', normalizedBatches);
+    writeAdminSessionCache('batches-colleges', normalizedColleges);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -164,6 +299,10 @@ const Batches = () => {
       if (!cancelled) {
         setBatches(emptyBatches);
         setColleges([]);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setIsLoadingBatches(false);
       }
     });
 
@@ -257,12 +396,12 @@ const Batches = () => {
       setCreateError('Start date and end date are required');
       return;
     }
-    if (createBatchForm.startDate > createBatchForm.endDate) {
-      setCreateError('End date must be after start date');
+    if (createBatchForm.startDate < todayIsoDate) {
+      setCreateError('Start date must be today or a future date');
       return;
     }
-    if (trackOptions.length > 0 && !createBatchForm.assignedTrack) {
-      setCreateError('Assigned track is required');
+    if (createBatchForm.startDate > createBatchForm.endDate) {
+      setCreateError('End date must be after start date');
       return;
     }
     if (createBatchForm.batchSize && (!/^\d+$/.test(createBatchForm.batchSize) || Number(createBatchForm.batchSize) <= 0)) {
@@ -300,7 +439,7 @@ const Batches = () => {
       setIsCreateFormOpen(false);
       setEditingBatchId(null);
     } catch (error) {
-      setCreateError(error.message || 'Failed to save batch');
+      setCreateError(error.message || (editingBatchId ? 'Failed to update batch.' : 'Failed to create batch.'));
     } finally {
       setIsSavingBatch(false);
     }
@@ -336,14 +475,14 @@ const Batches = () => {
       {isCreateFormOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsCreateFormOpen(false)} />
-          <div className="relative w-full max-w-2xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-visible">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">{editingBatchId ? 'Edit Batch' : 'Create Batch'}</h2>
-              <button onClick={() => setIsCreateFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-xl shadow-2xl overflow-visible">
+            <div className="px-5 py-3 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-[#3C83F6] dark:text-white">{editingBatchId ? 'Edit Batch' : 'Create Batch'}</h2>
+              <button onClick={() => setIsCreateFormOpen(false)} className="text-xs text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60">Close</button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Name*</label>
                   <input
@@ -359,7 +498,7 @@ const Batches = () => {
                     <select
                       value={createBatchForm.college}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, college: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
                       <option className={dropdownOptionClass} value="">Select college</option>
                       {collegeOptions.map((college) => (
@@ -371,7 +510,7 @@ const Batches = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
                   <div className="mt-1">
@@ -381,9 +520,13 @@ const Batches = () => {
                         setCreateBatchForm((prev) => ({
                           ...prev,
                           startDate: nextDate,
-                          endDate: prev.endDate && nextDate && prev.endDate < nextDate ? '' : prev.endDate,
+                          endDate:
+                            prev.endDate && nextDate && prev.endDate < nextDate
+                              ? ''
+                              : prev.endDate,
                         }))
                       }
+                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -400,7 +543,7 @@ const Batches = () => {
                           endDate: nextDate,
                         }))
                       }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
@@ -408,19 +551,18 @@ const Batches = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track*</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
                       value={createBatchForm.assignedTrack}
                       onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
-                      disabled={trackOptions.length === 0}
+                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="">{trackOptions.length ? 'Select track' : 'No tracks available'}</option>
-                      {trackOptions.map((trackName) => (
-                        <option className={dropdownOptionClass} key={trackName} value={trackName}>{trackName}</option>
+                      <option className={dropdownOptionClass} value="">Optional track</option>
+                      {DEFAULT_TRACK_OPTIONS.map((track) => (
+                        <option className={dropdownOptionClass} key={track.value} value={track.value}>{track.label}</option>
                       ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
@@ -447,7 +589,7 @@ const Batches = () => {
                   <select
                     value={createBatchForm.status}
                     onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, status: e.target.value }))}
-                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                   >
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
                     <option className={dropdownOptionClass} value="Active">Active</option>
@@ -460,17 +602,17 @@ const Batches = () => {
 
               {createError && <p className="text-xs text-red-500">{createError}</p>}
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="pt-1.5 flex items-center justify-end gap-2">
                 <button
                   onClick={() => setIsCreateFormOpen(false)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                  className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={createBatch}
                   disabled={isSavingBatch}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
                 >
                   {isSavingBatch ? 'Saving...' : editingBatchId ? 'Save Changes' : 'Create Batch'}
                 </button>
@@ -516,48 +658,55 @@ const Batches = () => {
 
         <main
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
-          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+          className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div>
-                <h1 className="admin-page-title">Batches</h1>
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
+            <div>
+              <h1 className="admin-page-title">Batches</h1>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_170px_auto] gap-2.5 items-center">
+            {isLoadingBatches ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading batches..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_160px_150px_auto] gap-2 items-center">
               <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
-                <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/35 dark:text-white/35" />
+                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                 <input
                   value={batchSearchTerm}
                   onChange={(e) => setBatchSearchTerm(e.target.value)}
                   placeholder="Search batches..."
-                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-10 pr-3 text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-9 pr-3 text-xs sm:text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                 />
               </div>
 
               <div className="relative min-w-0">
-                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
                     value={collegeFilter}
                     onChange={(e) => setCollegeFilter(e.target.value)}
-                    className="appearance-none w-full h-10 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
                   >
                     {['All Colleges', ...collegeOptions].map((college) => (
                       <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
                     ))}
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                 </div>
               </div>
 
               <div className="relative min-w-0">
-                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none w-full h-10 rounded-xl bg-transparent px-3.5 pr-9 text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
                   >
                     <option className={dropdownOptionClass} value="All Status">All Status</option>
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
@@ -565,96 +714,41 @@ const Batches = () => {
                     <option className={dropdownOptionClass} value="Expired">Expired</option>
                     <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                 </div>
               </div>
 
               <button
                 onClick={openCreateBatch}
-                className="h-10 px-5 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
+                className="h-9 px-4 rounded-xl bg-[#3C83F6] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
               >
                 <FiPlus className="w-3.5 h-3.5" />
                 Create Batch
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
               {[
                 { label: 'Active', count: counts.Active, color: 'text-emerald-500' },
                 { label: 'Draft', count: counts.Draft, color: 'text-indigo-500 dark:text-indigo-400' },
                 { label: 'Archived', count: counts.Archived, color: 'text-black/35 dark:text-white/40' },
               ].map(({ label, count, color }) => (
-                <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl px-6 py-5">
-                  <p className="admin-micro-label text-black/40 dark:text-white/40">{label}</p>
-                  <p className={`text-3xl font-light tracking-tight mt-2 ${color}`}>{count}</p>
+                <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl px-2 sm:px-5 py-2.5 sm:py-4 flex flex-col items-center sm:items-start text-center sm:text-left">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">{label}</p>
+                  <p className={`text-lg sm:text-2xl font-semibold tracking-tight mt-0.5 sm:mt-1 ${color}`}>{count}</p>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 xl:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredBatches.map((batch) => (
-                <div key={batch.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-4 rounded-2xl flex flex-col gap-3.5 hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="inline-flex items-center gap-1.5 text-xs font-medium text-black/55 dark:text-white/55 min-w-0">
-                      <FiHome className="w-3.5 h-3.5" />
-                      <span className="break-words">{batch.college || 'Unassigned college'}</span>
-                    </p>
-                    <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusBadge(batch.status)}`}>
-                      {batch.status}
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-black/90 dark:text-white leading-none break-words">{batch.name}</h3>
-                    <p className="text-[13px] sm:text-sm md:text-base text-black/55 dark:text-white/50 leading-relaxed sm:leading-snug line-clamp-2">
-                      {batch.track || 'No tracks are assigned to this batch.'}
-                    </p>
-                  </div>
-
-                  <div className="h-px bg-black/5 dark:bg-white/10" />
-
-                  <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
-                    <div className="space-y-1.5 min-w-0">
-                      <p className="text-[11px] text-black/45 dark:text-white/45">Start</p>
-                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white break-words">{batch.start}</p>
-                    </div>
-                    <div className="space-y-1.5 min-w-0">
-                      <p className="text-[11px] text-black/45 dark:text-white/45">End</p>
-                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white break-words">{batch.end}</p>
-                    </div>
-                    <div className="space-y-1.5 min-w-0">
-                      <p className="text-[11px] text-black/45 dark:text-white/45">Students</p>
-                      <p className="text-sm md:text-base font-medium text-black/90 dark:text-white">{batch.students}</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_42px_42px] gap-2 pt-0.5">
-                    <button
-                      onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
-                      className="col-span-2 sm:col-span-1 w-full h-10 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
-                        <circle cx="12" cy="12" r="2.5" />
-                      </svg>
-                      View Batch
-                    </button>
-                    <button
-                      onClick={() => openEditBatch(batch)}
-                      className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
-                      aria-label={`Edit ${batch.name}`}
-                    >
-                      <FiEdit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setPendingDeleteBatch(batch)}
-                      className="h-9 sm:h-10 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
-                      aria-label={`Delete ${batch.name}`}
-                    >
-                      <FiTrash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+                <BatchCard
+                  key={batch.id}
+                  batch={batch}
+                  onEdit={openEditBatch}
+                  onDelete={setPendingDeleteBatch}
+                  navigate={navigate}
+                />
               ))}
             </div>
 
@@ -662,6 +756,8 @@ const Batches = () => {
               <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
                 No batches found for the selected filters.
               </div>
+            )}
+            </>
             )}
           </div>
         </main>

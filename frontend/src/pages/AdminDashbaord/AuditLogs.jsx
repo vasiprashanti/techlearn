@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyAuditLogs, emptyAuditSummary } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit3, FiTrash2, FiDownload } from 'react-icons/fi';
@@ -174,22 +173,12 @@ export default function AuditLogs() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen z-10 transition-all duration-700 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div className="max-w-[1500px] mx-auto space-y-5">
 
-            {/* Header */}
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div>
-                <h1 className="admin-page-title">Audit Logs</h1>
-
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
-
-            <section className="space-y-0.5">
-              <h2 className="text-2xl font-semibold tracking-tight text-[#1f3147] dark:text-white">Audit Logs</h2>
-              <p className="text-sm text-[#6e839b] dark:text-white/60">Track all admin actions on the platform</p>
-            </section>
+            <div>
+              <h1 className="admin-page-title">Audit Logs</h1>
+            </div>
 
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -214,12 +203,12 @@ export default function AuditLogs() {
                   placeholder="Search logs..."
                   value={tableSearch}
                   onChange={e => setTableSearch(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  className="dashboard-input-surface h-10 rounded-full pl-11 pr-4 text-[13px] sm:text-sm leading-none"
                 />
               </div>
               <button
                 onClick={exportLogs}
-                className="h-10 px-4 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold inline-flex items-center justify-center gap-2 shrink-0"
+                className="dashboard-primary-btn h-10 shrink-0 px-4 text-sm"
               >
                 <FiDownload className="w-3.5 h-3.5" />
                 Export Logs

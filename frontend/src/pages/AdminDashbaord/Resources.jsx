@@ -2,14 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import LoadingScreen from '../../components/Loader/Loader3D';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
-import { emptyResources } from '../../data/adminEmptyStates';
-import { FiSearch, FiPlus, FiEye, FiDownload, FiFileText, FiVideo, FiLink2, FiX, FiEdit2, FiTrash2, FiMoreHorizontal, FiUpload, FiChevronDown } from 'react-icons/fi';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import { adminAPI } from '../../services/adminApi';
+import { FiSearch, FiPlus, FiX, FiEdit2, FiTrash2, FiChevronDown, FiMap, FiUpload, FiEye } from 'react-icons/fi';
 
-const resourceCategoryOptions = ['Courses', 'Important Topics', 'Resume Templates'];
+const createRoadmapForm = () => ({
+  title: '',
+  description: '',
+  markdownBody: '',
+  assignedBatchIds: [],
+  status: 'Active',
+  fileName: '',
+});
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -20,10 +27,9 @@ const searchRoutes = [
   { id: 'students', title: 'Students', category: 'Organization' },
   { id: 'question-bank', title: 'Question Bank', category: 'Learning' },
   { id: 'track-templates', title: 'Track Templates', category: 'Learning' },
-  { id: 'resources', title: 'Resources', category: 'Learning' },
+  { id: 'admin/roadmaps', title: 'Roadmaps', category: 'Learning' },
   { id: 'certificates', title: 'Certificates', category: 'Learning' },
   { id: 'submission-monitor', title: 'Submission Monitor', category: 'Operations' },
-  { id: 'notifications', title: 'Notifications', category: 'Operations' },
   { id: 'audit-logs', title: 'Audit Logs', category: 'Operations' },
   { id: 'reports', title: 'Reports', category: 'Operations' },
 ];
@@ -36,45 +42,41 @@ export default function Resources() {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tableSearch, setTableSearch] = useState('');
-  const [resourceEntries, setResourceEntries] = useState(emptyResources);
-  const [resourceForm, setResourceForm] = useState({
-    title: '',
-    category: '',
-    file: null,
-    fileName: '',
-  });
-  const [editingResourceId, setEditingResourceId] = useState(null);
-  const [isSavingResource, setIsSavingResource] = useState(false);
-  const [openResourceMenuId, setOpenResourceMenuId] = useState(null);
-  const [resourceMenuPosition, setResourceMenuPosition] = useState({ top: 0, left: 0 });
-  const [resourceFormError, setResourceFormError] = useState('');
+
+  const [roadmapEntries, setRoadmapEntries] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
+  const [isRoadmapModalOpen, setIsRoadmapModalOpen] = useState(false);
+  const [editingRoadmapId, setEditingRoadmapId] = useState(null);
+  const [viewingRoadmap, setViewingRoadmap] = useState(null);
+  const [roadmapForm, setRoadmapForm] = useState(createRoadmapForm());
+  const [roadmapFormError, setRoadmapFormError] = useState('');
+  const [isSavingRoadmap, setIsSavingRoadmap] = useState(false);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
-  const isPersistedResource = (resourceId) => /^[a-f0-9]{24}$/i.test(String(resourceId || ''));
 
   useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     let cancelled = false;
 
-    adminAPI
-      .getResources()
-      .then((remoteResources) => {
-        if (!cancelled) {
-          const normalized = preferRemoteData(remoteResources, emptyResources).map((resource) => ({
-            ...resource,
-            id: resource.id || resource._id,
-            date: resource.date || resource.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
-            views: resource.views || 0,
-          }));
-          setResourceEntries(normalized);
-        }
+    Promise.all([
+      adminAPI.getRoadmaps(),
+      adminAPI.getBatches(),
+    ])
+      .then(([remoteRoadmaps, remoteBatches]) => {
+        if (cancelled) return;
+        setRoadmapEntries(Array.isArray(remoteRoadmaps) ? remoteRoadmaps : []);
+        setBatchOptions((Array.isArray(remoteBatches) ? remoteBatches : []).map((batch) => ({
+          id: batch.id || batch._id,
+          name: batch.name || 'Untitled Batch',
+          college: batch.college || '',
+        })));
       })
       .catch(() => {
         if (!cancelled) {
-          setResourceEntries(emptyResources);
+          setRoadmapEntries([]);
+          setBatchOptions([]);
         }
       });
 
@@ -97,24 +99,6 @@ export default function Resources() {
     else setSearchQuery('');
   }, [isSearchOpen]);
 
-  useEffect(() => {
-    const handleGlobalClick = (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) {
-        setOpenResourceMenuId(null);
-        return;
-      }
-      const clickedTrigger = target.closest('.resource-actions-trigger');
-      const clickedMenu = target.closest('.resource-actions-menu');
-      if (!clickedTrigger && !clickedMenu) {
-        setOpenResourceMenuId(null);
-      }
-    };
-
-    window.addEventListener('click', handleGlobalClick);
-    return () => window.removeEventListener('click', handleGlobalClick);
-  }, []);
-
   const filteredRoutes = searchRoutes.filter(r =>
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -122,197 +106,96 @@ export default function Resources() {
 
   const handleRouteSelect = (id) => { setIsSearchOpen(false); navigate('/' + id); };
 
-  const filteredResources = resourceEntries.filter(r => {
-    const matchSearch = !tableSearch || r.title.toLowerCase().includes(tableSearch.toLowerCase()) || r.category.toLowerCase().includes(tableSearch.toLowerCase());
-    return matchSearch;
-  });
-
-  const activeMenuResource = filteredResources.find((resource) => String(resource.id) === String(openResourceMenuId));
-
-  const totalViews = resourceEntries.reduce((acc, r) => acc + r.views, 0);
-  const uniqueCategories = [...new Set(resourceEntries.map(r => r.category))].length;
-
-  const typeIconMap = {
-    PDF: FiFileText,
-    Sheet: FiFileText,
-    Video: FiVideo,
-    Link: FiLink2,
+  const openAddRoadmapModal = () => {
+    setEditingRoadmapId(null);
+    setRoadmapForm(createRoadmapForm());
+    setRoadmapFormError('');
+    setIsRoadmapModalOpen(true);
   };
 
-  const detectResourceType = (fileName = '', mimeType = '') => {
-    const name = String(fileName).toLowerCase();
-    const mime = String(mimeType).toLowerCase();
-    if (mime.startsWith('video/') || /\.(mp4|mov|avi|mkv|webm)$/i.test(name)) return 'Video';
-    if (mime.includes('sheet') || /\.(xls|xlsx|csv)$/i.test(name)) return 'Sheet';
-    if (mime.includes('pdf') || /\.pdf$/i.test(name)) return 'PDF';
-    return 'PDF';
-  };
-
-  const openAddResourceModal = () => {
-    setEditingResourceId(null);
-    setResourceForm({ title: '', category: '', file: null, fileName: '' });
-    setResourceFormError('');
-    setIsAddResourceOpen(true);
-  };
-
-  const openEditResourceModal = (resource) => {
-    setEditingResourceId(resource.id);
-    setResourceForm({
-      title: resource.title || '',
-      category: resource.category || '',
-      file: null,
-      fileName: '',
+  const openEditRoadmapModal = (roadmap) => {
+    setEditingRoadmapId(roadmap.id || roadmap._id);
+    setRoadmapForm({
+      title: roadmap.title || '',
+      description: roadmap.description || '',
+      markdownBody: roadmap.markdownBody || '',
+      assignedBatchIds: (roadmap.assignedBatchIds || []).map((batchId) => String(batchId)),
+      status: roadmap.status || 'Active',
+      fileName: 'Assigned Roadmap.md',
     });
-    setResourceFormError('');
-    setOpenResourceMenuId(null);
-    setIsAddResourceOpen(true);
+    setRoadmapFormError('');
+    setIsRoadmapModalOpen(true);
   };
 
-  const closeAddResourceModal = () => {
-    setIsAddResourceOpen(false);
-    setEditingResourceId(null);
-    setResourceForm({ title: '', category: '', file: null, fileName: '' });
-    setIsSavingResource(false);
-    setResourceFormError('');
+  const closeRoadmapModal = () => {
+    setIsRoadmapModalOpen(false);
+    setEditingRoadmapId(null);
+    setRoadmapForm(createRoadmapForm());
+    setRoadmapFormError('');
+    setIsSavingRoadmap(false);
   };
 
-  const normalizeResource = (resource) => ({
-    ...resource,
-    id: resource?.id || resource?._id,
-    date: resource?.date || resource?.createdAt?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
-    views: resource?.views || 0,
-  });
-
-  const addResource = async () => {
-    if (!resourceForm.title.trim()) {
-      setResourceFormError('Resource name is required.');
-      return;
-    }
-
-    if (!resourceForm.category) {
-      setResourceFormError('Resource category is required.');
-      return;
-    }
-
-    if (!editingResourceId && !resourceForm.file) {
-      setResourceFormError('Please upload a resource file.');
-      return;
-    }
-
-    setIsSavingResource(true);
-
-    const fileType = detectResourceType(resourceForm.fileName || resourceForm.file?.name, resourceForm.file?.type);
-
-    const toDataUrl = (file) => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read uploaded file.'));
-      reader.readAsDataURL(file);
+  const toggleRoadmapBatch = (batchId) => {
+    setRoadmapForm((prev) => {
+      const nextId = String(batchId);
+      const selected = new Set((prev.assignedBatchIds || []).map(String));
+      if (selected.has(nextId)) selected.delete(nextId);
+      else selected.add(nextId);
+      return { ...prev, assignedBatchIds: Array.from(selected) };
     });
+  };
 
-    let uploadedUrl = '';
-    try {
-      if (resourceForm.file) {
-        uploadedUrl = await toDataUrl(resourceForm.file);
-      }
-    } catch (error) {
-      setResourceFormError(error?.message || 'Failed to process uploaded file.');
-      setIsSavingResource(false);
+  const saveRoadmap = async () => {
+    if (!roadmapForm.title.trim()) {
+      setRoadmapFormError('Roadmap title is required.');
       return;
     }
 
-    const newResource = {
-      id: Date.now(),
-      title: resourceForm.title.trim(),
-      category: resourceForm.category,
-      date: new Date().toISOString().slice(0, 10),
-      type: fileType,
-      url: uploadedUrl,
-      views: 0,
+    if (!roadmapForm.markdownBody.trim()) {
+      setRoadmapFormError('Roadmap markdown is required.');
+      return;
+    }
+
+    setIsSavingRoadmap(true);
+    setRoadmapFormError('');
+
+    const payload = {
+      title: roadmapForm.title.trim(),
+      description: roadmapForm.description.trim(),
+      markdownBody: roadmapForm.markdownBody.trim(),
+      assignedBatchIds: roadmapForm.assignedBatchIds,
+      status: roadmapForm.status,
     };
 
     try {
-      const existingEntry = editingResourceId
-        ? resourceEntries.find((entry) => String(entry.id) === String(editingResourceId))
-        : null;
-
-      const payload = {
-        title: resourceForm.title.trim(),
-        category: resourceForm.category,
-        type: uploadedUrl ? fileType : (existingEntry?.type || fileType),
-        url: uploadedUrl || existingEntry?.url || '',
-      };
-
-      let created;
-      if (editingResourceId && isPersistedResource(editingResourceId)) {
-        created = await adminAPI.updateResource(editingResourceId, payload);
-        if (!uploadedUrl && existingEntry?.url) {
-          created = { ...created, url: existingEntry.url, type: existingEntry.type || fileType };
-        }
-      } else if (editingResourceId) {
-        setResourceEntries((prev) => prev.map((entry) => (
-          String(entry.id) === String(editingResourceId)
-            ? normalizeResource({
-                ...entry,
-                ...payload,
-                url: uploadedUrl || existingEntry?.url || entry.url,
-                type: uploadedUrl ? fileType : (entry.type || fileType),
-              })
-            : entry
-        )));
-        closeAddResourceModal();
-        return;
+      if (editingRoadmapId) {
+        await adminAPI.updateRoadmap(editingRoadmapId, payload);
       } else {
-        created = await adminAPI.createResource(payload);
+        await adminAPI.createRoadmap(payload);
       }
-
-      try {
-        const refreshed = await adminAPI.getResources();
-        const normalized = preferRemoteData(refreshed, [newResource, ...resourceEntries]).map(normalizeResource);
-        setResourceEntries(normalized);
-      } catch {
-        // Mutation succeeded; keep UI in sync if refetch fails.
-        if (editingResourceId) {
-          setResourceEntries((prev) => prev.map((entry) => (
-            String(entry.id) === String(editingResourceId)
-              ? normalizeResource({ ...entry, ...(created || payload) })
-              : entry
-          )));
-        } else {
-          setResourceEntries((prev) => [normalizeResource(created || newResource), ...prev]);
-        }
-      }
-
-      closeAddResourceModal();
+      const refreshed = await adminAPI.getRoadmaps();
+      setRoadmapEntries(Array.isArray(refreshed) ? refreshed : []);
+      closeRoadmapModal();
     } catch (error) {
-      setResourceFormError(error?.message || 'Failed to save resource.');
+      setRoadmapFormError(error?.message || 'Failed to save roadmap.');
     } finally {
-      setIsSavingResource(false);
+      setIsSavingRoadmap(false);
     }
   };
 
-  const deleteResource = async (resource) => {
-    const confirmed = window.confirm(`Delete \"${resource.title}\"?`);
+  const deleteRoadmap = async (roadmap) => {
+    const confirmed = window.confirm(`Delete "${roadmap.title}"?`);
     if (!confirmed) return;
 
     try {
-      if (isPersistedResource(resource.id)) {
-        await adminAPI.deleteResource(resource.id);
-      }
-      setResourceEntries((prev) => prev.filter((entry) => String(entry.id) !== String(resource.id)));
+      await adminAPI.deleteRoadmap(roadmap.id || roadmap._id);
+      setRoadmapEntries((prev) => prev.filter((entry) => String(entry.id || entry._id) !== String(roadmap.id || roadmap._id)));
     } catch (error) {
-      window.alert(error?.message || 'Failed to delete resource.');
+      window.alert(error?.message || 'Failed to delete roadmap.');
     }
   };
 
-  const downloadResource = (resource) => {
-    const url = String(resource?.url || '').trim();
-    if (!url) {
-      window.alert('No download URL is available for this resource yet.');
-      return;
-    }
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+  if (!mounted) return <LoadingScreen />;
 
   return (
     <>
@@ -334,7 +217,6 @@ export default function Resources() {
                 <button key={route.id} onClick={() => handleRouteSelect(route.id)} className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors group text-left">
                   <div>
                     <h4 className="text-sm font-medium text-[#3C83F6] dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{route.title}</h4>
-
                   </div>
                   <span className="text-black/20 dark:text-white/20 group-hover:translate-x-1 transition-transform">›</span>
                 </button>
@@ -344,85 +226,176 @@ export default function Resources() {
         </div>
       )}
 
-      {isAddResourceOpen && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddResourceModal} />
-          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl p-6">
+      {isRoadmapModalOpen && (
+        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeRoadmapModal} />
+          <div className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl p-6">
             <button
-              onClick={closeAddResourceModal}
+              onClick={closeRoadmapModal}
               className="absolute right-4 top-4 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
-              aria-label="Close add resource form"
+              aria-label="Close roadmap form"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{editingResourceId ? 'Edit Resource' : 'Add Resource'}</h2>
+            <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{editingRoadmapId ? 'Edit Roadmap' : 'Create Roadmap'}</h2>
 
-            <div className="mt-5 space-y-4">
-              <div>
-                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Resource Name*</label>
-                <input
-                  value={resourceForm.title}
-                  onChange={(e) => setResourceForm((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="Enter resource title"
-                  className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
-                />
-              </div>
+            <div className="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Roadmap Title*</label>
+                  <input
+                    value={roadmapForm.title}
+                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, title: e.target.value }))}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Category*</label>
-                <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={resourceForm.category}
-                    onChange={(e) => setResourceForm((prev) => ({ ...prev, category: e.target.value }))}
-                    className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                  >
-                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
-                    {resourceCategoryOptions.map((option) => (
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Description</label>
+                  <input
+                    value={roadmapForm.description}
+                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, description: e.target.value }))}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Markdown File (.md)*</label>
+                  <div className="mt-2 flex items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-white/40 dark:bg-[#122b52]/50 hover:bg-white/60 dark:hover:bg-[#122b52]/80 hover:border-[#3C83F6] dark:hover:border-blue-400 transition-all duration-200 py-20 px-6 text-center cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept=".md"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (evt) => {
+                            setRoadmapForm((prev) => ({
+                              ...prev,
+                              markdownBody: evt.target?.result || '',
+                              fileName: file.name,
+                            }));
+                          };
+                          reader.readAsText(file);
+                        }
+                      }}
+                    />
+                    <div className="space-y-2">
+                      <div className="mx-auto w-12 h-12 rounded-xl bg-blue-500/10 dark:bg-blue-300/10 text-[#3C83F6] dark:text-blue-300 flex items-center justify-center">
+                        <FiUpload className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                          {roadmapForm.fileName ? roadmapForm.fileName : 'Click to upload Markdown file'}
+                        </p>
+                        <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
+                          Only Markdown (.md) files are supported
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Upload Resource*</label>
-                <label className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white inline-flex items-center justify-between cursor-pointer hover:bg-white dark:hover:bg-[#17345f] transition-colors">
-                  <span className="truncate pr-3 text-black/70 dark:text-white/80">{resourceForm.fileName || 'Choose file to upload'}</span>
-                  <span className="inline-flex items-center gap-1.5 shrink-0 text-[#3C83F6] dark:text-blue-300 font-semibold">
-                    <FiUpload className="w-3.5 h-3.5" />
-                    Browse
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setResourceForm((prev) => ({
-                        ...prev,
-                        file,
-                        fileName: file?.name || '',
-                      }));
-                    }}
-                  />
-                </label>
-                {editingResourceId && !resourceForm.fileName && (
-                  <p className="mt-1 text-[11px] text-[#5f7592] dark:text-slate-300">Upload a new file only if you want to replace the existing one.</p>
-                )}
-              </div>
+              <aside className="space-y-4">
+                <div>
+                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Status</label>
+                  <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
+                    <select
+                      value={roadmapForm.status}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, status: e.target.value }))}
+                      className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Active</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Draft</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
 
-              <div className="pt-2 flex items-center justify-end">
+                <div>
+                  <p className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Assign to Batches</p>
+                  <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#122b52] p-2 space-y-1">
+                    {batchOptions.map((batch) => {
+                      const checked = roadmapForm.assignedBatchIds.map(String).includes(String(batch.id));
+                      return (
+                        <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleRoadmapBatch(batch.id)}
+                            className="mt-1"
+                          />
+                          <span>
+                            <span className="block font-medium">{batch.name}</span>
+                            {batch.college && <span className="block text-[11px] text-[#5f7592] dark:text-slate-300">{batch.college}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {batchOptions.length === 0 && (
+                      <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-300">No batches available.</p>
+                    )}
+                  </div>
+                </div>
+
                 <button
-                  onClick={addResource}
-                  disabled={isSavingResource}
-                  className="h-10 px-5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                  onClick={saveRoadmap}
+                  disabled={isSavingRoadmap}
+                  className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-70 text-white text-sm font-semibold"
                 >
-                  {isSavingResource ? 'Saving...' : editingResourceId ? 'Save Changes' : 'Add'}
+                  {isSavingRoadmap ? 'Saving...' : editingRoadmapId ? 'Save Changes' : 'Create Roadmap'}
                 </button>
-              </div>
+                {roadmapFormError && <p className="text-xs text-red-500">{roadmapFormError}</p>}
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
 
-              {resourceFormError && <p className="text-xs text-red-500">{resourceFormError}</p>}
+      {viewingRoadmap && (
+        <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setViewingRoadmap(null)} />
+          <div className="relative w-full max-w-5xl max-h-[88vh] overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-black/10 dark:border-white/10 px-6 py-5">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{viewingRoadmap.title}</h2>
+                  <span className="rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                    {viewingRoadmap.status || 'Active'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[#5f7592] dark:text-slate-300">{viewingRoadmap.description || 'No description'}</p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {(viewingRoadmap.assignedBatches || []).length > 0 ? (
+                    viewingRoadmap.assignedBatches.map((batch) => (
+                      <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
+                        {batch.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[#5f7592] dark:text-slate-300">No batches assigned</span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingRoadmap(null)}
+                className="shrink-0 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
+                aria-label="Close roadmap preview"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[62vh] overflow-y-auto px-6 py-6">
+              <div className="prose prose-slate max-w-none dark:prose-invert prose-headings:text-[#0f1f3d] dark:prose-headings:text-white prose-p:text-[#31445f] dark:prose-p:text-slate-300 prose-li:text-[#31445f] dark:prose-li:text-slate-300 prose-a:text-[#3C83F6] prose-pre:bg-[#071831] prose-pre:text-slate-100">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {viewingRoadmap.markdownBody || 'No roadmap content available.'}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         </div>
@@ -433,147 +406,76 @@ export default function Resources() {
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
-          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className="max-w-[1600px] mx-auto space-y-6">
-
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div>
-                <h1 className="admin-page-title">Resources</h1>
-
-              </div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[
-                { label: 'Total Resources', value: resourceEntries.length },
-                { label: 'Total Views', value: totalViews.toLocaleString() },
-                { label: 'Categories', value: uniqueCategories },
-              ].map(({ label, value }) => (
-                <article key={label} className="rounded-2xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-5 py-4">
-                  <p className="text-xs text-[#5f7491] dark:text-slate-300">{label}</p>
-                  <p className="mt-1.5 text-3xl font-bold text-[#0b1b38] dark:text-white">{value}</p>
-                </article>
-              ))}
+          onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className="max-w-[1600px] mx-auto space-y-8">
+            <div>
+              <h1 className="admin-page-title">Roadmaps</h1>
             </div>
 
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <div className="relative max-w-lg flex-1 min-w-0 w-full sm:w-auto">
-                <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
-                <input
-                  type="text"
-                  placeholder="Search resources..."
-                  value={tableSearch}
-                  onChange={e => setTableSearch(e.target.value)}
-                  className="w-full h-10 sm:h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-11 pr-4 text-[13px] sm:text-sm leading-none text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                />
+            <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                    <FiMap className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
+                  </div>
+                  <div>
+                    <h2 className="text-base md:text-lg font-semibold text-[#0b1b38] dark:text-white">Batch Roadmaps</h2>
+                    <p className="text-xs md:text-sm text-[#5f7592] dark:text-slate-300">Create one roadmap and assign it to multiple batches.</p>
+                  </div>
+                </div>
+                <button onClick={openAddRoadmapModal} className="dashboard-primary-btn w-full sm:w-auto h-10 px-4 text-xs">
+                  <FiPlus className="w-3.5 h-3.5" />
+                  Create Roadmap
+                </button>
               </div>
 
-              <button onClick={openAddResourceModal} className="w-full sm:w-auto h-9 px-3.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5">
-                <FiPlus className="w-3.5 h-3.5" />
-                Add Resource
-              </button>
-            </div>
-
-            <div className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] max-h-[560px] overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
-              {filteredResources.map((res, i) => {
-                const TypeIcon = typeIconMap[res.type] || FiFileText;
-                return (
-                  <article key={res.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 px-4 py-3 ${i < filteredResources.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
-                        <TypeIcon className="w-3.5 h-3.5 text-[#6e809b] dark:text-slate-300" />
-                      </div>
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                {roadmapEntries.map((roadmap) => (
+                  <article key={roadmap.id || roadmap._id} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f5fbff] dark:bg-[#122b52] px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-sm md:text-base font-normal text-[#0b1b38] dark:text-white break-words">{res.title}</h3>
-                        <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 break-words">{res.category} · {res.date}</p>
+                        <h3 className="text-sm md:text-base font-semibold text-[#0b1b38] dark:text-white break-words">{roadmap.title}</h3>
+                        <p className="mt-1 text-xs text-[#5f7592] dark:text-slate-300 break-words">{roadmap.description || 'No description'}</p>
                       </div>
-                    </div>
-
-                    <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-2.5 shrink-0 mt-0.5 sm:mt-0">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-[#d6e6f4] text-[#0f2b54] dark:bg-[#21446f] dark:text-blue-200">
-                        {res.type}
+                      <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                        {roadmap.status}
                       </span>
-                      <div className="inline-flex items-center gap-2 shrink-0">
-                        <div className="inline-flex items-center gap-1 text-sm text-[#5f7592] dark:text-slate-300">
-                          <FiEye className="w-3.5 h-3.5" />
-                          <span>{res.views}</span>
-                        </div>
-                        <button
-                          type="button"
-                          className="resource-actions-trigger h-8 w-8 rounded-full inline-flex items-center justify-center border border-transparent text-[#0f1f3d] dark:text-slate-200 transition-all hover:border-[#3C83F6] hover:text-[#3C83F6] hover:ring-2 hover:ring-[#3C83F6]/40 hover:bg-black/5 dark:hover:bg-white/10"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            const rect = event.currentTarget.getBoundingClientRect();
-                            const menuWidth = 144;
-                            const menuHeight = 132;
-                            const left = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.right - menuWidth));
-                            const showAbove = rect.bottom + menuHeight + 8 > window.innerHeight;
-                            const top = showAbove
-                              ? Math.max(8, rect.top - menuHeight - 8)
-                              : rect.bottom + 8;
-
-                            setResourceMenuPosition({ top, left });
-                            setOpenResourceMenuId((current) => (current === res.id ? null : res.id));
-                          }}
-                          aria-label={`Open actions for ${res.title}`}
-                        >
-                          <FiMoreHorizontal className="w-3.5 h-3.5" />
-                        </button>
+                    </div>
+                    <p className="mt-3 text-xs text-[#5f7592] dark:text-slate-300">
+                      Assigned to {(roadmap.assignedBatches || []).length} batch{(roadmap.assignedBatches || []).length === 1 ? '' : 'es'}
+                    </p>
+                    {(roadmap.assignedBatches || []).length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {roadmap.assignedBatches.map((batch) => (
+                          <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
+                            {batch.name}
+                          </span>
+                        ))}
                       </div>
+                    )}
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <button onClick={() => setViewingRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${roadmap.title}`}>
+                        <FiEye className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => openEditRoadmapModal(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${roadmap.title}`}>
+                        <FiEdit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => deleteRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${roadmap.title}`}>
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </article>
-                );
-              })}
-              {filteredResources.length === 0 && (
-                <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">No resources match your filters.</div>
-              )}
-            </div>
-
+                ))}
+                {roadmapEntries.length === 0 && (
+                  <div className="lg:col-span-2 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
+                    No roadmaps created yet. Users will keep seeing the default roadmap until a batch roadmap is assigned.
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </main>
       </div>
-
-      {openResourceMenuId && activeMenuResource && (
-        <div
-          className="resource-actions-menu fixed z-[220] w-36 rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#071739] backdrop-blur-xl shadow-xl overflow-hidden"
-          style={{ top: `${resourceMenuPosition.top}px`, left: `${resourceMenuPosition.left}px` }}
-        >
-          <button
-            onClick={() => {
-              setOpenResourceMenuId(null);
-              downloadResource(activeMenuResource);
-            }}
-            className="w-full text-left px-3.5 py-2.5 text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-2"
-          >
-            <FiDownload className="w-3.5 h-3.5" />
-            Download
-          </button>
-          <button
-            onClick={() => {
-              setOpenResourceMenuId(null);
-              openEditResourceModal(activeMenuResource);
-            }}
-            className="w-full text-left px-3.5 py-2.5 text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors inline-flex items-center gap-2"
-          >
-            <FiEdit2 className="w-3.5 h-3.5" />
-            Edit
-          </button>
-          <button
-            onClick={() => {
-              setOpenResourceMenuId(null);
-              deleteResource(activeMenuResource);
-            }}
-            className="w-full text-left px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors inline-flex items-center gap-2"
-          >
-            <FiTrash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
-        </div>
-      )}
     </>
   );
 }
-
-
-

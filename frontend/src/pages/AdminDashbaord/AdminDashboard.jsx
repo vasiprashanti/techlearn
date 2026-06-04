@@ -9,8 +9,7 @@ import { adminAPI, preferRemoteData } from "../../services/adminApi";
 
 // Components
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORRECT - goes to /admin// <-- FIXED: Now using the exact Dashboard Sidebar
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import LoadingScreen from "../../components/Loader/Loader3D"; 
+import LoadingScreen from "../../components/AdminDashbaord/AdminPageLoader"; 
 
 // Icons
 import { FiSearch, FiClock, FiTrendingUp, FiAward } from "react-icons/fi";
@@ -210,16 +209,12 @@ export default function AdminDashboard() {
           onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)}
           className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 
             ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} 
-            pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden
+            pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden
             ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}
           `}
         >
           <div className="max-w-[1600px] mx-auto space-y-8">
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div className="flex-1" />
 
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {dashboardData.kpis.map((kpi, i) => (
@@ -245,7 +240,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 p-8 rounded-xl flex flex-col min-h-[300px]">
                 <h3 className="admin-section-heading mb-8 shrink-0">
-                  College Performance Ranking
+                  College Accuracy Ranking
                 </h3>
                 <div className="flex-1 flex flex-col justify-between gap-6 relative">
                   <div className="absolute top-0 bottom-0 left-[180px] right-0 flex justify-between px-2 text-[10px] text-black/20 dark:text-white/20 pointer-events-none -z-10 items-end pb-[-20px]">
@@ -267,7 +262,7 @@ export default function AdminDashboard() {
                           style={{ width: `${college.score}%` }}
                         >
                           <span className="text-[10px] font-bold text-white dark:text-black opacity-0 group-hover:opacity-100 transition-opacity">
-                            {college.score}%
+                            {college.accuracy ?? college.score}%
                           </span>
                         </div>
                       </div>
@@ -311,7 +306,7 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div className="text-sm font-light text-[#3C83F6] dark:text-white shrink-0 pl-2">
-                        {student.score}
+                        {student.accuracy ? `${student.accuracy}% accuracy` : student.score}
                       </div>
                     </div>
                   ))}

@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { protect, isAdmin } from "../middleware/authMiddleware.js";
 import {
   getAnalyticsPage,
@@ -63,8 +64,18 @@ import {
   listAuditLogsAdmin,
   listNotificationsAdmin,
 } from "../controllers/admin/adminOperationsController.js";
+import {
+  createRoadmapAdmin,
+  deleteRoadmapAdmin,
+  listRoadmapsAdmin,
+  updateRoadmapAdmin,
+} from "../controllers/roadmapController.js";
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 router.use(protect, isAdmin);
 
@@ -111,10 +122,15 @@ router.delete("/track-templates/:templateId/days/:dayNumber", removeTrackTemplat
 router.put("/track-templates/:templateId/reorder", reorderTrackTemplateQuestions);
 
 router.get("/resources", listResourcesAdmin);
-router.post("/resources", createResourceAdmin);
-router.put("/resources/:resourceId", updateResourceAdmin);
+router.post("/resources", upload.single("file"), createResourceAdmin);
+router.put("/resources/:resourceId", upload.single("file"), updateResourceAdmin);
 router.delete("/resources/:resourceId", deleteResourceAdmin);
 router.post("/resources/:resourceId/view", recordResourceView);
+
+router.get("/roadmaps", listRoadmapsAdmin);
+router.post("/roadmaps", createRoadmapAdmin);
+router.put("/roadmaps/:roadmapId", updateRoadmapAdmin);
+router.delete("/roadmaps/:roadmapId", deleteRoadmapAdmin);
 
 router.get("/certificates", getCertificatesPage);
 router.post("/certificates/issued", issueCertificateAdmin);

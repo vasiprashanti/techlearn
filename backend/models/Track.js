@@ -11,7 +11,7 @@ const trackSchema = new mongoose.Schema(
 
     trackType: {
       type: String,
-      enum: ["Core", "DSA", "SQL"],
+      enum: ["Core", "DSA", "SQL", "Daily Challenge", "Daily Task"],
       required: true,
     },
 

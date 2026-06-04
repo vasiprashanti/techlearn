@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import LoadingScreen from '../../components/Loader/Loader3D';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 
 const AdminDashboard = () => {
   const { theme } = useTheme();
@@ -76,8 +76,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchPayments();
   }, []);
-
-  if (loading) return <LoadingScreen fullScreen={true} />;
 
   if (error) return (
     <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900">

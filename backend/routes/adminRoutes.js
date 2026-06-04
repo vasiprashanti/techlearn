@@ -11,6 +11,7 @@ import {
   addMultipleTopics,
   createCourseShell,
   deleteCourse,
+  updateCourseShell,
 } from "../controllers/courseController.js";
 import {
   cleanupTempFiles,
@@ -30,6 +31,7 @@ adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
 adminRouter.put("/topic/:topicId", protect, upload.any(), editTopicDetails);
 
 adminRouter.post("/course-initiate", protect, createCourseShell);
+adminRouter.put("/:courseId", protect, isAdmin, updateCourseShell);
 
 adminRouter.post("/:courseId/topics", protect, isAdmin, addMultipleTopics);
 

@@ -344,16 +344,19 @@ const CertificationPayment = () => {
     return (
       <div className="min-h-screen pt-24 pb-16 bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          <button
+            type="button"
+            onClick={() => navigate("/learn/certification")}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-6"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Certifications
+          </button>
+          <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-8 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <h2 className="text-2xl font-bold text-[#0d2a57] dark:text-[#8fd9ff] mb-2">
               Certification Not Found
             </h2>
-            <button
-              onClick={() => navigate("/learn/certification")}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Back to Certifications
-            </button>
+            <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">The requested certification does not exist or could not be loaded.</p>
           </div>
         </div>
       </div>
@@ -368,14 +371,15 @@ const CertificationPayment = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-4 mb-8"
+          className="mb-8"
         >
           <button
+            type="button"
             onClick={() => navigate("/learn/certification")}
-            className="inline-flex items-center gap-2 px-1 py-1 text-sm font-semibold text-[#2d7fe8] transition hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Certifications</span>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Certifications
           </button>
         </motion.div>
 

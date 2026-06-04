@@ -4,8 +4,8 @@ import { FiChevronDown, FiDownload, FiEdit2, FiEye, FiPlus, FiSearch, FiTrash2, 
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import AdminHeaderControls from '../../components/AdminDashbaord/AdminHeaderControls';
-import { adminAPI, preferRemoteData } from '../../services/adminApi';
+import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyStudents } from '../../data/adminEmptyStates';
 
 const searchRoutes = [
@@ -33,6 +33,7 @@ const normalizeStudent = (student) => ({
   college: student.college || '',
   batch: student.batch || '',
   track: student.track || 'General Track',
+  accuracy: Number(student.accuracy ?? student.score ?? 0),
   score: Number(student.score || 0),
   streak: Number(student.streak || 0),
   status: student.status || 'Active',
@@ -95,7 +96,7 @@ const StudentModal = ({ student, onClose }) => {
           <div><span className="text-slate-500 dark:text-white/55">College:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.college || 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Batch:</span> <span className="font-medium break-words text-slate-900 dark:text-white">{student.batch || 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Track:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.track || 'Not available'}</span></div>
-          <div><span className="text-slate-500">Score:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.score}%</span></div>
+          <div><span className="text-slate-500">Accuracy:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.accuracy}%</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Streak:</span> <span className="font-medium text-slate-900 dark:text-white">{student.streak} days</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Tests Taken:</span> <span className="font-medium text-slate-900 dark:text-white">{student.testsTaken ?? 'Not available'}</span></div>
           <div><span className="text-slate-500 dark:text-white/55">Last Active:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.lastActive)}</span></div>
@@ -113,9 +114,10 @@ const Students = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
-  const [students, setStudents] = useState(emptyStudents);
-  const [colleges, setColleges] = useState([]);
-  const [batches, setBatches] = useState([]);
+  const [students, setStudents] = useState(() => readAdminSessionCache('students', emptyStudents));
+  const [colleges, setColleges] = useState(() => readAdminSessionCache('students-colleges', []));
+  const [batches, setBatches] = useState(() => readAdminSessionCache('students-batches', []));
+  const [isLoadingStudents, setIsLoadingStudents] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('students', emptyStudents)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -133,6 +135,7 @@ const Students = () => {
   const [bulkImportTrack, setBulkImportTrack] = useState('');
   const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [bulkImportReport, setBulkImportReport] = useState(null);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const searchInputRef = useRef(null);
   const bulkImportInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
@@ -145,9 +148,15 @@ const Students = () => {
       adminAPI.getColleges(),
       adminAPI.getBatches(),
     ]);
-    setStudents(preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent));
-    setColleges(preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' })));
-    setBatches(preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' })));
+    const normalizedStudents = preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent);
+    const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
+    const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' }));
+    setStudents(normalizedStudents);
+    setColleges(normalizedColleges);
+    setBatches(normalizedBatches);
+    writeAdminSessionCache('students', normalizedStudents);
+    writeAdminSessionCache('students-colleges', normalizedColleges);
+    writeAdminSessionCache('students-batches', normalizedBatches);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -159,6 +168,10 @@ const Students = () => {
         setStudents(emptyStudents);
         setColleges([]);
         setBatches([]);
+      }
+    }).finally(() => {
+      if (!cancelled) {
+        setIsLoadingStudents(false);
       }
     });
     return () => { cancelled = true; };
@@ -315,57 +328,6 @@ const Students = () => {
     URL.revokeObjectURL(url);
   };
 
-  const parseCsvRows = (text) => {
-    const rows = [];
-    let current = '';
-    let row = [];
-    let inQuotes = false;
-
-    for (let i = 0; i < text.length; i += 1) {
-      const char = text[i];
-      const next = text[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && next === '"') {
-          current += '"';
-          i += 1;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === ',' && !inQuotes) {
-        row.push(current.trim());
-        current = '';
-      } else if ((char === '\n' || char === '\r') && !inQuotes) {
-        if (char === '\r' && next === '\n') i += 1;
-        if (current.length > 0 || row.length > 0) {
-          row.push(current.trim());
-          rows.push(row);
-          row = [];
-          current = '';
-        }
-      } else {
-        current += char;
-      }
-    }
-
-    if (current.length > 0 || row.length > 0) {
-      row.push(current.trim());
-      rows.push(row);
-    }
-
-    return rows;
-  };
-
-  const normalizeHeader = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '');
-
-  const toEmailSlug = (value) =>
-    String(value || '')
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '.')
-      .replace(/^\.+|\.+$/g, '')
-      .replace(/\.{2,}/g, '.');
-
   const handleBulkImportSelection = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -379,104 +341,42 @@ const Students = () => {
         failures: ['Only CSV files are supported for bulk import.'],
       });
       event.target.value = '';
+      setIsBulkImportModalOpen(false);
       return;
     }
 
     setFormError('');
     setIsBulkImporting(true);
+    setIsBulkImportModalOpen(false); // Close the settings modal immediately upon starting import
 
     try {
       if (!bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack) {
         throw new Error('Select college, batch, and track before uploading CSV.');
       }
+      const result = await adminAPI.bulkUploadStudents({
+        file,
+        collegeId: bulkImportCollegeId,
+        batchId: bulkImportBatchId,
+        primaryTrack: bulkImportTrack,
+        status: 'Active',
+      });
 
-      const rawText = await file.text();
-      const parsedRows = parseCsvRows(rawText);
+      const imported = Number(result?.imported || 0);
+      const failed = Number(result?.failed || 0);
+      const failures = Array.isArray(result?.failedRows)
+        ? result.failedRows.map((entry) => `Row ${entry.row}: ${entry.reason}`)
+        : [];
 
-      if (parsedRows.length < 2) {
-        throw new Error('CSV must include a header and at least one data row.');
-      }
-
-      const [headerRow, ...dataRows] = parsedRows;
-      const headerMap = new Map(headerRow.map((header, index) => [normalizeHeader(header), index]));
-
-      const getCell = (row, ...keys) => {
-        for (const key of keys) {
-          const index = headerMap.get(normalizeHeader(key));
-          if (index !== undefined) return String(row[index] || '').trim();
-        }
-        return '';
-      };
-
-      let successCount = 0;
-      const failures = [];
-
-      for (let rowIndex = 0; rowIndex < dataRows.length; rowIndex += 1) {
-        const row = dataRows[rowIndex];
-        const displayRow = rowIndex + 2;
-
-        const name = getCell(row, 'name', 'studentname');
-        const email = getCell(row, 'email', 'studentemail');
-        const registrationNumber = getCell(row, 'registrationnumber', 'registrationno', 'regno', 'rollno', 'rollnumber');
-        const track = getCell(row, 'track', 'primarytrack');
-        const status = getCell(row, 'status');
-
-        const rowHasAnyIdentifier = Boolean(name || email || registrationNumber);
-        if (!rowHasAnyIdentifier) {
-          const isCompletelyBlank = row.every((cell) => !String(cell || '').trim());
-          if (isCompletelyBlank) continue;
-          failures.push(`Row ${displayRow}: provide at least one of name, email, or registration number.`);
-          continue;
-        }
-
-        const resolvedName =
-          name ||
-          (email.includes('@') ? email.split('@')[0].replace(/[._-]+/g, ' ').trim() : '') ||
-          (registrationNumber ? `Student ${registrationNumber}` : '');
-
-        if (!resolvedName) {
-          failures.push(`Row ${displayRow}: could not derive a valid name.`);
-          continue;
-        }
-
-        const generatedEmailSeed = toEmailSlug(email || registrationNumber || resolvedName) || `student.${displayRow}`;
-        const resolvedEmail = email || `${generatedEmailSeed}.${displayRow}@import.techlearn.local`;
-
-        try {
-          await adminAPI.createStudent({
-            name: resolvedName,
-            email: resolvedEmail.toLowerCase(),
-            rollNo: registrationNumber,
-            collegeId: bulkImportCollegeId,
-            batchId: bulkImportBatchId,
-            primaryTrack: track || bulkImportTrack || 'General Track',
-            status: status || 'Active',
-          });
-          successCount += 1;
-        } catch (error) {
-          failures.push(`Row ${displayRow}: ${error?.message || 'failed to import.'}`);
-        }
-      }
-
-      if (successCount > 0) {
+      if (imported > 0) {
         await loadStudentsData();
       }
 
-      if (failures.length > 0) {
-        setBulkImportReport({
-          type: successCount > 0 ? 'partial' : 'failed',
-          imported: successCount,
-          failed: failures.length,
-          failures,
-        });
-      } else {
-        setBulkImportReport({
-          type: 'success',
-          imported: successCount,
-          failed: 0,
-          failures: [],
-        });
-      }
+      setBulkImportReport({
+        type: failed > 0 ? (imported > 0 ? 'partial' : 'failed') : 'success',
+        imported,
+        failed,
+        failures,
+      });
     } catch (error) {
       setFormError(error?.message || 'Bulk import failed.');
       setBulkImportReport({
@@ -498,7 +398,7 @@ const Students = () => {
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
       <StudentModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />
 
-      <input ref={bulkImportInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleBulkImportSelection} />
+      <input ref={bulkImportInputRef} type="file" accept=".csv" className="hidden" onChange={handleBulkImportSelection} />
 
       {pendingDeleteStudent && (
         <div className="fixed inset-0 z-[135] flex items-center justify-center px-4">
@@ -599,7 +499,7 @@ const Students = () => {
                   <input value={studentForm.track} onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))} placeholder="Primary track" className={`mt-1 ${studentFormInputClass}`} />
                 </div>
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Statuscd </label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select value={studentForm.status} onChange={(e) => setStudentForm((prev) => ({ ...prev, status: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
                       <option className={dropdownOptionClass} value="Active">Active</option>
@@ -620,75 +520,117 @@ const Students = () => {
         </div>
       )}
 
+      {isBulkImportModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkImportModalOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Bulk Import Students</h2>
+              <button onClick={() => setIsBulkImportModalOpen(false)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-black/60 dark:text-white/65">
+                Select the College, Batch, and Track to import the students into. All fields are mandatory.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">College*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportCollegeId}
+                      onChange={(e) => {
+                        setBulkImportCollegeId(e.target.value);
+                        setBulkImportBatchId('');
+                        setBulkImportTrack('');
+                      }}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">Select college</option>
+                      {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Batch*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportBatchId}
+                      onChange={(e) => {
+                        setBulkImportBatchId(e.target.value);
+                        setBulkImportTrack('');
+                      }}
+                      disabled={!bulkImportCollegeId}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
+                    >
+                      <option className={dropdownOptionClass} value="">Select batch</option>
+                      {filteredBulkImportBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={bulkImportTrack}
+                      onChange={(e) => setBulkImportTrack(e.target.value)}
+                      disabled={!bulkImportCollegeId || !bulkImportBatchId}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none disabled:opacity-60"
+                    >
+                      <option className={dropdownOptionClass} value="">Select track</option>
+                      {filteredBulkImportTrackOptions.map((track) => <option className={dropdownOptionClass} key={track} value={track}>{track}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+              </div>
+
+              {formError && <p className="text-xs text-red-500">{formError}</p>}
+              <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-2.5">
+                <button onClick={() => setIsBulkImportModalOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
+                <button onClick={triggerBulkImport} disabled={isBulkImporting || !bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack} className="px-5 py-2.5 rounded-xl text-sm font-medium bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  <FiUpload className="w-4 h-4" />
+                  {isBulkImporting ? 'Importing...' : 'Select CSV & Import'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
-        <main onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-0 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
+        <main onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
           <div className="max-w-[1600px] mx-auto space-y-4">
-            <header className={`sticky top-0 z-40 -mx-4 sm:-mx-6 md:-mx-10 lg:-mx-14 xl:-mx-16 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 h-16 backdrop-blur-xl border-b border-black/5 dark:border-white/10 flex items-center justify-between transition-all duration-300 ${isPageScrolled ? "bg-[#daf0fa]/78 dark:bg-[#001233]/76" : "bg-[#daf0fa]/92 dark:bg-[#001233]/90"}`}>
-              <div><h1 className="admin-page-title">Students</h1></div>
-              <AdminHeaderControls user={user} logout={logout} />
-            </header>
+            <div>
+              <h1 className="admin-page-title">Students</h1>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(250px,320px)_150px_150px_150px_160px] gap-2.5 items-center mt-1 justify-end">
-              <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
+            {isLoadingStudents ? (
+              <section className="min-h-[50vh] flex items-center justify-center">
+                <LoadingScreen
+                  fullScreen={false}
+                  message="Loading students..."
+                  className="w-full rounded-3xl border border-black/5 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-xl"
+                />
+              </section>
+            ) : (
+            <>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-1">
+              <div className="relative w-full md:max-w-xs xl:max-w-sm">
                 <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                 <input type="text" placeholder="Search students..." value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full" />
               </div>
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportCollegeId}
-                    onChange={(e) => {
-                      setBulkImportCollegeId(e.target.value);
-                      setBulkImportBatchId('');
-                      setBulkImportTrack('');
-                    }}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full"
-                    title="Bulk import college"
-                  >
-                    <option className={dropdownOptionClass} value="">Import college</option>
-                    {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <button onClick={() => { setFormError(''); setIsBulkImportModalOpen(true); }} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiUpload className="w-3.5 h-3.5" />Bulk Import</button>
+                <button onClick={downloadBulkTemplate} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
+                <button onClick={openAddStudent} className="w-full sm:w-auto flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
               </div>
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportBatchId}
-                    onChange={(e) => {
-                      setBulkImportBatchId(e.target.value);
-                      setBulkImportTrack('');
-                    }}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
-                    title="Bulk import batch"
-                    disabled={!bulkImportCollegeId}
-                  >
-                    <option className={dropdownOptionClass} value="">Import batch</option>
-                    {filteredBulkImportBatchOptions.map((batch) => <option className={dropdownOptionClass} key={batch.id} value={batch.id}>{batch.name}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <div className="relative min-w-0">
-                <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 w-full min-w-[150px]">
-                  <select
-                    value={bulkImportTrack}
-                    onChange={(e) => setBulkImportTrack(e.target.value)}
-                    className="appearance-none h-10 text-sm font-semibold tracking-tight pl-3.5 pr-9 rounded-xl bg-transparent text-slate-800 dark:text-white outline-none w-full disabled:opacity-60"
-                    title="Bulk import track"
-                    disabled={!bulkImportCollegeId || !bulkImportBatchId}
-                  >
-                    <option className={dropdownOptionClass} value="">Import track</option>
-                    {filteredBulkImportTrackOptions.map((track) => <option className={dropdownOptionClass} key={track} value={track}>{track}</option>)}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <button onClick={openAddStudent} className="w-full flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"><FiPlus className="w-3.5 h-3.5" />Add Student</button>
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:hidden">
@@ -705,7 +647,7 @@ const Students = () => {
                     <div><p className="text-black/45 dark:text-white/45">College</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.college || 'Not available'}</p></div>
                     <div><p className="text-black/45 dark:text-white/45">Batch</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.batch || 'Not available'}</p></div>
                     <div className="col-span-2"><p className="text-black/45 dark:text-white/45">Track</p><p className="mt-1 font-medium text-black/75 dark:text-white/70 break-words">{student.track}</p></div>
-                    <div><p className="text-black/45 dark:text-white/45">Score</p><p className="mt-1 font-medium">{student.score}%</p></div>
+                    <div><p className="text-black/45 dark:text-white/45">Accuracy</p><p className="mt-1 font-medium">{student.accuracy}%</p></div>
                     <div><p className="text-black/45 dark:text-white/45">Streak</p><p className="mt-1 font-medium">{student.streak} days</p></div>
                   </div>
                   <div className="mt-4 flex items-center justify-end gap-2">
@@ -722,7 +664,7 @@ const Students = () => {
               <table className="w-full min-w-[1180px] table-fixed">
                 <thead className="border-b-2 border-black/12 dark:border-white/12">
                   <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-                    {['Name', 'Email', 'College', 'Batch', 'Track', 'Score', 'Streak', 'Status', 'Actions'].map((col) => <th key={col} className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">{col}</th>)}
+                    {['Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => <th key={col} className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">{col}</th>)}
                   </tr>
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
@@ -733,7 +675,7 @@ const Students = () => {
                       <td className="px-4 py-3 text-sm truncate">{student.college || 'Not available'}</td>
                       <td className="px-4 py-3 text-sm truncate">{student.batch || 'Not available'}</td>
                       <td className="px-4 py-3 text-sm truncate">{student.track}</td>
-                      <td className="px-4 py-3 text-sm">{student.score}%</td>
+                      <td className="px-4 py-3 text-sm">{student.accuracy}%</td>
                       <td className="px-4 py-3 text-sm">{student.streak} days</td>
                       <td className="px-4 py-3 text-sm">{student.status}</td>
                       <td className="px-4 py-3">
@@ -752,11 +694,9 @@ const Students = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-base font-medium text-black/45 dark:text-white/45">Showing {filteredStudents.length} of {students.length} students</p>
-              <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-                <button onClick={triggerBulkImport} disabled={isBulkImporting || !bulkImportCollegeId || !bulkImportBatchId || !bulkImportTrack} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap disabled:cursor-not-allowed"><FiUpload className="w-3.5 h-3.5" />{isBulkImporting ? 'Importing...' : 'Bulk Import'}</button>
-                <button onClick={downloadBulkTemplate} className="w-full sm:w-[190px] flex items-center justify-center gap-2 h-10 px-3.5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"><FiDownload className="w-3.5 h-3.5" />Download Template</button>
-              </div>
             </div>
+            </>
+            )}
           </div>
         </main>
       </div>

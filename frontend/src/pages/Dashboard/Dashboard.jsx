@@ -1,16 +1,222 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ChevronRight,
+  Clock,
+  Star,
+  TrendingUp,
+  X,
+} from 'lucide-react';
 import Sidebar from '../../components/Dashboard/Sidebar';
-import LoadingScreen from '../../components/Loader/Loader3D';
 import { useTheme } from '../../context/ThemeContext';
 import { useUser } from '../../context/UserContext';
-import { FiChevronRight, FiClock, FiStar, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import leaderboardApi from '../../services/leaderboardApi';
+import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
+import { practiceAPI } from '../../services/practiceApi';
+import heroBg from '../../assets/hero-bg-dashboard.webp';
+import pixelArrowImg from '../../assets/pixel-arrow.png';
+import pixelFlameImg from '../../assets/pixel-flame.png';
+import pixelQuestionImg from '../../assets/pixel-question.png';
+import pixelStarImg from '../../assets/pixel-star.png';
+
+const DASHBOARD_HIGHLIGHTS_CACHE_KEY = 'techlearn-dashboard-highlights-cache-v1';
+const DASHBOARD_HIGHLIGHTS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readDashboardHighlightsCache = () => {
+  try {
+    const raw = localStorage.getItem(DASHBOARD_HIGHLIGHTS_CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.timestamp || !parsed?.data) return null;
+    if (Date.now() - parsed.timestamp > DASHBOARD_HIGHLIGHTS_CACHE_TTL_MS) return null;
+
+    return parsed.data;
+  } catch {
+    return null;
+  }
+};
+
+const writeDashboardHighlightsCache = (partialData) => {
+  try {
+    const current = readDashboardHighlightsCache() || {};
+    localStorage.setItem(
+      DASHBOARD_HIGHLIGHTS_CACHE_KEY,
+      JSON.stringify({
+        timestamp: Date.now(),
+        data: {
+          ...current,
+          ...partialData,
+        },
+      })
+    );
+  } catch {
+    // Cache is only used to improve perceived load time.
+  }
+};
+
+const PixelStar = () => (
+  <img src={pixelStarImg} alt="Star XP" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+);
+
+const PixelQuestion = () => (
+  <img src={pixelQuestionImg} alt="Solved" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+);
+
+const PixelFlame = () => (
+  <img src={pixelFlameImg} alt="Streak" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+);
+
+const PixelArrow = () => (
+  <img src={pixelArrowImg} alt="Arrow" className="w-9 h-9 object-contain select-none" style={{ imageRendering: 'pixelated' }} />
+);
+
+const PlaceholderBar = ({ className = '' }) => (
+  <div
+    className={`animate-pulse rounded-full bg-white/20 dark:bg-white/10 ${className}`}
+    aria-hidden="true"
+  />
+);
 
 export default function Dashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
+  const [cachedHighlights] = useState(() => readDashboardHighlightsCache());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState(cachedHighlights?.leaderboardEntries || []);
+  const [activeChallenge, setActiveChallenge] = useState(cachedHighlights?.activeChallenge || null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(!cachedHighlights?.leaderboardEntries);
+  const [challengeLoading, setChallengeLoading] = useState(!cachedHighlights?.activeChallenge);
+  const [dailyTasks, setDailyTasks] = useState([]);
+  const [tasksLoaded, setTasksLoaded] = useState(false);
+  const [isFullyCompleted, setIsFullyCompleted] = useState(false);
+  const [taskProgress, setTaskProgress] = useState(0);
+
+  const loadTodayTasks = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/daily-task/today`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        if (payload?.success && payload?.data) {
+          const list = (payload.data.tasks || []).map((t) => ({
+            id: t.questionId,
+            text: t.title,
+            type: t.taskType,
+            completed: t.status === "Completed",
+          }));
+          setDailyTasks(list);
+          setIsFullyCompleted(payload.data.isFullyCompleted);
+          setTaskProgress(payload.data.progressPercent);
+        }
+      }
+      setTasksLoaded(true);
+    } catch (error) {
+      console.error("Failed to load daily tasks:", error);
+      setTasksLoaded(true);
+    }
+  };
+
+  useEffect(() => {
+    loadTodayTasks();
+  }, []);
+
+  // Group the daily tasks for the checklist display
+  const groupedTasks = useMemo(() => {
+    const groups = {};
+    dailyTasks.forEach((task) => {
+      let categoryGroup = task.type;
+      if (task.type === "Coding" || task.type === "Debugging") categoryGroup = "Coding";
+      else if (task.type === "MCQ" || task.type === "Core CS") categoryGroup = "MCQ";
+      else if (task.type === "SQL") categoryGroup = "SQL";
+      else if (task.type === "Aptitude") categoryGroup = "Aptitude";
+
+      if (!groups[categoryGroup]) {
+        groups[categoryGroup] = {
+          type: categoryGroup,
+          text: `${categoryGroup} Task`,
+          questions: [],
+        };
+      }
+      groups[categoryGroup].questions.push(task);
+    });
+
+    return Object.values(groups).map((group) => {
+      const completedCount = group.questions.filter((q) => q.completed).length;
+      const totalCount = group.questions.length;
+      return {
+        type: group.type,
+        text: group.text,
+        completed: totalCount > 0 && completedCount === totalCount,
+        questions: group.questions,
+      };
+    });
+  }, [dailyTasks]);
+
+  const handleGroupClick = (group) => {
+    const nextUncompleted = group.questions.find((q) => !q.completed) || group.questions[0];
+    if (!nextUncompleted) return;
+
+    if (group.type === "Coding") {
+      navigate(`/dashboard/practice/dsa/${nextUncompleted.id}?mode=daily`);
+    } else if (group.type === "SQL") {
+      navigate(`/dashboard/practice/sql/${nextUncompleted.id}?mode=daily`);
+    } else if (group.type === "Aptitude") {
+      navigate(`/dashboard/practice/aptitude/${nextUncompleted.id}?mode=daily`);
+    } else {
+      navigate(`/dashboard/practice/core-cs/${nextUncompleted.id}?mode=daily`);
+    }
+  };
+
+
+  const completedTasks = dailyTasks.filter(t => t.completed).length;
+  const totalTasks = dailyTasks.length;
+
+  const [streak, setStreak] = useState(0);
+  const [isSelectingAvatar, setIsSelectingAvatar] = useState(false);
+  const [pendingAvatar, setPendingAvatar] = useState(null);
+
+  const handleAvatarSelect = async (avatarUrl) => {
+    setIsSelectingAvatar(false);
+    try {
+      const storedUser = JSON.parse(localStorage.getItem("userData"));
+      if (!storedUser || !storedUser.id) return;
+
+      const token = localStorage.getItem("token");
+      const userId = storedUser.id;
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/users/user/${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ photoUrl: avatarUrl }),
+        }
+      );
+
+      if (!res.ok) throw new Error("Failed to update avatar");
+
+      await res.json();
+
+      // Update localStorage with new photoUrl and avatar
+      const updatedUser = { ...storedUser, photoUrl: avatarUrl, avatar: avatarUrl };
+      localStorage.setItem("userData", JSON.stringify(updatedUser));
+      
+      // Refresh UserContext state
+      if (refetchUserData) {
+        await refetchUserData();
+      }
+    } catch (error) {
+      console.error("Error updating avatar:", error);
+    }
+  };
 
   const {
     user,
@@ -19,9 +225,11 @@ export default function Dashboard() {
     xp,
     recentExercises,
     progress: contextProgress,
-    isReady
+    isReady,
+    latestDailyChallenge,
+    refetchUserData,
   } = useUser();
-  
+
   const isDarkMode = theme === 'dark';
 
   useEffect(() => {
@@ -37,40 +245,154 @@ export default function Dashboard() {
     };
   }, [contextProgress, xp]);
 
-  // --- Mock Data for UI (Replace with your API data) ---
-  const stats = [
-    { title: "Total XP", value: progress.xp.toLocaleString(), subtitle: "Global Rank: #402" },
-    { title: "Current Streak", value: "12", subtitle: "Days in a row " },
-    { title: "Problems Solved", value: progress.completed.toString(), subtitle: `Out of ${progress.total || 150} available` },
-    { title: "Course Progress", value: "68%", subtitle: "Data Structures Track" }
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDashboardHighlights = async () => {
+      const loadLeaderboard = async () => {
+        try {
+          const leaderboardResponse = await leaderboardApi.getLeaderboard(5);
+          if (!cancelled) {
+            const entries = leaderboardResponse?.entries || [];
+            setLeaderboardEntries(entries);
+            writeDashboardHighlightsCache({ leaderboardEntries: entries });
+          }
+        } catch {
+          if (!cancelled) {
+            setLeaderboardEntries([]);
+          }
+        } finally {
+          if (!cancelled) {
+            setLeaderboardLoading(false);
+          }
+        }
+      };
+
+      const loadChallenge = async () => {
+        try {
+          const challengeResponse = await dailyChallengeAPI.getActive();
+          if (!cancelled) {
+            const challenge = challengeResponse?.data || null;
+            setActiveChallenge(challenge);
+            writeDashboardHighlightsCache({ activeChallenge: challenge });
+          }
+        } catch {
+          if (!cancelled) {
+            setActiveChallenge(null);
+          }
+        } finally {
+          if (!cancelled) {
+            setChallengeLoading(false);
+          }
+        }
+      };
+      const loadStats = async () => {
+        try {
+          const stats = await practiceAPI.getStats();
+          if (!cancelled && stats?.streak !== undefined) {
+            setStreak(stats.streak);
+          }
+        } catch {}
+      };
+
+      loadLeaderboard();
+      loadChallenge();
+      loadStats();
+    };
+
+    loadDashboardHighlights();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const userDisplayName =
+    user?.name?.trim() ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
+    user?.email?.split('@')[0] ||
+    'Student';
+
+  const storedUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('userData')) || {};
+    } catch {
+      return {};
+    }
+  }, []);
+  const displayUser = user || storedUser;
+  let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/nobackgroundavatar1.png";
+  // Dynamically rewrite to the backgroundless version if user has an old avatar set
+  if (rawPhotoUrl && rawPhotoUrl.includes('/profile_avatars/') && !rawPhotoUrl.includes('nobackground')) {
+    rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
+  }
+  const photoUrl = rawPhotoUrl;
+  const collegeName = displayUser?.collegeName || "TechLearn Student";
+
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const retroStats = [
+    { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
+    { title: 'Total Solved', value: progress.completed.toString(), icon: <PixelQuestion /> },
+    {
+      title: 'Progress',
+      value: `${progress.total ? Math.round((progress.completed / progress.total) * 100) : 0}%`,
+      icon: <PixelArrow />,
+    },
+    {
+      title: 'Day streak',
+      value: streak.toString(),
+      icon: <PixelFlame />,
+    },
   ];
 
   const dailyChallenge = {
-    title: "Reverse Nodes in k-Group",
-    difficulty: "Hard",
-    topic: "Linked Lists",
-    xpReward: 250,
-    timeEstimate: "45 mins"
+    title: 'Daily Challenge',
+    xpReward: activeChallenge?.xpReward || activeChallenge?.points || 0,
+    timeEstimate: activeChallenge?.durationMinutes ? `${activeChallenge.durationMinutes} mins` : '--',
+    prompt:
+      activeChallenge?.description ||
+      activeChallenge?.summary ||
+      "Gear up for today's algorithmic puzzle. Submit your solution within the time limit to earn bonus XP and maintain your streak.",
   };
 
-  const leaderboardMock = [
-    { rank: 1, name: "Alex Chen", score: "14,250", isUser: false },
-    { rank: 2, name: "Sarah Jenkins", score: "13,900", isUser: false },
-    { rank: 3, name: "Michael Ross", score: "13,120", isUser: false },
-    { rank: 4, name: user?.firstName || "You", score: progress.xp.toLocaleString(), isUser: true },
-    { rank: 5, name: "David Kim", score: "11,800", isUser: false },
-  ];
+  const featuredLeaderboard = leaderboardEntries.length
+    ? leaderboardEntries.slice(0, 5).map((entry) => ({
+        rank: entry.rank,
+        name: entry.name,
+        totalXp: Number(entry.totalXp || 0),
+        isUser: entry.name === userDisplayName,
+        userId: entry.userId || `${entry.rank}-${entry.name}`,
+      }))
+    : [
+        {
+          rank: '--',
+          name: 'Leaderboard will update once learners earn XP',
+          totalXp: 0,
+          isUser: false,
+          userId: 'empty',
+        },
+      ];
 
-  if (isLoading || !isReady) {
-    return <LoadingScreen showMessage={true} fullScreen={true} size={40} duration={800} />;
+  if (!isReady) {
+    return null;
   }
 
-  if (error && !error.includes('authentication')) {
+  const showBlockingError = error && !error.includes('authentication') && !user;
+
+  if (showBlockingError) {
     return (
       <div className="flex items-center justify-center h-screen bg-transparent">
-        <div className="text-center p-8 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 rounded-2xl shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
+        <div className="text-center p-8 bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-black/5 dark:border-white/5 rounded-2xl">
           <div className="text-xl text-red-500 mb-4">{error}</div>
-          <button onClick={() => window.location.reload()} className="px-6 py-2 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] rounded-lg hover:brightness-105 transition-colors">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-[#3C83F6] text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
             Retry
           </button>
         </div>
@@ -78,204 +400,396 @@ export default function Dashboard() {
     );
   }
 
-  const userName = user?.firstName ? user.firstName : 'Student';
   return (
     <>
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        {/* Unified Background matches Admin */}
-        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
-            isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+            .font-press-start { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.4; }
+            .font-pixel-header { font-family: "Press Start 2P", "Courier New", monospace; line-height: 1.6; }
+            .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
+          `,
+        }}
+      />
+
+      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+        <div
+          className={`fixed inset-0 -z-10 transition-colors duration-300 ${
+            isDarkMode ? 'bg-[#020816]' : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'
           }`}
         />
 
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
-        <main className={`flex-1 transition-all duration-700 ease-in-out z-10 
-            ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} 
-          pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto
-            ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
+        <main
+          className={`flex flex-1 flex-col items-center transition-all duration-300 ease-in-out z-10 lg:ml-[90px] pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto ${
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+          }`}
         >
-          <div className="max-w-[1600px] mx-auto space-y-6">
-            
-            {/* Header Section with Profile & Theme Toggle */}
-            <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
-              <div>
-                <h1 className="brand-heading-primary font-poppins text-3xl md:text-4xl font-normal tracking-tight leading-none">
-                  Welcome back, {userName}.
-                </h1>
-                <p className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">
-                  Student Overview
-                </p>
+          <div className="w-full max-w-[1400px] space-y-8">
+            {error && !error.includes('authentication') ? (
+              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+                Some dashboard details are still syncing. You can keep using the page while we retry in the background.
               </div>
+            ) : null}
 
-            </header>
-
-            {/* KPIs Grid (Stats & Streak) */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {stats.map((stat, i) => (
-                <div key={i} className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-6 flex flex-col justify-between hover:from-[#ecf8ff] hover:to-[#deefff] dark:hover:from-[#0a2f6f]/85 dark:hover:to-[#0b3677]/80 transition-colors rounded-xl shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
-                  <span className="text-[10px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#7fb9e6]">
-                    {stat.title}
-                  </span>
-                  <div className="mt-4 mb-1 flex items-end gap-2">
-                    <span className="text-3xl font-normal tracking-tighter text-[#2d7fe8] dark:text-[#8fd9ff]">
-                      {stat.value}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6]">
-                    {stat.subtitle}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Middle Section: Daily Challenge & Mini Leaderboard */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+            <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
-              {/* Daily Challenge Highlight (Spans 2 columns) */}
-              <div className="lg:col-span-2 relative bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 rounded-xl flex flex-col min-h-[300px] overflow-hidden group shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
-                {/* Background Decoration */}
-                <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none transition-transform duration-700 group-hover:scale-110">
-                  <FiStar className="w-64 h-64" />
-                </div>
-                
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] shrink-0">
+              {/* Daily Challenge Card - Spans 5/8 width on lg */}
+              <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
+                <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
+                  <div
+                    className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
+                    style={{
+                      backgroundImage: `url(${heroBg})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+
+                  {/* Top Header Row */}
+                  <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
+                    <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
                       Daily Challenge
-                    </span>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-rose-500/20 text-rose-600 dark:text-rose-400 bg-rose-500/5 rounded-sm">
-                        {dailyChallenge.difficulty}
+                    </h1>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
                       </span>
-                      <span className="text-[10px] uppercase tracking-widest px-2 py-0.5 border border-[#86c4ff]/45 text-[#2d7fe8] dark:text-[#8fd9ff] bg-[#dbf1ff] dark:bg-[#0d366f] rounded-sm">
-                        {dailyChallenge.topic}
+                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                        <span>Resets in 14h 22m</span>
                       </span>
-                    </div>
-                    
-                    <h2 className="text-2xl md:text-3xl font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-2">
-                      {dailyChallenge.title}
-                    </h2>
-                    
-                    <div className="flex items-center gap-6 mt-6">
-                      <div className="flex items-center gap-2 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
-                        <FiStar className="text-amber-500" />
-                        <span>+{dailyChallenge.xpReward} XP</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
-                        <FiClock className="text-[#4f7fb7] dark:text-[#7cc3ee]" />
-                        <span>~{dailyChallenge.timeEstimate}</span>
-                      </div>
                     </div>
                   </div>
 
-                  <div className="mt-8 flex items-center justify-between">
-                    <button 
-                      onClick={() => navigate('/dashboard/daily-challenge')}
-                      className="bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] text-[#082a5d] px-6 py-3 rounded-lg text-sm font-medium transition-colors hover:brightness-105 flex items-center gap-2"
-                    >
-                      Start Challenge <FiChevronRight />
-                    </button>
-                    <span className="text-xs text-[#5f82ac] dark:text-[#81bde6]">Resets in 14h 22m</span>
+                  {/* Middle / Bottom Content */}
+                  <div className="z-10 flex flex-col items-start text-left w-full mt-4 sm:mt-5 space-y-3 text-white">
+                    {challengeLoading ? (
+                      <div className="w-full max-w-xl space-y-2.5 pt-1">
+                        <PlaceholderBar className="mt-3 h-10 w-36 rounded-lg bg-white/25 dark:bg-white/15" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
+                        <div className="flex w-full justify-end pt-1">
+                          <button
+                            onClick={() => navigate('/dashboard/daily-challenge')}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            Go to Daily challenge <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Leaderboard Snippet */}
-              <div className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 rounded-xl flex flex-col min-h-[300px] shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
-                <div className="flex items-center justify-between mb-6 shrink-0">
-                  <h3 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6]">
-                    Leaderboard
-                  </h3>
-                  <button onClick={() => navigate('/leaderboard')} className="text-[10px] font-medium text-[#2d7fe8] dark:text-[#8fd9ff] hover:underline">
-                    View Full
+              {/* Stats Overview Card - Spans 3/8 width on lg - Redesigned into two halves */}
+              <div className="w-full lg:col-span-3 order-3 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between relative">
+                
+                {/* Top Half Section: Avatar on left, Headings on right - Centered layout - pushed down with pt-4 */}
+                <div className="flex items-center justify-center gap-4 shrink-0 w-full px-1.5 pt-4 pb-1">
+                  {/* Left Column: Avatar + Edit Link - Expanded Size */}
+                  <div className="flex flex-col items-center justify-end shrink-0 relative w-20 h-16">
+                    <img
+                      src={photoUrl}
+                      alt="Avatar"
+                      className="w-20 h-20 object-contain select-none absolute bottom-2"
+                    />
+                    <button
+                      onClick={() => {
+                        setPendingAvatar(photoUrl);
+                        setIsSelectingAvatar(true);
+                      }}
+                      className="font-press-start text-[8px] sm:text-[9.5px] text-[#00113b] dark:text-[#8fd9ff] hover:underline leading-none transition-colors z-10"
+                    >
+                      EDIT
+                    </button>
+                  </div>
+
+                  {/* Right Column: Name & College */}
+                  <div className="text-left flex-1 min-w-0 -mt-6">
+                    <h2 className="font-press-start text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                      {userDisplayName}
+                    </h2>
+                    <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
+                      {collegeName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom Half Section: 2x2 Stats Grid (Icon left, Text right) - Shipped flush left - pushed down with mt-2 */}
+                <div className="grid grid-cols-2 gap-y-3 gap-x-1 px-1 py-0.5 mt-2 flex-1 items-center w-full justify-items-start pl-4 sm:pl-6">
+                  {retroStats.map((stat) => (
+                    <div key={stat.title} className="flex items-center gap-2">
+                      <div className="shrink-0">{stat.icon}</div>
+                      <div className="flex flex-col text-left">
+                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
+                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
+              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    VIEW FULL
                   </button>
                 </div>
-                
-                <div className="flex-1 flex flex-col justify-between gap-2">
-                  {leaderboardMock.map((student) => (
-                    <div
-                      key={student.rank}
-                      className={`flex items-center gap-4 py-2 px-3 -mx-3 rounded-lg transition-colors ${
-                        student.isUser ? 'bg-[#dbf1ff] dark:bg-[#0d366f] border border-[#86c4ff]/40 dark:border-[#6fbfff]/30' : 'hover:bg-[#edf7ff]/75 dark:hover:bg-[#0a2f6f]/55'
-                      }`}
-                    >
-                      <div className={`w-5 text-sm font-medium text-right shrink-0 ${
-                        student.rank === 1 ? 'text-amber-500' : student.rank === 2 ? 'text-slate-400' : student.rank === 3 ? 'text-amber-700' : 'text-black/30 dark:text-white/30'
-                      }`}>
-                        #{student.rank}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className={`text-sm font-medium truncate ${student.isUser ? 'text-[#2d7fe8] dark:text-[#8fd9ff]' : 'text-[#0d2a57] dark:text-[#8fd9ff]'}`}>
-                          {student.name}
-                        </h4>
-                      </div>
-                      <div className="text-xs font-semibold text-[#4c6f9a] dark:text-[#7fb8e2] shrink-0">
-                        {student.score}
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex-1 flex flex-col justify-around gap-1 py-1">
+                  {leaderboardLoading
+                    ? Array.from({ length: 5 }).map((_, index) => (
+                        <div
+                          key={`leaderboard-loading-${index}`}
+                          className="flex items-center gap-2 py-1 px-1 rounded-sm"
+                        >
+                          <PlaceholderBar className="h-2 w-6" />
+                          <PlaceholderBar className="h-2.5 flex-1 rounded-md" />
+                          <PlaceholderBar className="h-2 w-10" />
+                        </div>
+                      ))
+                    : featuredLeaderboard.map((student) => (
+                        <div
+                          key={student.userId}
+                          className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
+                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          <div
+                            className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
+                              student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
+                            }`}
+                          >
+                            #{student.rank}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                              {student.name}
+                            </div>
+                          </div>
+                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
+                            {student.totalXp.toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
                 </div>
               </div>
-            </div>
 
-            {/* Bottom Section: Recent Exercises */}
-            <div className="bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 dark:from-[#052152]/75 dark:to-[#072b63]/70 backdrop-blur-xl border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 p-8 rounded-xl flex flex-col shadow-[0_12px_34px_rgba(60,131,246,0.12)]">
-              <div className="flex items-center justify-between mb-6 shrink-0">
-                <h3 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6]">
-                  Recent Activity & Exercises
-                </h3>
-                <button onClick={() => navigate('/learn/exercises')} className="text-[10px] font-medium text-[#2d7fe8] dark:text-[#8fd9ff] hover:underline">
-                  View All History
-                </button>
-              </div>
+              {/* Daily Tasks Card - Spans 5/8 width on lg */}
+              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
+                {/* Header */}
+                <div className="flex items-center justify-between shrink-0 mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
+                  </div>
+                  <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                    {completedTasks}/{totalTasks}
+                  </span>
+                </div>
 
-              {(!recentExercises || recentExercises.length === 0) ? (
-                 <div className="py-12 flex flex-col items-center justify-center border border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 rounded-lg border-dashed bg-[#edf7ff]/60 dark:bg-[#0a2f6f]/35">
-                    <p className="text-xs tracking-widest uppercase text-[#5f82ac] dark:text-[#81bde6]">
-                      No recent activity recorded
-                    </p>
-                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recentExercises.slice(0, 3).map((exercise, i) => (
-                    <div 
-                      key={i} 
-                      className="p-5 border border-[#86c4ff]/40 dark:border-[#6fbfff]/30 bg-[#edf7ff]/75 dark:bg-[#0a2f6f]/45 hover:bg-[#f4fbff] dark:hover:bg-[#0b3677]/55 transition-colors rounded-xl cursor-pointer group flex flex-col justify-between min-h-[140px]"
-                      onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="text-[10px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#7fb9e6]">
-                            {exercise.courseTitle || 'Course'}
-                          </span>
-                          <span className="text-[10px] uppercase font-medium text-[#2d7fe8] dark:text-[#8fd9ff]">
-                            +{exercise.xp || 0} XP
+                 {/* Task List - Staged background elements added back */}
+                <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
+                  {groupedTasks.length > 0 ? (
+                    groupedTasks.map(group => (
+                      <div
+                        key={group.type}
+                        onClick={() => handleGroupClick(group)}
+                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
+                          <div
+                            className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                              group.completed
+                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                            }`}
+                          >
+                            {group.completed && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          {/* Task text */}
+                          <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
+                            group.completed
+                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                              : 'text-[#00113b] dark:text-white'
+                          }`}>
+                            {group.text}
                           </span>
                         </div>
-                        <h4 className="text-sm font-medium text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2">
-                          {exercise.title || 'Untitled Exercise'}
-                        </h4>
                       </div>
-                      <div className="flex items-center justify-between mt-4 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-3">
-                        <span className="text-[10px] text-[#5f82ac] dark:text-[#81bde6] flex items-center gap-1">
-                          <FiTrendingUp /> Completed
-                        </span>
-                        <FiChevronRight className="text-[#6f8fb8] dark:text-[#7fb9e6] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors" />
-                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center p-3">
+                      <svg className="w-8 h-8 text-slate-400/80 dark:text-slate-500 mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                        No tasks assigned for today.
+                      </p>
+                      <p className="font-press-start text-[8px] text-slate-400/60 dark:text-slate-500 mt-1">
+                        You're all caught up!
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
 
+                {/* Premium Retro Neon Progress Bar */}
+                <div className="mt-1 shrink-0 w-full">
+                  <div className="flex justify-between items-center font-press-start mb-0.5">
+                    <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
+                      {totalTasks > 0 ? `${taskProgress}%` : "No tasks"}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
+                      style={{ width: `${totalTasks > 0 ? taskProgress : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}
+              <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
+                <div className="flex items-center justify-between mb-4 shrink-0">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
+                  <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    View All History
+                  </button>
+                </div>
+
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div
+                        key={`exercise-loading-${index}`}
+                        className="p-4 border border-black/5 dark:border-white/5 bg-white/20 dark:bg-black/20 rounded-xl min-h-[110px] animate-pulse"
+                      >
+                        <PlaceholderBar className="h-3 w-20" />
+                        <PlaceholderBar className="mt-3 h-3.5 w-full rounded-md" />
+                        <PlaceholderBar className="mt-2 h-3.5 w-4/5 rounded-md" />
+                        <div className="mt-6 border-t border-black/5 dark:border-white/5 pt-2">
+                          <PlaceholderBar className="h-2.5 w-24" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : !recentExercises || recentExercises.length === 0 ? (
+                  <div className="py-10 flex flex-col items-center justify-center border border-black/5 dark:border-white/5 rounded-lg border-dashed">
+                    <p className="font-press-start text-[8px] md:text-[9.5px] tracking-widest uppercase text-black/30 dark:text-white/30">No recent activity recorded</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {recentExercises.slice(0, 3).map((exercise, index) => (
+                      <div
+                        key={`${exercise.id || exercise.title}-${index}`}
+                        className="p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 transition-all duration-300 rounded-xl cursor-pointer group flex flex-col justify-between min-h-[110px] hover:-translate-y-0.5 hover:shadow-md"
+                        onClick={() => navigate(`/learn/exercises/${exercise.courseId}/${exercise.id}`)}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-1.5">
+                            <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                              {exercise.courseTitle || 'Course'}
+                            </span>
+                            <span className="font-press-start text-[10px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
+                              +{exercise.xp || 0} XP
+                            </span>
+                          </div>
+                          <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                            {exercise.title || 'Untitled Exercise'}
+                          </h4>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
+                          <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
+                            <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Completed
+                          </span>
+                          <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
         </main>
       </div>
+
+      {/* Avatar Picker Modal */}
+      {isSelectingAvatar && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div 
+            className="relative w-full max-w-md bg-white dark:bg-[#0a1128] border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-2xl animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button 
+              onClick={() => setIsSelectingAvatar(false)}
+              className="absolute top-4 right-4 text-black/50 dark:text-white/50 hover:text-black dark:hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h3 className="font-press-start text-[10px] tracking-wider text-[#0d2a57] dark:text-[#8fd9ff] mb-4 text-center">
+              CHOOSE YOUR AVATAR
+            </h3>
+
+            <div className="grid grid-cols-4 gap-4 my-6">
+              {Array.from({ length: 8 }, (_, i) => {
+                const avatarUrl = `/profile_avatars/nobackgroundavatar${i + 1}.png`;
+                const isSelected = avatarUrl === (pendingAvatar || photoUrl);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setPendingAvatar(avatarUrl)}
+                    className={`relative aspect-square rounded-xl overflow-hidden p-1 transition-all ${
+                      isSelected 
+                        ? "bg-gradient-to-br from-[#3C83F6] to-[#2563eb] scale-105 shadow-md border border-[#3C83F6]" 
+                        : "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <img 
+                      src={avatarUrl} 
+                      alt={`Avatar ${i + 1}`}
+                      className="w-full h-full object-cover rounded-lg bg-white dark:bg-[#020b23]"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setIsSelectingAvatar(false)}
+                className="px-4 py-2 border border-black/10 dark:border-white/10 rounded-xl text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 text-black/60 dark:text-white/60 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleAvatarSelect(pendingAvatar || photoUrl)}
+                className="px-4 py-2 bg-[#3C83F6] text-white rounded-xl text-xs font-semibold hover:bg-blue-600 transition-all disabled:opacity-50"
+                disabled={!pendingAvatar || pendingAvatar === photoUrl}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

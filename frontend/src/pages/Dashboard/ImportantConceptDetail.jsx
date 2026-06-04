@@ -183,36 +183,36 @@ export default function ImportantConceptDetail() {
 
   if (!concept || !detail) {
     return (
-      <UserSidebarLayout maxWidthClass="max-w-5xl">
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <button
+          type="button"
+          onClick={() => navigate(backPath)}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Concepts
+        </button>
         <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <button
-            type="button"
-            onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-lg font-semibold text-[#8fd9ff] transition hover:text-[#a8e6ff]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back to concepts
-          </button>
-          <p className="mt-4 text-[#0d2a57] dark:text-[#8fd9ff]">Concept not found.</p>
+          <p className="text-[#0d2a57] dark:text-[#8fd9ff]">Concept not found.</p>
         </div>
       </UserSidebarLayout>
     );
   }
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-5xl">
+    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="space-y-6">
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <button
-            type="button"
-            onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-lg font-semibold text-[#8fd9ff] transition hover:text-[#a8e6ff]"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Back to concepts
-          </button>
+        <button
+          type="button"
+          onClick={() => navigate(backPath)}
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Concepts
+        </button>
 
-          <div className="mt-4 flex items-start gap-4">
+        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/95 to-[#d9efff]/90 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+          <div className="flex items-start gap-4">
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-sm font-semibold"
               style={{

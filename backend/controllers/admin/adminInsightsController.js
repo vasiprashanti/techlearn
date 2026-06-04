@@ -98,6 +98,7 @@ const buildDashboardResponse = async () => {
     ],
     collegeRanking: collegeScores.map((college) => ({
       name: college.name || "Unknown College",
+      accuracy: Number((college.score || 0).toFixed(0)),
       score: Number((college.score || 0).toFixed(0)),
     })),
     topStudents: metrics.topStudents,
