@@ -194,7 +194,8 @@ router.post("/google", async function googleLogin(req, res) {
           email: formattedEmail,
           password: "",
           authProvider: "google",
-          photoUrl: picture || "",
+          photoUrl: "/profile_avatars/nobackgroundavatar1.png",
+          avatar: "/profile_avatars/nobackgroundavatar1.png",
         });
       } catch (error) {
         if (error?.code === 11000) {
@@ -205,7 +206,12 @@ router.post("/google", async function googleLogin(req, res) {
       }
     } else {
       user.authProvider = user.authProvider === "local" ? user.authProvider : "google";
-      if (picture && !user.photoUrl) user.photoUrl = picture;
+      if (!user.photoUrl || !user.photoUrl.includes("/profile_avatars/")) {
+        user.photoUrl = "/profile_avatars/nobackgroundavatar1.png";
+      }
+      if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
+        user.avatar = "/profile_avatars/nobackgroundavatar1.png";
+      }
       await user.save();
     }
 
@@ -254,7 +260,8 @@ router.post("/firebase", async (req, res) => {
           email: formattedEmail,
           password: "",
           authProvider: "firebase",
-          photoUrl: picture || "",
+          photoUrl: "/profile_avatars/nobackgroundavatar1.png",
+          avatar: "/profile_avatars/nobackgroundavatar1.png",
           role: assignedRole,
         });
       } catch (error) {
@@ -266,7 +273,12 @@ router.post("/firebase", async (req, res) => {
       }
     } else {
       if (isAdmin && user.role !== "admin") user.role = "admin";
-      if (picture && !user.photoUrl) user.photoUrl = picture;
+      if (!user.photoUrl || !user.photoUrl.includes("/profile_avatars/")) {
+        user.photoUrl = "/profile_avatars/nobackgroundavatar1.png";
+      }
+      if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
+        user.avatar = "/profile_avatars/nobackgroundavatar1.png";
+      }
       if (user.authProvider !== "local") user.authProvider = "firebase";
       await user.save();
     }

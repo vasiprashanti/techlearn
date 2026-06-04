@@ -13,11 +13,13 @@ import UserSidebarLayout from "./UserSidebarLayout";
 const AVATAR_COUNT = 8;
 const AVATAR_PATH = "/profile_avatars";
 
-// Helper function to get initial avatar
 const getInitialAvatar = () => {
   const storedUser = JSON.parse(localStorage.getItem("userData"));
   if (storedUser?.photoUrl) {
     let url = storedUser.photoUrl;
+    if (url && !url.includes('/profile_avatars/')) {
+      url = `${AVATAR_PATH}/avatar1.png`;
+    }
     if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
       url = url.replace('/nobackgroundavatar', '/avatar');
     }
@@ -42,9 +44,12 @@ const Profile = () => {
   useEffect(() => {
     if (hasInitialized) return;
     const storedUser = JSON.parse(localStorage.getItem("userData"));
-    const activePhoto = user?.photoUrl || storedUser?.photoUrl;
+    let activePhoto = user?.photoUrl || storedUser?.photoUrl;
     if (activePhoto) {
       let url = activePhoto;
+      if (url && !url.includes('/profile_avatars/')) {
+        url = `${AVATAR_PATH}/avatar1.png`;
+      }
       if (url.includes('/profile_avatars/') && url.includes('nobackground')) {
         url = url.replace('/nobackgroundavatar', '/avatar');
       }

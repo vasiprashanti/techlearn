@@ -322,6 +322,9 @@ export default function Dashboard() {
   }, []);
   const displayUser = user || storedUser;
   let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/nobackgroundavatar1.png";
+  if (rawPhotoUrl && !rawPhotoUrl.includes('/profile_avatars/')) {
+    rawPhotoUrl = "/profile_avatars/nobackgroundavatar1.png";
+  }
   // Dynamically rewrite to the backgroundless version if user has an old avatar set
   if (rawPhotoUrl && rawPhotoUrl.includes('/profile_avatars/') && !rawPhotoUrl.includes('nobackground')) {
     rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
