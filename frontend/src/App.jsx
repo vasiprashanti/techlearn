@@ -3,6 +3,7 @@ import { lazy, Suspense, useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ScrollToTop from './components/ScrollToTop'
+import ExternalLinkHandler from './components/ExternalLinkHandler'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { AuthModalProvider } from './context/AuthModalContext'
@@ -365,6 +366,7 @@ export default function App() {
           <AuthModalProvider>
             
               <ScrollToTop />
+              <ExternalLinkHandler />
               <DelayedAnalytics />
               <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] transition-all duration-300">
                 <FloatingCodeBackground />

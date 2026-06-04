@@ -9,9 +9,9 @@ import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/c
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
-  <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
-    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#020816]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#06194d]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
     <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
@@ -53,6 +53,7 @@ const CourseTopics = () => {
   
   // Ref for the scrollable container
   const scrollContainerRef = useRef(null);
+  const lastContentScrollTopRef = useRef(0);
 
   const [backendCourse, setBackendCourse] = useState(cachedCourse);
   const [loading, setLoading] = useState(!cachedCourse);
@@ -134,16 +135,22 @@ const CourseTopics = () => {
       // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
       scrollContainerRef.current.scrollTop = 0;
     }
+    lastContentScrollTopRef.current = 0;
     setIsCourseHeaderHidden(false);
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-      detail: { isScrolled: false },
+      detail: { isScrolled: false, isScrollingDown: false },
     }));
   }, [selectedTopic]);
 
   const handleContentScroll = (event) => {
-    const shouldHideHeader = event.currentTarget.scrollTop > 24;
+    const currentScrollTop = event.currentTarget.scrollTop;
+    const isScrollingDown = currentScrollTop > lastContentScrollTopRef.current;
+    const shouldHideHeader = currentScrollTop > 24 && isScrollingDown;
+
+    lastContentScrollTopRef.current = Math.max(currentScrollTop, 0);
+
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-      detail: { isScrolled: shouldHideHeader },
+      detail: { isScrolled: shouldHideHeader, isScrollingDown },
     }));
     setIsCourseHeaderHidden((current) => (
       current === shouldHideHeader ? current : shouldHideHeader
@@ -153,7 +160,7 @@ const CourseTopics = () => {
   useEffect(() => {
     return () => {
       window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-        detail: { isScrolled: false },
+        detail: { isScrolled: false, isScrollingDown: false },
       }));
     };
   }, []);
@@ -181,12 +188,12 @@ const CourseTopics = () => {
       <ScrollProgress />
       
       {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#020816]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#06194d]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
-      <main className="flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
+      <main className="relative flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
         {/* Top Header */}
-        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-6 md:px-12 transition-all duration-300 ease-out ${
+        <header className={`absolute left-0 right-0 top-4 z-20 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
           isCourseHeaderHidden
             ? "max-h-0 py-0 opacity-0 pointer-events-none"
             : "max-h-32 pt-4 pb-4 opacity-100"
@@ -194,7 +201,7 @@ const CourseTopics = () => {
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
-                className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-semibold text-[#00113b] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
+                className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] leading-tight text-[#00113b] hover:text-[#2d7fe8] dark:text-[#66dbe6] dark:hover:text-[#96efff] transition-colors group"
             >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to Learn</span>
@@ -255,11 +262,11 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[27rem_minmax(0,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out"
+            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
-            <div className="flex-1 overflow-y-auto px-3 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex-1 overflow-y-auto px-3 py-4 md:ml-12 md:max-w-[20rem] md:px-0 md:py-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
                 {currentCourse.topics.map((topic, index) => {
                   const isActive = selectedTopic === index;
@@ -268,10 +275,10 @@ const CourseTopics = () => {
                     <button
                       key={topic.id}
                       onClick={() => setSelectedTopic(index)}
-                      className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                      className={`group flex w-full items-center gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
-                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
-                          : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
+                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-[#3b73ff] dark:bg-[#2f6df1] dark:text-white"
+                          : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-[#b9c3d7] dark:hover:border-white/10 dark:hover:bg-white/[0.06] dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
@@ -288,12 +295,12 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="min-h-0 overflow-y-auto px-4 md:px-8 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="min-h-0 overflow-y-auto px-4 md:px-16 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
-            <div className="max-w-[800px] mx-auto pb-20">
+            <div className="max-w-[760px] pb-20">
 
               {/* Reading Content */}
-              <div className="p-8 md:p-12 lg:p-16 min-h-[60vh]">
+              <div className="px-0 py-2 md:py-3 min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
@@ -302,7 +309,7 @@ const CourseTopics = () => {
                 */}
                 <h1
                   key={selectedTopic}
-                  className="text-3xl md:text-4xl lg:text-5xl font-medium text-[#00113b] dark:text-white tracking-tight leading-[1.2]"
+                  className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold text-[#00113b] dark:text-white tracking-tight leading-[1.1]"
                 >
                   {currentTopic?.title}
                 </h1>

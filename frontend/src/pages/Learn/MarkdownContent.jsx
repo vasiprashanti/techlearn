@@ -34,7 +34,16 @@ const markdownComponents = {
   h4: ({children}) => <h5 className="text-[13px] font-bold text-[#00113b] dark:text-white/65 mt-6 mb-3 uppercase tracking-widest">{cleanHeadingText(children)}</h5>,
   p: ({children}) => <p className="text-[#00113b] dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light">{children}</p>,
   strong: ({children}) => <strong className="font-medium text-[#00113b] dark:text-white">{children}</strong>,
-  a: ({children, href}) => <a href={href} className="font-medium text-[#00113b] underline decoration-[#00113b]/30 decoration-2 underline-offset-4 transition-all hover:text-[#3C83F6] dark:text-blue-200 dark:decoration-blue-200/35">{children}</a>,
+  a: ({children, href}) => (
+    <a
+      href={href}
+      target={href?.startsWith('http') ? '_blank' : undefined}
+      rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+      className="font-medium text-[#00113b] underline decoration-[#00113b]/30 decoration-2 underline-offset-4 transition-all hover:text-[#3C83F6] dark:text-blue-200 dark:decoration-blue-200/35"
+    >
+      {children}
+    </a>
+  ),
   blockquote: ({children}) => (
     <blockquote className="my-8 pl-6 py-2 border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl">
       <div className="text-[#00113b] dark:text-white/65 italic text-lg">{children}</div>
