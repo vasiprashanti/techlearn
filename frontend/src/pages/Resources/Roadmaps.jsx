@@ -9,7 +9,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Loader2,
-  Map,
   X,
 } from 'lucide-react';
 import ScrollProgress from '../../components/ScrollProgress';
@@ -331,21 +330,17 @@ export default function Roadmaps() {
     <UserSidebarLayout maxWidthClass="max-w-[1180px]">
       <ScrollProgress />
 
-      <div className="space-y-12 pb-10">
+      <div className="space-y-8 pb-8">
         <motion.header
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-12 text-center md:pt-16"
+          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
         >
-          <div className="mb-5 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.35em] text-[#0000a8] dark:text-[#8fd9ff]">
-            <Map className="h-4 w-4" />
-            Roadmap
-          </div>
-          <h1 className="text-4xl font-semibold tracking-tight text-[#00113b] dark:text-white sm:text-5xl lg:text-6xl">
+          <h1 className="dashboard-page-title">
             {heroTitle}
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-[#00113b]/58 dark:text-white/58 md:text-lg">
+          <p className="dashboard-page-subtitle mx-auto mt-3 max-w-2xl">
             {heroDescription}
           </p>
         </motion.header>
@@ -367,10 +362,10 @@ export default function Roadmaps() {
           </section>
         ) : (
           <>
-            <section className="relative mx-auto max-w-[1120px]">
+            <section className="relative mx-auto max-w-[1040px]">
               <div className="pointer-events-none absolute left-4 top-3 h-[calc(100%-1.5rem)] w-px bg-[#d8e6ee] md:left-1/2 md:-translate-x-1/2 dark:bg-[#28537f]/75" />
 
-              <div className="space-y-10 md:space-y-14">
+              <div className="space-y-6 md:space-y-8">
                 {parsedRoadmap.steps.map((step, index) => {
                   const isRight = index % 2 === 1;
                   return (
@@ -380,24 +375,24 @@ export default function Roadmaps() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, margin: '-80px' }}
                       transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
-                      className="relative grid items-start gap-5 pl-12 md:grid-cols-[1fr_72px_1fr] md:gap-0 md:pl-0"
+                      className="relative grid items-start gap-3 pl-10 md:grid-cols-[1fr_60px_1fr] md:gap-0 md:pl-0"
                     >
-                      <div className="absolute left-4 top-8 z-10 h-4 w-4 -translate-x-1/2 rounded-full border-[5px] border-white bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:left-1/2 dark:border-[#06142f] dark:bg-[#79cfff]" />
+                      <div className="absolute left-4 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-white bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:left-1/2 dark:border-[#06142f] dark:bg-[#79cfff]" />
 
                       <button
                         type="button"
                         onClick={() => setActiveStepId(step.id)}
-                        className={`group relative w-full rounded-[1.125rem] border border-slate-200 bg-white px-6 py-7 text-left text-[#00113b] shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#0000a8] hover:bg-white hover:shadow-lg dark:border-[#16345f] dark:bg-[#06142f] dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[126px] ${
+                        className={`group relative w-full rounded-2xl border border-slate-200 bg-white px-5 py-5 text-left text-[#00113b] shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#0000a8] hover:bg-white hover:shadow-lg dark:border-[#16345f] dark:bg-[#06142f] dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
                           isRight ? 'md:col-start-3' : 'md:col-start-1'
                         }`}
                         aria-expanded={step.id === activeStepId}
                       >
-                        <span className="block text-[11px] font-bold uppercase tracking-[0.16em] text-[#0000a8] dark:text-[#89d6ff]">
+                        <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#0000a8] dark:text-[#89d6ff]">
                           {step.label}
                         </span>
-                        <span className="mt-3 block pr-10 text-xl font-semibold tracking-tight sm:text-2xl">{step.title}</span>
-                        <span className="absolute right-6 top-7 inline-flex h-8 w-8 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0000a8] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
-                          <ArrowRight className="h-5 w-5" />
+                        <span className="mt-2 block pr-9 text-lg font-semibold tracking-tight sm:text-xl">{step.title}</span>
+                        <span className="absolute right-5 top-5 inline-flex h-7 w-7 items-center justify-center rounded-full text-[#00113b]/45 transition group-hover:translate-x-1 group-hover:text-[#0000a8] dark:text-white/45 dark:group-hover:text-[#8fd9ff]">
+                          <ArrowRight className="h-4 w-4" />
                         </span>
                       </button>
                     </motion.div>

@@ -13,17 +13,14 @@ const initialFormState = {
   firstName: "",
   lastName: "",
   email: "",
-  dateOfBirth: "",
-  gender: "",
-  username: "",
 };
 
 function Toggle({ checked, onChange, label, note }) {
   return (
-    <div className="dashboard-inner-surface flex items-start justify-between gap-4 p-4">
+    <div className="dashboard-inner-surface flex items-start justify-between gap-4 p-3.5">
       <div>
-        <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{label}</p>
-        <p className="mt-1 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{note}</p>
+        <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">{label}</p>
+        <p className="mt-1 text-[11px] leading-5 text-[#4c6f9a] dark:text-[#7fb8e2]">{note}</p>
       </div>
       <button
         type="button"
@@ -77,9 +74,6 @@ export default function DashboardSettings() {
     firstName: mergedUser.firstName || "",
     lastName: mergedUser.lastName || "",
     email: mergedUser.email || "",
-    dateOfBirth: mergedUser.dateOfBirth || "",
-    gender: mergedUser.gender || "",
-    username: mergedUser.username || "",
   });
   
   const [isSaving, setIsSaving] = useState(false);
@@ -104,9 +98,6 @@ export default function DashboardSettings() {
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         email: formData.email.trim(),
-        dateOfBirth: formData.dateOfBirth,
-        gender: formData.gender,
-        username: formData.username.trim(),
       };
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/users/user/${userId}`, {
@@ -138,25 +129,25 @@ export default function DashboardSettings() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-8 py-2 px-1">
+      <div className="space-y-6 py-2 px-1">
         
         {/* Top Header Section */}
-        <header className="flex flex-col justify-between gap-4 border-b border-black/5 pb-6 dark:border-white/5 md:flex-row md:items-end">
+        <header className="flex flex-col justify-between gap-4 border-b border-black/5 pb-5 dark:border-white/5 md:flex-row md:items-end">
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <button
               type="button"
               onClick={() => navigate("/dashboard/profile")}
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+              className="inline-flex items-center gap-2 text-xs font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
             >
               <ArrowLeft className="h-4 w-4" />
               Back to Profile
             </button>
             <h1 className="font-poppins tracking-tight leading-[0.92]">
-              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+              <span className="block italic text-3xl sm:text-4xl md:text-5xl brand-heading-primary">
                 ACCOUNT SETTINGS
               </span>
             </h1>
-            <p className="mt-4 text-xs uppercase tracking-widest text-black/40 dark:text-white/40">
+            <p className="mt-3 text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">
               Customize your profile metadata, system settings, and notifications
             </p>
           </motion.div>
@@ -179,9 +170,9 @@ export default function DashboardSettings() {
                   setActiveTab(tab.id);
                   setStatus({ type: "", message: "" });
                 }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-300 ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-semibold uppercase tracking-wider transition-all duration-300 ${
                   active 
-                    ? "bg-[#3C83F6] text-white shadow-lg" 
+                    ? "bg-[#00113b] text-[#daf0fa] shadow-md shadow-[#00113b]/15" 
                     : "text-[#4c6f9a] hover:bg-black/5 dark:text-[#a6cbf3] dark:hover:bg-white/5"
                 }`}
               >
@@ -201,17 +192,17 @@ export default function DashboardSettings() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.4 }}
-              className="dashboard-surface p-8 md:p-12 space-y-8"
+              className="dashboard-surface p-5 md:p-7 space-y-6"
             >
               <div className="flex items-center gap-3">
-                <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
                   Personal Information
                 </h2>
                 <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
               </div>
 
-              <form onSubmit={handleProfileSubmit} className="space-y-7">
-                <div className="grid gap-6 sm:grid-cols-2">
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
+                <div className="grid gap-5 sm:grid-cols-2">
                   <label className="block">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">First Name</span>
                     <input type="text" value={formData.firstName} onChange={handleFormChange("firstName")} className={inputClass} required />
@@ -225,27 +216,6 @@ export default function DashboardSettings() {
                   <label className="block sm:col-span-2">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">Email Address</span>
                     <input type="email" value={formData.email} onChange={handleFormChange("email")} className={inputClass} required />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">Date of Birth</span>
-                    <input type="date" value={formData.dateOfBirth} onChange={handleFormChange("dateOfBirth")} className={inputClass} />
-                  </label>
-
-                  <label className="block">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">Gender</span>
-                    <select value={formData.gender} onChange={handleFormChange("gender")} className={inputClass}>
-                      <option value="">Select</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                      <option value="prefer-not-to-say">Prefer not to say</option>
-                    </select>
-                  </label>
-
-                  <label className="block sm:col-span-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">Username</span>
-                    <input type="text" value={formData.username} onChange={handleFormChange("username")} className={inputClass} required />
                   </label>
                 </div>
 
@@ -264,10 +234,10 @@ export default function DashboardSettings() {
                 )}
 
                 <div className="flex flex-wrap items-center justify-end gap-3 border-t border-[#86c4ff]/30 pt-6 dark:border-[#6bb8ec]/30">
-                  <button type="button" onClick={() => navigate("/dashboard/profile")} className="dashboard-secondary-btn">
+                  <button type="button" onClick={() => navigate("/dashboard/profile")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#00113b]/20 bg-white/45 px-5 py-2.5 text-xs font-semibold text-[#00113b] transition hover:bg-white/70 dark:border-[#8fd9ff]/25 dark:bg-white/5 dark:text-[#8fd9ff] dark:hover:bg-white/10">
                     Cancel
                   </button>
-                  <button type="submit" disabled={isSaving} className="dashboard-secondary-btn disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-2">
+                  <button type="submit" disabled={isSaving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] disabled:cursor-not-allowed disabled:opacity-60">
                     <Save className="h-4 w-4" />
                     {isSaving ? "Saving..." : "Save Profile Details"}
                   </button>
@@ -283,10 +253,10 @@ export default function DashboardSettings() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.4 }}
-              className="dashboard-surface p-6 md:p-8 space-y-6"
+              className="dashboard-surface p-5 md:p-7 space-y-5"
             >
               <div className="flex items-center gap-3 mb-4">
-                <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
                   Notification Prefs
                 </h2>
                 <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
@@ -328,10 +298,10 @@ export default function DashboardSettings() {
                   note="Hide your public leaderboard profile from other learners."
                 />
                 <div className="dashboard-inner-surface p-4">
-                  <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Display Initials</p>
+                  <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Display Name</p>
                   <input
                     type="text"
-                    value={formData.username || "Student"}
+                    value={`${formData.firstName} ${formData.lastName}`.trim() || "Student"}
                     readOnly
                     className="dashboard-input-surface mt-2 h-10 rounded-xl px-3 py-2 cursor-not-allowed opacity-75"
                   />
@@ -346,7 +316,7 @@ export default function DashboardSettings() {
                     setStatus({ type: "success", message: "Application preferences saved successfully." });
                     setTimeout(() => setStatus({ type: "", message: "" }), 2500);
                   }}
-                  className="dashboard-secondary-btn"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c]"
                 >
                   Confirm Preferences
                 </button>
@@ -372,7 +342,7 @@ export default function DashboardSettings() {
               <div className="dashboard-surface p-6 space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Lock className="h-4 w-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                  <h2 className="text-sm font-bold tracking-widest uppercase text-[#0d2a57] dark:text-[#8fd9ff]">Account Security</h2>
+                  <h2 className="text-xs font-bold tracking-widest uppercase text-[#0d2a57] dark:text-[#8fd9ff]">Account Security</h2>
                 </div>
                 
                 <div className="space-y-4">
@@ -384,7 +354,7 @@ export default function DashboardSettings() {
                   />
                   <button
                     type="button"
-                    className="dashboard-secondary-btn w-full"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c]"
                   >
                     Change Password
                   </button>
@@ -394,16 +364,16 @@ export default function DashboardSettings() {
               <div className="dashboard-surface p-6 space-y-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Globe className="h-4 w-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                  <h2 className="text-sm font-bold tracking-widest uppercase text-[#0d2a57] dark:text-[#8fd9ff]">System Environment</h2>
+                  <h2 className="text-xs font-bold tracking-widest uppercase text-[#0d2a57] dark:text-[#8fd9ff]">System Environment</h2>
                 </div>
 
                 <div className="space-y-4">
                   <div className="dashboard-inner-surface p-4">
-                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Interface Language</p>
+                    <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Interface Language</p>
                     <p className="mt-1 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">English (United States)</p>
                   </div>
                   <div className="dashboard-inner-surface p-4">
-                    <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Standard Time Zone</p>
+                    <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Standard Time Zone</p>
                     <p className="mt-1 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">Asia/Kolkata (GMT+05:30)</p>
                   </div>
                 </div>
@@ -413,7 +383,7 @@ export default function DashboardSettings() {
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-500" />
                   <div>
-                    <h3 className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Security & System Synchronization</h3>
+                    <h3 className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Security & System Synchronization</h3>
                     <p className="text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">Your mock time zones and security logs are up to date.</p>
                   </div>
                 </div>
@@ -423,7 +393,7 @@ export default function DashboardSettings() {
                     setStatus({ type: "success", message: "Security configurations synced successfully." });
                     setTimeout(() => setStatus({ type: "", message: "" }), 2500);
                   }}
-                  className="dashboard-secondary-btn"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-xs font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c]"
                 >
                   Verify Integrity
                 </button>

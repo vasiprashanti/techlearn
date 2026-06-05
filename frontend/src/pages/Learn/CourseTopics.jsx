@@ -11,7 +11,7 @@ const MarkdownContent = lazy(() => import('./MarkdownContent'));
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
-    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-[#06194d]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+    <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
     <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
@@ -188,12 +188,12 @@ const CourseTopics = () => {
       <ScrollProgress />
       
       {/* Unified Background */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-[#06194d]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
 
       <main className="relative flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
         
         {/* Top Header */}
-        <header className={`absolute left-0 right-0 top-4 z-20 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
+        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
           isCourseHeaderHidden
             ? "max-h-0 py-0 opacity-0 pointer-events-none"
             : "max-h-32 pt-4 pb-4 opacity-100"
@@ -201,7 +201,7 @@ const CourseTopics = () => {
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
-                className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] leading-tight text-[#00113b] hover:text-[#2d7fe8] dark:text-[#66dbe6] dark:hover:text-[#96efff] transition-colors group"
+                className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] leading-tight text-[#00113b] hover:text-[#2d7fe8] dark:text-[#7fb9e6] dark:hover:text-[#96ddff] transition-colors group"
             >
                 <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                 <span>Back to Learn</span>
@@ -277,8 +277,8 @@ const CourseTopics = () => {
                       onClick={() => setSelectedTopic(index)}
                       className={`group flex w-full items-center gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
-                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-[#3b73ff] dark:bg-[#2f6df1] dark:text-white"
-                          : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-[#b9c3d7] dark:hover:border-white/10 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                          ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#00113b] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          : "border-transparent text-[#00113b] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#00113b] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">

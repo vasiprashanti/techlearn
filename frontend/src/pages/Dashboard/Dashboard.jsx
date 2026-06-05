@@ -419,7 +419,7 @@ export default function Dashboard() {
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-300 ${
-            isDarkMode ? 'bg-[#020816]' : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'
+            isDarkMode ? 'bg-[#020816]' : 'bg-gradient-to-br from-[#d0f2ff] via-[#b8eaff] to-[#d0f2ff]'
           }`}
         />
 

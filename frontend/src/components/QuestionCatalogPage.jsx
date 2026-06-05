@@ -22,6 +22,29 @@ const topicPillClass = {
   Aptitude: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800',
 };
 
+const trackCardDetails = {
+  DSA: {
+    description: 'Master arrays, strings, trees, and graph algorithms.',
+    visualClass: 'from-[#d8f2ff] via-[#c7ecff] to-[#b7e4ff] dark:from-[#082a5d] dark:via-[#0a214b] dark:to-[#061936]',
+  },
+  SQL: {
+    description: 'Practice databases, joins, filters, and SQL query logic.',
+    visualClass: 'from-[#dcf7ff] via-[#c7f0ff] to-[#bceaff] dark:from-[#06315f] dark:via-[#08284f] dark:to-[#061936]',
+  },
+  'Core CS': {
+    description: 'Revise OS, DBMS, networks, and computer architecture.',
+    visualClass: 'from-[#e4f5ff] via-[#cfeeff] to-[#bde7ff] dark:from-[#132949] dark:via-[#0b2147] dark:to-[#061936]',
+  },
+  Aptitude: {
+    description: 'Build speed across quant, reasoning, and verbal questions.',
+    visualClass: 'from-[#e3eeff] via-[#d4e9ff] to-[#bfe5ff] dark:from-[#192957] dark:via-[#10234d] dark:to-[#061936]',
+  },
+  Company: {
+    description: 'Solve company-tagged questions for targeted preparation.',
+    visualClass: 'from-[#eaf6ff] via-[#d7efff] to-[#c4e8ff] dark:from-[#243052] dark:via-[#102348] dark:to-[#061936]',
+  },
+};
+
 function FilterDropdown({ label, options, value, onChange, isOpen, onToggle }) {
   return (
     <div className="relative">
@@ -180,11 +203,11 @@ export default function QuestionCatalogPage({
 
   const effectivePracticeTracks = useMemo(() => {
     const defaultTracks = {
-      'DSA': { track: 'DSA', attempted: 0, total: 0, accuracy: 0, icon: <Code className="w-4 h-4 text-blue-500" /> },
-      'SQL': { track: 'SQL', attempted: 0, total: 0, accuracy: 0, icon: <Database className="w-4 h-4 text-sky-500" /> },
-      'Core CS': { track: 'Core CS', attempted: 0, total: 0, accuracy: 0, icon: <Cpu className="w-4 h-4 text-slate-500" /> },
-      'Aptitude': { track: 'Aptitude', attempted: 0, total: 0, accuracy: 0, icon: <Brain className="w-4 h-4 text-indigo-500" /> },
-      'Company': { track: 'Company', attempted: 0, total: 0, accuracy: 0, icon: <Briefcase className="w-4 h-4 text-orange-500" /> },
+      'DSA': { track: 'DSA', attempted: 0, total: 0, accuracy: 0, icon: <Code className="h-9 w-9" />, ...trackCardDetails.DSA },
+      'SQL': { track: 'SQL', attempted: 0, total: 0, accuracy: 0, icon: <Database className="h-9 w-9" />, ...trackCardDetails.SQL },
+      'Core CS': { track: 'Core CS', attempted: 0, total: 0, accuracy: 0, icon: <Cpu className="h-9 w-9" />, ...trackCardDetails['Core CS'] },
+      'Aptitude': { track: 'Aptitude', attempted: 0, total: 0, accuracy: 0, icon: <Brain className="h-9 w-9" />, ...trackCardDetails.Aptitude },
+      'Company': { track: 'Company', attempted: 0, total: 0, accuracy: 0, icon: <Briefcase className="h-9 w-9" />, ...trackCardDetails.Company },
     };
 
     const visibleTotals = displayQuestions.reduce((accumulator, question) => {
@@ -309,8 +332,8 @@ export default function QuestionCatalogPage({
           </div>
 
           {!showBackBtn && (
-            <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[110px] relative overflow-hidden">
+            <div className="mb-6 space-y-4">
+              <div className="dashboard-surface dashboard-surface-strong p-4 flex flex-col justify-between min-h-[104px] relative overflow-hidden">
                 <div className="absolute right-2 bottom-2 text-orange-500/10 dark:text-orange-500/5">
                   <Flame className="w-16 h-16" />
                 </div>
@@ -322,41 +345,43 @@ export default function QuestionCatalogPage({
                   {practiceStats?.streak || 0} <span className="text-xs font-normal text-[#4c6f9a] dark:text-[#7fb8e2]">days</span>
                 </p>
               </div>
-              
-              {effectivePracticeTracks.map((track) => (
-                <button
-                  key={track.track}
-                  type="button"
-                  onClick={() => handleTrackNavigate(track.track)}
-                  className="dashboard-surface p-4 text-left border border-transparent hover:border-[#3C83F6]/45 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 relative group flex flex-col justify-between min-h-[110px]"
-                >
-                  <div className="w-full flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="shrink-0">{track.icon}</span>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-[#dff3ff] truncate group-hover:text-[#3C83F6] transition-colors">
-                        {track.track}
-                      </p>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                {effectivePracticeTracks.map((track) => (
+                  <button
+                    key={track.track}
+                    type="button"
+                    onClick={() => handleTrackNavigate(track.track)}
+                    className="dashboard-surface group relative flex min-h-[238px] overflow-hidden p-0 text-left transition-all duration-300 hover:-translate-y-1 hover:border-[#3C83F6]/45 hover:shadow-lg"
+                  >
+                    <div className="flex h-full w-full flex-col">
+                      <div className={`relative flex min-h-[96px] basis-[40%] items-center justify-center overflow-hidden border-b border-[#9fcfff]/35 bg-gradient-to-br ${track.visualClass}`}>
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.55),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(143,217,255,0.16),transparent_42%)]" />
+                        <div className="dashboard-icon-badge relative z-10 h-16 w-16 rounded-3xl text-[#2d7fe8] shadow-[0_10px_26px_rgba(60,131,246,0.16)] transition-transform duration-300 group-hover:scale-110 dark:text-[#8fd9ff]">
+                          {track.icon}
+                        </div>
+                        <ChevronRight className="absolute right-4 top-4 h-4 w-4 text-[#2d7fe8]/60 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#2d7fe8] dark:text-[#8fd9ff]/70" />
+                      </div>
+
+                      <div className="flex basis-[60%] flex-col justify-between p-5">
+                        <div>
+                          <h3 className="text-xl font-semibold leading-snug text-[#0d2a57] transition-colors group-hover:text-[#2d7fe8] dark:text-[#8fd9ff] dark:group-hover:text-[#96ddff]">
+                            {track.track} Practice
+                          </h3>
+                          <p className="mt-3 text-sm leading-relaxed text-[#4c6f9a] dark:text-[#7fb8e2]">
+                            {track.description}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6]">
+                          <span>{track.attempted || 0}/{track.total || 0} solved</span>
+                          <span>{track.accuracy || 0}%</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-white/50 px-2 py-0.5 text-xs text-[#4c6f9a] dark:bg-[#0b214d]/60 dark:text-[#9bc5e8] shrink-0 font-medium">
-                      {track.accuracy || 0}%
-                    </span>
-                  </div>
-                  
-                  <div className="mt-3 w-full flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] text-[#4c6f9a] dark:text-[#7fb8e2] font-medium leading-none">
-                        {track.attempted || 0}/{track.total || 0} solved
-                      </p>
-                      {track.correct !== undefined && (
-                        <p className="text-[10px] text-[#4c6f9a]/75 dark:text-[#7fb8e2]/75 mt-1 leading-none">
-                          {track.correct} correct
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#3C83F6] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 

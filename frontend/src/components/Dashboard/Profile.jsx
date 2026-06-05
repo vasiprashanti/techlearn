@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  User, Mail, CalendarDays, Lock, Camera, ArrowLeft,
-  X, CheckCircle, Shield, Settings 
+  User, Mail, Lock, Camera,
+  X, CheckCircle, Settings 
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
@@ -110,7 +110,7 @@ const Profile = () => {
   
   const userInitial = displayUser?.firstName?.charAt(0)?.toUpperCase() || 'S';
   const userName = displayUser?.firstName ? `${displayUser.firstName} ${displayUser.lastName || ''}` : 'Student';
-  const dashboardCardClass = "dashboard-surface p-8 md:p-12";
+  const dashboardCardClass = "dashboard-surface p-5 md:p-7";
 
   if (isLoading) {
     return (
@@ -125,108 +125,66 @@ const Profile = () => {
     <>
       <ScrollProgress />
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="space-y-8">
+        <div className="space-y-6">
           
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
+          <header className="flex flex-col md:flex-row md:items-end justify-between pb-5 border-b border-black/5 dark:border-white/5 gap-4">
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
               <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+                <span className="block italic text-3xl sm:text-4xl md:text-5xl brand-heading-primary">
                   MY PROFILE
                 </span>
               </h1>
-              <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
+              <p className="text-[10px] tracking-widest uppercase text-black/40 dark:text-white/40 mt-3">
                 Manage your personal information
               </p>
             </motion.div>
           </header>
 
           {/* Main Content Grid (Responsive two-column grid) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-8 w-full items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 w-full items-start">
             
             {/* Left Column - Info & Security Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full space-y-8 order-2 lg:order-1"
+              className="w-full order-2 lg:order-1"
             >
-              {/* Basic Info Card */}
+              {/* Account Details Card */}
               <div className={dashboardCardClass}>
-                <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
-                    Basic Info
+                <div className="flex items-center gap-3 mb-7">
+                  <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
+                    Account Details
                   </h2>
                   <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <User className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
                       <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Full Name</p>
                     </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
+                    <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
                       {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
                     </p>
                   </div>
 
                   <div className="group">
                     <div className="flex items-center gap-3 mb-2">
-                      <CalendarDays className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Date of Birth</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.dateOfBirth || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Gender</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 capitalize">
-                      {displayUser?.gender || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Mail className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <Mail className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
                       <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
                     </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 truncate">
+                    <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 truncate">
                       {displayUser?.email || "No email provided"}
                     </p>
                   </div>
-                </div>
-              </div>
 
-              {/* Account Info Card */}
-              <div className={dashboardCardClass}>
-                <div className="flex items-center gap-3 mb-10">
-                  <h2 className="text-xs tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
-                    Account Security
-                  </h2>
-                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="group">
+                  <div className="group sm:col-span-2">
                     <div className="flex items-center gap-3 mb-2">
-                      <Shield className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Username</p>
-                    </div>
-                    <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.username || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Lock className="w-4 h-4 text-[#2d7fe8] dark:text-[#8fd9ff]" />
+                      <Lock className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
                       <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Password</p>
                     </div>
                     <div className="flex items-center pl-7 gap-2">
-                      <p className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
+                      <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
                         ••••••••
                       </p>
                       <span className="ml-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
@@ -246,8 +204,8 @@ const Profile = () => {
                 {/* Decorative background blur */}
                 <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
 
-                <div className="relative mb-8 mt-4 group">
-                  <div className="w-48 h-48 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
+                <div className="relative mb-6 mt-2 group">
+                  <div className="w-40 h-40 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
                     <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
                       <img
                         src={selectedAvatar}
@@ -259,14 +217,14 @@ const Profile = () => {
                   
                   <button
                     onClick={() => setIsSelectingAvatar(true)}
-                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-4 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
+                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
                     title="Change Avatar"
                   >
-                    <Camera className="w-5 h-5" />
+                    <Camera className="w-4 h-4" />
                   </button>
                 </div>
 
-                <h2 className="relative z-10 mb-1 text-center text-2xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
+                <h2 className="relative z-10 mb-1 text-center text-xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
                   {userName}
                 </h2>
                 <div className="relative z-10 mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
@@ -279,7 +237,7 @@ const Profile = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/dashboard/profile/settings')}
-                  className="dashboard-secondary-btn relative z-10 mt-5 w-fit px-6 mx-auto flex items-center gap-2"
+                  className="relative z-10 mt-5 mx-auto inline-flex w-fit items-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-sm font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:text-[#daf0fa] dark:hover:bg-[#001b5c]"
                 >
                   <Settings className="w-4 h-4" />
                   <span>Settings</span>
