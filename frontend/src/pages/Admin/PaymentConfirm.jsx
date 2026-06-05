@@ -21,8 +21,8 @@ const PaymentConfirm = () => {
     <div className={`flex min-h-screen ${theme === 'dark' ? 'dark' : 'light'}`}>
       <div className={`fixed inset-0 -z-10 ${
         theme === 'dark' 
-          ? 'bg-gradient-to-br from-[#020b23] to-[#0a1128]' 
-          : 'bg-gradient-to-br from-[#daf0fa] to-[#bceaff]'
+          ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' 
+          : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
       }`} />
       
       <main className="flex-1 p-6 ml-[70px]">

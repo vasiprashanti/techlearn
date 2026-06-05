@@ -129,29 +129,32 @@ export default function DashboardSettings() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-6 py-2 px-1">
+      <div className="space-y-8 py-2 px-1">
         
         {/* Top Header Section */}
-        <header className="flex flex-col justify-between gap-4 border-b border-black/5 pb-5 dark:border-white/5 md:flex-row md:items-end">
-          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/profile")}
-              className="inline-flex items-center gap-2 text-xs font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Profile
-            </button>
-            <h1 className="font-poppins tracking-tight leading-[0.92]">
-              <span className="block italic text-3xl sm:text-4xl md:text-5xl brand-heading-primary">
-                ACCOUNT SETTINGS
-              </span>
-            </h1>
-            <p className="mt-3 text-[10px] uppercase tracking-widest text-black/40 dark:text-white/40">
-              Customize your profile metadata, system settings, and notifications
-            </p>
-          </motion.div>
-        </header>
+        <div className="w-full text-left">
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/profile")}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Profile
+          </button>
+        </div>
+
+        <motion.header
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+        >
+          <h1 className="font-press-start leading-normal">
+            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+              ACCOUNT SETTINGS
+            </span>
+          </h1>
+        </motion.header>
 
         {/* Unified Tab Controller */}
         <div className="flex border-b border-black/5 dark:border-white/5 pb-1 gap-2">

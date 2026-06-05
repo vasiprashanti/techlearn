@@ -38,7 +38,7 @@ const Languages = () => {
         className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
           isDarkMode
             ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]"
-            : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"
+            : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
         }`}
       />
 

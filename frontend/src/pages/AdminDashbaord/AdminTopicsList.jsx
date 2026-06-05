@@ -220,7 +220,13 @@ const AdminTopicsList = () => {
   if (loading && topics.length === 0 && !exerciseFile) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        <div className="fixed inset-0 -z-10 transition-colors duration-1000" />
+        <div
+        className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
+          isDarkMode
+            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
+            : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
+        }`}
+      />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
         <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden flex items-center justify-center`}>
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -232,7 +238,13 @@ const AdminTopicsList = () => {
   if (error) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-        <div className="fixed inset-0 -z-10 transition-colors duration-1000" />
+        <div
+        className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
+          isDarkMode
+            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
+            : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
+        }`}
+      />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
         <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-y-auto overflow-x-hidden flex items-center justify-center`}>
           <div className="text-red-500 font-semibold">{error}</div>
@@ -247,7 +259,7 @@ const AdminTopicsList = () => {
         isDarkMode ? "dark" : "light"
       }`}
     >
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
 
       {/* Edit Topic Modal Popup */}
       {showEditModal && editingTopic && (

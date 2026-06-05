@@ -3,6 +3,7 @@ import { Check, ChevronDown, Filter, Search, Code, Database, Cpu, Brain, Briefca
 import { useLocation, useNavigate } from 'react-router-dom';
 import UserSidebarLayout from './Dashboard/UserSidebarLayout';
 import { practiceAPI } from '../services/practiceApi';
+import { motion } from 'framer-motion';
 
 const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
@@ -311,25 +312,29 @@ export default function QuestionCatalogPage({
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <section className="p-1 sm:p-2">
           {showBackBtn && (
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/practice")}
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Practice
-            </button>
+            <div className="w-full text-left">
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/practice")}
+                className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Practice
+              </button>
+            </div>
           )}
-          <div className="mb-5">
-            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-              <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
-                {pageTitle?.toUpperCase()}
-              </span>
-            </h1>
-            <p className="dashboard-page-subtitle">
-              {pageSubtitle}
-            </p>
-          </div>
+          <motion.header
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65 }}
+            className="mx-auto max-w-4xl pt-8 text-center md:pt-10 mb-8"
+          >
+          <h1 className="font-press-start leading-normal">
+            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+              {pageTitle?.toUpperCase()}
+            </span>
+          </h1>
+        </motion.header>
 
           {!showBackBtn && (
             <div className="mb-6 space-y-4">

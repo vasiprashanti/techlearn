@@ -4,11 +4,12 @@ import {
   Award,
   LayoutDashboard,
   Map,
-  PanelLeftOpen,
   PlayCircle,
   User,
-  X,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiSidebar, FiX } from "react-icons/fi";
+import { useTheme } from "../../context/ThemeContext";
 
 const menuGroups = [
   {
@@ -26,6 +27,8 @@ const menuGroups = [
 const SCROLL_KEY = 'student-sidebar-scroll';
 
 const Sidebar = () => {
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const desktopNavRef = useRef(null);
   const location = useLocation();
@@ -138,7 +141,7 @@ const Sidebar = () => {
         title="Open Menu"
         className="lg:hidden fixed top-20 left-4 z-[45] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/55 dark:bg-black/55 border border-black/10 dark:border-white/10 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3c83f6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300"
       >
-        <PanelLeftOpen className="w-4 h-4" />
+        <FiSidebar className="w-4 h-4" />
         <span className="text-xs font-semibold tracking-wide">Menu</span>
       </button>
 
@@ -157,7 +160,7 @@ const Sidebar = () => {
                   className="absolute right-2 top-0 p-1 text-[#00113b] dark:text-slate-400 hover:text-white"
                   aria-label="Close sidebar"
                 >
-                  <X className="w-4 h-4" />
+                  <FiX className="w-4 h-4" />
                 </button>
               </div>
 

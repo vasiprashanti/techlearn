@@ -59,6 +59,17 @@ const Navbar = () => {
     return () => window.removeEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
   }, []);
 
+  const [isForceHidden, setIsForceHidden] = useState(false);
+
+  useEffect(() => {
+    const handleHideNavbar = (event) => {
+      setIsForceHidden(!!event.detail?.hide);
+    };
+
+    window.addEventListener('techlearn:hide-navbar', handleHideNavbar);
+    return () => window.removeEventListener('techlearn:hide-navbar', handleHideNavbar);
+  }, []);
+
   useEffect(() => {
     if (!isUserMenuOpen) return undefined;
 
@@ -90,7 +101,7 @@ const Navbar = () => {
 
   const isDarkMode = theme === 'dark';
 
-  if (shouldHideNavbar) {
+  if (shouldHideNavbar || isForceHidden) {
     return null;
   }
 
@@ -182,15 +193,15 @@ const Navbar = () => {
                   </div>
 
                   <div className="p-2.5 space-y-1.5">
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                      }}
-                      className="w-full rounded-xl border border-[#f6b6b4]/60 bg-[#ffe6e5] px-3 py-2.5 text-left text-sm font-medium text-[#be4b43] transition hover:bg-[#ffd9d7] dark:border-[#8a3a35]/60 dark:bg-[#4a1f22]/50 dark:text-[#ffb6b0] dark:hover:bg-[#5b272b]/60"
-                    >
-                      Logout
-                    </button>
+                     <button
+                       onClick={() => {
+                         setIsUserMenuOpen(false);
+                         logout();
+                       }}
+                       className="w-full rounded-xl border border-red-600 bg-red-600 px-3 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-red-700 hover:border-red-700 dark:border-red-600 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
+                     >
+                       Logout
+                     </button>
                   </div>
                 </div>
               )}

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   User, Mail, Lock, Camera,
-  X, CheckCircle, Settings 
+  X, CheckCircle, Settings,
+  Award, Zap, BookOpen, Shield
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserContext";
@@ -31,7 +32,7 @@ const getInitialAvatar = () => {
 const Profile = () => {
   const navigate = useNavigate();
   const { theme } = useTheme();
-  const { user, isLoading, refetchUserData } = useUser();
+  const { user, isLoading, refetchUserData, xp, progress } = useUser();
   
   const isDarkMode = theme === 'dark';
   
@@ -115,7 +116,7 @@ const Profile = () => {
   if (isLoading) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased items-center justify-center ${isDarkMode ? "dark" : "light"}`}>
-         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`} />
+         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
          <div className="w-12 h-12 border-t-2 border-[#3C83F6] dark:border-white rounded-full animate-spin"></div>
       </div>
     );
@@ -125,69 +126,147 @@ const Profile = () => {
     <>
       <ScrollProgress />
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="space-y-6">
+        <div className="space-y-8">
           
-          <header className="flex flex-col md:flex-row md:items-end justify-between pb-5 border-b border-black/5 dark:border-white/5 gap-4">
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                <span className="block italic text-3xl sm:text-4xl md:text-5xl brand-heading-primary">
-                  MY PROFILE
-                </span>
-              </h1>
-              <p className="text-[10px] tracking-widest uppercase text-black/40 dark:text-white/40 mt-3">
-                Manage your personal information
-              </p>
-            </motion.div>
-          </header>
+          <motion.header
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65 }}
+            className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+          >
+            <h1 className="font-press-start leading-normal">
+              <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+                MY PROFILE
+              </span>
+            </h1>
+          </motion.header>
 
           {/* Main Content Grid (Responsive two-column grid) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 w-full items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 w-full lg:items-stretch">
             
             {/* Left Column - Info & Security Section */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full order-2 lg:order-1"
+              className="w-full order-2 lg:order-1 flex flex-col h-full"
             >
               {/* Account Details Card */}
-              <div className={dashboardCardClass}>
-                <div className="flex items-center gap-3 mb-7">
-                  <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-semibold">
-                    Account Details
-                  </h2>
-                  <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+              <div className={`${dashboardCardClass} flex-1 flex flex-col justify-between gap-8 h-full`}>
+                {/* Account Details Section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                      Account Profile
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Full Name */}
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Full Name</p>
+                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
+                          {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Email Address */}
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Email Address</p>
+                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
+                          {displayUser?.email || "No email provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Account Type / Role */}
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Account Role</p>
+                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white capitalize">
+                          {displayUser?.role || "Student"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Security / Password */}
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
+                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
+                        <Lock className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Password</p>
+                        <div className="flex items-center gap-2 justify-between">
+                          <p className="text-sm font-semibold text-[#0d2a57] dark:text-white tracking-[0.25em]">
+                            ••••••••
+                          </p>
+                          <span className="rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[8px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <User className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Full Name</p>
-                    </div>
-                    <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7">
-                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
-                    </p>
+                {/* Learning Summary Section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                      Learning Overview
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
                   </div>
 
-                  <div className="group">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Mail className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Email Address</p>
-                    </div>
-                    <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] pl-7 truncate">
-                      {displayUser?.email || "No email provided"}
-                    </p>
-                  </div>
-
-                  <div className="group sm:col-span-2">
-                    <div className="flex items-center gap-3 mb-2">
-                      <Lock className="w-3.5 h-3.5 text-[#2d7fe8] dark:text-[#8fd9ff]" />
-                      <p className="text-[10px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-semibold">Password</p>
-                    </div>
-                    <div className="flex items-center pl-7 gap-2">
-                      <p className="text-sm md:text-base font-medium text-[#0d2a57] dark:text-[#8fd9ff] tracking-[0.2em]">
-                        ••••••••
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* XP Stats */}
+                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase tracking-widest text-amber-700 dark:text-yellow-500 font-bold">Total XP</span>
+                        <Zap className="w-4 h-4 text-yellow-500 animate-pulse" />
+                      </div>
+                      <p className="text-xl font-black text-amber-850 dark:text-yellow-400">
+                        {Number(xp || 0).toLocaleString()}
                       </p>
-                      <span className="ml-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
+                    </div>
+
+                    {/* Exercises Solved */}
+                    <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border border-blue-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase tracking-widest text-[#2d7fe8] dark:text-[#8fd9ff] font-bold">Exercises</span>
+                        <Award className="w-4 h-4 text-blue-500" />
+                      </div>
+                      <p className="text-xl font-black text-[#0d2a57] dark:text-[#8fd9ff]">
+                        {progress?.completedExercises || 0} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">/ {progress?.totalExercises || 0}</span>
+                      </p>
+                    </div>
+
+                    {/* Course Progress */}
+                    <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-bold">Course</span>
+                        <BookOpen className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xl font-black text-emerald-800 dark:text-emerald-400">
+                          {progress?.courseProgress || 0}%
+                        </p>
+                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                            style={{ width: `${progress?.courseProgress || 0}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

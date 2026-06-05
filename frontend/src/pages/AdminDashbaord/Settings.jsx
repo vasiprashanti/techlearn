@@ -56,7 +56,7 @@ export default function Settings() {
         className={`fixed inset-0 -z-10 transition-colors duration-700 ${
           isDarkMode
             ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]"
-            : "bg-gradient-to-br from-[#daf0fa] via-[#c7e9ff] to-[#daf0fa]"
+            : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
         }`}
       />
 

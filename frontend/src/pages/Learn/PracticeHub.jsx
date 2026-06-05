@@ -22,7 +22,7 @@ export default function PracticeHub() {
   const practiceCards = [
     {
       id: 'dsa',
-      title: 'DSA PRACTICE',
+      title: 'DSA',
       desc: 'Master array, string, tree, and graph algorithms.',
       icon: <Code className="h-10 w-10" />,
       visualClass: 'from-[#d8f2ff] via-[#c7ecff] to-[#b7e4ff] dark:from-[#082a5d] dark:via-[#0a214b] dark:to-[#061936]',
@@ -30,7 +30,7 @@ export default function PracticeHub() {
     },
     {
       id: 'sql',
-      title: 'SQL PRACTICE',
+      title: 'SQL',
       desc: 'Master databases, complex joins, and SQL queries.',
       icon: <Database className="h-10 w-10" />,
       visualClass: 'from-[#dcf7ff] via-[#c7f0ff] to-[#bceaff] dark:from-[#06315f] dark:via-[#08284f] dark:to-[#061936]',
@@ -38,7 +38,7 @@ export default function PracticeHub() {
     },
     {
       id: 'core-cs',
-      title: 'CORE CS PRACTICE',
+      title: 'CORE CS',
       desc: 'Operating Systems, DBMS, Networks, and Computer Architecture.',
       icon: <Cpu className="h-10 w-10" />,
       visualClass: 'from-[#e4f5ff] via-[#cfeeff] to-[#bde7ff] dark:from-[#132949] dark:via-[#0b2147] dark:to-[#061936]',
@@ -46,7 +46,7 @@ export default function PracticeHub() {
     },
     {
       id: 'aptitude',
-      title: 'APTITUDE PRACTICE',
+      title: 'APTITUDE',
       desc: 'Quantitative, logical reasoning, and verbal ability puzzles.',
       icon: <Brain className="h-10 w-10" />,
       visualClass: 'from-[#e3eeff] via-[#d4e9ff] to-[#bfe5ff] dark:from-[#192957] dark:via-[#10234d] dark:to-[#061936]',
@@ -54,7 +54,7 @@ export default function PracticeHub() {
     },
     {
       id: 'company',
-      title: 'COMPANY QUESTIONS',
+      title: 'COMPANY BASED',
       desc: 'Practice coding questions asked in top tech companies.',
       icon: <Briefcase className="h-10 w-10" />,
       visualClass: 'from-[#eaf6ff] via-[#d7efff] to-[#c4e8ff] dark:from-[#243052] dark:via-[#102348] dark:to-[#061936]',
@@ -64,17 +64,19 @@ export default function PracticeHub() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-6 px-1 py-2">
-        <header className="pb-4">
-          <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-            <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+      <div className="space-y-8 px-1 py-2">
+        <motion.header
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+        >
+          <h1 className="font-press-start leading-normal">
+            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
               PRACTICE QUESTIONS
             </span>
           </h1>
-          <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4">
-            Practice and track your progress across topics
-          </p>
-        </header>
+        </motion.header>
 
         <div className="space-y-5">
           {/* Streak Card */}
@@ -111,9 +113,9 @@ export default function PracticeHub() {
                     <ChevronRight className="absolute right-5 top-5 h-5 w-5 text-[#2d7fe8]/55 transition-all duration-300 group-hover:translate-x-1 group-hover:text-[#2d7fe8] dark:text-[#8fd9ff]/70" />
                   </div>
 
-                  <div className="flex basis-[60%] flex-col justify-end p-6 md:p-7">
+                  <div className="flex basis-[60%] flex-col justify-center items-center text-center p-6 md:p-7">
                     <h3 className="text-xl md:text-[1.55rem] font-semibold leading-snug text-[#0d2a57] transition-colors group-hover:text-[#2d7fe8] dark:text-[#8fd9ff] dark:group-hover:text-[#96ddff]">
-                      {card.title.replace(' PRACTICE', ' Practice')}
+                      {card.title}
                     </h3>
                     <p className="mt-4 text-sm leading-relaxed text-[#4c6f9a] dark:text-[#7fb8e2]">
                       {card.desc}
