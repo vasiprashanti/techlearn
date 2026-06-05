@@ -162,10 +162,9 @@ export default function TrackTemplateDetails() {
     };
   }, [categorySlug, track?.trackType, trackDetail?.availableQuestions]);
 
-  const openAddDayModal = () => {
-    const nextDay = String(Math.max(0, ...(trackDetail?.dayAssignments || []).map((d) => Number(d.dayNumber))) + 1);
+  const openAddTaskModal = (dayNumber) => {
     setAddDayForm({
-      dayNumber: nextDay,
+      dayNumber: String(dayNumber),
       questionId: '',
       taskType: 'Coding',
     });
@@ -174,9 +173,8 @@ export default function TrackTemplateDetails() {
 
   const closeAddDayModal = () => {
     setIsAddDayModalOpen(false);
-    const nextDay = String(Math.max(0, ...(trackDetail?.dayAssignments || []).map((d) => Number(d.dayNumber))) + 1);
     setAddDayForm({
-      dayNumber: nextDay,
+      dayNumber: '',
       questionId: '',
       taskType: 'Coding',
     });
@@ -200,10 +198,9 @@ export default function TrackTemplateDetails() {
     }
   };
 
-  const removeAssignedQuestion = async (indexToRemove) => {
+  const removeAssignedQuestion = async (dayNumber) => {
     try {
-      const dayNum = indexToRemove + 1;
-      await adminAPI.removeTrackTemplateDay(templateId, dayNum);
+      await adminAPI.removeTrackTemplateDay(templateId, dayNumber);
       const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
       setTrackDetail(preferRemoteData(remoteTemplate, null));
     } catch (err) {
@@ -213,8 +210,7 @@ export default function TrackTemplateDetails() {
 
   const removeTaskFromDay = async (dayNumber, questionId) => {
     try {
-      // In a real flow, remove specific task. For now, pull/remove track day assignment.
-      await adminAPI.removeTrackTemplateDay(templateId, dayNumber);
+      await adminAPI.removeTrackTemplateDay(templateId, dayNumber, questionId);
       const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
       setTrackDetail(preferRemoteData(remoteTemplate, null));
     } catch (err) {
@@ -265,9 +261,10 @@ export default function TrackTemplateDetails() {
                 <input
                   type="number"
                   min="1"
+                  readOnly
+                  disabled
                   value={addDayForm.dayNumber}
-                  onChange={(e) => setAddDayForm((prev) => ({ ...prev, dayNumber: e.target.value }))}
-                  className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 text-base text-[#1a2335] dark:text-white"
+                  className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#cdd5e0] dark:bg-[#0c1c38] px-3.5 text-base text-[#1a2335]/60 dark:text-white/50 cursor-not-allowed outline-none"
                 />
               </div>
 
@@ -392,10 +389,6 @@ export default function TrackTemplateDetails() {
 
             <div className="flex items-center justify-between pt-1">
               <h3 className="text-xl font-bold text-[#0b1b38] dark:text-white">Day-wise Questions</h3>
-              <button onClick={openAddDayModal} className="h-9 px-3.5 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1.5">
-                <FiPlus className="w-3.5 h-3.5" />
-                Add Day
-              </button>
             </div>
 
             <div className="space-y-2.5">
@@ -406,49 +399,76 @@ export default function TrackTemplateDetails() {
                       <span className="inline-flex items-center rounded-full px-2.5 py-1 bg-[#dfe8f6] dark:bg-[#1c3f76] text-[#3c83f6] dark:text-blue-300 text-xs font-semibold">
                         Day {day.dayNumber}
                       </span>
-                      <button onClick={() => removeTaskFromDay(day.dayNumber, null)} className="text-red-500 hover:text-red-650 text-xs font-semibold">Remove Day</button>
+                      <button
+                        onClick={() => openAddTaskModal(day.dayNumber)}
+                        className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
+                      >
+                        <FiPlus className="w-3.5 h-3.5" />
+                        Add Task
+                      </button>
                     </div>
                     <div className="space-y-2 pl-3">
-                      {(day.tasks || []).map((t, idx) => (
-                        <div key={`${t.questionId}-${idx}`} className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2 text-xs">
-                          <span className="text-[#0b1b38] dark:text-white font-medium">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[{t.taskType}]</span>
-                            {t.questionTitle}
-                          </span>
-                        </div>
-                      ))}
+                      {day.tasks && day.tasks.length > 0 ? (
+                        day.tasks.map((t, idx) => (
+                          <div key={`${t.questionId}-${idx}`} className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2 text-xs">
+                            <span className="text-[#0b1b38] dark:text-white font-medium">
+                              <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[{t.taskType}]</span>
+                              {t.questionTitle}
+                            </span>
+                            <button
+                              onClick={() => removeTaskFromDay(day.dayNumber, t.questionId)}
+                              className="text-red-500 hover:text-red-700 font-semibold"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">No tasks assigned yet.</p>
+                      )}
                     </div>
                   </article>
                 ))
               ) : (
-                assignedQuestions.map((question, index) => (
-                  <article key={`${question.id}-${index}`} className="group rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-3 flex items-center justify-between gap-2.5">
+                (trackDetail?.dayAssignments || []).map((day) => (
+                  <article key={`day-${day.dayNumber}`} className="group rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-3 flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-2 h-6 flex flex-col justify-center gap-[3px]">
-                        <span className="w-1 h-1 rounded-full bg-black/20 dark:bg-white/30" />
-                        <span className="w-1 h-1 rounded-full bg-black/20 dark:bg-white/30" />
-                        <span className="w-1 h-1 rounded-full bg-black/20 dark:bg-white/30" />
-                      </div>
                       <span className="inline-flex items-center rounded-full px-2.5 py-1 bg-[#dfe8f6] dark:bg-[#1c3f76] text-[#3c83f6] dark:text-blue-300 text-xs font-semibold">
-                        Day {index + 1}
+                        Day {day.dayNumber}
                       </span>
-                      <div className="min-w-0">
-                        <h4 className="text-base font-semibold text-[#0b1b38] dark:text-white truncate">{question.title}</h4>
-                        <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">{question.track} · {question.difficulty}</p>
-                      </div>
+                      {day.questionId ? (
+                        <div className="min-w-0">
+                          <h4 className="text-base font-semibold text-[#0b1b38] dark:text-white truncate">{day.questionTitle}</h4>
+                          <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">{day.track} · {day.difficulty}</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">No question assigned yet.</p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2.5">
-                      <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
-                        {question.difficulty}
-                      </span>
-                      <button
-                        onClick={() => removeAssignedQuestion(index)}
-                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-650 transition-opacity"
-                        aria-label={`Remove day ${index + 1}`}
-                      >
-                        <FiX className="w-4 h-4" />
-                      </button>
+                      {day.questionId ? (
+                        <>
+                          <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(day.difficulty)}`}>
+                            {day.difficulty}
+                          </span>
+                          <button
+                            onClick={() => removeAssignedQuestion(day.dayNumber)}
+                            className="text-red-500 hover:text-red-700 transition-colors"
+                            aria-label={`Remove question on day ${day.dayNumber}`}
+                          >
+                            <FiX className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => openAddTaskModal(day.dayNumber)}
+                          className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
+                        >
+                          <FiPlus className="w-3.5 h-3.5" />
+                          Assign Question
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))

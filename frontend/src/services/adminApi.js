@@ -272,7 +272,10 @@ export const adminAPI = {
   updateTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}`, { method: 'DELETE' }),
   assignTrackTemplateDay: (templateId, body) => request(`/admin/track-templates/${templateId}/days`, { method: 'POST', body: JSON.stringify(body) }),
-  removeTrackTemplateDay: (templateId, dayNumber) => request(`/admin/track-templates/${templateId}/days/${dayNumber}`, { method: 'DELETE' }),
+  removeTrackTemplateDay: (templateId, dayNumber, questionId) => {
+    const query = questionId ? `?questionId=${questionId}` : '';
+    return request(`/admin/track-templates/${templateId}/days/${dayNumber}${query}`, { method: 'DELETE' });
+  },
   reorderTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}/reorder`, { method: 'PUT', body: JSON.stringify(body) }),
 
   getResources: () => request('/admin/resources'),

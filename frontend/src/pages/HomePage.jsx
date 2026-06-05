@@ -99,7 +99,7 @@ const HomePage = () => {
   useEffect(() => {
     if (isTyping && currentIndex < fullText.length) {
       const isMobile = window.innerWidth <= 480
-      const charDelay = isMobile ? 120 : 75
+      const charDelay = isMobile ? 220 : 150
 
       const timeout = setTimeout(() => {
         setDisplayedText(prev => prev + fullText[currentIndex])

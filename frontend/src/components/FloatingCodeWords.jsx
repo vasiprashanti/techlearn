@@ -38,8 +38,8 @@ const FloatingCodeWords = () => {
       snippet.style.position = 'fixed'
       snippet.style.top = '-5%'
       
-      // Override animation to run exactly once (forwards) over 3.5 seconds for a smooth fall
-      snippet.style.animation = 'float-down 3.5s linear forwards'
+      // Override animation to run exactly once (forwards) over 2s for a faster fall
+      snippet.style.animation = 'float-down 2s linear forwards'
 
       // Calculate boundaries to prevent text leaking off left/right edges
       const padding = isMobile ? 70 : 130
@@ -62,7 +62,7 @@ const FloatingCodeWords = () => {
           if (col >= 0 && col < numCols) {
             const lastSpawn = occupiedColumns.current[col] || 0
             // Cooldown blocks spawning too close vertically in/around this lane
-            if (now - lastSpawn < 1600) {
+            if (now - lastSpawn < 800) {
               isOccupied = true
               break
             }
@@ -99,16 +99,16 @@ const FloatingCodeWords = () => {
 
       document.body.appendChild(snippet)
 
-      // Remove snippet only after the 3.5s float-down animation completes off-screen
+      // Remove snippet only after the 2s float-down animation completes off-screen
       setTimeout(() => {
         if (snippet.parentNode) {
           snippet.remove()
         }
-      }, 3600)
+      }, 2100)
     }
 
-    // Set spawn interval: slower on mobile, comfortable on desktop
-    const spawnInterval = isMobile ? 2000 : 1100
+    // Set spawn interval: faster on mobile, comfortable on desktop
+    const spawnInterval = isMobile ? 1000 : 550
     const interval = setInterval(createSnippet, spawnInterval)
 
     return () => {

@@ -655,6 +655,15 @@ export const createTrackTemplate = async (req, res) => {
       return res.status(400).json({ success: false, message: schedule.error });
     }
 
+    const dayAssignments = [];
+    for (let i = 1; i <= schedule.totalDays; i++) {
+      dayAssignments.push({
+        dayNumber: i,
+        questionId: null,
+        tasks: [],
+      });
+    }
+
     const template = await TrackTemplate.create({
       name: name.trim(),
       trackType: req.body.trackType || "Daily Challenge",
@@ -666,6 +675,7 @@ export const createTrackTemplate = async (req, res) => {
       totalDays: schedule.totalDays,
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
+      dayAssignments,
       versionHistory: [{ version: 1, label: "v1 - Initial template", changedBy: getActorName(req.user) }],
     });
 
@@ -743,6 +753,10 @@ export const getTrackTemplateDetail = async (req, res) => {
         trackType: template.trackType || "Daily Challenge",
         dayAssignments: (template.dayAssignments || []).map((assignment) => ({
           dayNumber: assignment.dayNumber,
+          questionId: assignment.questionId?._id || assignment.questionId,
+          questionTitle: assignment.questionId?.title || "",
+          difficulty: assignment.questionId?.difficulty || "",
+          track: getCategoryTitle(assignment.questionId || {}),
           tasks: (assignment.tasks || []).map((t) => ({
             taskType: t.taskType,
             questionId: t.questionId?._id || t.questionId,
@@ -828,6 +842,22 @@ export const updateTrackTemplate = async (req, res) => {
       });
       if (schedule.error) {
         return res.status(400).json({ success: false, message: schedule.error });
+      }
+      if (schedule.totalDays !== template.totalDays) {
+        const currentDaysCount = template.dayAssignments.length;
+        if (schedule.totalDays > currentDaysCount) {
+          for (let i = currentDaysCount + 1; i <= schedule.totalDays; i++) {
+            template.dayAssignments.push({
+              dayNumber: i,
+              questionId: null,
+              tasks: [],
+            });
+          }
+        } else if (schedule.totalDays < currentDaysCount) {
+          template.dayAssignments = template.dayAssignments.filter(
+            (assignment) => assignment.dayNumber <= schedule.totalDays
+          );
+        }
       }
       template.startDate = schedule.startDate;
       template.endDate = schedule.endDate;
@@ -1011,6 +1041,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 export const removeTrackTemplateDay = async (req, res) => {
   try {
     const { templateId, dayNumber } = req.params;
+    const { questionId } = req.query;
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId);
@@ -1018,9 +1049,21 @@ export const removeTrackTemplateDay = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    template.dayAssignments = template.dayAssignments.filter(
-      (assignment) => assignment.dayNumber !== Number(dayNumber)
+    const targetDayNumber = Number(dayNumber);
+    const dayIndex = template.dayAssignments.findIndex(
+      (assignment) => assignment.dayNumber === targetDayNumber
     );
+
+    if (dayIndex >= 0) {
+      if (questionId) {
+        template.dayAssignments[dayIndex].tasks = template.dayAssignments[dayIndex].tasks.filter(
+          (t) => String(t.questionId) !== String(questionId)
+        );
+      } else {
+        template.dayAssignments[dayIndex].questionId = null;
+        template.dayAssignments[dayIndex].tasks = [];
+      }
+    }
     await template.save();
     await syncTemplateToTrack(template);
     await logTrackTemplateEvent({
