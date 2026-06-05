@@ -347,13 +347,13 @@ export default function Roadmaps() {
 
         {loading ? (
           <section className="flex min-h-[360px] items-center justify-center">
-            <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/55 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
+            <div className="inline-flex items-center gap-3 rounded-full border border-[#86c4ff]/45 bg-white/40 px-5 py-3 text-sm font-medium text-[#00113b] shadow-sm shadow-[#3c83f6]/10 backdrop-blur-xl dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#8fd9ff]">
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading roadmap content
             </div>
           </section>
         ) : error ? (
-          <section className="mx-auto max-w-2xl rounded-[1.4rem] border border-dashed border-[#86c4ff]/55 bg-white/45 p-8 text-center shadow-sm shadow-[#3c83f6]/10 dark:border-[#6fbfff]/30 dark:bg-[#051738]/70">
+          <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
             <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff] bg-[#e4f4ff] text-[#1266af] dark:border-[#6fbfff] dark:bg-[#14406f] dark:text-[#9cd6ff]">
               <AlertCircle className="h-5 w-5" />
             </div>
@@ -363,7 +363,7 @@ export default function Roadmaps() {
         ) : (
           <>
             <section className="relative mx-auto max-w-[1040px]">
-              <div className="pointer-events-none absolute left-4 top-3 h-[calc(100%-1.5rem)] w-px bg-[#d8e6ee] md:left-1/2 md:-translate-x-1/2 dark:bg-[#28537f]/75" />
+              <div className="pointer-events-none absolute left-4 top-3 h-[calc(100%-1.5rem)] w-px bg-[#86c4ff]/45 md:left-1/2 md:-translate-x-1/2 dark:bg-[#28537f]/75" />
 
               <div className="space-y-6 md:space-y-8">
                 {parsedRoadmap.steps.map((step, index) => {
@@ -377,12 +377,12 @@ export default function Roadmaps() {
                       transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
                       className="relative grid items-start gap-3 pl-10 md:grid-cols-[1fr_60px_1fr] md:gap-0 md:pl-0"
                     >
-                      <div className="absolute left-4 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-white bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:left-1/2 dark:border-[#06142f] dark:bg-[#79cfff]" />
+                      <div className="absolute left-4 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:left-1/2 dark:border-[#06142f] dark:bg-[#79cfff]" />
 
                       <button
                         type="button"
                         onClick={() => setActiveStepId(step.id)}
-                        className={`group relative w-full rounded-2xl border border-slate-200 bg-white px-5 py-5 text-left text-[#00113b] shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#0000a8] hover:bg-white hover:shadow-lg dark:border-[#16345f] dark:bg-[#06142f] dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
+                        className={`dashboard-surface group relative w-full rounded-2xl px-5 py-5 text-left text-[#00113b] transition duration-300 hover:-translate-y-1 hover:border-[#3C83F6]/55 hover:bg-white/55 hover:shadow-lg dark:text-[#dff3ff] dark:hover:border-[#34699e] dark:hover:bg-[#071a3d] md:min-h-[96px] ${
                           isRight ? 'md:col-start-3' : 'md:col-start-1'
                         }`}
                         aria-expanded={step.id === activeStepId}
@@ -426,7 +426,7 @@ export default function Roadmaps() {
                     animate={{ x: 0 }}
                     exit={{ x: '100%' }}
                     transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                    className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-[#eaf8fd] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
+                    className="relative z-10 h-full w-full max-w-[560px] overflow-y-auto bg-gradient-to-br from-[#bceaff] via-[#d9f3ff] to-[#bceaff] px-7 py-8 text-[#00113b] shadow-[-22px_0_60px_rgba(0,17,59,0.22)] [scrollbar-width:thin] [scrollbar-color:#7abdf2_transparent] dark:bg-none dark:bg-[#06142f] dark:text-white md:px-10 md:py-10"
                   >
                     <button
                       type="button"
