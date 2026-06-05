@@ -337,10 +337,12 @@ export default function Roadmaps() {
           transition={{ duration: 0.65 }}
           className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
         >
-          <h1 className="dashboard-page-title">
-            {heroTitle}
+          <h1 className="font-poppins tracking-tight leading-[0.92]">
+            <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">
+              {heroTitle.toUpperCase()}
+            </span>
           </h1>
-          <p className="dashboard-page-subtitle mx-auto mt-3 max-w-2xl">
+          <p className="mt-4 max-w-2xl mx-auto text-xs tracking-widest uppercase text-[#00113b]/40 dark:text-white/40">
             {heroDescription}
           </p>
         </motion.header>
