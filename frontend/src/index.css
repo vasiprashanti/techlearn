@@ -270,6 +270,33 @@
     -webkit-text-fill-color: #00113b !important;
   }
 
+  html:not(.dark) .course-notes-text pre,
+  html:not(.dark) .course-notes-text pre :where(code, span) {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-comment,
+  html:not(.dark) .course-notes-text pre .hljs-quote {
+    color: #9fb3c8 !important;
+    -webkit-text-fill-color: #9fb3c8 !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-keyword,
+  html:not(.dark) .course-notes-text pre .hljs-built_in,
+  html:not(.dark) .course-notes-text pre .hljs-type,
+  html:not(.dark) .course-notes-text pre .hljs-title {
+    color: #8fd9ff !important;
+    -webkit-text-fill-color: #8fd9ff !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-string,
+  html:not(.dark) .course-notes-text pre .hljs-number,
+  html:not(.dark) .course-notes-text pre .hljs-literal {
+    color: #c7f9cc !important;
+    -webkit-text-fill-color: #c7f9cc !important;
+  }
+
   .font-press-start {
     font-family: 'Press Start 2P', monospace;
   }
