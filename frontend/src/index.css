@@ -254,6 +254,22 @@
     color: #00113b !important;
   }
 
+  html:not(.dark) .course-notes-text,
+  html:not(.dark) .course-notes-text :where(h1, h2, h3, h4, h5, h6, p, li, span, strong, em, blockquote, table, th, td, figcaption) {
+    color: #00113b !important;
+  }
+
+  html:not(.dark) .course-notes-text :where(h1, h2, h3, h4, h5, h6) {
+    -webkit-text-fill-color: #00113b !important;
+    background: none !important;
+  }
+
+  html:not(.dark) .course-notes-text a,
+  html:not(.dark) .course-notes-text code:not(pre code) {
+    color: #00113b !important;
+    -webkit-text-fill-color: #00113b !important;
+  }
+
   .font-press-start {
     font-family: 'Press Start 2P', monospace;
   }

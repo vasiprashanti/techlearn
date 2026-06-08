@@ -301,7 +301,7 @@ const CourseTopics = () => {
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
               {/* Reading Content */}
-              <div className="px-6 py-2 md:px-10 lg:px-12 md:py-3 min-h-[60vh]">
+              <div className="course-notes-text px-6 py-2 md:px-10 lg:px-12 md:py-3 min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
