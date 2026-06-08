@@ -86,11 +86,23 @@ const AdminTopicsList = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteTopic = () => {
+  const confirmDeleteTopic = async () => {
     if (!topicToDelete) return;
-    setTopics(prev => prev.filter(t => t.topicId !== topicToDelete.topicId));
-    setShowDeleteConfirm(false);
-    setTopicToDelete(null);
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(
+        `${BASE_URL}/admin/topic/${topicToDelete.topicId}`,
+        token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+      );
+      setTopics(prev => prev.filter(t => t.topicId !== topicToDelete.topicId));
+      alert("Topic deleted successfully!");
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to delete topic.");
+    } finally {
+      setShowDeleteConfirm(false);
+      setTopicToDelete(null);
+    }
   };
 
   const handleEditTopicSubmit = async (e) => {

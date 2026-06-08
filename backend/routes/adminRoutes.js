@@ -12,6 +12,7 @@ import {
   createCourseShell,
   deleteCourse,
   updateCourseShell,
+  deleteTopic,
 } from "../controllers/courseController.js";
 import {
   cleanupTempFiles,
@@ -29,6 +30,7 @@ adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
 
 // Edit topic details (with file upload)
 adminRouter.put("/topic/:topicId", protect, upload.any(), editTopicDetails);
+adminRouter.delete("/topic/:topicId", protect, isAdmin, deleteTopic);
 
 adminRouter.post("/course-initiate", protect, createCourseShell);
 adminRouter.put("/:courseId", protect, isAdmin, updateCourseShell);

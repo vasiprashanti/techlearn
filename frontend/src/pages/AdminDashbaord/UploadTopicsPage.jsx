@@ -151,7 +151,7 @@ export default function UploadTopicsPage() {
         throw new Error("Please upload at least one file before submitting.");
       }
 
-      const filesRes = await fetch(`${BASE_URL}/dashboard/files`, {
+      const filesRes = await fetch(`${BASE_URL}/admin/files`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`  
@@ -172,7 +172,7 @@ export default function UploadTopicsPage() {
         const exerciseFormData = new FormData();
         exerciseFormData.append("exerciseFile", exerciseFile);
 
-        const exerciseRes = await fetch(`${BASE_URL}/dashboard/${courseId}/exercise`, {
+        const exerciseRes = await fetch(`${BASE_URL}/admin/${courseId}/exercise`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -212,7 +212,7 @@ export default function UploadTopicsPage() {
       };
 
       const topicsRes = await fetch(
-        `${BASE_URL}/courses/${courseId}/topics`,
+        `${BASE_URL}/admin/${courseId}/topics`,
         {
           method: "POST",
           headers: { 
@@ -239,7 +239,7 @@ export default function UploadTopicsPage() {
       }, 1500);
 
       try {
-        await fetch(`${BASE_URL}/dashboard/notes/exercises/cleanup`, {
+        await fetch(`${BASE_URL}/admin/notes/exercises/cleanup`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
