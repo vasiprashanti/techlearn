@@ -16,7 +16,7 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[27rem_minmax(0,1fr)]">
+      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[24rem_minmax(0,1fr)]">
         <aside className="hidden md:flex min-h-0 flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
@@ -24,8 +24,11 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
         </aside>
         <div className="min-h-0 overflow-hidden px-4 md:px-0 pb-10">
           <div
-            className="max-w-[760px] p-8 md:p-12 lg:p-16 md:mr-auto"
-            style={{ marginLeft: 'max(0px, calc((100vw - 760px) / 2 - 27rem))' }}
+            className="p-8 md:p-12 lg:p-16 md:mr-auto"
+            style={{
+              width: 'min(760px, max(420px, calc(100vw - 48rem)))',
+              marginLeft: 'max(0px, calc((100vw - 760px) / 2 - 24rem))',
+            }}
           >
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
@@ -265,7 +268,7 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[27rem_minmax(0,1fr)]">
+        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[24rem_minmax(0,1fr)]">
           <aside
             className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
@@ -301,8 +304,11 @@ const CourseTopics = () => {
             className="min-h-0 overflow-y-auto px-4 md:px-0 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div
-              className="max-w-[760px] pb-20 md:mr-auto"
-              style={{ marginLeft: 'max(0px, calc((100vw - 760px) / 2 - 27rem))' }}
+              className="pb-20 md:mr-auto"
+              style={{
+                width: 'min(760px, max(420px, calc(100vw - 48rem)))',
+                marginLeft: 'max(0px, calc((100vw - 760px) / 2 - 24rem))',
+              }}
             >
 
               {/* Reading Content */}
