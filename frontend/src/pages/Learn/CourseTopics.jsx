@@ -8,35 +8,22 @@ import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/c
 
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
-const CourseTopicLayoutStyles = () => (
-  <style>{`
-    @media (min-width: 768px) {
-      .course-topic-reading-column {
-        width: min(760px, calc(100vw - 40rem));
-        margin-left: max(2rem, calc(50vw - 380px - 18rem));
-        margin-right: auto;
-      }
-    }
-  `}</style>
-);
-
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-    <CourseTopicLayoutStyles />
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
     <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="hidden md:flex min-h-0 flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
+      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[minmax(18rem,1fr)_minmax(0,920px)_minmax(18rem,1fr)]">
+        <aside className="hidden md:flex min-h-0 w-[18rem] flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
         </aside>
         <div className="min-h-0 overflow-hidden px-4 md:px-0 pb-10">
-          <div className="course-topic-reading-column w-full max-w-[760px] p-8 md:p-12 lg:p-16">
+          <div className="w-full max-w-[920px] p-8 md:p-12 lg:p-16">
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
               <div className="h-5 w-full rounded-full bg-white/30 dark:bg-white/10 animate-pulse" />
@@ -46,6 +33,7 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
             </div>
           </div>
         </div>
+        <div className="hidden md:block" aria-hidden="true" />
       </div>
     </main>
   </div>
@@ -198,7 +186,6 @@ const CourseTopics = () => {
 
   return (
     <div className={`flex min-h-full w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
-      <CourseTopicLayoutStyles />
       <ScrollProgress />
       
       {/* Unified Background */}
@@ -276,9 +263,9 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[minmax(18rem,1fr)_minmax(0,920px)_minmax(18rem,1fr)]">
           <aside
-            className="hidden md:flex min-h-0 flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
+            className="hidden md:flex min-h-0 w-[18rem] flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 md:ml-8 md:max-w-[15rem] md:px-0 md:py-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="space-y-2">
@@ -311,7 +298,7 @@ const CourseTopics = () => {
             onScroll={handleContentScroll}
             className="min-h-0 overflow-y-auto px-4 md:px-0 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
-            <div className="course-topic-reading-column w-full max-w-[760px] pb-20">
+            <div className="w-full max-w-[920px] pb-20">
 
               {/* Reading Content */}
               <div className="px-0 py-2 md:py-3 min-h-[60vh]">
@@ -374,8 +361,9 @@ const CourseTopics = () => {
               )}
               </div>
 
-            </div>
+              </div>
           </div>
+          <div className="hidden md:block" aria-hidden="true" />
         </div>
       </main>
     </div>
