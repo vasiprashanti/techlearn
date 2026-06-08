@@ -96,13 +96,17 @@ const Leaderboard = () => {
     return 'bg-black/5 dark:bg-white/5 text-black/60 dark:text-white/60';
   };
 
+  const normalizeAvatar = (avatar) => {
+    if (avatar && avatar.includes('/profile_avatars/') && avatar.includes('nobackground')) {
+      return avatar.replace('/nobackgroundavatar', '/avatar');
+    }
+    return avatar;
+  };
+
   const renderPodiumUser = (entry, rank, delay = 0) => {
     if (!entry) return null;
 
-    let avatar = entry.avatar || entry.photoUrl || FALLBACK_AVATAR;
-    if (avatar && avatar.includes('/profile_avatars/') && avatar.includes('nobackground')) {
-      avatar = avatar.replace('/nobackgroundavatar', '/avatar');
-    }
+    const avatar = normalizeAvatar(entry.avatar || entry.photoUrl || FALLBACK_AVATAR);
 
     return (
       <MotionDiv
@@ -181,28 +185,17 @@ const Leaderboard = () => {
               </span>
             </h1>
           </MotionDiv>
-          
+
           <div className="grid gap-4 pt-1 lg:grid-cols-2 lg:items-stretch">
             <MotionDiv
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="dashboard-surface p-3.5 md:p-4 h-full flex flex-col justify-between"
+              className="relative flex min-h-[220px] flex-row items-end justify-center gap-2 px-0 pt-10 sm:gap-4 md:min-h-[260px] lg:min-h-[280px] h-full"
             >
-              <div className="mb-3 flex items-center justify-between border-b border-black/5 pb-2 dark:border-white/5">
-                <div>
-                  <h2 className="text-sm md:text-base font-bold text-[#00113b] dark:text-white uppercase tracking-wider">
-                    TOP 3 PODIUM
-                  </h2>
-                </div>
-                <Trophy className="h-5 w-5 text-yellow-500 animate-pulse" />
-              </div>
-
-              <div className="flex min-h-[220px] flex-row items-end justify-center gap-2 px-0 pt-4 sm:gap-4 md:min-h-[260px] lg:min-h-[280px] flex-1">
-                {renderPodiumUser(topThree[1], 2, 0.2)}
-                {renderPodiumUser(topThree[0], 1, 0)}
-                {renderPodiumUser(topThree[2], 3, 0.4)}
-              </div>
+              {renderPodiumUser(topThree[1], 2, 0.2)}
+              {renderPodiumUser(topThree[0], 1, 0)}
+              {renderPodiumUser(topThree[2], 3, 0.4)}
             </MotionDiv>
 
             <div className="flex flex-col gap-4 h-full">
@@ -217,7 +210,7 @@ const Leaderboard = () => {
                     <img src={userAvatar} alt="Your Profile" className="w-full h-full rounded-full object-cover" />
                   </div>
                   <div>
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-0.5">Your Ranking</p>
+                    <p className="font-press-start text-[8px] md:text-[9px] uppercase tracking-normal text-black/50 dark:text-white/50 mb-1">Your Ranking</p>
                     <h3 className="text-sm font-medium text-black dark:text-white">
                       #{currentUser?.rank || '--'} <span className="text-xs font-normal text-black/40 dark:text-white/40 ml-1">in Global</span>
                     </h3>
@@ -226,13 +219,13 @@ const Leaderboard = () => {
 
                 <div className="flex gap-4 w-full sm:w-auto px-1 sm:px-0 justify-between sm:justify-end border-t sm:border-t-0 border-black/5 dark:border-white/5 pt-2 sm:pt-0">
                   <div>
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-0.5 flex items-center gap-1">
+                    <p className="font-press-start text-[8px] md:text-[9px] uppercase tracking-normal text-black/50 dark:text-white/50 mb-1 flex items-center gap-1">
                       <Zap className="w-3 h-3 text-[#3C83F6] dark:text-white" /> Total XP
                     </p>
                     <p className="text-sm font-bold text-black dark:text-white">{Number(currentUser?.totalXp || 0).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-semibold mb-0.5">Participants</p>
+                    <p className="font-press-start text-[8px] md:text-[9px] uppercase tracking-normal text-black/50 dark:text-white/50 mb-1">Participants</p>
                     <p className="text-sm font-bold text-black dark:text-white">{Number(leaderboardData.totalParticipants || 0).toLocaleString()}</p>
                   </div>
                 </div>
@@ -246,15 +239,13 @@ const Leaderboard = () => {
               >
                 <div className="overflow-x-auto w-full flex-1">
                   <div className="min-w-[550px] flex flex-col h-full">
-                    {/* Header */}
-                    <div className="flex items-center gap-4 px-4 md:px-5 py-2.5 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold">
+                    <div className="flex items-center gap-4 px-4 md:px-5 py-2.5 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 font-press-start text-[7px] md:text-[8px] uppercase tracking-normal text-black/50 dark:text-white/50">
                       <div className="w-12 shrink-0 text-center md:text-left">Rank</div>
                       <div className="flex-1">Student</div>
                       <div className="w-24 shrink-0 text-right md:text-left">Score</div>
                       <div className="w-28 shrink-0 text-right hidden md:block">Signal</div>
                     </div>
 
-                    {/* Rows */}
                     <div className="divide-y divide-black/5 dark:divide-white/5 max-h-[300px] md:max-h-[380px] overflow-y-auto flex-1">
                       {loading ? (
                         <div className="px-4 md:px-5 py-8 text-sm text-black/50 dark:text-white/50">Loading leaderboard...</div>
@@ -262,48 +253,48 @@ const Leaderboard = () => {
                         <div className="px-4 md:px-5 py-8 text-sm text-red-500">{error}</div>
                       ) : entries.length === 0 ? (
                         <div className="px-4 md:px-5 py-8 text-sm text-black/50 dark:text-white/50">No leaderboard activity yet.</div>
-                      ) : entries.map((entry) => (
-                        <div key={entry.userId || `${entry.rank}-${entry.name}`} className="flex items-center gap-4 px-4 md:px-5 py-2.5 hover:bg-white/40 dark:hover:bg-black/40 transition-colors duration-300">
-                          <div className="w-12 shrink-0 flex items-center justify-center md:justify-start gap-2">
-                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold shrink-0 ${getRankBadge(entry.rank)}`}>
-                              {entry.rank}
-                            </span>
-                            <div className="hidden sm:block shrink-0">{getTrendIcon(entry.rank)}</div>
-                          </div>
+                      ) : entries.map((entry) => {
+                        const avatar = normalizeAvatar(entry.avatar || entry.photoUrl || FALLBACK_AVATAR);
 
-                          <div className="flex-1 flex items-center gap-2 md:gap-3 min-w-0">
-                            <div className="w-8 h-8 rounded-full bg-[#daf0fa] dark:bg-[#0f1f43] p-0.5 border border-black/10 dark:border-white/10 overflow-hidden shrink-0">
-                              <img
-                                src={
-                                  (entry.avatar || entry.photoUrl || FALLBACK_AVATAR).includes('/profile_avatars/') && (entry.avatar || entry.photoUrl || FALLBACK_AVATAR).includes('nobackground')
-                                    ? (entry.avatar || entry.photoUrl || FALLBACK_AVATAR).replace('/nobackgroundavatar', '/avatar')
-                                    : (entry.avatar || entry.photoUrl || FALLBACK_AVATAR)
-                                }
-                                alt={entry.name}
-                                className="w-full h-full rounded-full object-cover"
-                              />
+                        return (
+                          <div key={entry.userId || `${entry.rank}-${entry.name}`} className="flex items-center gap-4 px-4 md:px-5 py-2.5 hover:bg-white/40 dark:hover:bg-black/40 transition-colors duration-300">
+                            <div className="w-12 shrink-0 flex items-center justify-center md:justify-start gap-2">
+                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] md:text-xs font-bold shrink-0 ${getRankBadge(entry.rank)}`}>
+                                {entry.rank}
+                              </span>
+                              <div className="hidden sm:block shrink-0">{getTrendIcon(entry.rank)}</div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-xs md:text-sm font-semibold text-black dark:text-white truncate">{entry.name}</p>
-                              <p className="text-[9px] md:text-[10px] text-black/40 dark:text-white/40 md:hidden truncate mt-0.5">
-                                {entry.completedExercises || 0} completed
-                              </p>
+
+                            <div className="flex-1 flex items-center gap-2 md:gap-3 min-w-0">
+                              <div className="w-8 h-8 rounded-full bg-[#daf0fa] dark:bg-[#0f1f43] p-0.5 border border-black/10 dark:border-white/10 overflow-hidden shrink-0">
+                                <img
+                                  src={avatar}
+                                  alt={entry.name}
+                                  className="w-full h-full rounded-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs md:text-sm font-semibold text-black dark:text-white truncate">{entry.name}</p>
+                                <p className="text-[9px] md:text-[10px] text-black/40 dark:text-white/40 md:hidden truncate mt-0.5">
+                                  {entry.completedExercises || 0} completed
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="w-24 shrink-0 flex flex-col justify-center text-right md:text-left">
+                              <span className="text-xs md:text-sm font-bold text-[#3C83F6] dark:text-white">
+                                {Number(entry.totalXp || 0).toLocaleString()} XP
+                              </span>
+                            </div>
+
+                            <div className="w-28 shrink-0 hidden md:flex items-center justify-end">
+                              <span className="text-[9px] md:text-[10px] text-black/60 dark:text-white/60 font-medium px-2 py-0.5 bg-black/5 dark:bg-white/5 rounded-full truncate border border-black/[0.03] dark:border-white/[0.03]">
+                                {entry.completedExercises || 0} solved
+                              </span>
                             </div>
                           </div>
-
-                          <div className="w-24 shrink-0 flex flex-col justify-center text-right md:text-left">
-                            <span className="text-xs md:text-sm font-bold text-[#3C83F6] dark:text-white">
-                              {Number(entry.totalXp || 0).toLocaleString()} XP
-                            </span>
-                          </div>
-
-                          <div className="w-28 shrink-0 hidden md:flex items-center justify-end">
-                            <span className="text-[9px] md:text-[10px] text-black/60 dark:text-white/60 font-medium px-2 py-0.5 bg-black/5 dark:bg-white/5 rounded-full truncate border border-black/[0.03] dark:border-white/[0.03]">
-                              {entry.completedExercises || 0} solved
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

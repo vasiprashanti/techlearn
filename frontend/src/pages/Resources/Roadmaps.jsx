@@ -367,8 +367,8 @@ export default function Roadmaps() {
           </section>
         ) : (
           <>
-            <section className="relative mx-auto max-w-[1040px]">
-              <div className="pointer-events-none absolute left-4 top-3 h-[calc(100%-1.5rem)] w-px bg-[#86c4ff]/45 md:left-1/2 md:-translate-x-1/2 dark:bg-[#28537f]/75" />
+            <section className="relative mx-auto max-w-[520px] md:max-w-[1040px]">
+              <div className="pointer-events-none absolute left-1/2 top-3 hidden h-[calc(100%-1.5rem)] w-px -translate-x-1/2 bg-[#86c4ff]/45 md:block dark:bg-[#28537f]/75" />
 
               <div className="space-y-6 md:space-y-8">
                 {parsedRoadmap.steps.map((step, index) => {
@@ -380,9 +380,9 @@ export default function Roadmaps() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true, margin: '-80px' }}
                       transition={{ duration: 0.45, delay: Math.min(index * 0.03, 0.18) }}
-                      className="relative grid items-start gap-3 pl-10 md:grid-cols-[1fr_60px_1fr] md:gap-0 md:pl-0"
+                      className="relative grid items-start gap-3 md:grid-cols-[1fr_60px_1fr] md:gap-0"
                     >
-                      <div className="absolute left-4 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:left-1/2 dark:border-[#06142f] dark:bg-[#79cfff]" />
+                      <div className="absolute left-1/2 top-6 z-10 hidden h-3.5 w-3.5 -translate-x-1/2 rounded-full border-[4px] border-[#e0f5ff] bg-[#0000a8] shadow-[0_0_0_1px_rgba(0,17,59,0.08)] md:block dark:border-[#06142f] dark:bg-[#79cfff]" />
 
                       <button
                         type="button"
