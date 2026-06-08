@@ -12,17 +12,17 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-    <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
+    <main className="flex-1 flex flex-col min-h-screen overflow-visible pt-20 md:h-screen md:overflow-hidden md:pt-24">
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+      <div className="flex-1 min-h-0 overflow-visible md:grid md:overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
         <aside className="hidden md:flex min-h-0 w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
         </aside>
-        <div className="min-h-0 overflow-hidden px-4 md:px-8 xl:px-0 pb-10">
+        <div className="min-h-0 overflow-visible px-4 pb-10 md:overflow-hidden md:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-[760px] p-8 md:px-10 lg:px-12">
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
@@ -136,6 +136,9 @@ const CourseTopics = () => {
       // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
       scrollContainerRef.current.scrollTop = 0;
     }
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
     lastContentScrollTopRef.current = 0;
     setIsCourseHeaderHidden(false);
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
@@ -191,7 +194,7 @@ const CourseTopics = () => {
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative flex-1 flex flex-col transition-all duration-700 ease-in-out z-10 h-screen overflow-hidden pt-20 md:pt-24">
+      <main className="relative z-10 flex flex-1 flex-col overflow-visible pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
         
         {/* Top Header */}
         <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
@@ -263,7 +266,7 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+        <div className="flex-1 min-h-0 overflow-visible md:grid md:overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
           <aside
             className="hidden md:flex min-h-0 w-64 justify-self-start flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
@@ -296,7 +299,7 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="min-h-0 overflow-y-auto px-4 md:px-8 xl:px-0 pt-0 pb-10 relative transition-all duration-500 ease-out [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="relative min-h-0 overflow-visible px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
