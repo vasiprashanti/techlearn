@@ -93,11 +93,11 @@ export default function EditProfile() {
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="mx-auto max-w-[1400px] space-y-8">
-        <motion.header
+        <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
         >
           <button
             type="button"
@@ -112,7 +112,7 @@ export default function EditProfile() {
               EDIT PROFILE
             </span>
           </h1>
-        </motion.header>
+        </motion.div>
 
         <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.08 }} className="dashboard-surface p-8 md:p-12">
           <form onSubmit={handleSubmit} className="space-y-7">

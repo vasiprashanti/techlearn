@@ -139,7 +139,7 @@ const Sidebar = () => {
       <button
         onClick={() => setMobileMenuOpen(true)}
         title="Open Menu"
-        className="lg:hidden fixed top-20 left-4 z-[45] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/55 dark:bg-black/55 border border-black/10 dark:border-white/10 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3c83f6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300"
+        className="lg:hidden fixed top-24 left-4 z-[45] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/55 dark:bg-black/55 border border-black/10 dark:border-white/10 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3c83f6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300"
       >
         <FiSidebar className="w-4 h-4" />
         <span className="text-xs font-semibold tracking-wide">Menu</span>

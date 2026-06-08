@@ -44,7 +44,7 @@ const Leaderboard = () => {
       setError('');
 
       try {
-        const payload = await leaderboardApi.getLeaderboard(20);
+        const payload = await leaderboardApi.getLeaderboard(1000);
         if (!isCancelled) {
           setLeaderboardData(payload);
         }
@@ -141,9 +141,7 @@ const Leaderboard = () => {
           {entry.name.split(' ')[0]}
         </h3>
         <p
-          className={`text-[8px] md:text-[9px] uppercase tracking-widest font-bold mb-1 md:mb-2 ${
-            rank === 1 ? 'text-yellow-600 dark:text-yellow-500' : rank === 2 ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-600'
-          }`}
+          className="text-[6.5px] md:text-[8px] font-press-start mb-1 md:mb-2 text-lavender"
         >
           {Number(entry.totalXp || 0).toLocaleString()} XP
         </p>
@@ -222,7 +220,7 @@ const Leaderboard = () => {
                     <p className="font-press-start text-[8px] md:text-[9px] uppercase tracking-normal text-black/50 dark:text-white/50 mb-1 flex items-center gap-1">
                       <Zap className="w-3 h-3 text-[#3C83F6] dark:text-white" /> Total XP
                     </p>
-                    <p className="text-sm font-bold text-black dark:text-white">{Number(currentUser?.totalXp || 0).toLocaleString()}</p>
+                    <p className="text-xs md:text-sm font-press-start text-lavender">{Number(currentUser?.totalXp || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="font-press-start text-[8px] md:text-[9px] uppercase tracking-normal text-black/50 dark:text-white/50 mb-1">Participants</p>
@@ -238,15 +236,17 @@ const Leaderboard = () => {
                 className="dashboard-surface overflow-hidden flex-1 flex flex-col"
               >
                 <div className="overflow-x-auto w-full flex-1">
-                  <div className="min-w-[550px] flex flex-col h-full">
-                    <div className="flex items-center gap-4 px-4 md:px-5 py-2.5 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 font-press-start text-[7px] md:text-[8px] uppercase tracking-normal text-black/50 dark:text-white/50">
+                  <div className="min-w-0 md:min-w-[550px] flex flex-col h-full">
+                    {/* Header */}
+                    <div className="flex items-center gap-4 px-4 md:px-5 py-2.5 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold font-sans">
                       <div className="w-12 shrink-0 text-center md:text-left">Rank</div>
                       <div className="flex-1">Student</div>
                       <div className="w-24 shrink-0 text-right md:text-left">Score</div>
                       <div className="w-28 shrink-0 text-right hidden md:block">Signal</div>
                     </div>
 
-                    <div className="divide-y divide-black/5 dark:divide-white/5 max-h-[300px] md:max-h-[380px] overflow-y-auto flex-1">
+                    {/* Rows */}
+                    <div className="divide-y divide-black/5 dark:divide-white/5 max-h-[70vh] overflow-y-auto flex-1">
                       {loading ? (
                         <div className="px-4 md:px-5 py-8 text-sm text-black/50 dark:text-white/50">Loading leaderboard...</div>
                       ) : error ? (
@@ -282,7 +282,7 @@ const Leaderboard = () => {
                             </div>
 
                             <div className="w-24 shrink-0 flex flex-col justify-center text-right md:text-left">
-                              <span className="text-xs md:text-sm font-bold text-[#3C83F6] dark:text-white">
+                              <span className="text-[7.5px] md:text-[10px] font-press-start text-lavender">
                                 {Number(entry.totalXp || 0).toLocaleString()} XP
                               </span>
                             </div>

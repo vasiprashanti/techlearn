@@ -323,18 +323,18 @@ export default function QuestionCatalogPage({
               </button>
             </div>
           )}
-          <motion.header
+          <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65 }}
-            className="mx-auto max-w-4xl pt-8 text-center md:pt-10 mb-8"
+            className="mx-auto max-w-4xl pt-2 text-center md:pt-4 mb-8"
           >
           <h1 className="font-press-start leading-normal">
             <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
               {pageTitle?.toUpperCase()}
             </span>
           </h1>
-        </motion.header>
+        </motion.div>
 
           {!showBackBtn && (
             <div className="mb-6 space-y-4">

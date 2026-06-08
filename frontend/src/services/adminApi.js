@@ -223,6 +223,7 @@ export const adminAPI = {
   createBatch: (body) => request('/admin/batches', { method: 'POST', body: JSON.stringify(body) }),
   updateBatch: (batchId, body) => request(`/admin/batches/${batchId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBatch: (batchId) => request(`/admin/batches/${batchId}`, { method: 'DELETE' }),
+  bulkDeleteBatches: (batchIds) => request('/admin/batches/bulk-delete', { method: 'POST', body: JSON.stringify({ batchIds }) }),
 
   getStudents: () => request('/admin/students'),
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
@@ -257,6 +258,7 @@ export const adminAPI = {
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
   updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteQuestionCategory: (categoryId) => request(`/admin/questions/categories/${categoryId}`, { method: 'DELETE' }),
+  bulkDeleteQuestionCategories: (categoryIds) => request('/admin/questions/categories/bulk-delete', { method: 'POST', body: JSON.stringify({ categoryIds }) }),
   getQuestions: (params = {}) => {
     const query = new URLSearchParams(params);
     const suffix = query.toString() ? `?${query.toString()}` : '';
@@ -271,6 +273,7 @@ export const adminAPI = {
   createTrackTemplate: (body) => request('/admin/track-templates', { method: 'POST', body: JSON.stringify(body) }),
   updateTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}`, { method: 'DELETE' }),
+  bulkDeleteTrackTemplates: (templateIds) => request('/admin/track-templates/bulk-delete', { method: 'POST', body: JSON.stringify({ templateIds }) }),
   assignTrackTemplateDay: (templateId, body) => request(`/admin/track-templates/${templateId}/days`, { method: 'POST', body: JSON.stringify(body) }),
   removeTrackTemplateDay: (templateId, dayNumber, questionId) => {
     const query = questionId ? `?questionId=${questionId}` : '';

@@ -107,18 +107,18 @@ export default function DailyChallenge() {
           </button>
         </div>
 
-        <motion.header
+        <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-1 text-center md:pt-2"
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
         >
           <h1 className="font-press-start leading-normal">
             <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
               DAILY CHALLENGE
             </span>
           </h1>
-        </motion.header>
+        </motion.div>
 
         {/* Dynamic Metric Cards Grid */}
         <motion.div

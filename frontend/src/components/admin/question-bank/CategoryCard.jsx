@@ -48,12 +48,13 @@ const getCategoryIconKey = (type) => {
 
 const isPersistedCategory = (categoryId) => /^[a-f0-9]{24}$/i.test(String(categoryId || ''));
 
-export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
+export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onSelectToggle }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const iconKey = getCategoryIconKey(category.categoryType);
   const theme = getCategoryTheme(iconKey);
   const Icon = categoryIconMap[iconKey] || FiBarChart2;
-  const isCrudEnabled = isPersistedCategory(category.id);
+  const categoryId = category.id || category._id;
+  const isCrudEnabled = isPersistedCategory(categoryId);
 
   useEffect(() => {
     const handleGlobalClick = (event) => {
@@ -66,7 +67,17 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
   }, []);
 
   return (
-    <article className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group">
+    <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+      <div className="absolute left-3.5 top-3.5 z-20">
+        <input
+          type="checkbox"
+          checked={selected}
+          disabled={!isCrudEnabled}
+          onChange={() => isCrudEnabled && onSelectToggle(categoryId)}
+          className={`w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30 ${!isCrudEnabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+        />
+      </div>
+
       <div className="absolute right-3 top-3 z-20 category-actions-container">
         <button
           type="button"
@@ -111,7 +122,7 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView }) => {
         )}
       </div>
 
-      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint}`}>
+      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10`}>
         <div className="flex items-start gap-2.5">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm ${theme.iconBg}`}>
             <Icon className={`w-5 h-5 ${theme.iconColor}`} />

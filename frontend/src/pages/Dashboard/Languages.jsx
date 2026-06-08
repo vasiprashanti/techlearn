@@ -50,7 +50,7 @@ const Languages = () => {
         } pt-24 pb-12 px-6 md:px-12 lg:px-16 overflow-auto`}
       >
         <div style={{ padding: "28px 32px" }}>
-          <div style={{ marginBottom: "24px" }}>
+          <div style={{ marginBottom: "24px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
             <h1
               style={{
                 fontSize: "22px",

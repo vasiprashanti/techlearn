@@ -83,7 +83,35 @@ export default function TrackTemplate() {
   const [trackQuestions, setTrackQuestions] = useState({});
   const [versionHistory, setVersionHistory] = useState({});
   const [questionCategories, setQuestionCategories] = useState([]);
+  const [selectedTrackIds, setSelectedTrackIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const searchInputRef = useRef(null);
+
+  const handleSelectToggle = (id) => {
+    setSelectedTrackIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedTrackIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    setTemplateFormError('');
+    setIsBulkDeleting(true);
+    try {
+      await adminAPI.bulkDeleteTrackTemplates(selectedTrackIds);
+      await loadTrackTemplatePageData();
+      setSelectedTrackIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (error) {
+      setTemplateFormError(error.message || 'Failed to bulk delete track templates.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const isDarkMode = theme === 'dark';
 
@@ -758,6 +786,34 @@ export default function TrackTemplate() {
         </div>
       )}
 
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkDeleteConfirmOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-6">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Bulk Delete Templates?</h3>
+            <p className="mt-2 text-sm text-black/60 dark:text-white/60">
+              Are you sure you want to delete the {selectedTrackIds.length} selected track templates? This action cannot be undone.
+            </p>
+            {templateFormError && <p className="text-xs text-red-500 mt-2">{templateFormError}</p>}
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+                className="h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-70 text-white text-sm font-semibold inline-flex items-center gap-2"
+              >
+                {isBulkDeleting ? 'Deleting...' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Layout */}
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
@@ -786,6 +842,23 @@ export default function TrackTemplate() {
 
             {/* Search + Create Row */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-10 sm:h-9 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={filteredTracks.length > 0 && filteredTracks.every(t => selectedTrackIds.includes(t.id || t._id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const newSelections = new Set([...selectedTrackIds, ...filteredTracks.map(t => t.id || t._id)]);
+                      setSelectedTrackIds(Array.from(newSelections));
+                    } else {
+                      setSelectedTrackIds(selectedTrackIds.filter(id => !filteredTracks.some(t => (t.id || t._id) === id)));
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+              </div>
+
               <div className="relative flex-1">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
                 <input
@@ -820,6 +893,7 @@ export default function TrackTemplate() {
                 {filteredTracks.map((track) => {
                   const templateId = track.id || track._id;
                   const Icon = track.icon;
+                  const isSelected = selectedTrackIds.includes(templateId);
                   const statusBadgeClass =
                     track.status === 'Active'
                       ? 'bg-emerald-600 text-white'
@@ -827,8 +901,17 @@ export default function TrackTemplate() {
                         ? 'bg-amber-500 text-white'
                         : 'bg-slate-600 text-white';
                   return (
-                    <div key={templateId || track.name} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0e2148] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-250 overflow-hidden">
-                      <div className="p-5">
+                    <div key={templateId || track.name} className={`relative rounded-2xl border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white dark:bg-[#0e2148] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-250 overflow-hidden`}>
+                      <div className="absolute left-3.5 top-3.5 z-20">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleSelectToggle(templateId)}
+                          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                        />
+                      </div>
+
+                      <div className="p-5 pl-11">
                         <div className="flex items-start justify-between gap-3.5">
                           <div className="w-12 h-12 rounded-2xl bg-[#e3edfb] dark:bg-[#1f365c] text-[#2f73e0] dark:text-[#9dc4ff] flex items-center justify-center shrink-0 border border-black/5 dark:border-white/10 shadow-sm">
                             <Icon className="w-5 h-5" />
@@ -890,6 +973,29 @@ export default function TrackTemplate() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Floating Bulk Action Bar */}
+            {selectedTrackIds.length > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3.5 rounded-full border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43]/85 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-300">
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {selectedTrackIds.length} {selectedTrackIds.length === 1 ? 'template' : 'templates'} selected
+                </span>
+                <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                <button
+                  onClick={handleClearSelection}
+                  className="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                  className="px-4 py-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  Delete Selected
+                </button>
               </div>
             )}
 

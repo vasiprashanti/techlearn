@@ -42,11 +42,11 @@ const Concepts = () => {
       <div className="space-y-8">
         
         {/* Header Section with Brand Gradient and Back Button */}
-        <motion.header
+        <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
         >
           <button
             type="button"
@@ -61,7 +61,7 @@ const Concepts = () => {
               IMPORTANT CONCEPTS
             </span>
           </h1>
-        </motion.header>
+        </motion.div>
 
         {/* Search Section */}
         <motion.section

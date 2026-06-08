@@ -1587,3 +1587,11 @@ html {
 .dark .letter.visible {
   color: rgba(147, 197, 253, 1);
 }
+
+.text-lavender {
+  color: #7c6be3;
+}
+
+.dark .text-lavender {
+  color: #d6c7ff;
+}

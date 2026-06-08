@@ -128,18 +128,18 @@ const Profile = () => {
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
         <div className="space-y-8">
           
-          <motion.header
+          <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.65 }}
-            className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+            className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
           >
             <h1 className="font-press-start leading-normal">
               <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
                 MY PROFILE
               </span>
             </h1>
-          </motion.header>
+          </motion.div>
 
           {/* Main Content Grid (Responsive two-column grid) */}
           <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 w-full lg:items-stretch">
@@ -278,12 +278,12 @@ const Profile = () => {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
               className="w-full flex flex-col order-1 lg:order-2 lg:h-full"
             >
-              <div className={`${dashboardCardClass} flex flex-col items-center justify-center relative overflow-hidden lg:h-full`}>
+              <div className={`${dashboardCardClass} flex flex-col md:flex-row lg:flex-col items-center justify-center md:justify-around relative overflow-hidden lg:h-full py-8 md:py-10 gap-6 md:gap-10`}>
                 
                 {/* Decorative background blur */}
                 <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
 
-                <div className="relative mb-6 mt-2 group">
+                <div className="relative mt-2 group shrink-0">
                   <div className="w-40 h-40 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
                     <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
                       <img
@@ -303,24 +303,26 @@ const Profile = () => {
                   </button>
                 </div>
 
-                <h2 className="relative z-10 mb-1 text-center text-xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
-                  {userName}
-                </h2>
-                <div className="relative z-10 mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                  <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
-                    Student Account
-                  </span>
-                </div>
+                <div className="flex flex-col items-center md:items-center lg:items-center relative z-10">
+                  <h2 className="mb-1 text-center md:text-center lg:text-center text-xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
+                    {userName}
+                  </h2>
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
+                    <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
+                      Student Account
+                    </span>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard/profile/settings')}
-                  className="relative z-10 mt-5 mx-auto inline-flex w-fit items-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-sm font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:text-[#daf0fa] dark:hover:bg-[#001b5c]"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>Settings</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/profile/settings')}
+                    className="mt-5 inline-flex w-fit items-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-sm font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:text-[#daf0fa] dark:hover:bg-[#001b5c]"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Settings</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
 

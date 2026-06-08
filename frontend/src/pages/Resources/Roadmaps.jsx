@@ -337,18 +337,18 @@ export default function Roadmaps() {
       <ScrollProgress />
 
       <div className="space-y-8 pb-8">
-        <motion.header
+        <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.65 }}
-          className="mx-auto max-w-4xl pt-8 text-center md:pt-10"
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
         >
           <h1 className="font-press-start leading-normal">
             <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
               {heroTitle.toUpperCase()}
             </span>
           </h1>
-        </motion.header>
+        </motion.div>
 
         {loading ? (
           <section className="flex min-h-[360px] items-center justify-center">

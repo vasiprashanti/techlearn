@@ -37,7 +37,7 @@ const practiceSubmissionSchema = new mongoose.Schema(
     },
     track: {
       type: String,
-      enum: ["DSA", "Core CS", "SQL", "Aptitude"],
+      enum: ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"],
       required: true,
       index: true,
     },
