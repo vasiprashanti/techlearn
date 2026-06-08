@@ -12,17 +12,17 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
     <div className={`flex min-h-screen w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-    <main className="flex-1 flex flex-col min-h-screen overflow-visible pt-20 md:h-screen md:overflow-hidden md:pt-24">
+    <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
       <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-visible md:grid md:overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
         <aside className="hidden md:flex min-h-0 w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
         </aside>
-        <div className="min-h-0 overflow-visible px-4 pb-10 md:overflow-hidden md:px-8 xl:px-0">
+        <div className="min-h-0 overflow-hidden px-4 pb-10 md:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-[760px] p-8 md:px-10 lg:px-12">
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
@@ -55,6 +55,8 @@ const CourseTopics = () => {
   // Ref for the scrollable container
   const scrollContainerRef = useRef(null);
   const lastContentScrollTopRef = useRef(0);
+  const touchStartYRef = useRef(null);
+  const [isNotesAtEnd, setIsNotesAtEnd] = useState(false);
 
   const [backendCourse, setBackendCourse] = useState(cachedCourse);
   const [loading, setLoading] = useState(!cachedCourse);
@@ -129,6 +131,79 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
+  const shouldControlPageScroll = Boolean(currentCourse && currentTopic);
+
+  const getNotesScrollState = (node = scrollContainerRef.current) => {
+    if (!node) return { atTop: true, atBottom: true, canScroll: false };
+
+    const maxScrollTop = Math.max(node.scrollHeight - node.clientHeight, 0);
+    const canScroll = maxScrollTop > 2;
+
+    return {
+      atTop: node.scrollTop <= 2,
+      atBottom: node.scrollTop >= maxScrollTop - 2,
+      canScroll,
+    };
+  };
+
+  const syncNotesEndState = (node = scrollContainerRef.current) => {
+    const { atBottom, canScroll } = getNotesScrollState(node);
+    setIsNotesAtEnd(!canScroll || atBottom);
+  };
+
+  const isSidebarScrollEvent = (event) => {
+    return Boolean(event.target?.closest?.('[data-course-sidebar="true"]'));
+  };
+
+  const scrollNotesBy = (deltaY) => {
+    const scroller = scrollContainerRef.current;
+    if (!scroller || !deltaY) return false;
+
+    const { atTop, atBottom, canScroll } = getNotesScrollState(scroller);
+    if (!canScroll) return false;
+
+    const isScrollingDown = deltaY > 0;
+    const shouldScrollNotes =
+      (isScrollingDown && !atBottom) || (!isScrollingDown && !atTop);
+
+    if (!shouldScrollNotes) return false;
+
+    scroller.scrollTop += deltaY;
+    syncNotesEndState(scroller);
+    return true;
+  };
+
+  const handlePrimaryAreaWheel = (event) => {
+    if (isSidebarScrollEvent(event)) return;
+
+    if (scrollNotesBy(event.deltaY)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handlePrimaryAreaTouchStart = (event) => {
+    if (isSidebarScrollEvent(event)) {
+      touchStartYRef.current = null;
+      return;
+    }
+
+    touchStartYRef.current = event.touches?.[0]?.clientY ?? null;
+  };
+
+  const handlePrimaryAreaTouchMove = (event) => {
+    if (isSidebarScrollEvent(event) || touchStartYRef.current === null) return;
+
+    const currentY = event.touches?.[0]?.clientY;
+    if (typeof currentY !== 'number') return;
+
+    const deltaY = touchStartYRef.current - currentY;
+    if (scrollNotesBy(deltaY)) {
+      event.preventDefault();
+      event.stopPropagation();
+      touchStartYRef.current = currentY;
+    }
+  };
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
@@ -136,15 +211,22 @@ const CourseTopics = () => {
       // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
       scrollContainerRef.current.scrollTop = 0;
     }
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     lastContentScrollTopRef.current = 0;
     setIsCourseHeaderHidden(false);
+    setIsNotesAtEnd(false);
+    window.requestAnimationFrame(() => syncNotesEndState());
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: false, isScrollingDown: false },
     }));
   }, [selectedTopic]);
+
+  useEffect(() => {
+    if (!shouldControlPageScroll) return undefined;
+
+    const frame = window.requestAnimationFrame(() => syncNotesEndState());
+    return () => window.cancelAnimationFrame(frame);
+  }, [shouldControlPageScroll, currentTopic?.id, currentTopic?.notesContent]);
 
   const handleContentScroll = (event) => {
     const currentScrollTop = event.currentTarget.scrollTop;
@@ -152,6 +234,7 @@ const CourseTopics = () => {
     const shouldHideHeader = currentScrollTop > 24 && isScrollingDown;
 
     lastContentScrollTopRef.current = Math.max(currentScrollTop, 0);
+    syncNotesEndState(event.currentTarget);
 
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: shouldHideHeader, isScrollingDown },
@@ -168,6 +251,26 @@ const CourseTopics = () => {
       }));
     };
   }, []);
+
+  useEffect(() => {
+    if (!shouldControlPageScroll) return undefined;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    if (!isNotesAtEnd) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [isNotesAtEnd, shouldControlPageScroll]);
 
   if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
@@ -194,7 +297,7 @@ const CourseTopics = () => {
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative z-10 flex flex-1 flex-col overflow-visible pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
+      <main className="relative z-10 flex h-screen flex-1 flex-col overflow-hidden pt-20 transition-all duration-700 ease-in-out md:pt-24">
         
         {/* Top Header */}
         <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
@@ -232,7 +335,7 @@ const CourseTopics = () => {
               onClick={() => setIsSyllabusOpen(false)}
               className="fixed inset-x-0 bottom-0 top-20 bg-black/20 dark:bg-black/60 backdrop-blur-sm z-30 md:hidden"
             />
-            <div className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
+            <div data-course-sidebar="true" className="fixed left-0 top-20 bottom-0 w-full sm:w-96 rounded-r-2xl bg-[#bceaff]/80 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] backdrop-blur-2xl border-r border-black/5 dark:border-white/5 z-40 flex flex-col shadow-[0_20px_60px_rgba(15,23,42,0.08)] md:hidden">
                 <div className="p-4 border-b border-black/5 dark:border-white/5 flex justify-between items-center bg-white/40 dark:bg-black/20">
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-[#3C83F6] dark:text-white font-semibold block">Syllabus</span>
@@ -266,8 +369,14 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="flex-1 min-h-0 overflow-visible md:grid md:overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+        <div
+          onWheel={handlePrimaryAreaWheel}
+          onTouchStart={handlePrimaryAreaTouchStart}
+          onTouchMove={handlePrimaryAreaTouchMove}
+          className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
+        >
           <aside
+            data-course-sidebar="true"
             className="hidden md:flex min-h-0 w-64 justify-self-start flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
             <div className="flex-1 overflow-y-auto px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -299,7 +408,7 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="relative min-h-0 overflow-visible px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="relative min-h-0 overflow-y-auto px-4 pb-10 pt-0 transition-all duration-500 ease-out md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
