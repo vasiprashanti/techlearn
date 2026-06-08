@@ -83,9 +83,9 @@ const Leaderboard = () => {
   };
 
   const getPodiumStyles = (rank) => {
-    if (rank === 1) return 'h-20 md:h-28 bg-gradient-to-t from-yellow-500/20 to-yellow-500/5 border-yellow-500/30';
-    if (rank === 2) return 'h-12 md:h-20 bg-gradient-to-t from-slate-400/20 to-slate-400/5 border-slate-400/30';
-    if (rank === 3) return 'h-8 md:h-16 bg-gradient-to-t from-amber-700/20 to-amber-700/5 border-amber-700/30';
+    if (rank === 1) return 'h-20 md:h-28 lg:h-48 xl:h-60 bg-gradient-to-t from-yellow-500/20 to-yellow-500/5 border-yellow-500/30';
+    if (rank === 2) return 'h-12 md:h-20 lg:h-36 xl:h-48 bg-gradient-to-t from-slate-400/20 to-slate-400/5 border-slate-400/30';
+    if (rank === 3) return 'h-8 md:h-16 lg:h-28 xl:h-36 bg-gradient-to-t from-amber-700/20 to-amber-700/5 border-amber-700/30';
     return '';
   };
 
@@ -146,7 +146,7 @@ const Leaderboard = () => {
           {Number(entry.totalXp || 0).toLocaleString()} XP
         </p>
         <div
-          className={`w-full ${rank === 1 ? 'max-w-[80px] md:max-w-[100px] pt-2 md:pt-3' : 'max-w-[64px] md:max-w-[80px] pt-1 md:pt-2'} rounded-t-lg md:rounded-t-xl border-t border-x backdrop-blur-xl flex justify-center ${getPodiumStyles(rank)}`}
+          className={`w-full ${rank === 1 ? 'max-w-[80px] md:max-w-[100px] lg:max-w-[120px] xl:max-w-[140px] pt-2 md:pt-3' : 'max-w-[64px] md:max-w-[80px] lg:max-w-[100px] xl:max-w-[110px] pt-1 md:pt-2'} rounded-t-lg md:rounded-t-xl border-t border-x backdrop-blur-xl flex justify-center ${getPodiumStyles(rank)}`}
         >
           {rank === 1 ? (
             <Star className="w-4 h-4 md:w-5 md:h-5 text-yellow-500 opacity-50" />
@@ -189,7 +189,7 @@ const Leaderboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative flex min-h-[220px] flex-row items-end justify-center gap-2 px-0 pt-10 sm:gap-4 md:min-h-[260px] lg:min-h-[280px] h-full"
+              className="relative flex min-h-[220px] flex-row items-end justify-center gap-2 px-4 pb-6 pt-16 sm:gap-4 md:min-h-[260px] lg:min-h-[280px] h-full"
             >
               {renderPodiumUser(topThree[1], 2, 0.2)}
               {renderPodiumUser(topThree[0], 1, 0)}
