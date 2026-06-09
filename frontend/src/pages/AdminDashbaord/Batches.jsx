@@ -138,7 +138,7 @@ const getBatchTheme = (status) => {
   }
 };
 
-const BatchCard = ({ batch, onEdit, onDelete, navigate }) => {
+const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const theme = getBatchTheme(batch.status);
 
@@ -153,7 +153,16 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate }) => {
   }, [batch.id]);
 
   return (
-    <article className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group">
+    <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+      <div className="absolute left-3.5 top-3.5 z-20">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onSelectToggle(batch.id)}
+          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+        />
+      </div>
+
       <div className={`absolute right-3 top-3 z-20 batch-actions-${batch.id}`}>
         <button
           type="button"
@@ -191,7 +200,7 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate }) => {
         )}
       </div>
 
-      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint}`}>
+      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10`}>
         <div className="flex items-start gap-2.5">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
             <FiBookOpen className={`w-5 h-5 ${theme.iconColor}`} />
@@ -266,7 +275,35 @@ const Batches = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [collegeFilter, setCollegeFilter] = useState('All Colleges');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [selectedBatchIds, setSelectedBatchIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const searchInputRef = useRef(null);
+
+  const handleSelectToggle = (id) => {
+    setSelectedBatchIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedBatchIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    setCreateError('');
+    setIsBulkDeleting(true);
+    try {
+      await adminAPI.bulkDeleteBatches(selectedBatchIds);
+      await loadBatchPageData();
+      setSelectedBatchIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (error) {
+      setCreateError(error.message || 'Failed to bulk delete batches.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
   const isDarkMode = theme === 'dark';
   const todayIsoDate = getTodayIsoDate();
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -652,8 +689,38 @@ const Batches = () => {
         </div>
       )}
 
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[125] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkDeleteConfirmOpen(false)} />
+          <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-base font-semibold text-red-600 dark:text-red-400">Bulk Delete Batches</h3>
+              <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                Are you sure you want to delete the {selectedBatchIds.length} selected batches? This will delete all associated student records and submissions.
+              </p>
+              {createError && <p className="text-xs text-red-500 mt-2">{createError}</p>}
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 transition-colors"
+              >
+                {isBulkDeleting ? 'Deleting...' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
-        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
+        <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
         <main
@@ -675,7 +742,24 @@ const Batches = () => {
               </section>
             ) : (
             <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_160px_150px_auto] gap-2 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[auto_minmax(0,1fr)_160px_150px_auto] gap-2 items-center">
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={filteredBatches.length > 0 && filteredBatches.every(b => selectedBatchIds.includes(b.id))}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const newSelections = new Set([...selectedBatchIds, ...filteredBatches.map(b => b.id)]);
+                      setSelectedBatchIds(Array.from(newSelections));
+                    } else {
+                      setSelectedBatchIds(selectedBatchIds.filter(id => !filteredBatches.some(b => b.id === id)));
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                />
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+              </div>
+
               <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                 <input
@@ -745,12 +829,37 @@ const Batches = () => {
                 <BatchCard
                   key={batch.id}
                   batch={batch}
+                  selected={selectedBatchIds.includes(batch.id)}
+                  onSelectToggle={handleSelectToggle}
                   onEdit={openEditBatch}
                   onDelete={setPendingDeleteBatch}
                   navigate={navigate}
                 />
               ))}
             </div>
+
+            {/* Floating Bulk Action Bar */}
+            {selectedBatchIds.length > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3.5 rounded-full border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43]/85 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-300">
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {selectedBatchIds.length} {selectedBatchIds.length === 1 ? 'batch' : 'batches'} selected
+                </span>
+                <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                <button
+                  onClick={handleClearSelection}
+                  className="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                  className="px-4 py-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  Delete Selected
+                </button>
+              </div>
+            )}
 
             {filteredBatches.length === 0 && (
               <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">

@@ -322,6 +322,9 @@ export default function Dashboard() {
   }, []);
   const displayUser = user || storedUser;
   let rawPhotoUrl = displayUser?.photoUrl || "/profile_avatars/nobackgroundavatar1.png";
+  if (rawPhotoUrl && !rawPhotoUrl.includes('/profile_avatars/')) {
+    rawPhotoUrl = "/profile_avatars/nobackgroundavatar1.png";
+  }
   // Dynamically rewrite to the backgroundless version if user has an old avatar set
   if (rawPhotoUrl && rawPhotoUrl.includes('/profile_avatars/') && !rawPhotoUrl.includes('nobackground')) {
     rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
@@ -416,7 +419,7 @@ export default function Dashboard() {
       <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-300 ${
-            isDarkMode ? 'bg-[#020816]' : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'
+            isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
           }`}
         />
 
@@ -428,11 +431,7 @@ export default function Dashboard() {
           }`}
         >
           <div className="w-full max-w-[1400px] space-y-8">
-            {error && !error.includes('authentication') ? (
-              <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
-                Some dashboard details are still syncing. You can keep using the page while we retry in the background.
-              </div>
-            ) : null}
+
 
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               

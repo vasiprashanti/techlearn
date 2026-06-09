@@ -385,17 +385,13 @@ export const deleteQuestionCategory = async (req, res) => {
       return res.status(404).json({ success: false, message: "Question category not found." });
     }
 
-    const activeQuestions = await Question.countDocuments({
-      $or: [{ categoryId: category._id }, { categorySlug: category.slug }, { categoryTitle: category.title }],
-      isActive: { $ne: false },
-    });
-
-    if (activeQuestions > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete a category that still has active questions. Delete or archive the questions first.",
-      });
-    }
+    // Archive associated questions
+    await Question.updateMany(
+      {
+        $or: [{ categoryId: category._id }, { categorySlug: category.slug }, { categoryTitle: category.title }],
+      },
+      { $set: { isActive: false, status: "Archived" } }
+    );
 
     await Category.findByIdAndDelete(category._id);
 
@@ -655,6 +651,15 @@ export const createTrackTemplate = async (req, res) => {
       return res.status(400).json({ success: false, message: schedule.error });
     }
 
+    const dayAssignments = [];
+    for (let i = 1; i <= schedule.totalDays; i++) {
+      dayAssignments.push({
+        dayNumber: i,
+        questionId: null,
+        tasks: [],
+      });
+    }
+
     const template = await TrackTemplate.create({
       name: name.trim(),
       trackType: req.body.trackType || "Daily Challenge",
@@ -666,6 +671,7 @@ export const createTrackTemplate = async (req, res) => {
       totalDays: schedule.totalDays,
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
+      dayAssignments,
       versionHistory: [{ version: 1, label: "v1 - Initial template", changedBy: getActorName(req.user) }],
     });
 
@@ -743,6 +749,10 @@ export const getTrackTemplateDetail = async (req, res) => {
         trackType: template.trackType || "Daily Challenge",
         dayAssignments: (template.dayAssignments || []).map((assignment) => ({
           dayNumber: assignment.dayNumber,
+          questionId: assignment.questionId?._id || assignment.questionId,
+          questionTitle: assignment.questionId?.title || "",
+          difficulty: assignment.questionId?.difficulty || "",
+          track: getCategoryTitle(assignment.questionId || {}),
           tasks: (assignment.tasks || []).map((t) => ({
             taskType: t.taskType,
             questionId: t.questionId?._id || t.questionId,
@@ -828,6 +838,22 @@ export const updateTrackTemplate = async (req, res) => {
       });
       if (schedule.error) {
         return res.status(400).json({ success: false, message: schedule.error });
+      }
+      if (schedule.totalDays !== template.totalDays) {
+        const currentDaysCount = template.dayAssignments.length;
+        if (schedule.totalDays > currentDaysCount) {
+          for (let i = currentDaysCount + 1; i <= schedule.totalDays; i++) {
+            template.dayAssignments.push({
+              dayNumber: i,
+              questionId: null,
+              tasks: [],
+            });
+          }
+        } else if (schedule.totalDays < currentDaysCount) {
+          template.dayAssignments = template.dayAssignments.filter(
+            (assignment) => assignment.dayNumber <= schedule.totalDays
+          );
+        }
       }
       template.startDate = schedule.startDate;
       template.endDate = schedule.endDate;
@@ -1011,6 +1037,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 export const removeTrackTemplateDay = async (req, res) => {
   try {
     const { templateId, dayNumber } = req.params;
+    const { questionId } = req.query;
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId);
@@ -1018,9 +1045,21 @@ export const removeTrackTemplateDay = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    template.dayAssignments = template.dayAssignments.filter(
-      (assignment) => assignment.dayNumber !== Number(dayNumber)
+    const targetDayNumber = Number(dayNumber);
+    const dayIndex = template.dayAssignments.findIndex(
+      (assignment) => assignment.dayNumber === targetDayNumber
     );
+
+    if (dayIndex >= 0) {
+      if (questionId) {
+        template.dayAssignments[dayIndex].tasks = template.dayAssignments[dayIndex].tasks.filter(
+          (t) => String(t.questionId) !== String(questionId)
+        );
+      } else {
+        template.dayAssignments[dayIndex].questionId = null;
+        template.dayAssignments[dayIndex].tasks = [];
+      }
+    }
     await template.save();
     await syncTemplateToTrack(template);
     await logTrackTemplateEvent({
@@ -1479,5 +1518,111 @@ export const createOrUpdateCertificateTemplate = async (req, res) => {
   } catch (error) {
     console.error("createOrUpdateCertificateTemplate error:", error);
     return res.status(500).json({ success: false, message: "Failed to save certificate template.", error: error.message });
+  }
+};
+
+export const bulkDeleteTrackTemplatesAdmin = async (req, res) => {
+  try {
+    const { templateIds } = req.body;
+    if (!Array.isArray(templateIds) || templateIds.length === 0) {
+      return res.status(400).json({ success: false, message: "templateIds must be a non-empty array." });
+    }
+
+    for (const templateId of templateIds) {
+      if (!assertObjectId(templateId, "templateId", res)) return;
+    }
+
+    const templates = await TrackTemplate.find({ _id: { $in: templateIds } }).lean();
+    if (!templates.length) {
+      return res.status(404).json({ success: false, message: "No track templates found for the provided IDs." });
+    }
+
+    await TrackTemplate.deleteMany({ _id: { $in: templateIds } });
+
+    // Clean up references in Batch
+    await Batch.updateMany(
+      { assignedDailyTaskTrack: { $in: templateIds } },
+      { $unset: { assignedDailyTaskTrack: "" } }
+    );
+    await Batch.updateMany(
+      { assignedDailyChallengeTrack: { $in: templateIds } },
+      { $unset: { assignedDailyChallengeTrack: "" } }
+    );
+
+    // Clean up corresponding synced Tracks
+    const batchIds = templates.map((t) => t.batchId).filter(Boolean);
+    if (batchIds.length > 0) {
+      await Track.deleteMany({
+        batchId: { $in: batchIds },
+        trackType: { $in: ["Daily Task", "Daily Challenge"] },
+      });
+    }
+
+    for (const template of templates) {
+      await writeAuditLog({
+        verb: "Deleted",
+        entityType: "TrackTemplate",
+        entityId: template._id,
+        action: "Deleted track template in bulk",
+        detail: template.name,
+        actor: req.user,
+      });
+    }
+
+    return res.status(200).json({ success: true, message: `${templates.length} track templates deleted successfully.` });
+  } catch (error) {
+    console.error("bulkDeleteTrackTemplatesAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to bulk delete track templates." });
+  }
+};
+
+export const bulkDeleteQuestionCategoriesAdmin = async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ success: false, message: "categoryIds must be a non-empty array." });
+    }
+
+    for (const categoryId of categoryIds) {
+      if (!assertObjectId(categoryId, "categoryId", res)) return;
+    }
+
+    const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
+    if (!categories.length) {
+      return res.status(404).json({ success: false, message: "No question categories found for the provided IDs." });
+    }
+
+    const categorySlugs = categories.map((c) => c.slug).filter(Boolean);
+    const categoryTitles = categories.map((c) => c.title).filter(Boolean);
+
+    // Deactivate/archive associated questions for all selected categories
+    await Question.updateMany(
+      {
+        $or: [
+          { categoryId: { $in: categoryIds } },
+          { categorySlug: { $in: categorySlugs } },
+          { categoryTitle: { $in: categoryTitles } },
+        ],
+      },
+      { $set: { isActive: false, status: "Archived" } }
+    );
+
+    await Category.deleteMany({ _id: { $in: categoryIds } });
+
+    for (const category of categories) {
+      await writeAuditLog({
+        verb: "Deleted",
+        entityType: "QuestionCategory",
+        entityId: category._id,
+        action: "Deleted question category in bulk",
+        detail: category.title,
+        actor: req.user,
+      });
+    }
+
+    return res.status(200).json({ success: true, message: `${categories.length} question categories deleted successfully.` });
+  } catch (error) {
+    console.error("bulkDeleteQuestionCategoriesAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to bulk delete question categories." });
   }
 };

@@ -9,10 +9,10 @@ const LearnMain = () => {
   const isDarkMode = theme === 'dark';
 
   return (
-    <div className={`min-h-screen relative overflow-hidden font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] ${
+    <div className={`min-h-screen relative overflow-hidden font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] ${
       isDarkMode 
-        ? "dark bg-[#020816]" 
-        : "light bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]"
+        ? "dark bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" 
+        : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"
     }`}>
       <ScrollProgress />
       <HeroSection />

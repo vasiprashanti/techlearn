@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -250,6 +252,53 @@
 
   html:not(.dark) .hover\:text-black:hover {
     color: #00113b !important;
+  }
+
+  html:not(.dark) .course-notes-text,
+  html:not(.dark) .course-notes-text :where(h1, h2, h3, h4, h5, h6, p, li, span, strong, em, blockquote, table, th, td, figcaption) {
+    color: #001862 !important;
+  }
+
+  html:not(.dark) .course-notes-text :where(h1, h2, h3, h4, h5, h6) {
+    -webkit-text-fill-color: #001862 !important;
+    background: none !important;
+  }
+
+  html:not(.dark) .course-notes-text a,
+  html:not(.dark) .course-notes-text code:not(pre code) {
+    color: #001862 !important;
+    -webkit-text-fill-color: #001862 !important;
+  }
+
+  html:not(.dark) .course-notes-text pre,
+  html:not(.dark) .course-notes-text pre :where(code, span) {
+    color: #e2e8f0 !important;
+    -webkit-text-fill-color: #e2e8f0 !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-comment,
+  html:not(.dark) .course-notes-text pre .hljs-quote {
+    color: #9fb3c8 !important;
+    -webkit-text-fill-color: #9fb3c8 !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-keyword,
+  html:not(.dark) .course-notes-text pre .hljs-built_in,
+  html:not(.dark) .course-notes-text pre .hljs-type,
+  html:not(.dark) .course-notes-text pre .hljs-title {
+    color: #8fd9ff !important;
+    -webkit-text-fill-color: #8fd9ff !important;
+  }
+
+  html:not(.dark) .course-notes-text pre .hljs-string,
+  html:not(.dark) .course-notes-text pre .hljs-number,
+  html:not(.dark) .course-notes-text pre .hljs-literal {
+    color: #c7f9cc !important;
+    -webkit-text-fill-color: #c7f9cc !important;
+  }
+
+  .font-press-start {
+    font-family: 'Press Start 2P', monospace;
   }
 
   .text-gradient {
@@ -724,28 +773,45 @@
     box-shadow: 0 0 0 4px rgba(76, 143, 208, 0.26) !important;
   }
 
-  .admin-dashboard-typography button[class*="bg-[#3C83F6]"],
-  .admin-dashboard-typography a[class*="bg-[#3C83F6]"] {
-    background: #020b23 !important;
-    color: #daf0fa !important;
-    border-color: rgba(2, 11, 35, 0.28) !important;
-    box-shadow: 0 12px 30px rgba(2, 11, 35, 0.22);
+  .admin-dashboard-typography :is(button, a).dashboard-primary-btn,
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#3C83F6]"],
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#3c83f6]"],
+  .admin-dashboard-typography :is(button, a)[class*="bg-blue-600"],
+  .admin-dashboard-typography :is(button, a)[class*="bg-blue-500"],
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#00113b]"] {
+    background: #00113b !important;
+    color: #ffffff !important;
+    border-color: rgba(0, 17, 59, 0.28) !important;
+    box-shadow: 0 12px 30px rgba(0, 17, 59, 0.2);
   }
 
-  .admin-dashboard-typography button[class*="bg-[#3C83F6]"]:hover,
-  .admin-dashboard-typography a[class*="bg-[#3C83F6]"]:hover {
-    background: #071a42 !important;
+  .admin-dashboard-typography :is(button, a).dashboard-primary-btn:hover,
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#3C83F6]"]:hover,
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#3c83f6]"]:hover,
+  .admin-dashboard-typography :is(button, a)[class*="bg-blue-600"]:hover,
+  .admin-dashboard-typography :is(button, a)[class*="bg-blue-500"]:hover,
+  .admin-dashboard-typography :is(button, a)[class*="bg-[#00113b]"]:hover {
+    background: #001b5c !important;
   }
 
-  .dark .admin-dashboard-typography button[class*="bg-[#3C83F6]"],
-  .dark .admin-dashboard-typography a[class*="bg-[#3C83F6]"] {
-    background: #0c1f4d !important;
-    color: #daf0fa !important;
+  .dark .admin-dashboard-typography :is(button, a).dashboard-primary-btn,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#3C83F6]"],
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#3c83f6]"],
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-blue-600"],
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-blue-500"],
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#00113b]"] {
+    background: #bceaff !important;
+    color: #020b23 !important;
+    border-color: rgba(188, 234, 255, 0.42) !important;
   }
 
-  .dark .admin-dashboard-typography button[class*="bg-[#3C83F6]"]:hover,
-  .dark .admin-dashboard-typography a[class*="bg-[#3C83F6]"]:hover {
-    background: #142b67 !important;
+  .dark .admin-dashboard-typography :is(button, a).dashboard-primary-btn:hover,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#3C83F6]"]:hover,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#3c83f6]"]:hover,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-blue-600"]:hover,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-blue-500"]:hover,
+  .dark .admin-dashboard-typography :is(button, a)[class*="bg-[#00113b]"]:hover {
+    background: #daf0fa !important;
   }
 
   .admin-dashboard-typography h2,
@@ -1520,4 +1586,12 @@ html {
 
 .dark .letter.visible {
   color: rgba(147, 197, 253, 1);
+}
+
+.text-lavender {
+  color: #7c6be3;
+}
+
+.dark .text-lavender {
+  color: #d6c7ff;
 }

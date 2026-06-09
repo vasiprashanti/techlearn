@@ -24,6 +24,34 @@ export const QuestionBankAdminPage = () => {
   const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
   const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   const [categoryError, setCategoryError] = useState('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  const handleSelectToggle = (id) => {
+    setSelectedCategoryIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCategoryIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    setCategoryError('');
+    setIsBulkDeleting(true);
+    try {
+      await questionBankApi.bulkDeleteCategories(selectedCategoryIds);
+      await refetch();
+      setSelectedCategoryIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (err) {
+      setCategoryError(err.message || 'Failed to bulk delete categories.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const isDarkMode = theme === 'dark';
 
@@ -116,7 +144,7 @@ export const QuestionBankAdminPage = () => {
           <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
             <h3 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">Delete Category?</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-              Are you sure you want to delete <span className="font-semibold text-slate-800 dark:text-slate-200">{deleteCategoryTarget.title}</span>? This will permanently delete the category and all associated questions.
+              Are you sure you want to delete <span className="font-semibold text-slate-800 dark:text-slate-200">{deleteCategoryTarget.title}</span>? This will permanently delete the category and archive all associated questions.
             </p>
             {categoryError && (
               <p className="mt-3 text-xs text-red-500">{categoryError}</p>
@@ -141,8 +169,39 @@ export const QuestionBankAdminPage = () => {
         </div>
       )}
 
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkDeleteConfirmOpen(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">Bulk Delete Categories?</h3>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Are you sure you want to delete the {selectedCategoryIds.length} selected categories? This will permanently delete them and archive all associated questions.
+            </p>
+            {categoryError && (
+              <p className="mt-3 text-xs text-red-500">{categoryError}</p>
+            )}
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/15 text-sm font-medium text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {isBulkDeleting ? 'Deleting...' : 'Delete All'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Gradient */}
-      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]'}`} />
+      <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
       
       {/* Admin Sidebar Navigation */}
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -191,8 +250,27 @@ export const QuestionBankAdminPage = () => {
 
           {/* Category Listing Container */}
           <section className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
+                
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={categories.length > 0 && categories.every(c => selectedCategoryIds.includes(c.id || c._id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const newSelections = new Set([...selectedCategoryIds, ...categories.map(c => c.id || c._id)]);
+                        setSelectedCategoryIds(Array.from(newSelections));
+                      } else {
+                        setSelectedCategoryIds(selectedCategoryIds.filter(id => !categories.some(c => (c.id || c._id) === id)));
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                  />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+                </div>
+              </div>
               <button
                 onClick={handleAddCategoryClick}
                 className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-5 text-sm font-semibold transition-colors shadow-sm"
@@ -204,12 +282,37 @@ export const QuestionBankAdminPage = () => {
 
             <CategoryListPanel
               categories={categories}
+              selectedCategoryIds={selectedCategoryIds}
+              onSelectToggle={handleSelectToggle}
               onEditCategory={handleEditCategoryClick}
               onDeleteCategory={handleDeleteCategoryClick}
               onViewCategory={handleViewCategory}
               onAddCategory={handleAddCategoryClick}
             />
           </section>
+
+          {/* Floating Bulk Action Bar */}
+          {selectedCategoryIds.length > 0 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3.5 rounded-full border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43]/85 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-300">
+              <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {selectedCategoryIds.length} {selectedCategoryIds.length === 1 ? 'category' : 'categories'} selected
+              </span>
+              <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+              <button
+                onClick={handleClearSelection}
+                className="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                className="px-4 py-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          )}
         </div>
       </main>
     </div>

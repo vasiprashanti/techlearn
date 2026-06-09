@@ -302,3 +302,46 @@ export const getCourseById = async (req, res) => {
     });
   }
 };
+
+// delete topic and clean up associated notes & course topic references
+export const deleteTopic = async (req, res) => {
+  try {
+    const { topicId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(topicId)) {
+      return res.status(400).json({ message: "Invalid topic ID" });
+    }
+
+    const topic = await Topic.findById(topicId);
+    if (!topic) {
+      return res.status(404).json({ message: "Topic not found" });
+    }
+
+    // Delete associated notes
+    if (topic.notesId) {
+      await Notes.findByIdAndDelete(topic.notesId);
+    } else {
+      await Notes.deleteMany({ topicId });
+    }
+
+    // Pull from Course
+    await Course.updateOne(
+      { _id: topic.courseId },
+      { $pull: { topicIds: topic._id } }
+    );
+
+    // Delete Topic
+    await Topic.findByIdAndDelete(topicId);
+
+    res.status(200).json({
+      success: true,
+      message: "Topic deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete topic error:", error);
+    res.status(500).json({
+      message: "Failed to delete topic",
+      error: error.message,
+    });
+  }
+};

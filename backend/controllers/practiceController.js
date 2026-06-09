@@ -3,7 +3,7 @@ import PracticeSubmission from "../models/PracticeSubmission.js";
 import mongoose from "mongoose";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 
-const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude"];
+const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 
 const normalizePracticeTrack = (value = "") => {
   const normalized = String(value).trim().toLowerCase();
@@ -11,6 +11,7 @@ const normalizePracticeTrack = (value = "") => {
   if (normalized.includes("core") || normalized.includes("cs")) return "Core CS";
   if (normalized.includes("sql") || normalized.includes("database")) return "SQL";
   if (normalized.includes("aptitude")) return "Aptitude";
+  if (normalized.includes("company")) return "Company Based";
   return "";
 };
 
@@ -109,7 +110,7 @@ export const recordPracticeSubmission = async (req, res) => {
     }
 
     if (!TRACKS.includes(track)) {
-      return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, or Aptitude." });
+      return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, Aptitude, or Company Based." });
     }
 
     let canonicalQuestion = null;
@@ -264,6 +265,7 @@ export const getPracticeStats = async (req, res) => {
           attempted: 0,
           correct: 0,
           accuracy: 0,
+          streak: 0,
         },
       ])
     );
@@ -289,6 +291,10 @@ export const getPracticeStats = async (req, res) => {
         stats[track].attempted > 0
           ? Number(((stats[track].correct / stats[track].attempted) * 100).toFixed(1))
           : 0;
+
+      const trackSubmissions = submissions.filter((s) => s.track === track);
+      const trackStreak = calculateStreak(trackSubmissions);
+      stats[track].streak = trackStreak.currentStreak;
     }
 
     const streak = calculateStreak(submissions);

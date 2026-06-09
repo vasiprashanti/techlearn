@@ -259,7 +259,7 @@ export default function Courses() {
 
   if (loading) {
     return (
-      <div className={`w-full min-h-screen px-4 sm:px-6 md:px-12 lg:px-16 pb-12 pt-24 ${isDarkMode ? "dark bg-[#020816]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#daf0fa]"}`}>
+      <div className={`w-full min-h-screen px-4 sm:px-6 md:px-12 lg:px-16 pb-12 pt-24 ${isDarkMode ? "dark bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "light bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`}>
         <div className="mx-auto max-w-[1600px] space-y-10">
           <div className="h-16 w-72 rounded-2xl bg-white/30 dark:bg-white/10 animate-pulse" />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -273,7 +273,7 @@ export default function Courses() {
   }
 
   return (
-    <div className="w-full min-h-screen font-sans antialiased text-[#0d2a57] dark:text-[#8fd9ff] bg-transparent">
+    <div className="w-full min-h-screen font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] bg-transparent">
       <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
@@ -283,8 +283,8 @@ export default function Courses() {
                 <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
                   <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
                 </h1>
-                <p className="text-sm sm:text-base md:text-lg text-[#6f8fb8] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">Fundamentals first. Brilliance next.</p>
-                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#4d6f9c] dark:text-[#7fb9e6] mt-2">Pick a track and start building skills</p>
+                <p className="text-sm sm:text-base md:text-lg text-[#00113b] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">Fundamentals first. Brilliance next.</p>
+                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-2">Pick a track and start building skills</p>
               </div>
             </header>
 
@@ -330,10 +330,10 @@ export default function Courses() {
                           </div>
 
                           <div className="relative z-10 mt-auto">
-                            <h3 className="text-xl md:text-[1.6rem] font-semibold text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2d7fe8] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
+                            <h3 className="text-xl md:text-[1.6rem] font-semibold text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
                               {course.title}
                             </h3>
-                            <p className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
+                            <p className="text-sm text-[#00113b] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
                               {course.description}
                             </p>
                           </div>
@@ -381,7 +381,7 @@ export default function Courses() {
                             <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
                               {batch.level}
                             </span>
-                            <span className="text-[10px] uppercase tracking-widest text-[#4f719c] dark:text-[#8ac7f3] transition-colors">
+                            <span className="text-[10px] uppercase tracking-widest text-[#00113b] dark:text-[#8ac7f3] transition-colors">
                               By {batch.instructor}
                             </span>
                           </div>
@@ -392,21 +392,21 @@ export default function Courses() {
                             </span>
                           </div>
 
-                          <h3 className="text-xl font-medium text-center text-[#0d2a57] dark:text-[#8fd9ff] group-hover:text-[#2c7de4] dark:group-hover:text-[#9adfff] transition-colors mb-6">
+                          <h3 className="text-xl font-medium text-center text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#9adfff] transition-colors mb-6">
                             {batch.title}
                           </h3>
 
                           <div className="grid grid-cols-2 gap-y-5 gap-x-8 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
                             <div className="flex items-center gap-2.5">
-                              <Clock className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
+                              <Clock className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
-                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
+                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2.5">
-                              <Calendar className="w-4 h-4 text-[#4f7fb7] dark:text-[#7cc3ee]" />
+                              <Calendar className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
-                                <span className="text-[11px] font-semibold text-[#10305e] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
+                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
                               </div>
                             </div>
                           </div>

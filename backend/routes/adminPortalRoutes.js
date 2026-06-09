@@ -25,6 +25,7 @@ import {
   updateBatchAdmin,
   updateCollege,
   updateStudentAdmin,
+  bulkDeleteBatchesAdmin,
 } from "../controllers/admin/adminEntityController.js";
 import {
   assignTrackTemplateDay,
@@ -55,6 +56,8 @@ import {
   updateQuestionCategory,
   updateResourceAdmin,
   updateTrackTemplate,
+  bulkDeleteTrackTemplatesAdmin,
+  bulkDeleteQuestionCategoriesAdmin,
 } from "../controllers/admin/adminLearningController.js";
 import {
   createNotificationAdmin,
@@ -94,6 +97,7 @@ router.post("/batches", createBatchAdmin);
 router.get("/batches/:batchId", getBatchDetail);
 router.put("/batches/:batchId", updateBatchAdmin);
 router.delete("/batches/:batchId", deleteBatchAdmin);
+router.post("/batches/bulk-delete", bulkDeleteBatchesAdmin);
 router.put("/batches/:batchId/activate", activateBatchAdmin);
 
 router.get("/students", listStudentsAdmin);
@@ -106,6 +110,7 @@ router.get("/questions/categories", listQuestionCategories);
 router.post("/questions/categories", createQuestionCategory);
 router.put("/questions/categories/:categoryId", updateQuestionCategory);
 router.delete("/questions/categories/:categoryId", deleteQuestionCategory);
+router.post("/questions/categories/bulk-delete", bulkDeleteQuestionCategoriesAdmin);
 router.get("/questions", listQuestionsAdmin);
 router.post("/questions", createQuestionAdmin);
 router.get("/questions/:questionId", getQuestionDetailAdmin);
@@ -117,6 +122,7 @@ router.post("/track-templates", createTrackTemplate);
 router.get("/track-templates/:templateId", getTrackTemplateDetail);
 router.put("/track-templates/:templateId", updateTrackTemplate);
 router.delete("/track-templates/:templateId", deleteTrackTemplate);
+router.post("/track-templates/bulk-delete", bulkDeleteTrackTemplatesAdmin);
 router.post("/track-templates/:templateId/days", assignTrackTemplateDay);
 router.delete("/track-templates/:templateId/days/:dayNumber", removeTrackTemplateDay);
 router.put("/track-templates/:templateId/reorder", reorderTrackTemplateQuestions);

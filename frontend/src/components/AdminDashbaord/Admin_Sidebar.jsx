@@ -71,11 +71,11 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
     `sidebar-button flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm tracking-wide transition-all duration-300 ease-out ${
       isActive
         ? isDarkMode
-          ? "bg-[#263a86] !text-white font-semibold shadow-lg border border-[#5574c7]/55"
-          : "bg-white/90 text-[#020b23] font-semibold shadow-lg border border-white/25"
+          ? "bg-[#122449] hover:bg-[#183766] !text-white font-semibold shadow-lg border border-[#5574c7]/55"
+          : "bg-[#00113b] hover:bg-[#17386c] text-white font-semibold shadow-lg border border-[#00113b]/20"
         : isDarkMode
-          ? "!text-[#dbeaff] hover:!text-white hover:bg-[#1a2f67] hover:shadow-lg hover:border hover:border-[#5f7fda]/35 font-normal border border-transparent"
-          : "!text-[#17386c]/78 hover:!text-[#020b23] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 font-normal border border-transparent"
+          ? "!text-[#dbeaff] hover:!text-white hover:bg-[#183766] hover:shadow-lg hover:border hover:border-[#5f7fda]/35 font-normal border border-transparent"
+          : "!text-[#00113b] hover:!text-[#2f73e0] hover:bg-white/60 hover:shadow-md hover:border hover:border-[#3C83F6]/18 font-normal border border-transparent"
     }`;
 
   useEffect(() => {
@@ -151,14 +151,11 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
       {showMobileMenuButton && (
         <button
           onClick={() => setMobileMenuOpen(true)}
-          className={`lg:hidden fixed top-7 left-5 z-[45] p-2 rounded-md transition-all ${
-            isDarkMode
-              ? "text-white/60 hover:text-white hover:bg-white/10"
-              : "text-black/60 hover:text-black hover:bg-black/5"
-          }`}
-          aria-label="Open sidebar"
+          title="Open Menu"
+          className="lg:hidden fixed top-20 left-4 z-[45] flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/55 dark:bg-black/55 border border-black/10 dark:border-white/10 text-[#00113b] dark:text-[#8fd9ff] hover:text-[#3c83f6] dark:hover:text-white hover:scale-105 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all duration-300"
         >
-          <FiSidebar className="w-[22px] h-[22px]" />
+          <FiSidebar className="w-4 h-4" />
+          <span className="text-xs font-semibold tracking-wide">Menu</span>
         </button>
       )}
 

@@ -93,22 +93,26 @@ export default function EditProfile() {
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="mx-auto max-w-[1400px] space-y-8">
-        <header className="flex flex-col justify-between gap-4 border-b border-black/5 pb-6 dark:border-white/5 md:flex-row md:items-end">
-          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/profile")}
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Profile
-            </button>
-            <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-              <span className="dashboard-page-title block text-4xl sm:text-5xl md:text-6xl">Edit Profile.</span>
-            </h1>
-            <p className="mt-2 text-xs uppercase tracking-widest text-black/40 dark:text-white/40">Update your personal details</p>
-          </motion.div>
-        </header>
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
+        >
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/profile")}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Profile
+          </button>
+          <h1 className="font-press-start leading-normal">
+            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+              EDIT PROFILE
+            </span>
+          </h1>
+        </motion.div>
 
         <motion.section initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65, delay: 0.08 }} className="dashboard-surface p-8 md:p-12">
           <form onSubmit={handleSubmit} className="space-y-7">

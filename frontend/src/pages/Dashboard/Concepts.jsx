@@ -42,31 +42,26 @@ const Concepts = () => {
       <div className="space-y-8">
         
         {/* Header Section with Brand Gradient and Back Button */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-black/5 dark:border-white/5 gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="min-w-0"
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.65 }}
+          className="mx-auto max-w-4xl pt-2 text-center md:pt-4"
+        >
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/resources")}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
           >
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/resources")}
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-4"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Resources
-            </button>
-            <h1 className="font-poppins tracking-tight leading-[0.92]">
-              <span className="brand-heading-primary block text-4xl sm:text-5xl md:text-6xl font-bold font-poppins">
-                Important Concepts.
-              </span>
-            </h1>
-            <p className="text-xs tracking-widest uppercase text-black/40 dark:text-white/40 mt-4 max-w-4xl leading-relaxed">
-              Strengthen your interview foundations with structured deep-dives into OS, DBMS, Networks, OOD, and system design essentials.
-            </p>
-          </motion.div>
-        </header>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Resources
+          </button>
+          <h1 className="font-press-start leading-normal">
+            <span className="block text-xl sm:text-2xl md:text-3xl brand-heading-primary">
+              IMPORTANT CONCEPTS
+            </span>
+          </h1>
+        </motion.div>
 
         {/* Search Section */}
         <motion.section

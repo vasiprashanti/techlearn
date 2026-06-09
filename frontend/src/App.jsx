@@ -300,7 +300,7 @@ function LayoutWrapper() {
           <Route path="/learn/exercises/:courseId/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/learn/certification" element={<Certification />} />
           <Route path="/learn/certification/payment" element={<CertificationPayment />} />
-          <Route path="/learn/compiler" element={<OnlineCompiler />} />
+          <Route path="/compiler" element={<OnlineCompiler />} />
           <Route path="/build" element={<BuildPageMain />} />
           <Route path="/build/mini/:id" element={<ProjectDetail />} />
           <Route path="/build/midproject/:id" element={<ProjectDetail />} />

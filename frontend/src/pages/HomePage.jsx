@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-const FloatingCourseLogos = lazy(() => import('../components/FloatingCourseLogos'))
+const FloatingCodeWords = lazy(() => import('../components/FloatingCodeWords'))
 
 // Homepage component
 const HomePage = () => {
@@ -99,7 +99,7 @@ const HomePage = () => {
   useEffect(() => {
     if (isTyping && currentIndex < fullText.length) {
       const isMobile = window.innerWidth <= 480
-      const charDelay = isMobile ? 120 : 75
+      const charDelay = isMobile ? 220 : 150
 
       const timeout = setTimeout(() => {
         setDisplayedText(prev => prev + fullText[currentIndex])
@@ -187,9 +187,9 @@ const HomePage = () => {
     <div className="bg-transparent dark:bg-transparent relative">
       {/* Hero Section */}
       <div className="h-screen flex flex-col items-center justify-center px-6 relative pt-16">
-        {/* Floating Course Logos - Hero Section Only */}
+        {/* Falling Code Words - Hero Section Only */}
         <Suspense fallback={null}>
-          <FloatingCourseLogos />
+          <FloatingCodeWords />
         </Suspense>
         <div className="relative z-10 flex flex-col items-center justify-center text-center">
           {/* TECHLEARN Heading with Typewriter Effect */}
@@ -240,9 +240,9 @@ const HomePage = () => {
             </h2>
           </div>
 
-          {/* Start for Free Button */}
+          {/* Start Coding Button */}
           <button
-            onClick={() => navigate('/learn')}
+            onClick={() => navigate('/compiler')}
             className="inline-block font-poppins font-semibold rounded-lg transition-all duration-300 px-6 py-3 md:px-8 md:py-3 text-sm md:text-base mt-6 md:mt-8"
             style={{
               backgroundColor: '#ffffffac',
@@ -259,7 +259,7 @@ const HomePage = () => {
               e.target.style.color = '#001242'
             }}
           >
-            Start for Free
+            Start Coding
           </button>
         </div>
       </div>

@@ -137,18 +137,15 @@ export const updateCategory = async (req, res) => {
 
 /*
   DELETE /api/question-bank/categories/:id
-  Blocked if questions exist under the category.
+  Delete category and archive all associated questions.
  */
 export const deleteCategory = async (req, res) => {
   try {
-    const count = await Question.countDocuments({ categoryId: req.params.id, isActive: true });
-
-    if (count > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot delete category with existing questions. Remove questions first.',
-      });
-    }
+    // Archive associated questions
+    await Question.updateMany(
+      { categoryId: req.params.id },
+      { $set: { isActive: false, status: 'Archived' } }
+    );
 
     const deleted = await Category.findByIdAndDelete(req.params.id);
     if (!deleted) {

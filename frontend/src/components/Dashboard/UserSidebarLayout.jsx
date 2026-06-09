@@ -8,9 +8,6 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[14
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isDarkMode = theme === 'dark';
-  const isRoadmapRoute =
-    location.pathname === '/dashboard/roadmap' ||
-    location.pathname.startsWith('/resources/roadmaps');
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/') ||
@@ -33,10 +30,8 @@ export default function UserSidebarLayout({ children, maxWidthClass = 'max-w-[14
       <div
         className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
           isDarkMode
-            ? 'bg-[#020816]'
-            : isRoadmapRoute
-              ? 'bg-[#eaf8fd]'
-              : 'bg-gradient-to-br from-[#bceaff] via-[#9adfff] to-[#bceaff]'
+            ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]'
+            : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
         }`}
       />
 

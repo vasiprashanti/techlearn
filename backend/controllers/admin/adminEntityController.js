@@ -988,3 +988,63 @@ export const deleteStudentAdmin = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to delete student." });
   }
 };
+
+export const bulkDeleteBatchesAdmin = async (req, res) => {
+  try {
+    const { batchIds } = req.body;
+    if (!Array.isArray(batchIds) || batchIds.length === 0) {
+      return res.status(400).json({ success: false, message: "batchIds must be a non-empty array." });
+    }
+
+    for (const batchId of batchIds) {
+      if (!assertObjectId(batchId, "batchId", res)) return;
+    }
+
+    const batches = await Batch.find({ _id: { $in: batchIds } }).lean();
+    if (!batches.length) {
+      return res.status(404).json({ success: false, message: "No batches found for the provided IDs." });
+    }
+
+    await Batch.deleteMany({ _id: { $in: batchIds } });
+
+    const studentsToDelete = await Student.find({ batchId: { $in: batchIds } })
+      .select("_id email")
+      .lean();
+    const studentIds = studentsToDelete.map((student) => student._id);
+    const studentEmails = studentsToDelete
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    await Promise.all([
+      Submission.deleteMany({
+        $or: [
+          { batchId: { $in: batchIds } },
+          ...(studentIds.length ? [{ studentId: { $in: studentIds } }] : [])
+        ],
+      }),
+      studentEmails.length
+        ? StudentCodingSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentEmails.length
+        ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+    ]);
+
+    for (const batch of batches) {
+      await writeAuditLog({
+        verb: "Deleted",
+        entityType: "Batch",
+        entityId: batch._id,
+        action: "Deleted batch in bulk",
+        detail: batch.name,
+        actor: req.user,
+      });
+    }
+
+    return res.status(200).json({ success: true, message: `${batches.length} batches deleted successfully.` });
+  } catch (error) {
+    console.error("bulkDeleteBatchesAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to bulk delete batches." });
+  }
+};
