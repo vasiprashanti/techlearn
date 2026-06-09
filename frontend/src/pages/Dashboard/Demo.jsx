@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BookOpen,
-  CalendarDays,
   ChevronRight,
   CheckCircle2,
   Code2,
@@ -531,7 +529,7 @@ export default function DemoDashboard() {
               {/* Daily Notes / Daily Challenge Card - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
                 {MOCK_PROJECT_MODE ? (
-                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[260px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
+                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
                     <div
                       className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
                       style={{
@@ -540,46 +538,40 @@ export default function DemoDashboard() {
                         backgroundPosition: 'center',
                       }}
                     />
-                    <div className="absolute inset-0 z-0 bg-gradient-to-br from-black/95 via-[#071b3c]/78 to-[#0d4d7a]/45" />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                    <div className="relative z-10 flex flex-col h-full gap-4 text-white">
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-[#8fd9ff] drop-shadow-md leading-tight uppercase">
-                            Daily Notes
-                          </p>
-                          <h1 className="mt-3 font-press-start text-xl sm:text-2xl font-bold leading-tight text-white">
-                            {mockProjectDashboard.project.title}
-                          </h1>
-                        </div>
-                        <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-white/10 bg-black/55 px-2.5 py-1.5 font-press-start text-[10px] font-bold uppercase tracking-[0.12em] text-white shadow-sm">
-                          <CalendarDays className="w-3.5 h-3.5 shrink-0" />
-                          Day {mockProjectDashboard.project.currentDay} of {mockProjectDashboard.project.totalDays}
+                    <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
+                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
+                        Daily Notes
+                      </h1>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap leading-none">DAY {mockProjectDashboard.project.currentDay}/{mockProjectDashboard.project.totalDays}</span>
+                        </span>
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                          <span>{mockProjectDashboard.project.daysRemaining} DAYS LEFT</span>
                         </span>
                       </div>
+                    </div>
 
-                      <p className="max-w-3xl font-press-start text-xs sm:text-sm leading-relaxed text-white/82">
-                        {mockProjectDashboard.project.description}
-                      </p>
+                    <div className="z-10 flex flex-col items-start text-left w-full mt-4 sm:mt-5 space-y-3 text-white">
+                      <div className="w-full max-w-2xl">
+                        <h2 className="font-press-start text-sm sm:text-base md:text-lg font-bold leading-tight text-white">
+                          {mockProjectDashboard.project.title}
+                        </h2>
+                        <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-white/72 line-clamp-2">
+                          {mockProjectDashboard.project.description}
+                        </p>
+                        <p className="mt-3 font-press-start text-[10px] sm:text-xs font-medium text-[#8fd9ff]">
+                          {projectOverallProgress}% Complete · {projectXpEarned.toLocaleString()} XP · {mockProjectDashboard.project.streak} Day Streak
+                        </p>
+                      </div>
 
-                      <div className="mt-auto flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                          {[
-                            { label: 'Deadline', value: `${mockProjectDashboard.project.daysRemaining} Days Left` },
-                            { label: 'Progress', value: `${projectOverallProgress}%` },
-                            { label: 'XP', value: projectXpEarned.toLocaleString() },
-                            { label: 'Streak', value: `${mockProjectDashboard.project.streak} Days` },
-                          ].map((metric) => (
-                            <div key={metric.label} className="rounded-lg border border-white/10 bg-black/45 px-3 py-2 backdrop-blur-md">
-                              <p className="font-press-start text-[9px] uppercase tracking-widest text-white/55">{metric.label}</p>
-                              <p className="mt-1 font-press-start text-[10px] sm:text-xs font-bold text-white">{metric.value}</p>
-                            </div>
-                          ))}
-                        </div>
-
+                      <div className="flex w-full justify-end pt-1">
                         <button
                           onClick={() => projectNotesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white px-4 py-2 font-press-start text-[10px] sm:text-xs font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:bg-slate-200"
+                          className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                         >
                           Project Notes <ChevronRight className="w-3 h-3" />
                         </button>
@@ -705,7 +697,7 @@ export default function DemoDashboard() {
                       ].map((item) => (
                         <div
                           key={item.label}
-                          className="flex items-center justify-between gap-3 rounded-sm border border-black/5 bg-white/20 px-3 py-2 dark:border-white/5 dark:bg-[#020b23]/30"
+                          className="flex items-center justify-between gap-3 py-1.5 px-1.5 rounded-sm transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                         >
                           <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/60 dark:text-[#81bde6] leading-tight">
                             {item.label}
@@ -890,83 +882,79 @@ export default function DemoDashboard() {
                 {MOCK_PROJECT_MODE ? (
                   <>
                     <div className="flex items-center justify-between mb-4 shrink-0">
-                      <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">PROJECT NOTES</h3>
+                      <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Project Notes & Activity</h3>
                       <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff]">
                         Day {mockProjectDashboard.project.currentDay}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_0.6fr]">
-                      <div className="space-y-4">
-                        <div className="flex gap-3">
-                          <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-[#3C83F6] dark:text-[#8fd9ff]" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {[
+                        {
+                          label: 'Overview',
+                          icon: <FileText className="w-3.5 h-3.5" />,
+                          title: mockProjectDashboard.project.title,
+                          body: mockProjectDashboard.notes.overview,
+                        },
+                        {
+                          label: 'Objectives',
+                          icon: <Target className="w-3.5 h-3.5" />,
+                          title: 'Learning Objectives',
+                          body: mockProjectDashboard.notes.objectives.join(' · '),
+                        },
+                        {
+                          label: 'Deliverables',
+                          icon: <ListChecks className="w-3.5 h-3.5" />,
+                          title: 'Project Deliverables',
+                          body: mockProjectDashboard.notes.deliverables.join(' · '),
+                        },
+                        {
+                          label: 'Tech Stack',
+                          icon: <Code2 className="w-3.5 h-3.5" />,
+                          title: mockProjectDashboard.notes.techStack.join(' / '),
+                          body: mockProjectDashboard.notes.folderStructure.join(' / '),
+                        },
+                        {
+                          label: 'APIs & Rules',
+                          icon: <FileText className="w-3.5 h-3.5" />,
+                          title: mockProjectDashboard.notes.apis.join(' · '),
+                          body: mockProjectDashboard.notes.businessRules.join(' · '),
+                        },
+                        {
+                          label: 'Recent Activity',
+                          icon: <TrendingUp className="w-3.5 h-3.5" />,
+                          title: mockProjectDashboard.recentActivity[0]?.title || 'Project activity',
+                          body: mockProjectDashboard.recentActivity.map((activity) => `${activity.title} (${activity.meta})`).join(' · '),
+                        },
+                      ].map((note) => (
+                        <div
+                          key={note.label}
+                          className="p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 transition-all duration-300 rounded-xl group flex flex-col justify-between min-h-[120px] hover:-translate-y-0.5 hover:shadow-md"
+                        >
                           <div>
-                            <h4 className="font-press-start text-xs sm:text-sm text-[#00113b] dark:text-white">Project Overview</h4>
-                            <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b]/68 dark:text-[#b9d7f0]">
-                              {mockProjectDashboard.notes.overview}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          {[
-                            { title: 'Objectives', icon: <Target className="h-4 w-4" />, values: mockProjectDashboard.notes.objectives },
-                            { title: 'Deliverables', icon: <ListChecks className="h-4 w-4" />, values: mockProjectDashboard.notes.deliverables },
-                            { title: 'Tech Stack', icon: <Code2 className="h-4 w-4" />, values: mockProjectDashboard.notes.techStack },
-                            { title: 'Business Rules', icon: <FileText className="h-4 w-4" />, values: mockProjectDashboard.notes.businessRules },
-                          ].map((section) => (
-                            <div key={section.title} className="border-t border-black/5 pt-3 dark:border-white/5">
-                              <div className="mb-2 flex items-center gap-2 text-[#3C83F6] dark:text-[#8fd9ff]">
-                                {section.icon}
-                                <h4 className="font-press-start text-[10px] sm:text-xs uppercase text-[#00113b]/70 dark:text-[#81bde6]">
-                                  {section.title}
-                                </h4>
-                              </div>
-                              <div className="space-y-1.5">
-                                {section.values.slice(0, 3).map((value) => (
-                                  <p key={value} className="font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b] dark:text-white">
-                                    {value}
-                                  </p>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                          <div className="border-t border-black/5 pt-3 dark:border-white/5">
-                            <h4 className="font-press-start text-[10px] sm:text-xs uppercase text-[#00113b]/70 dark:text-[#81bde6]">Folder Structure</h4>
-                            <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b] dark:text-white">
-                              {mockProjectDashboard.notes.folderStructure.join(' / ')}
-                            </p>
-                          </div>
-                          <div className="border-t border-black/5 pt-3 dark:border-white/5">
-                            <h4 className="font-press-start text-[10px] sm:text-xs uppercase text-[#00113b]/70 dark:text-[#81bde6]">APIs</h4>
-                            <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b] dark:text-white">
-                              {mockProjectDashboard.notes.apis.join(' · ')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-black/5 pt-4 dark:border-white/5 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-pixel-header text-[9px] sm:text-[10px] tracking-wider text-black/70 dark:text-[#8fd9ff]">RECENT PROJECT ACTIVITY</h4>
-                          <TrendingUp className="h-4 w-4 text-emerald-500" />
-                        </div>
-                        <div className="mt-4 space-y-3">
-                          {mockProjectDashboard.recentActivity.map((activity) => (
-                            <div key={activity.id} className="flex items-start justify-between gap-3 border-b border-black/5 pb-3 last:border-b-0 dark:border-white/5">
-                              <p className="font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b] dark:text-white">
-                                {activity.title}
-                              </p>
-                              <span className="shrink-0 font-press-start text-[10px] text-[#3C83F6] dark:text-[#8fd9ff]">
-                                {activity.meta}
+                            <div className="flex justify-between items-start mb-1.5">
+                              <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                                {note.label}
+                              </span>
+                              <span className="text-[#3C83F6] dark:text-[#8fd9ff]">
+                                {note.icon}
                               </span>
                             </div>
-                          ))}
+                            <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                              {note.title}
+                            </h4>
+                            <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-2">
+                              {note.body}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
+                            <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
+                              <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Project
+                            </span>
+                            <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </>
                 ) : (
