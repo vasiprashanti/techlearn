@@ -877,87 +877,86 @@ export default function DemoDashboard() {
                 </div>
               </div>
 
-              {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}
-              <div ref={MOCK_PROJECT_MODE ? projectNotesRef : null} className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
-                {MOCK_PROJECT_MODE ? (
-                  <>
-                    <div className="flex items-center justify-between mb-4 shrink-0">
-                      <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Project Notes & Activity</h3>
-                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff]">
-                        Day {mockProjectDashboard.project.currentDay}
-                      </span>
-                    </div>
+              {MOCK_PROJECT_MODE ? (
+                <>
+                  <div ref={projectNotesRef} className="w-full lg:col-span-8 order-5 lg:order-none flex items-center justify-between px-1">
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
+                      Project Notes
+                    </h3>
+                    <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff]">
+                      Day {mockProjectDashboard.project.currentDay}
+                    </span>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {[
-                        {
-                          label: 'Overview',
-                          icon: <FileText className="w-3.5 h-3.5" />,
-                          title: mockProjectDashboard.project.title,
-                          body: mockProjectDashboard.notes.overview,
-                        },
-                        {
-                          label: 'Objectives',
-                          icon: <Target className="w-3.5 h-3.5" />,
-                          title: 'Learning Objectives',
-                          body: mockProjectDashboard.notes.objectives.join(' · '),
-                        },
-                        {
-                          label: 'Deliverables',
-                          icon: <ListChecks className="w-3.5 h-3.5" />,
-                          title: 'Project Deliverables',
-                          body: mockProjectDashboard.notes.deliverables.join(' · '),
-                        },
-                        {
-                          label: 'Tech Stack',
-                          icon: <Code2 className="w-3.5 h-3.5" />,
-                          title: mockProjectDashboard.notes.techStack.join(' / '),
-                          body: mockProjectDashboard.notes.folderStructure.join(' / '),
-                        },
-                        {
-                          label: 'APIs & Rules',
-                          icon: <FileText className="w-3.5 h-3.5" />,
-                          title: mockProjectDashboard.notes.apis.join(' · '),
-                          body: mockProjectDashboard.notes.businessRules.join(' · '),
-                        },
-                        {
-                          label: 'Recent Activity',
-                          icon: <TrendingUp className="w-3.5 h-3.5" />,
-                          title: mockProjectDashboard.recentActivity[0]?.title || 'Project activity',
-                          body: mockProjectDashboard.recentActivity.map((activity) => `${activity.title} (${activity.meta})`).join(' · '),
-                        },
-                      ].map((note) => (
-                        <div
-                          key={note.label}
-                          className="p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 transition-all duration-300 rounded-xl group flex flex-col justify-between min-h-[120px] hover:-translate-y-0.5 hover:shadow-md"
-                        >
-                          <div>
-                            <div className="flex justify-between items-start mb-1.5">
-                              <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
-                                {note.label}
-                              </span>
-                              <span className="text-[#3C83F6] dark:text-[#8fd9ff]">
-                                {note.icon}
-                              </span>
-                            </div>
-                            <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
-                              {note.title}
-                            </h4>
-                            <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-2">
-                              {note.body}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
-                            <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
-                              <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Project
-                            </span>
-                            <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
-                          </div>
+                  {[
+                    {
+                      label: 'Overview',
+                      icon: <FileText className="w-3.5 h-3.5" />,
+                      title: mockProjectDashboard.project.title,
+                      body: mockProjectDashboard.notes.overview,
+                    },
+                    {
+                      label: 'Objectives',
+                      icon: <Target className="w-3.5 h-3.5" />,
+                      title: 'Learning Objectives',
+                      body: mockProjectDashboard.notes.objectives.join(' · '),
+                    },
+                    {
+                      label: 'Deliverables',
+                      icon: <ListChecks className="w-3.5 h-3.5" />,
+                      title: 'Project Deliverables',
+                      body: mockProjectDashboard.notes.deliverables.join(' · '),
+                    },
+                    {
+                      label: 'Tech Stack',
+                      icon: <Code2 className="w-3.5 h-3.5" />,
+                      title: mockProjectDashboard.notes.techStack.join(' / '),
+                      body: mockProjectDashboard.notes.folderStructure.join(' / '),
+                    },
+                    {
+                      label: 'APIs',
+                      icon: <FileText className="w-3.5 h-3.5" />,
+                      title: mockProjectDashboard.notes.apis.join(' · '),
+                      body: 'Endpoints students should understand while building the day-wise implementation tasks.',
+                    },
+                    {
+                      label: 'Business Rules',
+                      icon: <ListChecks className="w-3.5 h-3.5" />,
+                      title: 'Implementation Rules',
+                      body: mockProjectDashboard.notes.businessRules.join(' · '),
+                    },
+                  ].map((note) => (
+                    <div
+                      key={note.label}
+                      className="w-full lg:col-span-4 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl group flex flex-col justify-between min-h-[150px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
+                    >
+                      <div>
+                        <div className="flex justify-between items-start mb-1.5">
+                          <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                            {note.label}
+                          </span>
+                          <span className="text-[#3C83F6] dark:text-[#8fd9ff]">
+                            {note.icon}
+                          </span>
                         </div>
-                      ))}
+                        <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                          {note.title}
+                        </h4>
+                        <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-3">
+                          {note.body}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
+                        <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
+                          <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Project
+                        </span>
+                        <ChevronRight className="text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors w-3 h-3" />
+                      </div>
                     </div>
-                  </>
-                ) : (
+                  ))}
+                </>
+              ) : (
+                <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
                   <>
                     <div className="flex items-center justify-between mb-4 shrink-0">
                       <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
@@ -1018,8 +1017,8 @@ export default function DemoDashboard() {
                       </div>
                     )}
                   </>
-                )}
-              </div>
+                </div>
+              )}
 
             </div>
           </div>
