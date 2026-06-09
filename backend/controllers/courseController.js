@@ -20,6 +20,12 @@ export const createCourseShell = async (req, res) => {
       });
     }
 
+    if (title.trim().length < 1) {
+      return res.status(400).json({
+        message: "Course title must be at least 1 character long",
+      });
+    }
+
     // Create course shell with empty topicIds and exerciseIds arrays
     const courseData = {
       title: title.trim(),
@@ -107,6 +113,10 @@ export const updateCourseShell = async (req, res) => {
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
+    }
+
+    if (title !== undefined && String(title).trim().length < 1) {
+      return res.status(400).json({ message: "Course title must be at least 1 character long" });
     }
 
     const update = {};

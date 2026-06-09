@@ -95,7 +95,6 @@ export default function Courses() {
       setCourses((prevCourses) => [newCourse, ...prevCourses]);
       setShowForm(false);
       setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner" });
-      navigate(`/admin/upload-topics?courseId=${courseId}`);
     } catch (err) {
       console.error("Error creating course:", err);
       setFormError(`Could not create course: ${err.message}`);

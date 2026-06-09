@@ -71,7 +71,6 @@ const PaymentGateway = lazy(() => import('./pages/Build/PaymentGateway'))
 const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
-const UploadTopicsPage = lazy(() => import('./pages/AdminDashbaord/UploadTopicsPage'))
 const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
 const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
 const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
@@ -319,7 +318,6 @@ function LayoutWrapper() {
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
-            <Route path="/admin/upload-topics" element={<UploadTopicsPage />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
             <Route path="/admin/codingroundupload" element={<CodingRoundUpload />} />

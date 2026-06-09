@@ -40,10 +40,17 @@ export const getCourseTopicsForDashboard = async (req, res) => {
       topicId: t._id,
       topicName: t.title,
       topicSlug: t.slug,
+      index: t.index,
       notesId: t.notesId?._id || null,
       notesContent: t.notesId?.parsedContent || "",
     }));
-    return res.status(200).json({ topics: formattedTopics });
+    return res.status(200).json({
+      topics: formattedTopics,
+      courseTitle: course.title,
+      numTopics: course.numTopics || 0,
+      description: course.description || "",
+      level: course.level || "Beginner"
+    });
   } catch (error) {
     return res.status(500).json({
       message: "Error occured while fetching topics for admin dashboard",
