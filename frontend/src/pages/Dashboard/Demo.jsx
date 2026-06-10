@@ -933,10 +933,10 @@ export default function DemoDashboard() {
                           key={note.day}
                           type="button"
                           ref={isCurrentDay ? todaysTopicsRef : null}
-                          className={`p-4 border rounded-xl text-left group flex flex-col justify-between min-h-[118px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+                          className={`p-4 border rounded-xl text-left group flex flex-col justify-between min-h-[118px] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                             isCurrentDay
-                              ? 'border-[#3C83F6]/45 bg-white/40 dark:border-[#3C83F6]/45 dark:bg-[#0b3ef2]/15 shadow-md shadow-blue-600/10'
-                              : 'border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60'
+                              ? 'border-[#3C83F6]/55 bg-white/50 dark:border-[#3C83F6]/55 dark:bg-[#0b3ef2]/25 shadow-md shadow-blue-600/10'
+                              : 'border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] hover:bg-white/50'
                           }`}
                         >
                           <div>
@@ -965,7 +965,7 @@ export default function DemoDashboard() {
                     })}
 
                     {lockedProjectNotesCount > 0 ? (
-                      <div className="p-4 border border-dashed border-black/10 dark:border-white/10 rounded-xl min-h-[118px] flex flex-col justify-between opacity-70">
+                      <div className="p-4 border border-dashed border-black/10 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl rounded-xl min-h-[118px] flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-2">
                           <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
                             Future
