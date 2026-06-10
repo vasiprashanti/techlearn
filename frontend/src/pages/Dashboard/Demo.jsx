@@ -734,7 +734,7 @@ export default function DemoDashboard() {
               </div>
 
               {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
-              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
+              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:min-h-[280px] lg:h-auto justify-between">
                 {MOCK_PROJECT_MODE ? (
                   <>
                     <div className="flex items-center justify-between mb-2 shrink-0">
@@ -832,7 +832,7 @@ export default function DemoDashboard() {
               </div>
 
               {/* Daily Tasks Card - Spans 5/8 width on lg */}
-              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
+              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:min-h-[280px] lg:h-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0 mb-1">
                   <div className="flex items-center gap-1.5">
@@ -855,7 +855,7 @@ export default function DemoDashboard() {
                           type="button"
                           onClick={() => handleProjectTaskComplete(task.id)}
                           disabled={task.completed}
-                          className={`group flex w-full items-center justify-between gap-3 px-1.5 py-2 text-left transition-all duration-300 hover:bg-black/5 active:scale-[0.99] disabled:cursor-default dark:hover:bg-white/5 ${
+                          className={`group flex w-full items-center justify-between gap-3 px-1.5 py-1.5 text-left transition-all duration-300 hover:bg-black/5 active:scale-[0.99] disabled:cursor-default dark:hover:bg-white/5 ${
                             task.completed ? 'opacity-75' : ''
                           }`}
                         >
@@ -877,7 +877,7 @@ export default function DemoDashboard() {
                               }`}>
                                 {task.title}
                               </span>
-                              <span className="mt-1 block truncate font-press-start text-[8px] sm:text-[9px] text-[#00113b]/50 dark:text-[#81bde6] leading-tight">
+                              <span className="mt-0.5 block truncate font-press-start text-[8px] sm:text-[9px] text-[#00113b]/50 dark:text-[#81bde6] leading-tight">
                                 {task.completed ? 'Completed' : task.type}
                               </span>
                             </div>
