@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
   Clock,
-  FileText,
   Lock,
   TrendingUp,
   X,
@@ -83,9 +82,9 @@ const MOCK_PROJECT_MODE = true;
 
 const mockProjectDashboard = {
   project: {
-    title: 'Project Allocation System',
+    title: 'Smart Seat Allocation',
     description:
-      'Build a full-stack allocation workflow with authentication, batch assignment, dashboards, and submission tracking.',
+      'Build a full-stack seat allocation workflow with preferences, eligibility, allocation rules, dashboards, and review tracking.',
     currentDay: 5,
     totalDays: 15,
     daysRemaining: 10,
@@ -104,7 +103,7 @@ const mockProjectDashboard = {
   ],
   notes: {
     overview:
-      'Students are building a project allocation system that lets trainers assign work, track implementation progress, and review submissions in one place.',
+      'Students are building a smart seat allocation system that lets admins collect preferences, apply allocation rules, and review seat assignments in one place.',
     objectives: ['Understand project-based delivery', 'Build clean feature slices', 'Practice daily commits and reviews'],
     deliverables: ['Authentication flow', 'Student dashboard', 'Admin assignment workflow', 'Submission tracking'],
     techStack: ['React', 'Node.js', 'Express', 'MongoDB'],
@@ -114,12 +113,12 @@ const mockProjectDashboard = {
   },
   dayNotes: [
     { day: 1, title: 'Project Setup & Repository', fileName: 'day-01.md' },
-    { day: 2, title: 'Auth Flow Planning', fileName: 'day-02.md' },
-    { day: 3, title: 'Login UI & Form State', fileName: 'day-03.md' },
-    { day: 4, title: 'Employee Entity Design', fileName: 'day-04.md' },
+    { day: 2, title: 'Seat Matrix Planning', fileName: 'day-02.md' },
+    { day: 3, title: 'Preference Form State', fileName: 'day-03.md' },
+    { day: 4, title: 'Allocation Rules Design', fileName: 'day-04.md' },
     { day: 5, title: 'Service Layer & GitHub Commit', fileName: 'day-05.md' },
-    { day: 6, title: 'Assignment API Integration', fileName: 'day-06.md' },
-    { day: 7, title: 'Student Dashboard Wiring', fileName: 'day-07.md' },
+    { day: 6, title: 'Allocation API Integration', fileName: 'day-06.md' },
+    { day: 7, title: 'Review Dashboard Wiring', fileName: 'day-07.md' },
   ],
   recentActivity: [
     { id: 'day-4-bonus', title: 'Day 4 completion bonus awarded', meta: '+25 XP' },
@@ -485,15 +484,7 @@ export default function DemoDashboard() {
         isUser: entry.name === userDisplayName,
         userId: entry.userId || `${entry.rank}-${entry.name}`,
       }))
-    : [
-        {
-          rank: '--',
-          name: 'Leaderboard will update once learners earn XP',
-          totalXp: 0,
-          isUser: false,
-          userId: 'empty',
-        },
-      ];
+    : [];
 
   if (!isReady) {
     return null;
@@ -563,9 +554,9 @@ export default function DemoDashboard() {
                     />
                     <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                    <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
-                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
-                        Project Notes
+                    <div className="z-10 flex flex-wrap items-center justify-between gap-2 w-full shrink-0 sm:flex-nowrap">
+                      <h1 className="font-pixel-header max-w-[46%] text-[7.5px] sm:max-w-none sm:text-[9.5px] md:text-[10.5px] tracking-wider text-white drop-shadow-md leading-tight">
+                        {mockProjectDashboard.project.title}
                       </h1>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
@@ -578,32 +569,34 @@ export default function DemoDashboard() {
                       </div>
                     </div>
 
-                    <div className="z-10 flex flex-col items-start text-left w-full mt-4 sm:mt-5 space-y-3 text-white">
-                      <div className="w-full max-w-2xl">
-                        <h2 className="font-press-start text-sm sm:text-base md:text-lg font-bold leading-tight text-white">
-                          {mockProjectDashboard.project.title}
-                        </h2>
-                        <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-white/72 line-clamp-2">
-                          {mockProjectDashboard.project.description}
-                        </p>
-                        <p className="mt-3 font-press-start text-[10px] sm:text-xs font-medium text-[#8fd9ff]">
-                          {projectOverallProgress}% Complete · {projectXpEarned.toLocaleString()} XP · {mockProjectDashboard.project.streak} Day Streak
-                        </p>
-                      </div>
+                    <div className="z-10 flex flex-1 flex-col justify-end text-left w-full mt-4 sm:mt-5 text-white">
+                      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={pixelStarImg}
+                            alt="XP"
+                            className="w-7 h-7 object-contain select-none"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <span className="font-pixel-header text-[8px] sm:text-[9px] text-[#8fd9ff] drop-shadow-md">
+                            {projectXpEarned.toLocaleString()} XP
+                          </span>
+                        </div>
 
-                      <div className="flex w-full flex-col justify-end gap-2 pt-1 sm:flex-row">
-                        <button
-                          onClick={() => scrollToSection(projectOverviewRef)}
-                          className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
-                        >
-                          View Project <ChevronRight className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={() => scrollToSection(todaysTopicsRef)}
-                          className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
-                        >
-                          Today's Topics <ChevronRight className="w-3 h-3" />
-                        </button>
+                        <div className="flex w-full flex-col justify-end gap-2 sm:w-auto sm:flex-row">
+                          <button
+                            onClick={() => scrollToSection(projectOverviewRef)}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            View Project <ChevronRight className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => scrollToSection(todaysTopicsRef)}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            Today's Topics <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -684,7 +677,7 @@ export default function DemoDashboard() {
 
                   {/* Right Column: Name & College */}
                   <div className="text-left flex-1 min-w-0 -mt-6">
-                    <h2 className="font-press-start text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                    <h2 className="font-pixel-header text-[9px] sm:text-[10px] text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-relaxed truncate">
                       {userDisplayName}
                     </h2>
                     <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
@@ -727,7 +720,7 @@ export default function DemoDashboard() {
                           <PlaceholderBar className="h-2 w-10" />
                         </div>
                       ))
-                    : featuredLeaderboard.map((student) => (
+                    : featuredLeaderboard.length > 0 ? featuredLeaderboard.map((student) => (
                         <div
                           key={student.userId}
                           className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
@@ -750,7 +743,21 @@ export default function DemoDashboard() {
                             {student.totalXp.toLocaleString()}
                           </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2 text-center">
+                          <div
+                            className="grid h-16 w-16 place-items-center rounded-lg border border-dashed border-[#00113b]/25 bg-white/25 shadow-inner dark:border-[#8fd9ff]/25 dark:bg-white/5"
+                            style={{ imageRendering: 'pixelated' }}
+                          >
+                            <span className="font-pixel-header text-[6px] uppercase leading-relaxed text-[#00113b]/45 dark:text-[#8fd9ff]/60">
+                              Pixel<br />Widget
+                            </span>
+                          </div>
+                          <p className="font-press-start text-[9px] sm:text-[10px] text-[#00113b]/55 dark:text-[#81bde6]/70 leading-relaxed">
+                            Leaderboard illustration placeholder
+                          </p>
+                        </div>
+                      )}
                 </div>
               </div>
 
@@ -761,7 +768,7 @@ export default function DemoDashboard() {
                   <div className="flex items-center gap-1.5">
                     <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                   </div>
-                  <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                  <span className="font-pixel-header text-[7px] sm:text-[8px] text-[#00113b] dark:text-[#8fd9ff] leading-tight font-normal">
                     {MOCK_PROJECT_MODE
                       ? `${projectCompletedToday}/${projectTotalToday}`
                       : `${completedTasks}/${totalTasks}`}
@@ -775,14 +782,14 @@ export default function DemoDashboard() {
                       <div
                         key={task.id}
                         onClick={() => handleProjectTaskComplete(task.id)}
-                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#00113b] hover:shadow-[0_0_8px_rgba(0,17,59,0.22)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           <div
                             className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
                               task.completed
-                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
-                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                                ? 'bg-[#00113b] border-[#00113b] text-white shadow-[0_0_6px_rgba(0,17,59,0.45)]'
+                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#00113b]'
                             }`}
                           >
                             {task.completed && (
@@ -806,15 +813,15 @@ export default function DemoDashboard() {
                       <div
                         key={group.type}
                         onClick={() => handleGroupClick(group)}
-                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#00113b] hover:shadow-[0_0_8px_rgba(0,17,59,0.22)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
                       >
                         <div className="flex items-center gap-2 min-w-0 flex-1">
                           {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
                           <div
                             className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
                               group.completed
-                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
-                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                                ? 'bg-[#00113b] border-[#00113b] text-white shadow-[0_0_6px_rgba(0,17,59,0.45)]'
+                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#00113b]'
                             }`}
                           >
                             {group.completed && (
@@ -851,13 +858,13 @@ export default function DemoDashboard() {
 
                 {/* Premium Retro Neon Progress Bar */}
                 <div className="mt-1 shrink-0 w-full">
-                  <div className="flex justify-between items-center font-press-start mb-0.5">
-                    <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                  <div className="flex justify-between items-center font-pixel-header mb-0.5">
+                    <span className="text-[7px] sm:text-[8px] font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
                       {MOCK_PROJECT_MODE
                         ? 'PROGRESS'
                         : 'PROGRESS'}
                     </span>
-                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
+                    <span className="text-[7px] sm:text-[8px] font-bold text-[#00113b] dark:text-[#8fd9ff] leading-tight">
                       {MOCK_PROJECT_MODE
                         ? (projectDayComplete ? 'Unlocked' : `${projectDayProgress}%`)
                         : (totalTasks > 0 ? `${taskProgress}%` : "No tasks")}
@@ -865,7 +872,7 @@ export default function DemoDashboard() {
                   </div>
                   <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
                     <div 
-                      className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
+                      className="h-full rounded-full transition-all duration-500 ease-out bg-[#00113b] shadow-[0_0_6px_rgba(0,17,59,0.45)]"
                       style={{ width: `${MOCK_PROJECT_MODE ? projectDayProgress : (totalTasks > 0 ? taskProgress : 0)}%` }}
                     />
                   </div>
@@ -873,46 +880,12 @@ export default function DemoDashboard() {
               </div>
 
               {MOCK_PROJECT_MODE ? (
-                <div className="w-full lg:col-span-8 order-5 lg:order-none flex flex-col gap-4">
+                <div ref={projectOverviewRef} className="w-full lg:col-span-8 order-5 lg:order-none flex flex-col gap-4">
                   <div className="flex items-center justify-between gap-3 shrink-0 px-1">
-                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Topics & Tasks</h3>
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">RECENT TASKS & TOPICS</h3>
                     <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] whitespace-nowrap">
                       Day {mockProjectDashboard.project.currentDay}
                     </span>
-                  </div>
-
-                  <div
-                    ref={projectOverviewRef}
-                    className="p-4 md:p-5 border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl rounded-xl"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
-                          Project Overview
-                        </span>
-                        <h4 className="mt-2 font-press-start text-xs sm:text-sm text-black dark:text-white leading-relaxed">
-                          {mockProjectDashboard.project.title}
-                        </h4>
-                        <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50">
-                          {mockProjectDashboard.notes.overview}
-                        </p>
-                      </div>
-                      <FileText className="w-4 h-4 shrink-0 text-[#3C83F6] dark:text-[#8fd9ff]" />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2 border-t border-black/5 dark:border-white/5 pt-3">
-                      {[
-                        `${mockProjectDashboard.notes.techStack.join(' / ')}`,
-                        `${mockProjectDashboard.notes.deliverables.length} deliverables`,
-                        `${projectOverallProgress}% complete`,
-                      ].map((item) => (
-                        <span
-                          key={item}
-                          className="rounded-md border border-black/5 bg-white/25 px-2 py-1 font-press-start text-[9px] text-[#00113b]/60 dark:border-white/5 dark:bg-white/5 dark:text-[#81bde6]"
-                        >
-                          {item}
-                        </span>
-                      ))}
-                    </div>
                   </div>
 
                   <div className="flex items-center justify-between gap-3 px-1">
