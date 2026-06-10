@@ -7,10 +7,14 @@ import ProjectTask from "../models/ProjectTask.js";
 import StudentProject from "../models/StudentProject.js";
 import StudentTaskProgress from "../models/StudentTaskProgress.js";
 
-// Ensure uploads/projects directory exists for saving permanent files
+// Safe directory creation fallback for serverless environments (like Vercel)
 const projectsUploadDir = "uploads/projects";
-if (!fs.existsSync(projectsUploadDir)) {
-  fs.mkdirSync(projectsUploadDir, { recursive: true });
+try {
+  if (!fs.existsSync(projectsUploadDir)) {
+    fs.mkdirSync(projectsUploadDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn("Unable to create uploads directory (likely running on read-only serverless disk):", err.message);
 }
 
 // ==========================================
@@ -27,10 +31,14 @@ export const createProject = async (req, res) => {
     if (req.file) {
       overview_markdown_content = fs.readFileSync(req.file.path, "utf-8");
       
-      // Copy to permanent folder
-      const destPath = path.join(projectsUploadDir, Date.now() + "-" + req.file.originalname);
-      fs.copyFileSync(req.file.path, destPath);
-      overview_markdown_file_url = destPath.replace(/\\/g, "/"); // Normalize windows slashes
+      // Copy to permanent folder (wrapped to prevent crash on read-only environments)
+      try {
+        const destPath = path.join(projectsUploadDir, Date.now() + "-" + req.file.originalname);
+        fs.copyFileSync(req.file.path, destPath);
+        overview_markdown_file_url = destPath.replace(/\\/g, "/"); // Normalize windows slashes
+      } catch (copyErr) {
+        console.warn("Could not copy overview file to permanent uploads folder:", copyErr.message);
+      }
       
       // Clean up temp file
       try {
@@ -181,9 +189,13 @@ export const updateProject = async (req, res) => {
     if (req.file) {
       project.overview_markdown_content = fs.readFileSync(req.file.path, "utf-8");
       
-      const destPath = path.join(projectsUploadDir, Date.now() + "-" + req.file.originalname);
-      fs.copyFileSync(req.file.path, destPath);
-      project.overview_markdown_file_url = destPath.replace(/\\/g, "/");
+      try {
+        const destPath = path.join(projectsUploadDir, Date.now() + "-" + req.file.originalname);
+        fs.copyFileSync(req.file.path, destPath);
+        project.overview_markdown_file_url = destPath.replace(/\\/g, "/");
+      } catch (copyErr) {
+        console.warn("Could not copy updated overview file to permanent uploads folder:", copyErr.message);
+      }
       
       try {
         fs.unlinkSync(req.file.path);
