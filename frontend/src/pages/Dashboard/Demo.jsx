@@ -873,8 +873,8 @@ export default function DemoDashboard() {
               </div>
 
               {MOCK_PROJECT_MODE ? (
-                <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
-                  <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
+                <div className="w-full lg:col-span-8 order-5 lg:order-none flex flex-col gap-4">
+                  <div className="flex items-center justify-between gap-3 shrink-0 px-1">
                     <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Topics & Tasks</h3>
                     <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] whitespace-nowrap">
                       Day {mockProjectDashboard.project.currentDay}
@@ -883,7 +883,7 @@ export default function DemoDashboard() {
 
                   <div
                     ref={projectOverviewRef}
-                    className="mb-4 p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 rounded-xl"
+                    className="p-4 md:p-5 border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl rounded-xl"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -915,7 +915,7 @@ export default function DemoDashboard() {
                     </div>
                   </div>
 
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center justify-between gap-3 px-1">
                     <h4 className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
                       Project Notes
                     </h4>
