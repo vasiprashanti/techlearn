@@ -2,12 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronRight,
-  CheckCircle2,
-  Code2,
   Clock,
   FileText,
-  ListChecks,
-  Target,
+  Lock,
   TrendingUp,
   X,
 } from 'lucide-react';
@@ -115,6 +112,15 @@ const mockProjectDashboard = {
     apis: ['POST /auth/login', 'GET /projects/current', 'PATCH /projects/tasks/:taskId'],
     businessRules: ['One active project per batch', 'XP is awarded once per task', 'Day bonus unlocks after all tasks are complete'],
   },
+  dayNotes: [
+    { day: 1, title: 'Project Setup & Repository', fileName: 'day-01.md' },
+    { day: 2, title: 'Auth Flow Planning', fileName: 'day-02.md' },
+    { day: 3, title: 'Login UI & Form State', fileName: 'day-03.md' },
+    { day: 4, title: 'Employee Entity Design', fileName: 'day-04.md' },
+    { day: 5, title: 'Service Layer & GitHub Commit', fileName: 'day-05.md' },
+    { day: 6, title: 'Assignment API Integration', fileName: 'day-06.md' },
+    { day: 7, title: 'Student Dashboard Wiring', fileName: 'day-07.md' },
+  ],
   recentActivity: [
     { id: 'day-4-bonus', title: 'Day 4 completion bonus awarded', meta: '+25 XP' },
     { id: 'entity-done', title: 'Create Employee Entity completed', meta: '+15 XP' },
@@ -137,7 +143,8 @@ export default function DemoDashboard() {
   const [isFullyCompleted, setIsFullyCompleted] = useState(false);
   const [taskProgress, setTaskProgress] = useState(0);
   const [projectTasks, setProjectTasks] = useState(mockProjectDashboard.todayTasks);
-  const projectNotesRef = useRef(null);
+  const projectOverviewRef = useRef(null);
+  const todaysTopicsRef = useRef(null);
 
   const loadTodayTasks = async () => {
     try {
@@ -230,6 +237,10 @@ export default function DemoDashboard() {
         task.id === taskId ? { ...task, completed: true } : task
       )
     );
+  };
+
+  const scrollToSection = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
 
@@ -429,60 +440,17 @@ export default function DemoDashboard() {
     { title: 'Streak', value: mockProjectDashboard.project.streak.toString(), icon: <PixelFlame /> },
   ];
 
-  const projectProgressItems = [
-    { label: 'Current Day', value: `Day ${mockProjectDashboard.project.currentDay}`, icon: <Clock className="w-3.5 h-3.5" /> },
-    { label: 'Days Remaining', value: mockProjectDashboard.project.daysRemaining.toString(), icon: <TrendingUp className="w-3.5 h-3.5" /> },
-    { label: 'Today', value: `${projectCompletedToday}/${projectTotalToday} Tasks`, icon: <ListChecks className="w-3.5 h-3.5" /> },
-    { label: 'Certificate', value: mockProjectDashboard.project.certificateStatus, icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
-  ];
-
-  const projectNoteCards = [
-    {
-      label: 'Overview',
-      icon: <FileText className="w-3.5 h-3.5" />,
-      title: mockProjectDashboard.project.title,
-      summary: mockProjectDashboard.notes.overview,
-      meta: 'Project brief',
-    },
-    {
-      label: 'Objectives',
-      icon: <Target className="w-3.5 h-3.5" />,
-      title: 'Learning Objectives',
-      items: mockProjectDashboard.notes.objectives,
-      meta: `${mockProjectDashboard.notes.objectives.length} goals`,
-    },
-    {
-      label: 'Deliverables',
-      icon: <ListChecks className="w-3.5 h-3.5" />,
-      title: 'Project Deliverables',
-      items: mockProjectDashboard.notes.deliverables,
-      meta: `${mockProjectDashboard.notes.deliverables.length} outputs`,
-    },
-    {
-      label: 'Tech Stack',
-      icon: <Code2 className="w-3.5 h-3.5" />,
-      title: 'Implementation Stack',
-      rows: [
-        { label: 'Stack', value: mockProjectDashboard.notes.techStack.join(' / ') },
-        { label: 'Folders', value: mockProjectDashboard.notes.folderStructure.join(' / ') },
-      ],
-      meta: `${mockProjectDashboard.notes.techStack.length} tools`,
-    },
-    {
-      label: 'APIs',
-      icon: <FileText className="w-3.5 h-3.5" />,
-      title: 'Project Endpoints',
-      items: mockProjectDashboard.notes.apis,
-      meta: `${mockProjectDashboard.notes.apis.length} routes`,
-    },
-    {
-      label: 'Business Rules',
-      icon: <ListChecks className="w-3.5 h-3.5" />,
-      title: 'Implementation Rules',
-      items: mockProjectDashboard.notes.businessRules,
-      meta: `${mockProjectDashboard.notes.businessRules.length} rules`,
-    },
-  ];
+  const projectDateLabel = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  }).format(new Date());
+  const accessibleProjectNotes = mockProjectDashboard.dayNotes.filter(
+    (note) => note.day <= mockProjectDashboard.project.currentDay
+  );
+  const lockedProjectNotesCount = mockProjectDashboard.dayNotes.filter(
+    (note) => note.day > mockProjectDashboard.project.currentDay
+  ).length;
 
   const retroStats = MOCK_PROJECT_MODE ? projectStats : [
     { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
@@ -581,7 +549,7 @@ export default function DemoDashboard() {
 
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
-              {/* Daily Notes / Daily Challenge Card - Spans 5/8 width on lg */}
+              {/* Project Notes / Daily Challenge Card - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
                 {MOCK_PROJECT_MODE ? (
                   <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
@@ -597,12 +565,12 @@ export default function DemoDashboard() {
 
                     <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
                       <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
-                        Daily Notes
+                        Project Notes
                       </h1>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
                           <Clock className="w-3.5 h-3.5 shrink-0" />
-                          <span className="whitespace-nowrap leading-none">DAY {mockProjectDashboard.project.currentDay}/{mockProjectDashboard.project.totalDays}</span>
+                          <span className="whitespace-nowrap leading-none">{projectDateLabel}</span>
                         </span>
                         <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
                           <span>{mockProjectDashboard.project.daysRemaining} DAYS LEFT</span>
@@ -623,12 +591,18 @@ export default function DemoDashboard() {
                         </p>
                       </div>
 
-                      <div className="flex w-full justify-end pt-1">
+                      <div className="flex w-full flex-col justify-end gap-2 pt-1 sm:flex-row">
                         <button
-                          onClick={() => projectNotesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          onClick={() => scrollToSection(projectOverviewRef)}
                           className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                         >
-                          Project Notes <ChevronRight className="w-3 h-3" />
+                          View Project <ChevronRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => scrollToSection(todaysTopicsRef)}
+                          className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                        >
+                          Today's Topics <ChevronRight className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -734,105 +708,54 @@ export default function DemoDashboard() {
               </div>
 
               {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
-              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:min-h-[280px] lg:h-auto justify-between">
-                {MOCK_PROJECT_MODE ? (
-                  <>
-                    <div className="flex items-center justify-between mb-2 shrink-0">
-                      <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">PROJECT PROGRESS</h3>
-                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff]">
-                        {projectOverallProgress}%
-                      </span>
-                    </div>
-                    <div className="flex-1 flex flex-col justify-center">
-                      <div className="divide-y divide-black/5 dark:divide-white/5 border-y border-black/5 dark:border-white/5">
-                        {projectProgressItems.map((item) => (
-                          <div
-                            key={item.label}
-                            className="flex items-center justify-between gap-3 py-2 px-1.5 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                          >
-                            <div className="flex min-w-0 items-center gap-2">
-                              <span className="text-[#3C83F6] dark:text-[#8fd9ff] shrink-0">
-                                {item.icon}
-                              </span>
-                              <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/60 dark:text-[#81bde6] leading-tight truncate">
-                                {item.label}
-                              </span>
-                            </div>
-                            <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight text-right shrink-0 max-w-[46%] truncate">
-                              {item.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-3 shrink-0">
-                      <div className="flex justify-between items-center font-press-start mb-1">
-                        <span className="text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
-                          Overall
-                        </span>
-                        <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
-                          {projectCompletedTotal}/{mockProjectDashboard.project.totalProjectTasks}
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
+              <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
+                <div className="flex items-center justify-between mb-2 shrink-0">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                    VIEW FULL
+                  </button>
+                </div>
+                <div className="flex-1 flex flex-col justify-around gap-1 py-1">
+                  {leaderboardLoading
+                    ? Array.from({ length: 5 }).map((_, index) => (
                         <div
-                          className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
-                          style={{ width: `${projectOverallProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-2 shrink-0">
-                      <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
-                      <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
-                        VIEW FULL
-                      </button>
-                    </div>
-                    <div className="flex-1 flex flex-col justify-around gap-1 py-1">
-                      {leaderboardLoading
-                        ? Array.from({ length: 5 }).map((_, index) => (
-                            <div
-                              key={`leaderboard-loading-${index}`}
-                              className="flex items-center gap-2 py-1 px-1 rounded-sm"
-                            >
-                              <PlaceholderBar className="h-2 w-6" />
-                              <PlaceholderBar className="h-2.5 flex-1 rounded-md" />
-                              <PlaceholderBar className="h-2 w-10" />
+                          key={`leaderboard-loading-${index}`}
+                          className="flex items-center gap-2 py-1 px-1 rounded-sm"
+                        >
+                          <PlaceholderBar className="h-2 w-6" />
+                          <PlaceholderBar className="h-2.5 flex-1 rounded-md" />
+                          <PlaceholderBar className="h-2 w-10" />
+                        </div>
+                      ))
+                    : featuredLeaderboard.map((student) => (
+                        <div
+                          key={student.userId}
+                          className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
+                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                          }`}
+                        >
+                          <div
+                            className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
+                              student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
+                            }`}
+                          >
+                            #{student.rank}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                              {student.name}
                             </div>
-                          ))
-                        : featuredLeaderboard.map((student) => (
-                            <div
-                              key={student.userId}
-                              className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
-                                student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                              }`}
-                            >
-                              <div
-                                className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
-                                  student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
-                                }`}
-                              >
-                                #{student.rank}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
-                                  {student.name}
-                                </div>
-                              </div>
-                              <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
-                                {student.totalXp.toLocaleString()}
-                              </div>
-                            </div>
-                          ))}
-                    </div>
-                  </>
-                )}
+                          </div>
+                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
+                            {student.totalXp.toLocaleString()}
+                          </div>
+                        </div>
+                      ))}
+                </div>
               </div>
 
               {/* Daily Tasks Card - Spans 5/8 width on lg */}
-              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:min-h-[280px] lg:h-auto">
+              <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0 mb-1">
                   <div className="flex items-center gap-1.5">
@@ -840,7 +763,7 @@ export default function DemoDashboard() {
                   </div>
                   <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
                     {MOCK_PROJECT_MODE
-                      ? `Day ${mockProjectDashboard.project.currentDay} · ${projectCompletedToday}/${projectTotalToday}`
+                      ? `${projectCompletedToday}/${projectTotalToday}`
                       : `${completedTasks}/${totalTasks}`}
                   </span>
                 </div>
@@ -848,46 +771,36 @@ export default function DemoDashboard() {
                  {/* Task List - Staged background elements added back */}
                 <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
                   {MOCK_PROJECT_MODE ? (
-                    <div className="divide-y divide-black/5 dark:divide-white/5 border-y border-black/5 dark:border-white/5">
-                      {projectTasks.map((task) => (
-                        <button
-                          key={task.id}
-                          type="button"
-                          onClick={() => handleProjectTaskComplete(task.id)}
-                          disabled={task.completed}
-                          className={`group flex w-full items-center justify-between gap-3 px-1.5 py-1.5 text-left transition-all duration-300 hover:bg-black/5 active:scale-[0.99] disabled:cursor-default dark:hover:bg-white/5 ${
-                            task.completed ? 'opacity-75' : ''
-                          }`}
-                        >
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
-                            <div
-                              className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                                task.completed
-                                  ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
-                                  : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
-                              }`}
-                            >
-                              {task.completed && <CheckCircle2 className="h-3 w-3 text-white" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <span className={`block truncate font-press-start text-[10px] sm:text-xs font-normal leading-tight transition-all duration-300 ${
-                                task.completed
-                                  ? 'text-[#00113b]/45 dark:text-white/45'
-                                  : 'text-[#00113b] dark:text-white'
-                              }`}>
-                                {task.title}
-                              </span>
-                              <span className="mt-0.5 block truncate font-press-start text-[8px] sm:text-[9px] text-[#00113b]/50 dark:text-[#81bde6] leading-tight">
-                                {task.completed ? 'Completed' : task.type}
-                              </span>
-                            </div>
+                    projectTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => handleProjectTaskComplete(task.id)}
+                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div
+                            className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                              task.completed
+                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                            }`}
+                          >
+                            {task.completed && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
                           </div>
-                          <span className="ml-auto flex min-w-[64px] shrink-0 justify-center rounded-md border border-black/5 bg-white/30 px-2 py-1 font-press-start text-[9px] text-[#3C83F6] dark:border-white/5 dark:bg-white/5 dark:text-[#8fd9ff]">
-                            +{task.xp} XP
+                          <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
+                            task.completed
+                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                              : 'text-[#00113b] dark:text-white'
+                          }`}>
+                            {task.title}
                           </span>
-                        </button>
-                      ))}
-                    </div>
+                        </div>
+                      </div>
+                    ))
                   ) : groupedTasks.length > 0 ? (
                     groupedTasks.map(group => (
                       <div
@@ -941,7 +854,7 @@ export default function DemoDashboard() {
                   <div className="flex justify-between items-center font-press-start mb-0.5">
                     <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
                       {MOCK_PROJECT_MODE
-                        ? `Completion Bonus: +${mockProjectDashboard.project.completionBonus} XP`
+                        ? 'PROGRESS'
                         : 'PROGRESS'}
                     </span>
                     <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
@@ -960,78 +873,112 @@ export default function DemoDashboard() {
               </div>
 
               {MOCK_PROJECT_MODE ? (
-                <>
-                  <div ref={projectNotesRef} className="w-full lg:col-span-8 order-5 lg:order-none flex items-center justify-between px-1">
-                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
-                      Project Notes
-                    </h3>
-                    <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff]">
+                <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
+                  <div className="flex items-center justify-between gap-3 mb-4 shrink-0">
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Topics & Tasks</h3>
+                    <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] whitespace-nowrap">
                       Day {mockProjectDashboard.project.currentDay}
                     </span>
                   </div>
 
-                  {projectNoteCards.map((note) => (
-                    <div
-                      key={note.label}
-                      className="w-full lg:col-span-4 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl group flex flex-col justify-between min-h-[178px] hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-1.5">
-                          <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
-                            {note.label}
-                          </span>
-                          <span className="text-[#3C83F6] dark:text-[#8fd9ff]">
-                            {note.icon}
-                          </span>
-                        </div>
-                        <h4 className="font-press-start text-xs sm:text-sm text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
-                          {note.title}
+                  <div
+                    ref={projectOverviewRef}
+                    className="mb-4 p-4 border border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 rounded-xl"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                          Project Overview
+                        </span>
+                        <h4 className="mt-2 font-press-start text-xs sm:text-sm text-black dark:text-white leading-relaxed">
+                          {mockProjectDashboard.project.title}
                         </h4>
-                        {note.summary ? (
-                          <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-4">
-                            {note.summary}
-                          </p>
-                        ) : null}
-                        {note.items ? (
-                          <ul className="mt-3 grid gap-1.5">
-                            {note.items.map((item) => (
-                              <li key={item} className="flex items-start gap-2">
-                                <span className="w-3 shrink-0 font-press-start text-[10px] text-[#3C83F6] dark:text-[#8fd9ff] leading-relaxed">
-                                  -
-                                </span>
-                                <span className="font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-1">
-                                  {item}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                        {note.rows ? (
-                          <div className="mt-3 divide-y divide-black/5 dark:divide-white/5 border-y border-black/5 dark:border-white/5">
-                            {note.rows.map((row) => (
-                              <div key={row.label} className="grid grid-cols-[72px_minmax(0,1fr)] gap-2 py-2">
-                                <span className="font-press-start text-[9px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2] leading-relaxed">
-                                  {row.label}
-                                </span>
-                                <span className="font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50 line-clamp-2">
-                                  {row.value}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
+                        <p className="mt-2 font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50">
+                          {mockProjectDashboard.notes.overview}
+                        </p>
                       </div>
-                      <div className="flex items-center justify-between mt-3 border-t border-black/5 dark:border-white/5 pt-2">
-                        <span className="font-press-start text-[10px] text-black/50 dark:text-white/50 flex items-center gap-1">
-                          <TrendingUp className="w-2.5 h-2.5 text-emerald-500 shrink-0" /> Day {mockProjectDashboard.project.currentDay}
-                        </span>
-                        <span className="font-press-start text-[10px] text-black/50 dark:text-white/50">
-                          {note.meta}
-                        </span>
-                      </div>
+                      <FileText className="w-4 h-4 shrink-0 text-[#3C83F6] dark:text-[#8fd9ff]" />
                     </div>
-                  ))}
-                </>
+                    <div className="mt-3 flex flex-wrap gap-2 border-t border-black/5 dark:border-white/5 pt-3">
+                      {[
+                        `${mockProjectDashboard.notes.techStack.join(' / ')}`,
+                        `${mockProjectDashboard.notes.deliverables.length} deliverables`,
+                        `${projectOverallProgress}% complete`,
+                      ].map((item) => (
+                        <span
+                          key={item}
+                          className="rounded-md border border-black/5 bg-white/25 px-2 py-1 font-press-start text-[9px] text-[#00113b]/60 dark:border-white/5 dark:bg-white/5 dark:text-[#81bde6]"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h4 className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                      Project Notes
+                    </h4>
+                    <span className="font-press-start text-[10px] text-[#00113b]/50 dark:text-white/50 whitespace-nowrap">
+                      {lockedProjectNotesCount} locked
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                    {accessibleProjectNotes.map((note) => {
+                      const isCurrentDay = note.day === mockProjectDashboard.project.currentDay;
+
+                      return (
+                        <button
+                          key={note.day}
+                          type="button"
+                          ref={isCurrentDay ? todaysTopicsRef : null}
+                          className={`p-4 border rounded-xl text-left group flex flex-col justify-between min-h-[118px] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+                            isCurrentDay
+                              ? 'border-[#3C83F6]/45 bg-white/40 dark:border-[#3C83F6]/45 dark:bg-[#0b3ef2]/15 shadow-md shadow-blue-600/10'
+                              : 'border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                                Day {note.day}
+                              </span>
+                              {isCurrentDay ? (
+                                <span className="font-press-start text-[9px] uppercase text-[#3C83F6] dark:text-[#8fd9ff]">
+                                  Today
+                                </span>
+                              ) : null}
+                            </div>
+                            <h5 className="font-press-start text-xs text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                              {note.title}
+                            </h5>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2">
+                            <span className="font-press-start text-[9px] text-black/50 dark:text-white/50 truncate">
+                              {note.fileName}
+                            </span>
+                            <ChevronRight className="w-3 h-3 shrink-0 text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {lockedProjectNotesCount > 0 ? (
+                      <div className="p-4 border border-dashed border-black/10 dark:border-white/10 rounded-xl min-h-[118px] flex flex-col justify-between opacity-70">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                            Future
+                          </span>
+                          <Lock className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
+                        </div>
+                        <p className="font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50">
+                          {lockedProjectNotesCount} notes locked
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               ) : (
                 <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
                   <>
