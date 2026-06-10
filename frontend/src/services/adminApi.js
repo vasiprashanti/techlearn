@@ -334,6 +334,18 @@ export const adminAPI = {
   getSubmissions: () => request('/admin/submissions'),
   getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
 
+  getCertificates: () => request('/admin/certificates'),
+  issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
+  revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
+  restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
+  saveFinalTest: (testId, body) => request(testId ? `/admin/certificates/final-tests/${testId}` : '/admin/certificates/final-tests', {
+    method: testId ? 'PUT' : 'POST',
+    body: JSON.stringify(body),
+  }),
+
+  getSubmissions: () => request('/admin/submissions'),
+  getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
+
   getNotifications: () => request('/admin/notifications'),
   createNotification: (body) => request('/admin/notifications', { method: 'POST', body: JSON.stringify(body) }),
   deleteNotification: (notificationId) => request(`/admin/notifications/${notificationId}`, { method: 'DELETE' }),
@@ -341,4 +353,52 @@ export const adminAPI = {
   getAuditLogs: (search = '') => request(`/admin/audit-logs${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   getReports: () => request('/admin/reports'),
   exportReportUrl: (type, format = 'CSV') => `${API_BASE}/admin/reports/${type}/export?format=${encodeURIComponent(format)}`,
+
+  // ==========================================
+  // PROJECTS MANAGEMENT MVP ENDPOINTS
+  // ==========================================
+  getProjects: () => request('/admin/projects'),
+  getProject: (id) => request(`/admin/projects/${id}`),
+  getProjectMetrics: () => request('/admin/projects/summary'),
+  createProject: async (body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/projects`, {
+        method: 'POST',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to create project.');
+      invalidateCacheForPath('/admin/projects');
+      return unwrapData(payload);
+    }
+    return request('/admin/projects', { method: 'POST', body: JSON.stringify(body) });
+  },
+  updateProject: async (id, body) => {
+    if (body instanceof FormData) {
+      const response = await fetch(`${API_BASE}/admin/projects/${id}`, {
+        method: 'PUT',
+        headers: buildAuthHeaders(),
+        body,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Failed to update project.');
+      invalidateCacheForPath('/admin/projects');
+      return unwrapData(payload);
+    }
+    return request(`/admin/projects/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+  },
+  deleteProject: (id) => request(`/admin/projects/${id}`, { method: 'DELETE' }),
+  archiveProject: (id) => request(`/admin/projects/${id}/archive`, { method: 'PUT' }),
+
+  // Days & Tasks
+  createProjectDay: (body) => request('/admin/projects/days', { method: 'POST', body: JSON.stringify(body) }),
+  updateProjectDay: (id, body) => request(`/admin/projects/days/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  getProjectDays: (projectId) => request(`/admin/projects/${projectId}/days`),
+  deleteProjectDay: (id) => request(`/admin/projects/days/${id}`, { method: 'DELETE' }),
+
+  createProjectTask: (body) => request('/admin/projects/tasks', { method: 'POST', body: JSON.stringify(body) }),
+  updateProjectTask: (id, body) => request(`/admin/projects/tasks/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteProjectTask: (id) => request(`/admin/projects/tasks/${id}`, { method: 'DELETE' }),
+  getProjectTasksByDay: (dayId) => request(`/admin/projects/days/${dayId}/tasks`),
 };
