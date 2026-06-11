@@ -121,7 +121,7 @@ export default function ProjectDayNotes() {
                     </span>
                   ) : null}
                 </div>
-                <MarkdownContent>{selectedDay.markdown}</MarkdownContent>
+                <MarkdownContent compact>{selectedDay.markdown}</MarkdownContent>
               </div>
             )}
           </section>
