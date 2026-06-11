@@ -4,6 +4,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
 import { FiArrowLeft, FiSave, FiUpload, FiX, FiFileText, FiArchive, FiTrash2, FiEdit2 } from "react-icons/fi";
+import DayConfiguration from "../../components/AdminDashbaord/DayConfiguration";
+import StudentAssignmentPanel from "../../components/AdminDashbaord/StudentAssignmentPanel";
+import ProjectProgressMonitor from "../../components/AdminDashbaord/ProjectProgressMonitor";
 
 const CATEGORIES = [
   "Java Full Stack",
@@ -59,6 +62,11 @@ export default function EditProject() {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Phase 2 states
+  const [projectDays, setProjectDays] = useState([]);
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [loadingDays, setLoadingDays] = useState(false);
+
   const navigate = useNavigate();
   const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -67,6 +75,25 @@ export default function EditProject() {
   useEffect(() => {
     fetchProject();
   }, [projectId]);
+
+  useEffect(() => {
+    if (activeTab === "Days & Tasks" && projectId) {
+      fetchProjectDays();
+    }
+  }, [activeTab, projectId]);
+
+  const fetchProjectDays = async () => {
+    setLoadingDays(true);
+    try {
+      const data = await adminAPI.getProjectDays(projectId);
+      setProjectDays(data || []);
+    } catch (err) {
+      console.error("Error fetching project days:", err);
+      setError("Failed to fetch project days checklist.");
+    } finally {
+      setLoadingDays(false);
+    }
+  };
 
   const fetchProject = async () => {
     setLoading(true);
@@ -551,11 +578,78 @@ export default function EditProject() {
               </div>
             )}
 
-            {activeTab !== "Overview" && (
-              <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-12 text-center text-slate-400 shadow-[0_4px_24px_rgba(0,0,0,0.015)]">
-                <FiFileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm font-medium">Content for {activeTab} is coming soon.</p>
+            {activeTab === "Days & Tasks" && (
+              <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)] space-y-4">
+                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+                  <h3 className="text-sm font-bold text-[#0c1833] dark:text-white uppercase tracking-wider">
+                    Days Checklist & Configuration
+                  </h3>
+                </div>
+
+                {loadingDays ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : projectDays.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium text-center py-12">
+                    No days generated for this project.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {projectDays.map((day, idx) => {
+                      const isExpanded = selectedDayIndex === idx;
+                      return (
+                        <div
+                          key={day._id}
+                          className={`border rounded-2xl transition-all duration-300 overflow-hidden ${
+                            isExpanded
+                              ? "border-blue-500/30 bg-slate-50/35 dark:bg-black/15 shadow-sm"
+                              : "border-black/5 dark:border-white/5 bg-slate-50/10 dark:bg-black/5 hover:bg-slate-50/40 dark:hover:bg-black/10"
+                          }`}
+                        >
+                          {/* Accordion Trigger Day Card Header */}
+                          <button
+                            onClick={() => setSelectedDayIndex(isExpanded ? null : idx)}
+                            className="w-full text-left p-4 flex items-center justify-between outline-none"
+                          >
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
+                                Day {day.day_number}: {day.topic_title || `Day ${day.day_number} Topic`}
+                              </h4>
+                              <p className="text-[10px] font-semibold text-slate-400 mt-1">
+                                {day.taskCount || 0} Tasks &bull; {day.totalXp || 0} XP
+                              </p>
+                            </div>
+                            
+                            <span className="text-[10px] font-bold text-blue-500 hover:text-blue-600 transition-all">
+                              {isExpanded ? "Collapse ▲" : "Configure ▼"}
+                            </span>
+                          </button>
+
+                          {/* Expanded Day Details & Config Panel */}
+                          {isExpanded && (
+                            <div className="border-t border-black/5 dark:border-white/5 p-4 bg-white/40 dark:bg-black/20 rounded-b-2xl">
+                              <DayConfiguration
+                                dayId={day._id}
+                                dayNumber={day.day_number}
+                                onSave={fetchProjectDays}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            )}
+
+            {activeTab === "Students" && (
+              <StudentAssignmentPanel projectId={projectId} />
+            )}
+
+            {activeTab === "Submissions" && (
+              <ProjectProgressMonitor projectId={projectId} />
             )}
           </div>
 

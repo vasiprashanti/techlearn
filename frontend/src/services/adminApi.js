@@ -401,4 +401,12 @@ export const adminAPI = {
   updateProjectTask: (id, body) => request(`/admin/projects/tasks/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteProjectTask: (id) => request(`/admin/projects/tasks/${id}`, { method: 'DELETE' }),
   getProjectTasksByDay: (dayId) => request(`/admin/projects/days/${dayId}/tasks`),
+
+  // Phase 2
+  searchStudents: (projectId, query) => request(`/admin/projects/students/search?projectId=${projectId}&query=${encodeURIComponent(query)}`),
+  assignStudents: (projectId, studentIds) => request(`/admin/projects/${projectId}/assign`, { method: 'POST', body: JSON.stringify({ studentIds }) }),
+  getAssignedStudents: (projectId) => request(`/admin/projects/${projectId}/students`),
+  removeStudent: (projectId, studentId) => request(`/admin/projects/${projectId}/students/${studentId}/remove`, { method: 'PUT' }),
+  getProjectDayDetails: (dayId) => request(`/admin/projects/days/${dayId}/details`),
+  getProjectProgress: (projectId) => request(`/admin/projects/${projectId}/progress`),
 };

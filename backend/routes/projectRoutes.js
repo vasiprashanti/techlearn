@@ -16,10 +16,19 @@ import {
   createProjectTask,
   getProjectTasksByDay,
   updateProjectTask,
-  deleteProjectTask
+  deleteProjectTask,
+  searchStudents,
+  assignStudents,
+  getAssignedStudents,
+  removeStudent,
+  getProjectDayDetails,
+  getProjectProgress
 } from "../controllers/projectController.js";
 
 const router = express.Router();
+
+// Search Students Route (Must be declared before parameterized routes like /:id)
+router.get("/students/search", protect, isAdmin, searchStudents);
 
 // Project routes
 router.post("/", protect, isAdmin, upload.single("overviewFile"), createProject);
@@ -30,9 +39,16 @@ router.put("/:id", protect, isAdmin, upload.single("overviewFile"), updateProjec
 router.put("/:id/archive", protect, isAdmin, archiveProject);
 router.delete("/:id", protect, isAdmin, deleteProject);
 
+// Student assignment routes
+router.post("/:projectId/assign", protect, isAdmin, assignStudents);
+router.get("/:projectId/students", protect, isAdmin, getAssignedStudents);
+router.put("/:projectId/students/:studentId/remove", protect, isAdmin, removeStudent);
+router.get("/:projectId/progress", protect, isAdmin, getProjectProgress);
+
 // Project Days routes
 router.post("/days", protect, isAdmin, createProjectDay);
 router.get("/:projectId/days", protect, isAdmin, getProjectDays);
+router.get("/days/:dayId/details", protect, isAdmin, getProjectDayDetails);
 router.put("/days/:id", protect, isAdmin, updateProjectDay);
 router.delete("/days/:id", protect, isAdmin, deleteProjectDay);
 

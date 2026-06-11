@@ -6,6 +6,8 @@ import ProjectDay from "../models/ProjectDay.js";
 import ProjectTask from "../models/ProjectTask.js";
 import StudentProject from "../models/StudentProject.js";
 import StudentTaskProgress from "../models/StudentTaskProgress.js";
+import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
 
 // Safe directory creation fallback for serverless environments (like Vercel)
 const projectsUploadDir = "uploads/projects";
@@ -223,7 +225,14 @@ export const updateProject = async (req, res) => {
         }
         await ProjectDay.insertMany(daysToCreate);
       } else if (newDuration < oldDuration) {
-        // Delete project days beyond the new duration
+        // Delete project days and their associated tasks beyond the new duration
+        const daysToDelete = await ProjectDay.find({
+          project_id: project._id,
+          day_number: { $gt: newDuration }
+        }).select("_id");
+        const dayIds = daysToDelete.map((d) => d._id);
+
+        await ProjectTask.deleteMany({ project_day_id: { $in: dayIds } });
         await ProjectDay.deleteMany({
           project_id: project._id,
           day_number: { $gt: newDuration },
@@ -345,7 +354,32 @@ export const createProjectDay = async (req, res) => {
 export const getProjectDays = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const days = await ProjectDay.find({ project_id: projectId }).sort({ day_number: 1 });
+    const projectObjectId = new mongoose.Types.ObjectId(projectId);
+
+    const days = await ProjectDay.aggregate([
+      { $match: { project_id: projectObjectId } },
+      {
+        $lookup: {
+          from: "projecttasks",
+          localField: "_id",
+          foreignField: "project_day_id",
+          as: "tasks"
+        }
+      },
+      {
+        $addFields: {
+          taskCount: { $size: "$tasks" },
+          totalXp: { $sum: "$tasks.xp_value" }
+        }
+      },
+      {
+        $project: {
+          tasks: 0
+        }
+      },
+      { $sort: { day_number: 1 } }
+    ]);
+
     return res.status(200).json(days);
   } catch (err) {
     console.error("Get Project Days Error:", err);
@@ -422,7 +456,7 @@ export const createProjectTask = async (req, res) => {
 export const getProjectTasksByDay = async (req, res) => {
   try {
     const { dayId } = req.params;
-    const tasks = await ProjectTask.find({ project_day_id: dayId });
+    const tasks = await ProjectTask.find({ project_day_id: dayId }).sort({ createdAt: 1 });
     return res.status(200).json(tasks);
   } catch (err) {
     console.error("Get Project Tasks Error:", err);
@@ -458,6 +492,300 @@ export const deleteProjectTask = async (req, res) => {
     return res.status(200).json({ success: true, message: "Task deleted successfully." });
   } catch (err) {
     console.error("Delete Project Task Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ==========================================
+// STUDENT CONFIGURATION & ASSIGNMENT CONTROLLERS
+// ==========================================
+
+export const searchStudents = async (req, res) => {
+  try {
+    const { query, projectId } = req.query;
+    if (!query) {
+      return res.status(200).json([]);
+    }
+
+    // Exclude students who are already assigned (Active) to this specific project
+    let excludedStudentIds = [];
+    if (projectId) {
+      const assigned = await StudentProject.find({
+        project_id: projectId,
+        status: "Active"
+      }).select("student_id").lean();
+      excludedStudentIds = assigned.map(a => a.student_id);
+    }
+
+    const searchRegex = new RegExp(query, "i");
+    const searchFilter = {
+      status: "Active",
+      $or: [
+        { name: searchRegex },
+        { email: searchRegex },
+        { rollNo: searchRegex }
+      ]
+    };
+
+    if (excludedStudentIds.length > 0) {
+      searchFilter._id = { $nin: excludedStudentIds };
+    }
+
+    const students = await Student.find(searchFilter)
+      .populate("batchId", "name")
+      .limit(30)
+      .lean();
+
+    return res.status(200).json(students);
+  } catch (err) {
+    console.error("Search Students Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const assignStudents = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { studentIds } = req.body;
+
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return res.status(400).json({ success: false, message: "No students provided." });
+    }
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+
+    const assigned = [];
+    const skipped = [];
+
+    for (const studentId of studentIds) {
+      const student = await Student.findById(studentId);
+      if (!student) {
+        skipped.push({ studentId, name: "Unknown", reason: "Student not found." });
+        continue;
+      }
+
+      // Check if they already have an active project assignment
+      const activeAssignment = await StudentProject.findOne({
+        student_id: studentId,
+        status: "Active"
+      });
+
+      if (activeAssignment) {
+        const reason = activeAssignment.project_id.toString() === projectId
+          ? "Already assigned to this project."
+          : "Already has active project.";
+        skipped.push({ studentId, name: student.name, reason });
+        continue;
+      }
+
+      try {
+        const newAssignment = await StudentProject.create({
+          student_id: studentId,
+          project_id: projectId,
+          status: "Active",
+          current_day: 1,
+          progress_percentage: 0
+        });
+
+        assigned.push({ studentId, name: student.name });
+      } catch (saveErr) {
+        skipped.push({ studentId, name: student.name, reason: saveErr.message });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Assigned ${assigned.length} students, skipped ${skipped.length} students.`,
+      assigned,
+      skipped
+    });
+  } catch (err) {
+    console.error("Assign Students Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getAssignedStudents = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const assignments = await StudentProject.find({ project_id: projectId })
+      .populate({
+        path: "student_id",
+        select: "name email rollNo batchId",
+        populate: {
+          path: "batchId",
+          select: "name"
+        }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const result = assignments.map(a => ({
+      _id: a._id,
+      studentId: a.student_id?._id || null,
+      name: a.student_id?.name || "Unknown",
+      email: a.student_id?.email || "",
+      rollNo: a.student_id?.rollNo || "",
+      batch: a.student_id?.batchId?.name || "No Batch",
+      current_day: a.current_day,
+      progress_percentage: a.progress_percentage,
+      status: a.status,
+      assigned_at: a.assigned_at || a.createdAt
+    }));
+
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Get Assigned Students Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const removeStudent = async (req, res) => {
+  try {
+    const { projectId, studentId } = req.params;
+
+    // Find active assignment
+    const assignment = await StudentProject.findOne({
+      project_id: projectId,
+      student_id: studentId,
+      status: "Active"
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ success: false, message: "Active project assignment not found for this student." });
+    }
+
+    assignment.status = "Archived";
+    await assignment.save();
+
+    return res.status(200).json({ success: true, message: "Student removed from project. Assignment archived successfully." });
+  } catch (err) {
+    console.error("Remove Student Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getProjectDayDetails = async (req, res) => {
+  try {
+    const { dayId } = req.params;
+    const day = await ProjectDay.findById(dayId).lean();
+    if (!day) {
+      return res.status(404).json({ success: false, message: "Project day not found." });
+    }
+
+    const tasks = await ProjectTask.find({ project_day_id: dayId }).sort({ createdAt: 1 }).lean();
+
+    return res.status(200).json({
+      success: true,
+      day,
+      tasks
+    });
+  } catch (err) {
+    console.error("Get Project Day Details Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getProjectProgress = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await Project.findById(projectId).lean();
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+
+    // 1. Fetch all student project assignments (excluding archived)
+    const assignments = await StudentProject.find({
+      project_id: projectId,
+      status: { $ne: "Archived" }
+    }).populate({
+      path: "student_id",
+      select: "name email rollNo batchId",
+      populate: {
+        path: "batchId",
+        select: "name"
+      }
+    }).lean();
+
+    // 2. Fetch project days and tasks to know task counts and XP mappings
+    const projectDays = await ProjectDay.find({ project_id: projectId }).select("_id").lean();
+    const projectDayIds = projectDays.map(d => d._id);
+    const projectTasks = await ProjectTask.find({ project_day_id: { $in: projectDayIds } }).lean();
+    const totalProjectTasks = projectTasks.length;
+
+    const tasksMap = new Map(projectTasks.map(t => [t._id.toString(), t]));
+
+    // 3. Fetch completed progress records in bulk for all student assignments
+    const assignmentIds = assignments.map(a => a._id);
+    const progressRecords = await StudentTaskProgress.find({
+      student_project_id: { $in: assignmentIds },
+      completed: true
+    }).lean();
+
+    // Group progress records by student_project_id
+    const studentProgressMap = new Map();
+    for (const record of progressRecords) {
+      const spIdStr = record.student_project_id.toString();
+      if (!studentProgressMap.has(spIdStr)) {
+        studentProgressMap.set(spIdStr, []);
+      }
+      studentProgressMap.get(spIdStr).push(record);
+    }
+
+    // 4. Map students to details and dynamically generated day statuses
+    const results = assignments.map(a => {
+      const completedList = studentProgressMap.get(a._id.toString()) || [];
+      const completedCount = completedList.length;
+
+      // Calculate total XP earned from completed tasks
+      const totalXp = completedList.reduce((sum, record) => {
+        const task = tasksMap.get(record.project_task_id.toString());
+        return sum + (task ? task.xp_value : 0);
+      }, 0);
+
+      // Compute progress percentage
+      const progressPercentage = totalProjectTasks > 0 
+        ? Math.round((completedCount / totalProjectTasks) * 100) 
+        : 0;
+
+      // Generate day statuses
+      const dayStatuses = [];
+      const isProjectCompleted = a.status === "Completed";
+
+      for (let dayNum = 1; dayNum <= project.duration_days; dayNum++) {
+        let status = "Locked";
+        if (isProjectCompleted || dayNum < a.current_day) {
+          status = "Completed";
+        } else if (dayNum === a.current_day) {
+          status = "Current";
+        }
+        dayStatuses.push({
+          dayNumber: dayNum,
+          status
+        });
+      }
+
+      return {
+        studentId: a.student_id?._id || null,
+        name: a.student_id?.name || "Unknown",
+        batch: a.student_id?.batchId?.name || "No Batch",
+        currentDay: a.current_day,
+        totalDays: project.duration_days,
+        xp: totalXp,
+        progressPercentage,
+        assignmentStatus: a.status,
+        dayStatuses
+      };
+    });
+
+    return res.status(200).json(results);
+  } catch (err) {
+    console.error("Get Project Progress Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
