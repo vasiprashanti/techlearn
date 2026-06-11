@@ -27,6 +27,17 @@ const removeRedundantNotesHeading = (markdown = '') => {
   return lines.join('\n').trim();
 };
 
+const getInlineText = (children) => {
+  if (typeof children === 'string') return children;
+  if (Array.isArray(children)) {
+    return children.map((child) => getInlineText(child)).join('');
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    return getInlineText(children.props?.children);
+  }
+  return '';
+};
+
 const createMarkdownComponents = (compact = false) => {
   const headingOneClass = compact
     ? 'text-lg md:text-xl font-medium text-[#001862] dark:text-white mt-8 mb-4 tracking-tight'
@@ -60,16 +71,32 @@ const createMarkdownComponents = (compact = false) => {
     h4: ({children}) => <h5 className={headingFourClass}>{cleanHeadingText(children)}</h5>,
     p: ({children}) => <p className={paragraphClass}>{children}</p>,
     strong: ({children}) => <strong className="font-medium text-[#001862] dark:text-white">{children}</strong>,
-    a: ({children, href}) => (
-      <a
-        href={href}
-        target={href?.startsWith('http') ? '_blank' : undefined}
-        rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
-        className="font-medium text-[#001862] underline decoration-[#001862]/30 decoration-2 underline-offset-4 transition-all hover:text-[#3C83F6] dark:text-blue-200 dark:decoration-blue-200/35"
-      >
-        {children}
-      </a>
-    ),
+    a: ({children, href}) => {
+      const label = getInlineText(children).trim();
+      const isRunCodeLink = href?.startsWith('/compiler') && label.toLowerCase() === 'run code';
+
+      if (isRunCodeLink) {
+        return (
+          <a
+            href={href}
+            className="inline-flex items-center rounded-md border border-[#001862]/20 bg-white/70 px-3 py-2 font-press-start text-[8px] uppercase tracking-normal text-lavender no-underline shadow-sm transition hover:border-[#001862]/40 hover:bg-white"
+          >
+            {children}
+          </a>
+        );
+      }
+
+      return (
+        <a
+          href={href}
+          target={href?.startsWith('http') ? '_blank' : undefined}
+          rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+          className="font-medium text-[#001862] underline decoration-[#001862]/30 decoration-2 underline-offset-4 transition-all hover:text-[#3C83F6] dark:text-blue-200 dark:decoration-blue-200/35"
+        >
+          {children}
+        </a>
+      );
+    },
     blockquote: ({children}) => (
       <blockquote className={`${compact ? 'my-5 pl-4 py-1.5' : 'my-8 pl-6 py-2'} border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl`}>
         <div className={`text-[#001862] dark:text-white/65 italic ${compact ? 'text-sm' : 'text-lg'}`}>{children}</div>

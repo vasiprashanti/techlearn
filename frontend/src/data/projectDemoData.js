@@ -1,4 +1,4 @@
-export const PROJECT_DEMO_STORAGE_KEY = 'techlearn-project-demo-state-v1';
+export const PROJECT_DEMO_STORAGE_KEY = 'techlearn-project-demo-state-v2';
 
 export const projectDemoProject = {
   title: 'Smart Seat Allocation',
@@ -27,84 +27,177 @@ export const projectDemoNotes = {
 export const projectDemoDays = [
   {
     day: 1,
-    title: 'Project Setup & Repository',
+    title: 'HTML Fundamentals',
     fileName: 'day-01.md',
     markdown: `
-# Project Setup & Repository
+# HTML Fundamentals
 
-Set up the Smart Seat Allocation repository and prepare the project structure that every later feature will build on.
+HTML gives a webpage its structure. In Smart Seat Allocation, the first screen needs headings, forms, labels, buttons, and clean sections before styling or logic is added.
 
-## Goals
+## Today's Learning
 
-- Create the frontend and backend folders.
-- Add shared naming conventions for routes, models, and services.
-- Commit the initial setup so the project has a clean baseline.
+Think of HTML as the page skeleton. It tells the browser what content exists and what each piece means.
 
-## Checklist
+## Basic Page Example
 
-- Initialize the client app.
-- Initialize the server app.
-- Create the first README notes for local setup.
+~~~html
+<main>
+  <h1>Smart Seat Allocation</h1>
+  <p>Collect student preferences and show allocation progress.</p>
+
+  <form>
+    <label for="studentName">Student Name</label>
+    <input id="studentName" type="text" placeholder="Enter name" />
+
+    <button type="submit">Save Preference</button>
+  </form>
+</main>
+~~~
+
+[Run Code](/compiler)
+
+## Mini Task
+
+- Create the first HTML layout for the allocation page.
+- Add one heading, one paragraph, one form input, and one button.
+- Keep every input connected to a clear label.
 `,
-    tasks: [],
+    tasks: [
+      { id: 'create-html-shell', title: 'Create HTML Shell', xp: 10, completed: true, xpAwarded: true },
+      { id: 'add-form-labels', title: 'Add Form Labels', xp: 10, completed: true, xpAwarded: true },
+      { id: 'run-html-example', title: 'Run HTML Example', xp: 10, completed: true, xpAwarded: true },
+    ],
   },
   {
     day: 2,
-    title: 'Seat Matrix Planning',
+    title: 'CSS Fundamentals',
     fileName: 'day-02.md',
     markdown: `
-# Seat Matrix Planning
+# CSS Fundamentals
 
-Define how seats, students, and allocation preferences will be represented before writing feature code.
+CSS controls how the Smart Seat Allocation page looks. Once the HTML structure exists, CSS gives it spacing, color, borders, layout, and responsive behavior.
 
-## Goals
+## Today's Learning
 
-- List the fields required for seats.
-- Identify student preference inputs.
-- Sketch the first allocation flow.
+Use CSS to make the allocation form easier to scan and use. A clean project card should separate the title, description, form area, and action button.
+
+## Styling Example
+
+~~~css
+.allocation-card {
+  max-width: 520px;
+  padding: 24px;
+  border: 1px solid #001862;
+  border-radius: 12px;
+}
+
+.allocation-card button {
+  background: #001862;
+  color: white;
+  padding: 10px 16px;
+}
+~~~
+
+[Run Code](/compiler)
+
+## Mini Task
+
+- Style the allocation card.
+- Add comfortable spacing between form fields.
+- Make the submit button visually clear.
 `,
-    tasks: [],
+    tasks: [
+      { id: 'style-card', title: 'Style Allocation Card', xp: 10, completed: true, xpAwarded: true },
+      { id: 'space-form-fields', title: 'Space Form Fields', xp: 10, completed: true, xpAwarded: true },
+      { id: 'run-css-example', title: 'Run CSS Example', xp: 10, completed: true, xpAwarded: true },
+    ],
   },
   {
     day: 3,
-    title: 'Preference Form State',
+    title: 'JavaScript Fundamentals',
     fileName: 'day-03.md',
     markdown: `
-# Preference Form State
+# JavaScript Fundamentals
 
-Build the form state needed to collect student preferences for the allocation flow.
+JavaScript adds behavior to the project. It can read form values, update task progress, validate input, and refresh the UI without a page reload.
 
-## Goals
+## Today's Learning
 
-- Capture student choices.
-- Validate required inputs.
-- Prepare the request payload shape.
+For Smart Seat Allocation, JavaScript can keep track of selected preferences and calculate how much of the day's work is complete.
+
+## Progress Example
+
+~~~js
+const tasks = [
+  { title: 'Create form', completed: true },
+  { title: 'Validate preference', completed: false },
+  { title: 'Save selection', completed: false },
+];
+
+const completed = tasks.filter((task) => task.completed).length;
+const progress = Math.round((completed / tasks.length) * 100);
+
+console.log(progress + '% complete');
+~~~
+
+[Run Code](/compiler)
+
+## Mini Task
+
+- Create an array of project tasks.
+- Mark one task as completed.
+- Calculate the current progress percentage.
 `,
-    tasks: [],
+    tasks: [
+      { id: 'create-task-array', title: 'Create Task Array', xp: 10, completed: true, xpAwarded: true },
+      { id: 'calculate-progress', title: 'Calculate Progress', xp: 10, completed: true, xpAwarded: true },
+      { id: 'run-js-example', title: 'Run JS Example', xp: 10, completed: true, xpAwarded: true },
+    ],
   },
   {
     day: 4,
-    title: 'Allocation Rules Design',
+    title: 'React Fundamentals',
     fileName: 'day-04.md',
     markdown: `
-# Allocation Rules Design
+# React Fundamentals
 
-Document the rules that decide how students are mapped to available seats.
+React helps split the dashboard into reusable UI pieces. The project hero, daily tasks, notes list, and stats can each become small components.
 
-## Goals
+## Today's Learning
 
-- Define eligibility checks.
-- Decide tie-break behavior.
-- Prepare service-layer function names.
+React components receive data through props and render the current state of the project. That makes it easier to swap mock data for backend data later.
+
+## Component Example
+
+~~~jsx
+function ProjectNoteCard({ day, title }) {
+  return (
+    <article>
+      <p>Day {day}</p>
+      <h3>{title}</h3>
+    </article>
+  );
+}
+~~~
+
+## Mini Task
+
+- Create a note card component.
+- Pass day number and topic title as props.
+- Render the card inside a project notes list.
 `,
-    tasks: [],
+    tasks: [
+      { id: 'build-note-card', title: 'Build Note Card', xp: 10, completed: true, xpAwarded: true },
+      { id: 'pass-note-props', title: 'Pass Note Props', xp: 10, completed: true, xpAwarded: true },
+      { id: 'render-note-list', title: 'Render Note List', xp: 10, completed: true, xpAwarded: true },
+    ],
   },
   {
     day: 5,
-    title: 'Service Layer & GitHub Commit',
+    title: 'Backend Login API',
     fileName: 'day-05.md',
     markdown: `
-# Service Layer & GitHub Commit
+# Backend Login API
 
 Today focuses on wiring the first backend workflow for Smart Seat Allocation. Build the authentication surface that later project APIs can rely on.
 
@@ -155,16 +248,22 @@ The dashboard can request allocation status and render the latest project progre
   },
   {
     day: 7,
-    title: 'Review Dashboard Wiring',
+    title: 'HTML Notes Review',
     fileName: 'day-07.md',
     markdown: `
-# Review Dashboard Wiring
+# HTML Notes Review
 
-Prepare the review dashboard so students can inspect progress and revisit earlier learning notes.
+Review the HTML structure from the earlier mock notes and connect it back to the full Smart Seat Allocation flow.
 
 ## Today's Learning
 
-Focus on readable progress indicators, locked future days, and clear revision access for previous notes.
+Focus on semantic structure, labeled forms, readable sections, and clean project notes that can be rendered from markdown.
+
+## Revision Task
+
+- Revisit the HTML form structure.
+- Check that labels and inputs are connected.
+- Confirm that the note can be opened from the project dashboard.
 `,
     tasks: [
       { id: 'build-review-card', title: 'Build Review Card', xp: 10, completed: false, xpAwarded: false },
