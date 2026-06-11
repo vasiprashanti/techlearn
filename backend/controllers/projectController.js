@@ -28,10 +28,12 @@ export const createProject = async (req, res) => {
     const { title, description, category, duration_days, xp_requirement } = req.body;
     let overview_markdown_content = req.body.overview_markdown_content || "";
     let overview_markdown_file_url = "";
+    let overview_markdown_original_name = "";
 
     // Handle uploaded file
     if (req.file) {
       overview_markdown_content = fs.readFileSync(req.file.path, "utf-8");
+      overview_markdown_original_name = req.file.originalname;
       
       // Copy to permanent folder (wrapped to prevent crash on read-only environments)
       try {
@@ -61,6 +63,7 @@ export const createProject = async (req, res) => {
       xp_requirement: Number(xp_requirement || 0),
       overview_markdown_content,
       overview_markdown_file_url,
+      overview_markdown_original_name,
       status: req.body.status || "Draft",
     });
 
@@ -190,6 +193,7 @@ export const updateProject = async (req, res) => {
     // Handle markdown file replace
     if (req.file) {
       project.overview_markdown_content = fs.readFileSync(req.file.path, "utf-8");
+      project.overview_markdown_original_name = req.file.originalname;
       
       try {
         const destPath = path.join(projectsUploadDir, Date.now() + "-" + req.file.originalname);

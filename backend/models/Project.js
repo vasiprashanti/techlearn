@@ -36,6 +36,10 @@ const projectSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    overview_markdown_original_name: {
+      type: String,
+      default: "",
+    },
     status: {
       type: String,
       enum: ["Draft", "Published", "Archived"],

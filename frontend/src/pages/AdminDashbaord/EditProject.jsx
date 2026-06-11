@@ -37,7 +37,8 @@ export default function EditProject() {
     xp_requirement: "",
     status: "",
     overview_markdown_file_url: "",
-    overview_markdown_content: ""
+    overview_markdown_content: "",
+    overview_markdown_original_name: ""
   });
 
   // Edit form state
@@ -108,7 +109,8 @@ export default function EditProject() {
           xp_requirement: data.xp_requirement || 0,
           status: data.status || "Draft",
           overview_markdown_file_url: data.overview_markdown_file_url || "",
-          overview_markdown_content: data.overview_markdown_content || ""
+          overview_markdown_content: data.overview_markdown_content || "",
+          overview_markdown_original_name: data.overview_markdown_original_name || ""
         });
 
         setForm({
@@ -120,7 +122,11 @@ export default function EditProject() {
           status: data.status || "Draft",
           overview_markdown_content: data.overview_markdown_content || ""
         });
-        setExistingFileUrl(data.overview_markdown_file_url || (data.overview_markdown_content ? "overview.md" : ""));
+        
+        const originalFileName = data.overview_markdown_original_name || 
+          (data.overview_markdown_file_url ? data.overview_markdown_file_url.split("/").pop().replace(/^\d+-/, "") : "") || 
+          (data.overview_markdown_content ? "overview.md" : "");
+        setExistingFileUrl(originalFileName);
       }
     } catch (err) {
       console.error("Error fetching project details:", err);
@@ -391,7 +397,7 @@ export default function EditProject() {
                         <div>
                           <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Overview Markdown File</span>
                           <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">
-                            {existingFileUrl ? "overview.md (Staged in DB)" : "No file uploaded"}
+                            {existingFileUrl ? existingFileUrl : "No file uploaded"}
                           </span>
                         </div>
                         <div className="md:col-span-2">
@@ -499,7 +505,7 @@ export default function EditProject() {
                                 Choose File
                               </label>
                               <span className="text-[11px] text-slate-400 truncate max-w-[200px]" title={overviewFile ? overviewFile.name : (existingFileUrl ? "Stored in DB" : "No file selected")}>
-                                {overviewFile ? overviewFile.name : (existingFileUrl ? "overview.md (Uploaded)" : "No file chosen")}
+                                {overviewFile ? overviewFile.name : (existingFileUrl ? `${existingFileUrl} (Uploaded)` : "No file chosen")}
                               </span>
                               {overviewFile && (
                                 <button type="button" onClick={handleRemoveFile} className="p-1 text-rose-500 hover:bg-rose-500/10 rounded-full">
