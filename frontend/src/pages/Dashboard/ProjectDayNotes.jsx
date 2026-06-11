@@ -95,14 +95,11 @@ export default function ProjectDayNotes() {
               <h1 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-white md:text-3xl">
                 {dashboardData.project.title}
               </h1>
-              <p className="text-sm leading-6 text-[#00113b] dark:text-[#81bde6]">
-                Day {selectedDay.day} - {selectedDay.title}
-              </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-left sm:min-w-[420px]">
               {[
-                { label: 'Current Day', value: `Day ${dashboardData.project.currentDay}` },
+                { label: 'Current Day', value: dashboardData.project.currentDay },
                 { label: 'Project XP', value: projectXpEarned.toLocaleString() },
                 { label: 'Progress', value: `${projectOverallProgress}%` },
               ].map((item) => (
@@ -138,10 +135,7 @@ export default function ProjectDayNotes() {
               <div className="project-day-markdown">
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-[#00113b]/10 pb-4 dark:border-white/10">
                   <div>
-                    <p className="font-press-start text-[8px] uppercase tracking-widest text-[#00113b] dark:text-[#8fd9ff]">
-                      {selectedDay.fileName}
-                    </p>
-                    <h2 className="mt-2 text-xl font-semibold text-[#00113b] dark:text-white">
+                    <h2 className="text-xl font-semibold text-[#00113b] dark:text-white">
                       {selectedDay.title}
                     </h2>
                   </div>
@@ -199,13 +193,11 @@ export default function ProjectDayNotes() {
                           ) : null}
                         </span>
                         <span
-                          className={`flex-1 text-sm font-medium leading-5 text-[#00113b] dark:text-white ${
-                            task.completed ? 'line-through' : ''
-                          }`}
+                          className="flex-1 text-sm font-medium leading-5 text-[#00113b] dark:text-white"
                         >
                           {task.title}
                         </span>
-                        <span className="rounded-md border border-[#00113b]/10 bg-white/30 px-2 py-1 text-[10px] font-semibold text-[#00113b] dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff]">
+                        <span className="rounded-md border border-[#7c6be3]/20 bg-white/30 px-2 py-1 font-press-start text-[8px] leading-none text-lavender dark:border-[#d6c7ff]/20 dark:bg-white/5">
                           +{task.xp} XP
                         </span>
                       </button>
