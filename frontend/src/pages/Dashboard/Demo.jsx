@@ -435,7 +435,7 @@ export default function DemoDashboard() {
   const projectStats = [
     { title: 'Project XP', value: projectXpEarned.toLocaleString(), icon: <PixelStar /> },
     { title: 'Tasks Done', value: `${projectCompletedTotal}/${mockProjectDashboard.project.totalProjectTasks}`, icon: <PixelQuestion /> },
-    { title: 'Progress', value: `${projectOverallProgress}%`, icon: <PixelArrow /> },
+    { title: 'Project Progress', value: `${projectOverallProgress}%`, icon: <PixelArrow /> },
     { title: 'Streak', value: mockProjectDashboard.project.streak.toString(), icon: <PixelFlame /> },
   ];
 
@@ -521,7 +521,7 @@ export default function DemoDashboard() {
         }}
       />
 
-      <div className={`flex min-h-screen w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <div className={`flex min-h-screen w-full font-sans antialiased text-[#00113b] dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div
           className={`fixed inset-0 -z-10 transition-colors duration-300 ${
             isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'
@@ -680,7 +680,7 @@ export default function DemoDashboard() {
                     <h2 className="font-pixel-header text-[9px] sm:text-[10px] text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-relaxed truncate">
                       {userDisplayName}
                     </h2>
-                    <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
+                    <p className="font-press-start text-xs sm:text-sm text-[#00113b] dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
                       {collegeName}
                     </p>
                   </div>
@@ -693,7 +693,7 @@ export default function DemoDashboard() {
                       <div className="shrink-0">{stat.icon}</div>
                       <div className="flex flex-col text-left">
                         <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
-                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
+                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
                       </div>
                     </div>
                   ))}
@@ -703,8 +703,8 @@ export default function DemoDashboard() {
               {/* Leaderboard Card - Spans 3/8 width on lg - aligned flush left matching header */}
               <div className="w-full lg:col-span-3 order-4 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col h-full min-h-[220px] lg:h-[250px] justify-between">
                 <div className="flex items-center justify-between mb-2 shrink-0">
-                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">LEADERBOARD</h3>
-                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-[#00113b] dark:text-[#8fd9ff]">LEADERBOARD</h3>
+                  <button onClick={() => navigate('/leaderboard')} className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-[#8fd9ff] hover:underline">
                     VIEW FULL
                   </button>
                 </div>
@@ -727,19 +727,15 @@ export default function DemoDashboard() {
                             student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
                           }`}
                         >
-                          <div
-                            className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
-                              student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
-                            }`}
-                          >
+                          <div className="w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight text-[#00113b] dark:text-[#81bde6] font-medium">
                             #{student.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#00113b] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
                               {student.name}
                             </div>
                           </div>
-                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
+                          <div className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
                             {student.totalXp.toLocaleString()}
                           </div>
                         </div>
@@ -749,11 +745,11 @@ export default function DemoDashboard() {
                             className="grid h-16 w-16 place-items-center rounded-lg border border-dashed border-[#00113b]/25 bg-white/25 shadow-inner dark:border-[#8fd9ff]/25 dark:bg-white/5"
                             style={{ imageRendering: 'pixelated' }}
                           >
-                            <span className="font-pixel-header text-[6px] uppercase leading-relaxed text-[#00113b]/45 dark:text-[#8fd9ff]/60">
+                            <span className="font-pixel-header text-[6px] uppercase leading-relaxed text-[#00113b] dark:text-[#8fd9ff]">
                               Pixel<br />Widget
                             </span>
                           </div>
-                          <p className="font-press-start text-[9px] sm:text-[10px] text-[#00113b]/55 dark:text-[#81bde6]/70 leading-relaxed">
+                          <p className="font-press-start text-[9px] sm:text-[10px] text-[#00113b] dark:text-[#81bde6] leading-relaxed">
                             Leaderboard illustration placeholder
                           </p>
                         </div>
@@ -766,7 +762,7 @@ export default function DemoDashboard() {
                 {/* Header */}
                 <div className="flex items-center justify-between shrink-0 mb-1">
                   <div className="flex items-center gap-1.5">
-                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-[#00113b] dark:text-[#8fd9ff]">DAILY TASKS</h3>
                   </div>
                   <span className="font-pixel-header text-[7px] sm:text-[8px] text-[#00113b] dark:text-[#8fd9ff] leading-tight font-normal">
                     {MOCK_PROJECT_MODE
@@ -800,7 +796,7 @@ export default function DemoDashboard() {
                           </div>
                           <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
                             task.completed
-                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                              ? 'line-through text-[#00113b] dark:text-white/70'
                               : 'text-[#00113b] dark:text-white'
                           }`}>
                             {task.title}
@@ -833,7 +829,7 @@ export default function DemoDashboard() {
                           {/* Task text */}
                           <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
                             group.completed
-                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                              ? 'line-through text-[#00113b] dark:text-white/70'
                               : 'text-[#00113b] dark:text-white'
                           }`}>
                             {group.text}
@@ -843,13 +839,13 @@ export default function DemoDashboard() {
                     ))
                   ) : (
                     <div className="flex flex-col items-center justify-center text-center p-3">
-                      <svg className="w-8 h-8 text-slate-400/80 dark:text-slate-500 mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <svg className="w-8 h-8 text-[#00113b] dark:text-[#81bde6] mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                      <p className="font-press-start text-[9px] sm:text-[10px] text-[#00113b] dark:text-[#81bde6] leading-normal">
                         No tasks assigned for today.
                       </p>
-                      <p className="font-press-start text-[8px] text-slate-400/60 dark:text-slate-500 mt-1">
+                      <p className="font-press-start text-[8px] text-[#00113b] dark:text-[#81bde6] mt-1">
                         You're all caught up!
                       </p>
                     </div>
@@ -857,12 +853,12 @@ export default function DemoDashboard() {
                 </div>
 
                 {/* Premium Retro Neon Progress Bar */}
-                <div className="mt-1 shrink-0 w-full">
+                <div className="mt-3 shrink-0 w-full">
                   <div className="flex justify-between items-center font-pixel-header mb-0.5">
-                    <span className="text-[7px] sm:text-[8px] font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                    <span className="text-[7px] sm:text-[8px] font-medium text-[#00113b] dark:text-[#81bde6] leading-tight">
                       {MOCK_PROJECT_MODE
-                        ? 'PROGRESS'
-                        : 'PROGRESS'}
+                        ? 'Task Progress'
+                        : 'Task Progress'}
                     </span>
                     <span className="text-[7px] sm:text-[8px] font-bold text-[#00113b] dark:text-[#8fd9ff] leading-tight">
                       {MOCK_PROJECT_MODE
@@ -882,17 +878,14 @@ export default function DemoDashboard() {
               {MOCK_PROJECT_MODE ? (
                 <div ref={projectOverviewRef} className="w-full lg:col-span-8 order-5 lg:order-none flex flex-col gap-4">
                   <div className="flex items-center justify-between gap-3 shrink-0 px-1">
-                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">RECENT TASKS & TOPICS</h3>
-                    <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] whitespace-nowrap">
+                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-[#00113b] dark:text-[#8fd9ff]">RECENT TASKS & TOPICS</h3>
+                    <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">
                       Day {mockProjectDashboard.project.currentDay}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 px-1">
-                    <h4 className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
-                      Project Notes
-                    </h4>
-                    <span className="font-press-start text-[10px] text-[#00113b]/50 dark:text-white/50 whitespace-nowrap">
+                  <div className="flex items-center justify-end gap-3 px-1">
+                    <span className="font-press-start text-[10px] text-[#00113b] dark:text-[#81bde6] whitespace-nowrap">
                       {lockedProjectNotesCount} locked
                     </span>
                   </div>
@@ -914,24 +907,24 @@ export default function DemoDashboard() {
                         >
                           <div>
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                              <span className="font-press-start text-[10px] uppercase tracking-widest text-[#00113b] dark:text-[#7fb8e2]">
                                 Day {note.day}
                               </span>
                               {isCurrentDay ? (
-                                <span className="font-press-start text-[9px] uppercase text-[#3C83F6] dark:text-[#8fd9ff]">
+                                <span className="font-press-start text-[9px] uppercase text-[#00113b] dark:text-[#8fd9ff]">
                                   Today
                                 </span>
                               ) : null}
                             </div>
-                            <h5 className="font-press-start text-xs text-black dark:text-white group-hover:text-[#3C83F6] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
+                            <h5 className="font-press-start text-xs text-[#00113b] dark:text-white group-hover:text-[#00113b] dark:group-hover:text-[#96ddff] transition-colors line-clamp-2 leading-relaxed">
                               {note.title}
                             </h5>
                           </div>
                           <div className="mt-3 flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2">
-                            <span className="font-press-start text-[9px] text-black/50 dark:text-white/50 truncate">
+                            <span className="font-press-start text-[9px] text-[#00113b] dark:text-white truncate">
                               {note.fileName}
                             </span>
-                            <ChevronRight className="w-3 h-3 shrink-0 text-black/30 dark:text-white/30 group-hover:text-[#3C83F6] dark:group-hover:text-white transition-colors" />
+                            <ChevronRight className="w-3 h-3 shrink-0 text-[#00113b] dark:text-white group-hover:text-[#00113b] dark:group-hover:text-white transition-colors" />
                           </div>
                         </button>
                       );
@@ -940,12 +933,12 @@ export default function DemoDashboard() {
                     {lockedProjectNotesCount > 0 ? (
                       <div className="p-4 border border-dashed border-black/10 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl rounded-xl min-h-[118px] flex flex-col justify-between">
                         <div className="flex items-start justify-between gap-2">
-                          <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
+                          <span className="font-press-start text-[10px] uppercase tracking-widest text-[#00113b] dark:text-[#7fb8e2]">
                             Future
                           </span>
-                          <Lock className="w-3.5 h-3.5 text-black/40 dark:text-white/40" />
+                          <Lock className="w-3.5 h-3.5 text-[#00113b] dark:text-white" />
                         </div>
-                        <p className="font-press-start text-[10px] sm:text-xs leading-relaxed text-black/50 dark:text-white/50">
+                        <p className="font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b] dark:text-white">
                           {lockedProjectNotesCount} notes locked
                         </p>
                       </div>
