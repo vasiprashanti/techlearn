@@ -120,7 +120,7 @@ export default function EditProject() {
           status: data.status || "Draft",
           overview_markdown_content: data.overview_markdown_content || ""
         });
-        setExistingFileUrl(data.overview_markdown_file_url || "");
+        setExistingFileUrl(data.overview_markdown_file_url || (data.overview_markdown_content ? "overview.md" : ""));
       }
     } catch (err) {
       console.error("Error fetching project details:", err);
