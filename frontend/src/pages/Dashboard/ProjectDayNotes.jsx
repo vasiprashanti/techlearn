@@ -15,6 +15,35 @@ const getDayProgress = (day) => {
   };
 };
 
+const normalizeHeadingText = (value = '') =>
+  String(value)
+    .replace(/[`*_~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const removeDuplicateDayHeading = (markdown = '', dayTitle = '') => {
+  const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+  const firstContentIndex = lines.findIndex((line) => line.trim());
+
+  if (firstContentIndex === -1) return '';
+
+  const firstLine = lines[firstContentIndex].trim();
+  const headingMatch = firstLine.match(/^#{1,6}\s+(.+)$/);
+
+  if (!headingMatch) return markdown;
+
+  const markdownTitle = normalizeHeadingText(headingMatch[1]);
+  const selectedTitle = normalizeHeadingText(dayTitle);
+
+  if (markdownTitle === selectedTitle) {
+    lines.splice(firstContentIndex, 1);
+    return lines.join('\n').trim();
+  }
+
+  return markdown;
+};
+
 export default function ProjectDayNotes() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,6 +67,7 @@ export default function ProjectDayNotes() {
   const selectedProgress = getDayProgress(selectedDay);
   const isDemoRoute = location.pathname.startsWith('/demo');
   const backPath = isDemoRoute ? '/demo' : '/dashboard';
+  const selectedMarkdown = removeDuplicateDayHeading(selectedDay.markdown, selectedDay.title);
 
   const openDay = (dayNumber) => {
     if (dayNumber > dashboardData.project.currentDay) return;
@@ -121,7 +151,7 @@ export default function ProjectDayNotes() {
                     </span>
                   ) : null}
                 </div>
-                <MarkdownContent compact>{selectedDay.markdown}</MarkdownContent>
+                <MarkdownContent compact>{selectedMarkdown}</MarkdownContent>
               </div>
             )}
           </section>
