@@ -483,7 +483,7 @@ export default function ProjectsList() {
             </div>
 
             <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
                 <FiClock className="w-5 h-5" />
               </div>
               <div>
@@ -493,7 +493,7 @@ export default function ProjectsList() {
             </div>
 
             <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
-              <div className="w-12 h-12 rounded-xl bg-[#e6f4ea] dark:bg-emerald-950/20 flex items-center justify-center text-emerald-600 dark:text-emerald-300">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
                 <FiArchive className="w-5 h-5" />
               </div>
               <div>
@@ -503,7 +503,7 @@ export default function ProjectsList() {
             </div>
 
             <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-300">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
                 <FiUsers className="w-5 h-5" />
               </div>
               <div>

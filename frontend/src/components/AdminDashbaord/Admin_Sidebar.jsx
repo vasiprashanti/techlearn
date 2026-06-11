@@ -111,6 +111,7 @@ const Sidebar = ({ showMobileMenuButton = true }) => {
                 key={item.id}
                 to={`/${item.id}`}
                 onClick={onClickAction}
+                end={item.id === "admin"}
                 className={({ isActive }) => getNavClass(isActive)}
               >
                 {item.icon}

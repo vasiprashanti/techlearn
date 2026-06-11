@@ -519,7 +519,7 @@ export default function EditProject() {
                               ? handleArchiveProject
                               : () => setShowArchiveConfirm(true)
                           }
-                          className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
                         >
                           <FiArchive className="w-4 h-4" />
                           {projectDetails.status === "Archived" ? "Unarchive Project" : "Archive Project"}
@@ -535,7 +535,7 @@ export default function EditProject() {
                         <button
                           type="button"
                           onClick={() => setShowDeleteConfirm(true)}
-                          className="w-full bg-rose-500 hover:bg-rose-600 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm"
                         >
                           <FiTrash2 className="w-4 h-4" />
                           Delete Project
