@@ -13,6 +13,7 @@ import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 import { practiceAPI } from '../../services/practiceApi';
+import { useProjectDemoState } from '../../hooks/useProjectDemoState';
 import heroBg from '../../assets/hero-bg-dashboard.webp';
 import pixelArrowImg from '../../assets/pixel-arrow.png';
 import pixelFlameImg from '../../assets/pixel-flame.png';
@@ -80,53 +81,6 @@ const PlaceholderBar = ({ className = '' }) => (
 
 const MOCK_PROJECT_MODE = true;
 
-const mockProjectDashboard = {
-  project: {
-    title: 'Smart Seat Allocation',
-    description:
-      'Build a full-stack seat allocation workflow with preferences, eligibility, allocation rules, dashboards, and review tracking.',
-    currentDay: 5,
-    totalDays: 15,
-    daysRemaining: 10,
-    completionBonus: 25,
-    streak: 6,
-    baseXpBeforeToday: 285,
-    completedTasksBeforeToday: 13,
-    totalProjectTasks: 45,
-    certificateStatus: 'Not Eligible Yet',
-  },
-  todayTasks: [
-    { id: 'login-ui', title: 'Build Login UI', type: 'Development', xp: 10, completed: false },
-    { id: 'employee-entity', title: 'Create Employee Entity', type: 'Development', xp: 15, completed: true },
-    { id: 'service-layer', title: 'Create Employee Service', type: 'Development', xp: 15, completed: false },
-    { id: 'github-commit', title: 'Push GitHub Commit', type: 'Notes', xp: 10, completed: false },
-  ],
-  notes: {
-    overview:
-      'Students are building a smart seat allocation system that lets admins collect preferences, apply allocation rules, and review seat assignments in one place.',
-    objectives: ['Understand project-based delivery', 'Build clean feature slices', 'Practice daily commits and reviews'],
-    deliverables: ['Authentication flow', 'Student dashboard', 'Admin assignment workflow', 'Submission tracking'],
-    techStack: ['React', 'Node.js', 'Express', 'MongoDB'],
-    folderStructure: ['client/src/pages', 'client/src/components', 'server/models', 'server/routes'],
-    apis: ['POST /auth/login', 'GET /projects/current', 'PATCH /projects/tasks/:taskId'],
-    businessRules: ['One active project per batch', 'XP is awarded once per task', 'Day bonus unlocks after all tasks are complete'],
-  },
-  dayNotes: [
-    { day: 1, title: 'Project Setup & Repository', fileName: 'day-01.md' },
-    { day: 2, title: 'Seat Matrix Planning', fileName: 'day-02.md' },
-    { day: 3, title: 'Preference Form State', fileName: 'day-03.md' },
-    { day: 4, title: 'Allocation Rules Design', fileName: 'day-04.md' },
-    { day: 5, title: 'Service Layer & GitHub Commit', fileName: 'day-05.md' },
-    { day: 6, title: 'Allocation API Integration', fileName: 'day-06.md' },
-    { day: 7, title: 'Review Dashboard Wiring', fileName: 'day-07.md' },
-  ],
-  recentActivity: [
-    { id: 'day-4-bonus', title: 'Day 4 completion bonus awarded', meta: '+25 XP' },
-    { id: 'entity-done', title: 'Create Employee Entity completed', meta: '+15 XP' },
-    { id: 'notes-opened', title: 'Project notes reviewed', meta: 'Today' },
-  ],
-};
-
 export default function DemoDashboard() {
   const { theme } = useTheme();
   const navigate = useNavigate();
@@ -141,7 +95,20 @@ export default function DemoDashboard() {
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [isFullyCompleted, setIsFullyCompleted] = useState(false);
   const [taskProgress, setTaskProgress] = useState(0);
-  const [projectTasks, setProjectTasks] = useState(mockProjectDashboard.todayTasks);
+  const {
+    dashboardData: mockProjectDashboard,
+    projectTasks,
+    projectCompletedToday,
+    projectTotalToday,
+    projectDayProgress,
+    projectDayComplete,
+    projectXpEarned,
+    projectCompletedTotal,
+    projectOverallProgress,
+    accessibleProjectNotes,
+    lockedProjectNotesCount,
+    completeTask: completeProjectTask,
+  } = useProjectDemoState();
   const projectOverviewRef = useRef(null);
   const todaysTopicsRef = useRef(null);
 
@@ -231,11 +198,12 @@ export default function DemoDashboard() {
   };
 
   const handleProjectTaskComplete = (taskId) => {
-    setProjectTasks((currentTasks) =>
-      currentTasks.map((task) =>
-        task.id === taskId ? { ...task, completed: true } : task
-      )
-    );
+    completeProjectTask(mockProjectDashboard.project.currentDay, taskId);
+  };
+
+  const openProjectDayNotes = (dayNumber) => {
+    const suffix = dayNumber ? `?day=${dayNumber}` : '';
+    navigate(`/demo/project/day-notes${suffix}`);
   };
 
   const scrollToSection = (ref) => {
@@ -413,25 +381,6 @@ export default function DemoDashboard() {
     day: 'numeric',
   });
 
-  const projectCompletedToday = projectTasks.filter((task) => task.completed).length;
-  const projectTotalToday = projectTasks.length;
-  const projectDayProgress = projectTotalToday > 0 ? Math.round((projectCompletedToday / projectTotalToday) * 100) : 0;
-  const projectDayComplete = projectTotalToday > 0 && projectCompletedToday === projectTotalToday;
-  const projectTodayXp = projectTasks
-    .filter((task) => task.completed)
-    .reduce((total, task) => total + Number(task.xp || 0), 0);
-  const projectXpEarned =
-    mockProjectDashboard.project.baseXpBeforeToday +
-    projectTodayXp +
-    (projectDayComplete ? mockProjectDashboard.project.completionBonus : 0);
-  const projectCompletedTotal = Math.min(
-    mockProjectDashboard.project.totalProjectTasks,
-    mockProjectDashboard.project.completedTasksBeforeToday + projectCompletedToday
-  );
-  const projectOverallProgress = mockProjectDashboard.project.totalProjectTasks > 0
-    ? Math.round((projectCompletedTotal / mockProjectDashboard.project.totalProjectTasks) * 100)
-    : 0;
-
   const projectStats = [
     { title: 'Project XP', value: projectXpEarned.toLocaleString(), icon: <PixelStar /> },
     { title: 'Tasks Done', value: `${projectCompletedTotal}/${mockProjectDashboard.project.totalProjectTasks}`, icon: <PixelQuestion /> },
@@ -444,13 +393,6 @@ export default function DemoDashboard() {
     month: '2-digit',
     year: '2-digit',
   }).format(new Date());
-  const accessibleProjectNotes = mockProjectDashboard.dayNotes.filter(
-    (note) => note.day <= mockProjectDashboard.project.currentDay
-  );
-  const lockedProjectNotesCount = mockProjectDashboard.dayNotes.filter(
-    (note) => note.day > mockProjectDashboard.project.currentDay
-  ).length;
-
   const retroStats = MOCK_PROJECT_MODE ? projectStats : [
     { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
     { title: 'Total Solved', value: progress.completed.toString(), icon: <PixelQuestion /> },
@@ -591,7 +533,7 @@ export default function DemoDashboard() {
                             View Project <ChevronRight className="w-3 h-3" />
                           </button>
                           <button
-                            onClick={() => scrollToSection(todaysTopicsRef)}
+                            onClick={() => openProjectDayNotes()}
                             className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                           >
                             Today's Topics <ChevronRight className="w-3 h-3" />
@@ -899,6 +841,7 @@ export default function DemoDashboard() {
                           key={note.day}
                           type="button"
                           ref={isCurrentDay ? todaysTopicsRef : null}
+                          onClick={() => openProjectDayNotes(note.day)}
                           className={`p-4 border rounded-xl text-left group flex flex-col justify-between min-h-[118px] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                             isCurrentDay
                               ? 'border-[#3C83F6]/55 bg-white/50 dark:border-[#3C83F6]/55 dark:bg-[#0b3ef2]/25 shadow-md shadow-blue-600/10'

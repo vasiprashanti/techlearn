@@ -17,6 +17,7 @@ const Signup = lazy(() => import('./pages/Auth/Signup'))
 const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
 const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
+const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
 const DailyChallenge = lazy(() => import('./pages/Dashboard/DailyChallenge'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
@@ -197,7 +198,8 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/admin');
 
   const isStudentSidebarRoute =
-    ['/projects', '/leaderboard', '/demo'].includes(location.pathname) ||
+    ['/projects', '/leaderboard'].includes(location.pathname) ||
+    location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/interview/') ||
     location.pathname.startsWith('/learn/interview-questions') ||
@@ -233,6 +235,8 @@ function LayoutWrapper() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />
+            <Route path="/demo/project/day-notes" element={<ProjectDayNotes />} />
+            <Route path="/dashboard/project/day-notes" element={<ProjectDayNotes />} />
             <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
             <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
             <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
