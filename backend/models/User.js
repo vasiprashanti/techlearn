@@ -63,6 +63,42 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    mobileNumber: {
+      type: String,
+      default: "",
+    },
+    collegeName: {
+      type: String,
+      default: "",
+    },
+    degreeBranch: {
+      type: String,
+      default: "",
+    },
+    graduationYear: {
+      type: Number,
+      default: null,
+    },
+    programSelection: {
+      type: String,
+      enum: ["Placement Sprint", "Full Stack Project Program", "Both"],
+      default: "Placement Sprint",
+    },
+    placementReadiness: {
+      type: String,
+      enum: ["Just Starting", "Preparing Inconsistently", "Actively Preparing", "Already Attending Interviews", ""],
+      default: "",
+    },
+    dailyCommitment: {
+      type: String,
+      enum: ["Yes", "No", ""],
+      default: "",
+    },
+    declarationAccepted: {
+      type: Boolean,
+      default: false,
+    },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },
