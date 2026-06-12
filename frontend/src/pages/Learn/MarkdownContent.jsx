@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { Copy, Play } from 'lucide-react';
 import 'highlight.js/styles/github-dark.css';
 import '../../styles/markdown.css';
 
@@ -36,6 +37,31 @@ const getInlineText = (children) => {
     return getInlineText(children.props?.children);
   }
   return '';
+};
+
+const getCodeText = (children) => {
+  const codeNode = Array.isArray(children) ? children[0] : children;
+  return getInlineText(codeNode?.props?.children || children);
+};
+
+const getCodeLanguage = (children) => {
+  const codeNode = Array.isArray(children) ? children[0] : children;
+  const className = codeNode?.props?.className || '';
+  const match = className.match(/language-(\w+)/);
+  return match?.[1]?.toLowerCase() || 'code';
+};
+
+const getCodeFileName = (language) => {
+  const fileNames = {
+    css: 'style.css',
+    html: 'index.html',
+    javascript: 'script.js',
+    js: 'script.js',
+    jsx: 'component.jsx',
+    tsx: 'component.tsx',
+  };
+
+  return fileNames[language] || 'code';
 };
 
 const createMarkdownComponents = (compact = false) => {
@@ -114,14 +140,51 @@ const createMarkdownComponents = (compact = false) => {
       if (inline) return <code className={`bg-[#001862]/10 dark:bg-white/10 text-[#001862] dark:text-blue-200 px-1.5 py-0.5 rounded-md ${compact ? 'text-[12px]' : 'text-[13px]'} font-mono border border-[#001862]/20 dark:border-white/10`} {...props}>{children}</code>;
       return <code className={className} {...props}>{children}</code>;
     },
-    pre: ({children}) => (
-      <div className={`${compact ? 'my-6' : 'my-10'} relative group`}>
-        <div className="absolute -inset-1 bg-gradient-to-r from-[#3C83F6]/20 to-[#2563eb]/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition duration-500"></div>
-        <pre className={`relative bg-[#0a1128] dark:bg-black/80 border border-black/10 dark:border-white/10 rounded-2xl ${compact ? 'p-4 text-[12px]' : 'p-6 md:p-8 text-[13px]'} overflow-x-auto leading-relaxed font-mono text-slate-300 shadow-xl [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}>
-          {children}
-        </pre>
-      </div>
-    ),
+    pre: ({children}) => {
+      const language = getCodeLanguage(children);
+      const fileName = getCodeFileName(language);
+      const codeText = getCodeText(children);
+
+      const handleCopy = () => {
+        if (typeof navigator !== 'undefined' && navigator.clipboard) {
+          navigator.clipboard.writeText(codeText);
+        }
+      };
+
+      return (
+        <div className={`${compact ? 'my-6' : 'my-10'} overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-lg`}>
+          <div className="flex items-center justify-between gap-3 border-b border-slate-700 bg-slate-800/80 px-4 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-400/80" />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-yellow-400/80" />
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-400/80" />
+              <span className="ml-3 truncate font-mono text-xs text-slate-400">{fileName}</span>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </button>
+              <a
+                href="/compiler"
+                className="flex items-center gap-1.5 rounded-md bg-[#0000a8] px-3 py-1.5 text-xs font-semibold text-white no-underline transition-colors hover:bg-[#0000d0]"
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+                Run Code
+              </a>
+            </div>
+          </div>
+          <pre className={`${compact ? 'p-4 text-[12px]' : 'p-5 text-[13px]'} overflow-x-auto font-mono leading-[1.7] text-slate-100 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}>
+            {children}
+          </pre>
+        </div>
+      );
+    },
     table: ({children}) => <div className="my-8 overflow-x-auto rounded-2xl border border-[#001862]/10 dark:border-white/20"><table className="min-w-full border-collapse text-[#001862] dark:text-white/75">{children}</table></div>,
     th: ({children}) => <th className="border-b border-[#001862]/10 bg-white/35 px-4 py-3 text-left text-sm font-semibold text-[#001862] dark:border-white/20 dark:bg-white/5 dark:text-white">{children}</th>,
     td: ({children}) => <td className="border-b border-[#001862]/10 px-4 py-3 text-sm leading-6 text-[#001862] dark:border-white/10 dark:text-white/75">{children}</td>,

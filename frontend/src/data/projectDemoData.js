@@ -54,8 +54,6 @@ Think of HTML as the page skeleton. It tells the browser what content exists and
 </main>
 ~~~
 
-[Run Code](/compiler)
-
 ## Mini Task
 
 - Create the first HTML layout for the allocation page.
@@ -98,8 +96,6 @@ Use CSS to make the allocation form easier to scan and use. A clean project card
 }
 ~~~
 
-[Run Code](/compiler)
-
 ## Mini Task
 
 - Style the allocation card.
@@ -139,8 +135,6 @@ const progress = Math.round((completed / tasks.length) * 100);
 
 console.log(progress + '% complete');
 ~~~
-
-[Run Code](/compiler)
 
 ## Mini Task
 
