@@ -117,6 +117,7 @@ const Students = () => {
   const [students, setStudents] = useState(() => readAdminSessionCache('students', emptyStudents));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('students-colleges', []));
   const [batches, setBatches] = useState(() => readAdminSessionCache('students-batches', []));
+  const [tracks, setTracks] = useState(() => readAdminSessionCache('students-tracks', []));
   const [isLoadingStudents, setIsLoadingStudents] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('students', emptyStudents)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -143,20 +144,25 @@ const Students = () => {
   const studentFormInputClass = 'w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadStudentsData = useCallback(async () => {
-    const [remoteStudents, remoteColleges, remoteBatches] = await Promise.all([
+    const [remoteStudents, remoteColleges, remoteBatches, remoteTracks] = await Promise.all([
       adminAPI.getStudents(),
       adminAPI.getColleges(),
       adminAPI.getBatches(),
+      adminAPI.getTrackTemplates().catch(() => []),
     ]);
     const normalizedStudents = preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent);
     const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
     const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' }));
+    const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
+    const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
     setStudents(normalizedStudents);
     setColleges(normalizedColleges);
     setBatches(normalizedBatches);
+    setTracks(uniqueTracks);
     writeAdminSessionCache('students', normalizedStudents);
     writeAdminSessionCache('students-colleges', normalizedColleges);
     writeAdminSessionCache('students-batches', normalizedBatches);
+    writeAdminSessionCache('students-tracks', uniqueTracks);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -168,6 +174,7 @@ const Students = () => {
         setStudents(emptyStudents);
         setColleges([]);
         setBatches([]);
+        setTracks([]);
       }
     }).finally(() => {
       if (!cancelled) {
@@ -215,31 +222,8 @@ const Students = () => {
 
   const filteredBulkImportTrackOptions = useMemo(() => {
     if (!bulkImportCollegeId || !bulkImportBatchId) return [];
-
-    const selectedBatch = filteredBulkImportBatchOptions.find((batch) => batch.id === bulkImportBatchId);
-    const selectedBatchName = selectedBatch?.name;
-
-    const tracksFromBatchStudents = selectedBatchName
-      ? Array.from(
-          new Set(
-            students
-              .filter((student) => student.batch === selectedBatchName)
-              .map((student) => String(student.track || '').trim())
-              .filter(Boolean)
-          )
-        )
-      : [];
-
-    if (tracksFromBatchStudents.length > 0) return tracksFromBatchStudents;
-
-    return Array.from(
-      new Set(
-        students
-          .map((student) => String(student.track || '').trim())
-          .filter(Boolean)
-      )
-    );
-  }, [bulkImportCollegeId, bulkImportBatchId, filteredBulkImportBatchOptions, students]);
+    return tracks;
+  }, [bulkImportCollegeId, bulkImportBatchId, tracks]);
 
   const openAddStudent = () => {
     setEditingStudentId(null);
@@ -496,7 +480,21 @@ const Students = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Track*</label>
-                  <input value={studentForm.track} onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))} placeholder="Primary track" className={`mt-1 ${studentFormInputClass}`} />
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={studentForm.track}
+                      onChange={(e) => setStudentForm((prev) => ({ ...prev, track: e.target.value }))}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">Select track</option>
+                      {tracks.map((trackName) => (
+                        <option className={dropdownOptionClass} key={trackName} value={trackName}>
+                          {trackName}
+                        </option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
                 </div>
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
