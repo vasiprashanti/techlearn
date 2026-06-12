@@ -84,7 +84,7 @@ export default function ProjectOverview() {
                 <h3 className="text-lg font-bold text-[#00113b] dark:text-white mb-4">Project Guide & Expectations</h3>
                 {overviewData.overview_markdown_content ? (
                   <div className="prose dark:prose-invert max-w-none">
-                    <MarkdownContent markdown={overviewData.overview_markdown_content} />
+                    <MarkdownContent>{overviewData.overview_markdown_content}</MarkdownContent>
                   </div>
                 ) : (
                   <p className="text-xs text-slate-400 font-medium">No overview documentation uploaded for this project.</p>

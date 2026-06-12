@@ -98,6 +98,7 @@ export default function Dashboard() {
   const [hasActiveProject, setHasActiveProject] = useState(false);
   const [projectData, setProjectData] = useState(null);
   const [projectLoading, setProjectLoading] = useState(true);
+  const [advancementModal, setAdvancementModal] = useState({ isOpen: false, completedDay: 1, nextDay: 2 });
 
   const loadProjectData = async () => {
     try {
@@ -118,10 +119,11 @@ export default function Dashboard() {
 
   const handleProjectTaskToggle = async (taskId) => {
     try {
+      const currentDayBefore = projectData?.assignment?.current_day || 1;
       const res = await toggleStudentProjectTask(taskId);
       if (res && res.success) {
         if (res.dayAdvanced) {
-          alert(`Congratulations! You completed Day ${projectData.assignment.current_day} and advanced to Day ${res.currentDay}!`);
+          setAdvancementModal({ isOpen: true, completedDay: currentDayBefore, nextDay: res.currentDay });
         }
         await loadProjectData();
       }
@@ -970,6 +972,58 @@ export default function Dashboard() {
                 disabled={!pendingAvatar || pendingAvatar === photoUrl}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Day Advancement Modal */}
+      {advancementModal.isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 font-sans">
+          <div className="relative w-full max-w-md bg-white dark:bg-[#0a1128] border-2 border-[#3C83F6]/50 rounded-2xl p-6 md:p-8 shadow-2xl text-center border-b-8">
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#3C83F6] text-white p-3 rounded-full border-4 border-white dark:border-[#0a1128] shadow-lg">
+              <img
+                src={pixelStarImg}
+                alt="Level Up"
+                className="w-10 h-10 object-contain pixel-icon"
+              />
+            </div>
+            
+            <div className="mt-6 space-y-4">
+              <h3 className="font-pixel-header text-[10px] tracking-wider text-[#3C83F6] dark:text-[#8fd9ff] uppercase">
+                DAY COMPLETE!
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
+                Awesome effort! You have successfully completed all the tasks for <span className="font-semibold text-slate-800 dark:text-white font-sans">Day {advancementModal.completedDay}</span> of the project.
+              </p>
+              
+              <div className="bg-[#3C83F6]/10 dark:bg-white/5 py-4 px-6 rounded-xl border border-[#3C83F6]/20 dark:border-white/10 flex items-center justify-center gap-3">
+                <div className="text-right">
+                  <span className="block text-[8px] font-press-start uppercase text-slate-400 dark:text-slate-500">PREVIOUS</span>
+                  <span className="font-pixel-header text-[9px] text-slate-500 dark:text-slate-400">DAY {advancementModal.completedDay}</span>
+                </div>
+                <div className="font-bold text-slate-400">→</div>
+                <div className="text-left">
+                  <span className="block text-[8px] font-press-start uppercase text-[#3C83F6] dark:text-[#8fd9ff]">UNLOCKED</span>
+                  <span className="font-pixel-header text-[9px] text-[#3C83F6] dark:text-white">DAY {advancementModal.nextDay}</span>
+                </div>
+              </div>
+              
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic font-sans">
+                New lesson notes and tasks have been unlocked for you.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => {
+                  setAdvancementModal({ isOpen: false, completedDay: 1, nextDay: 2 });
+                  navigate(`/dashboard/project/day-notes?day=${advancementModal.nextDay}`);
+                }}
+                className="px-6 py-2.5 bg-[#3C83F6] text-white hover:bg-blue-600 font-press-start text-[9px] rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                UNLEASH DAY {advancementModal.nextDay}
               </button>
             </div>
           </div>
