@@ -7,3 +7,20 @@ frontend/.env.local
 
 # Local agent artifacts
 .pi/
+
+# OS metadata files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories and workspace configurations
+.vscode/
+.idea/
+.windsurf/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
