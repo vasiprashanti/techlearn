@@ -18,6 +18,11 @@ const userProgressSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+    projectXP: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
 
     totalCourseXP: {
       type: Map,

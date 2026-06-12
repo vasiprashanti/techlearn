@@ -35,7 +35,8 @@ export const getPublicLeaderboard = async (req, res) => {
       .map((row) => {
         const courseXp = sumMapValues(row.courseXP);
         const exerciseXp = sumMapValues(row.exerciseXP);
-        const totalXp = courseXp + exerciseXp;
+        const projectXp = sumMapValues(row.projectXP);
+        const totalXp = courseXp + exerciseXp + projectXp;
 
         return {
           userId: row.userId._id.toString(),
@@ -44,6 +45,7 @@ export const getPublicLeaderboard = async (req, res) => {
           totalXp,
           courseXp,
           exerciseXp,
+          projectXp,
           completedExercises: Array.isArray(row.completedExercises)
             ? row.completedExercises.length
             : 0,
@@ -82,6 +84,7 @@ export const getPublicLeaderboard = async (req, res) => {
             totalXp: 0,
             courseXp: 0,
             exerciseXp: 0,
+            projectXp: 0,
             completedExercises: 0,
           };
         }

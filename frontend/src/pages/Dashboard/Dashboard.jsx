@@ -13,6 +13,7 @@ import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 import { practiceAPI } from '../../services/practiceApi';
+import { getStudentActiveProject, toggleStudentProjectTask } from '../../api/project';
 import heroBg from '../../assets/hero-bg-dashboard.webp';
 import pixelArrowImg from '../../assets/pixel-arrow.png';
 import pixelFlameImg from '../../assets/pixel-flame.png';
@@ -92,6 +93,42 @@ export default function Dashboard() {
   const [tasksLoaded, setTasksLoaded] = useState(false);
   const [isFullyCompleted, setIsFullyCompleted] = useState(false);
   const [taskProgress, setTaskProgress] = useState(0);
+  
+  // Student project states
+  const [hasActiveProject, setHasActiveProject] = useState(false);
+  const [projectData, setProjectData] = useState(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+
+  const loadProjectData = async () => {
+    try {
+      const res = await getStudentActiveProject();
+      if (res && res.success && res.hasActiveProject) {
+        setHasActiveProject(true);
+        setProjectData(res);
+      } else {
+        setHasActiveProject(false);
+        setProjectData(null);
+      }
+    } catch (error) {
+      console.error("Failed to load project data:", error);
+    } finally {
+      setProjectLoading(false);
+    }
+  };
+
+  const handleProjectTaskToggle = async (taskId) => {
+    try {
+      const res = await toggleStudentProjectTask(taskId);
+      if (res && res.success) {
+        if (res.dayAdvanced) {
+          alert(`Congratulations! You completed Day ${projectData.assignment.current_day} and advanced to Day ${res.currentDay}!`);
+        }
+        await loadProjectData();
+      }
+    } catch (err) {
+      console.error("Failed to toggle project task:", err);
+    }
+  };
 
   const loadTodayTasks = async () => {
     try {
@@ -124,6 +161,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTodayTasks();
+    loadProjectData();
   }, []);
 
   // Group the daily tasks for the checklist display
@@ -338,7 +376,14 @@ export default function Dashboard() {
     day: 'numeric',
   });
 
-  const retroStats = [
+  const projectStats = hasActiveProject && projectData ? [
+    { title: 'Project XP', value: projectData.projectXpEarned.toLocaleString(), icon: <PixelStar /> },
+    { title: 'Tasks Done', value: `${projectData.projectCompletedTotal}/${projectData.totalProjectTasks}`, icon: <PixelQuestion /> },
+    { title: 'Project Progress', value: `${projectData.projectOverallProgress}%`, icon: <PixelArrow /> },
+    { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
+  ] : null;
+
+  const retroStats = hasActiveProject && projectData ? projectStats : [
     { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
     { title: 'Total Solved', value: progress.completed.toString(), icon: <PixelQuestion /> },
     {
@@ -435,56 +480,118 @@ export default function Dashboard() {
 
             <div className="flex flex-col lg:grid lg:grid-cols-8 gap-8 items-stretch w-full">
               
-              {/* Daily Challenge Card - Spans 5/8 width on lg */}
+              {/* Daily Challenge Card / Project Hero - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
-                <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
-                  <div
-                    className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
-                    style={{
-                      backgroundImage: `url(${heroBg})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                    }}
-                  />
-                  <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+                {hasActiveProject && projectData ? (
+                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
+                    <div
+                      className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
+                      style={{
+                        backgroundImage: `url(${heroBg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
 
-                  {/* Top Header Row */}
-                  <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
-                    <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
-                      Daily Challenge
-                    </h1>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
-                        <Clock className="w-3.5 h-3.5 shrink-0" />
-                        <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
-                      </span>
-                      <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                        <span>Resets in 14h 22m</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Middle / Bottom Content */}
-                  <div className="z-10 flex flex-col items-start text-left w-full mt-4 sm:mt-5 space-y-3 text-white">
-                    {challengeLoading ? (
-                      <div className="w-full max-w-xl space-y-2.5 pt-1">
-                        <PlaceholderBar className="mt-3 h-10 w-36 rounded-lg bg-white/25 dark:bg-white/15" />
+                    {/* Top Header Row */}
+                    <div className="z-10 flex flex-wrap items-center justify-between gap-2 w-full shrink-0 sm:flex-nowrap">
+                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight text-left">
+                        {projectData.project.title}
+                      </h1>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
+                        </span>
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                          <span>{projectData.project.daysRemaining} DAYS LEFT</span>
+                        </span>
                       </div>
-                    ) : (
-                      <>
-                        {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
-                        <div className="flex w-full justify-end pt-1">
+                    </div>
+
+                    {/* Bottom Row */}
+                    <div className="z-10 flex flex-1 flex-col justify-end text-left w-full mt-4 sm:mt-5 text-white">
+                      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={pixelStarImg}
+                            alt="XP"
+                            className="w-7 h-7 object-contain select-none"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <span className="font-pixel-header text-[8px] sm:text-[9px] text-[#8fd9ff] drop-shadow-md">
+                            {projectData.projectXpEarned} XP
+                          </span>
+                        </div>
+
+                        <div className="flex w-full flex-col justify-end gap-2 sm:w-auto sm:flex-row">
                           <button
-                            onClick={() => navigate('/dashboard/daily-challenge')}
-                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                            onClick={() => navigate('/dashboard/project-overview')}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                           >
-                            Go to Daily challenge <ChevronRight className="w-3 h-3" />
+                            View Project <ChevronRight className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => navigate('/dashboard/project/day-notes')}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            Start Lesson <ChevronRight className="w-3 h-3" />
                           </button>
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
+                    <div
+                      className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
+                      style={{
+                        backgroundImage: `url(${heroBg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+
+                    {/* Top Header Row */}
+                    <div className="z-10 flex items-center justify-between gap-2 w-full shrink-0">
+                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight whitespace-nowrap">
+                        Daily Challenge
+                      </h1>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
+                        </span>
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                          <span>Resets in 14h 22m</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Middle / Bottom Content */}
+                    <div className="z-10 flex flex-col items-start text-left w-full mt-4 sm:mt-5 space-y-3 text-white">
+                      {challengeLoading ? (
+                        <div className="w-full max-w-xl space-y-2.5 pt-1">
+                          <PlaceholderBar className="mt-3 h-10 w-36 rounded-lg bg-white/25 dark:bg-white/15" />
+                        </div>
+                      ) : (
+                        <>
+                          {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
+                          <div className="flex w-full justify-end pt-1">
+                            <button
+                              onClick={() => navigate('/dashboard/daily-challenge')}
+                              className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                            >
+                              Go to Daily challenge <ChevronRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Stats Overview Card - Spans 3/8 width on lg - Redesigned into two halves */}
@@ -582,83 +689,162 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Daily Tasks Card - Spans 5/8 width on lg */}
+              {/* Daily Tasks Card / Project Tasks - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
-                {/* Header */}
-                <div className="flex items-center justify-between shrink-0 mb-1">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
-                  </div>
-                  <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
-                    {completedTasks}/{totalTasks}
-                  </span>
-                </div>
-
-                 {/* Task List - Staged background elements added back */}
-                <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
-                  {groupedTasks.length > 0 ? (
-                    groupedTasks.map(group => (
-                      <div
-                        key={group.type}
-                        onClick={() => handleGroupClick(group)}
-                        className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
-                      >
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
-                          <div
-                            className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
-                              group.completed
-                                ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
-                                : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
-                            }`}
-                          >
-                            {group.completed && (
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          {/* Task text */}
-                          <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
-                            group.completed
-                              ? 'line-through text-[#00113b]/30 dark:text-white/30'
-                              : 'text-[#00113b] dark:text-white'
-                          }`}>
-                            {group.text}
-                          </span>
-                        </div>
+                {hasActiveProject && projectData ? (
+                  <>
+                    {/* Header */}
+                    <div className="flex items-center justify-between shrink-0 mb-1 text-left">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
+                          TODAY'S TASKS (DAY {projectData.assignment.current_day})
+                        </h3>
                       </div>
-                    ))
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-center p-3">
-                      <svg className="w-8 h-8 text-slate-400/80 dark:text-slate-500 mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
-                        No tasks assigned for today.
-                      </p>
-                      <p className="font-press-start text-[8px] text-slate-400/60 dark:text-slate-500 mt-1">
-                        You're all caught up!
-                      </p>
+                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                        {projectData.projectCompletedToday}/{projectData.projectTotalToday}
+                      </span>
                     </div>
-                  )}
-                </div>
 
-                {/* Premium Retro Neon Progress Bar */}
-                <div className="mt-1 shrink-0 w-full">
-                  <div className="flex justify-between items-center font-press-start mb-0.5">
-                    <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
-                    <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
-                      {totalTasks > 0 ? `${taskProgress}%` : "No tasks"}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
-                    <div 
-                      className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
-                      style={{ width: `${totalTasks > 0 ? taskProgress : 0}%` }}
-                    />
-                  </div>
-                </div>
+                    {/* Task List */}
+                    <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
+                      {projectData.todayTasks && projectData.todayTasks.length > 0 ? (
+                        projectData.todayTasks.map(task => (
+                          <div
+                            key={task.id}
+                            onClick={() => handleProjectTaskToggle(task.id)}
+                            className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div
+                                className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                  task.completed
+                                    ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                                    : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                                }`}
+                              >
+                                {task.completed && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
+                                task.completed
+                                  ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                                  : 'text-[#00113b] dark:text-white'
+                              }`}>
+                                {task.title}
+                              </span>
+                            </div>
+                            <span className="rounded-md border border-[#3C83F6]/20 bg-white/30 px-2 py-0.5 font-press-start text-[8px] leading-none text-[#3C83F6] dark:border-[#8fd9ff]/20 dark:bg-white/5 dark:text-[#8fd9ff]">
+                              +{task.xp} XP
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-center p-3">
+                          <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                            No tasks configured for today.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mt-1 shrink-0 w-full text-left">
+                      <div className="flex justify-between items-center font-press-start mb-0.5">
+                        <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
+                        <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                          {projectData.projectDayProgress}%
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full border border-black/5 bg-black/15 shadow-inner dark:border-white/5 dark:bg-black/40">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-[#3C83F6] shadow-[0_0_8px_#3C83F6] transition-all duration-500"
+                          style={{ width: `${projectData.projectDayProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Header */}
+                    <div className="flex items-center justify-between shrink-0 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
+                      </div>
+                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                        {completedTasks}/{totalTasks}
+                      </span>
+                    </div>
+
+                     {/* Task List - Staged background elements added back */}
+                    <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
+                      {groupedTasks.length > 0 ? (
+                        groupedTasks.map(group => (
+                          <div
+                            key={group.type}
+                            onClick={() => handleGroupClick(group)}
+                            className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {/* Beautiful custom pixel checkbox - Slightly rounded edges */}
+                              <div
+                                className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
+                                  group.completed
+                                    ? 'bg-[#3C83F6] border-[#3C83F6] text-white shadow-[0_0_6px_#3C83F6]'
+                                    : 'border-slate-400 dark:border-slate-600 bg-transparent group-hover:border-[#3C83F6]'
+                                }`}
+                              >
+                                {group.completed && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                              {/* Task text */}
+                              <span className={`font-press-start text-[10px] sm:text-xs font-normal truncate transition-all duration-300 leading-tight ${
+                                group.completed
+                                  ? 'line-through text-[#00113b]/30 dark:text-white/30'
+                                  : 'text-[#00113b] dark:text-white'
+                              }`}>
+                                {group.text}
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-center p-3">
+                          <svg className="w-8 h-8 text-slate-400/80 dark:text-slate-500 mb-2 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <p className="font-press-start text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 leading-normal">
+                            No tasks assigned for today.
+                          </p>
+                          <p className="font-press-start text-[8px] text-slate-400/60 dark:text-slate-500 mt-1">
+                            You're all caught up!
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Premium Retro Neon Progress Bar */}
+                    <div className="mt-1 shrink-0 w-full">
+                      <div className="flex justify-between items-center font-press-start mb-0.5">
+                        <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
+                          {totalTasks > 0 ? `${taskProgress}%` : "No tasks"}
+                        </span>
+                      </div>
+                      <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
+                        <div 
+                          className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
+                          style={{ width: `${totalTasks > 0 ? taskProgress : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}

@@ -17,6 +17,7 @@ import compilerRoutes from "./routes/compilerRoutes.js";
 import xpRoutes from "./routes/xpRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import dashboardProjectRoutes from "./routes/dashboardProjectRoutes.js";
+import studentProjectRoutes from "./routes/studentProjectRoutes.js";
 
 import miniRouter from "./routes/mini.js";
 import majorRouter from "./routes/major.js";
@@ -111,6 +112,7 @@ app.use("/api/daily-challenge", dailyChallengeRoutes);
 app.use("/api/daily-task", dailyTaskRoutes);
 app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
+app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);

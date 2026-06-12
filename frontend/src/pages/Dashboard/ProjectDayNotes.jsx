@@ -1,8 +1,10 @@
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronRight, Lock } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import MarkdownContent from '../Learn/MarkdownContent';
 import { useProjectDemoState } from '../../hooks/useProjectDemoState';
+import { getStudentActiveProject, getStudentProjectDayNotes, toggleStudentProjectTask } from '../../api/project';
 
 const getDayProgress = (day) => {
   const total = day?.tasks?.length || 0;
@@ -48,6 +50,15 @@ export default function ProjectDayNotes() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isDemoRoute = location.pathname.startsWith('/demo');
+
+  // Real API states
+  const [realLoading, setRealLoading] = useState(!isDemoRoute);
+  const [realError, setRealError] = useState('');
+  const [realProject, setRealProject] = useState(null);
+  const [realDayNotes, setRealDayNotes] = useState(null);
+
+  // Demo state (reads from local storage)
   const {
     projectState,
     dashboardData,
@@ -57,22 +68,171 @@ export default function ProjectDayNotes() {
     completeTask,
   } = useProjectDemoState();
 
+  const fetchRealProject = async (requestedDayNum) => {
+    try {
+      const proj = await getStudentActiveProject();
+      if (!proj || !proj.success || !proj.hasActiveProject) {
+        setRealError('No active project assignment found.');
+        setRealLoading(false);
+        return;
+      }
+      setRealProject(proj);
+
+      // Resolve day
+      const activeDay = proj.assignment.current_day;
+      const targetDayNum = requestedDayNum || activeDay;
+
+      if (targetDayNum > activeDay) {
+        setRealDayNotes({
+          day: targetDayNum,
+          title: `Day ${targetDayNum}`,
+          notes_markdown: '',
+          tasks: [],
+          isLocked: true
+        });
+        setRealLoading(false);
+        return;
+      }
+
+      const notesRes = await getStudentProjectDayNotes(targetDayNum);
+      if (notesRes && notesRes.success) {
+        setRealDayNotes({
+          day: targetDayNum,
+          title: notesRes.title,
+          notes_markdown: notesRes.notes_markdown || '',
+          tasks: notesRes.tasks || [],
+          isLocked: false
+        });
+      } else {
+        setRealError(notesRes.message || 'Failed to load day notes.');
+      }
+    } catch (err) {
+      console.error('Real Project Fetch Error:', err);
+      setRealError('Failed to connect to server.');
+    } finally {
+      setRealLoading(false);
+    }
+  };
+
+  const handleRealTaskToggle = async (taskId) => {
+    try {
+      const res = await toggleStudentProjectTask(taskId);
+      if (res && res.success) {
+        if (res.dayAdvanced) {
+          alert(`Congratulations! You completed Day ${realDayNotes.day} and advanced to Day ${res.currentDay}!`);
+        }
+        await fetchRealProject(realDayNotes.day);
+      }
+    } catch (err) {
+      console.error('Failed to toggle task:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDemoRoute) {
+      const requestedDay = Number(searchParams.get('day'));
+      setRealLoading(true);
+      fetchRealProject(requestedDay);
+    }
+  }, [searchParams, isDemoRoute]);
+
   const requestedDay = Number(searchParams.get('day'));
   const selectedDayNumber = Number.isFinite(requestedDay) && requestedDay > 0
     ? requestedDay
-    : dashboardData.project.currentDay;
-  const selectedDay =
-    projectState.days.find((day) => day.day === selectedDayNumber) || currentDayData;
-  const isFutureDay = selectedDay.day > dashboardData.project.currentDay;
-  const selectedProgress = getDayProgress(selectedDay);
-  const isDemoRoute = location.pathname.startsWith('/demo');
-  const backPath = isDemoRoute ? '/demo' : '/dashboard';
-  const selectedMarkdown = removeDuplicateDayHeading(selectedDay.markdown, selectedDay.title);
+    : (isDemoRoute ? dashboardData.project.currentDay : (realProject?.assignment?.current_day || 1));
+
+  // Resolve final variables
+  const currentDay = isDemoRoute ? dashboardData.project.currentDay : (realProject?.assignment?.current_day || 1);
+  const projectTitle = isDemoRoute ? dashboardData.project.title : (realProject?.project?.title || '');
+  const xpEarnedValue = isDemoRoute ? projectXpEarned : (realProject?.projectXpEarned || 0);
+  const overallProgressValue = isDemoRoute ? projectOverallProgress : (realProject?.projectOverallProgress || 0);
+
+  const selectedDay = isDemoRoute
+    ? (projectState.days.find((day) => day.day === selectedDayNumber) || currentDayData)
+    : {
+        day: realDayNotes?.day || selectedDayNumber,
+        title: realDayNotes?.title || `Day ${selectedDayNumber}`,
+        notes_markdown: realDayNotes?.notes_markdown || '',
+        tasks: realDayNotes?.tasks || []
+      };
+
+  const isFutureDay = isDemoRoute
+    ? (selectedDay.day > dashboardData.project.currentDay)
+    : (realDayNotes?.isLocked || false);
+
+  const selectedProgress = isDemoRoute
+    ? getDayProgress(selectedDay)
+    : {
+        completed: realDayNotes?.tasks?.filter(t => t.completed).length || 0,
+        total: realDayNotes?.tasks?.length || 0,
+        percent: realDayNotes?.tasks?.length > 0 ? Math.round((realDayNotes.tasks.filter(t => t.completed).length / realDayNotes.tasks.length) * 100) : 0,
+        complete: realDayNotes?.tasks?.length > 0 && realDayNotes.tasks.every(t => t.completed)
+      };
+
+  const selectedMarkdown = isDemoRoute
+    ? removeDuplicateDayHeading(selectedDay.markdown, selectedDay.title)
+    : removeDuplicateDayHeading(realDayNotes?.notes_markdown || '', realDayNotes?.title || '');
+
+  const sidebarDays = isDemoRoute
+    ? projectState.days.map((day) => ({
+        day: day.day,
+        title: day.title,
+        locked: day.day > dashboardData.project.currentDay,
+        active: day.day === selectedDay.day
+      }))
+    : (realProject?.dayNotes || []).map((day) => ({
+        day: day.day,
+        title: day.title,
+        locked: day.isLocked,
+        active: day.day === selectedDay.day
+      }));
 
   const openDay = (dayNumber) => {
-    if (dayNumber > dashboardData.project.currentDay) return;
-    setSearchParams(dayNumber === dashboardData.project.currentDay ? {} : { day: String(dayNumber) });
+    if (dayNumber > currentDay) return;
+    setSearchParams(dayNumber === currentDay ? {} : { day: String(dayNumber) });
   };
+
+  const handleTaskClick = (dayNumber, taskId) => {
+    if (isDemoRoute) {
+      completeTask(dayNumber, taskId);
+    } else {
+      handleRealTaskToggle(taskId);
+    }
+  };
+
+  const backPath = isDemoRoute ? '/demo' : '/dashboard';
+
+  if (!isDemoRoute && realLoading) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="flex flex-col items-center justify-center py-40">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400">Loading lesson materials...</p>
+        </div>
+      </UserSidebarLayout>
+    );
+  }
+
+  if (!isDemoRoute && realError) {
+    return (
+      <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+        <div className="text-center py-20 text-[#00113b] dark:text-white">
+          <p className="text-red-500 font-semibold text-sm">{realError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              const reqDay = Number(searchParams.get('day'));
+              setRealLoading(true);
+              fetchRealProject(reqDay);
+            }}
+            className="mt-4 bg-blue-600 text-white rounded-lg px-4 py-2 text-xs font-bold hover:bg-blue-700 transition"
+          >
+            Retry
+          </button>
+        </div>
+      </UserSidebarLayout>
+    );
+  }
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
@@ -83,25 +243,25 @@ export default function ProjectDayNotes() {
           className="inline-flex items-center gap-2 text-sm font-semibold text-[#00113b] transition hover:text-[#001b5c] dark:text-[#8fd9ff] dark:hover:text-white"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Project Dashboard
+          Back to Dashboard
         </button>
 
-        <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 md:p-7">
+        <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 md:p-7 text-left">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-2">
               <p className="font-press-start text-[8px] uppercase tracking-widest text-[#00113b] dark:text-[#8fd9ff]">
                 Today's Learning
               </p>
               <h1 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-white md:text-3xl">
-                {dashboardData.project.title}
+                {projectTitle}
               </h1>
             </div>
 
             <div className="grid grid-cols-3 gap-3 text-left sm:min-w-[420px]">
               {[
-                { label: 'Current Day', value: dashboardData.project.currentDay },
-                { label: 'Project XP', value: projectXpEarned.toLocaleString() },
-                { label: 'Progress', value: `${projectOverallProgress}%` },
+                { label: 'Current Day', value: currentDay },
+                { label: 'Project XP', value: xpEarnedValue.toLocaleString() },
+                { label: 'Progress', value: `${overallProgressValue}%` },
               ].map((item) => (
                 <div
                   key={item.label}
@@ -120,7 +280,7 @@ export default function ProjectDayNotes() {
         </section>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_390px]">
-          <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 md:p-7">
+          <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 md:p-7 text-left">
             {isFutureDay ? (
               <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl border border-dashed border-[#00113b]/30 text-[#00113b] dark:border-[#8fd9ff]/30 dark:text-[#8fd9ff]">
@@ -139,7 +299,7 @@ export default function ProjectDayNotes() {
                       {selectedDay.title}
                     </h2>
                   </div>
-                  {selectedDay.day < dashboardData.project.currentDay && selectedProgress.complete ? (
+                  {selectedDay.day < currentDay && selectedProgress.complete ? (
                     <span className="rounded-md border border-[#00113b]/10 bg-white/35 px-3 py-1.5 text-xs font-semibold text-[#00113b] dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff]">
                       Completed
                     </span>
@@ -151,7 +311,7 @@ export default function ProjectDayNotes() {
           </section>
 
           <aside className="space-y-6">
-            <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70">
+            <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 text-left">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="font-press-start text-[9px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
@@ -167,16 +327,16 @@ export default function ProjectDayNotes() {
               </div>
 
               <div className="mt-5 space-y-2">
-                {selectedDay.tasks.length > 0 ? (
+                {selectedDay.tasks && selectedDay.tasks.length > 0 ? (
                   selectedDay.tasks.map((task) => {
-                    const isLocked = selectedDay.day > dashboardData.project.currentDay;
+                    const isLocked = selectedDay.day > currentDay;
 
                     return (
                       <button
                         key={task.id}
                         type="button"
                         disabled={isLocked}
-                        onClick={() => completeTask(selectedDay.day, task.id)}
+                        onClick={() => handleTaskClick(selectedDay.day, task.id)}
                         className="group flex w-full items-center gap-3 rounded-sm border border-slate-400/60 bg-transparent px-3 py-3 text-left transition-all duration-300 hover:border-[#00113b] hover:shadow-[0_0_8px_rgba(0,17,59,0.22)] disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-600/60"
                       >
                         <span
@@ -193,7 +353,7 @@ export default function ProjectDayNotes() {
                           ) : null}
                         </span>
                         <span
-                          className="flex-1 text-sm font-medium leading-5 text-[#00113b] dark:text-white"
+                          className="flex-1 text-sm font-medium leading-5 text-[#00113b] dark:text-white truncate"
                         >
                           {task.title}
                         </span>
@@ -223,14 +383,14 @@ export default function ProjectDayNotes() {
                 </div>
               </div>
 
-              {selectedDay.day < dashboardData.project.currentDay && selectedProgress.complete ? (
+              {selectedDay.day < currentDay && selectedProgress.complete ? (
                 <p className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-[#00113b] dark:text-emerald-200">
-                  Day complete. Day {dashboardData.project.currentDay} is unlocked.
+                  Day complete. Day {currentDay} is unlocked.
                 </p>
               ) : null}
             </section>
 
-            <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70">
+            <section className="dashboard-surface rounded-xl border border-black/5 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-[#020b23]/70 text-left">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-press-start text-[9px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
                   Project Notes
@@ -240,9 +400,9 @@ export default function ProjectDayNotes() {
                 </span>
               </div>
               <div className="space-y-2">
-                {projectState.days.map((day) => {
-                  const locked = day.day > dashboardData.project.currentDay;
-                  const active = day.day === selectedDay.day;
+                {sidebarDays.map((day) => {
+                  const locked = day.locked;
+                  const active = day.active;
 
                   return (
                     <button
