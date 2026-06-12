@@ -193,16 +193,25 @@ export const registerUser = async (req, res) => {
     await newUser.save();
     const token = generatorToken(newUser._id);
 
-    // Create matching Student record
-    const student = await Student.create({
-      collegeId: college._id,
-      batchId: batch._id,
-      userId: newUser._id,
-      name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
-      email: emailCheck,
-      primaryTrack: "General Track",
-      status: "Active",
-    });
+    // Check if an admin already created a student profile for this email
+    let student = await Student.findOne({ email: emailCheck });
+
+    if (student) {
+      // Link the existing student profile to the new user account
+      student.userId = newUser._id;
+      await student.save();
+    } else {
+      // Create matching Student record
+      student = await Student.create({
+        collegeId: college._id,
+        batchId: batch._id,
+        userId: newUser._id,
+        name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
+        email: emailCheck,
+        primaryTrack: "General Track",
+        status: "Active",
+      });
+    }
 
     // Auto-assign project if they joined Full Stack Project Program or Both
     if (newUser.programSelection === "Full Stack Project Program" || newUser.programSelection === "Both") {

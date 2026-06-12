@@ -5,10 +5,25 @@ import ProjectDay from "../models/ProjectDay.js";
 import ProjectTask from "../models/ProjectTask.js";
 import StudentTaskProgress from "../models/StudentTaskProgress.js";
 import UserProgress from "../models/UserProgress.js";
+import User from "../models/User.js";
 
 // Helper to get active project for current student
 const getStudentActiveAssignment = async (userId) => {
-  const student = await Student.findOne({ userId });
+  let student = await Student.findOne({ userId });
+
+  if (!student) {
+    // Fallback: lookup user's email and lazy-link student profile if unlinked
+    const user = await User.findById(userId).select("email").lean();
+    if (user && user.email) {
+      student = await Student.findOne({ email: user.email.toLowerCase() });
+      if (student) {
+        student.userId = userId;
+        await student.save();
+        console.log(`Lazy-linked student profile ${student._id} to userId ${userId}`);
+      }
+    }
+  }
+
   if (!student) return null;
 
   const assignment = await StudentProject.findOne({
