@@ -34,6 +34,7 @@ const Sidebar = () => {
   const location = useLocation();
   const isDashboardRoute =
     location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard/') ||
     location.pathname.startsWith('/resources/roadmaps') ||
     location.pathname === '/dashboard/profile' ||

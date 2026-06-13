@@ -17,12 +17,14 @@ import compilerRoutes from "./routes/compilerRoutes.js";
 import xpRoutes from "./routes/xpRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import dashboardProjectRoutes from "./routes/dashboardProjectRoutes.js";
+import studentProjectRoutes from "./routes/studentProjectRoutes.js";
 
 import miniRouter from "./routes/mini.js";
 import majorRouter from "./routes/major.js";
 import bookingRouterModule from "./routes/Booking.js";
 const bookingRouter = bookingRouterModule.default || bookingRouterModule;
 import projectRouter from "./routes/Project.js";
+import projectRoutes from "./routes/projectRoutes.js";
 import midProjectRoutes from "./routes/midProjectRoutes.js";
 import transactionRoutes from "./routes/transactionRoutes.js";
 import uiLibraryRoutes from "./routes/uiLibraryRoutes.js";
@@ -110,6 +112,7 @@ app.use("/api/daily-challenge", dailyChallengeRoutes);
 app.use("/api/daily-task", dailyTaskRoutes);
 app.use("/api/college", collegeRouter);
 app.use("/api", dashboardProjectRoutes);
+app.use("/api/student/project", studentProjectRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/practice", practiceRoutes);
@@ -124,6 +127,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
+app.use("/api/admin/projects", projectRoutes);
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin/students", studentRoutes);
 app.use("/api/admin", adminPortalRoutes);
@@ -131,7 +135,6 @@ app.use("/api/question-bank", questionBankRoutes);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/analytics", analyticsRoutes);
 app.use("/api/admin/submission", submissionRoutes);
-app.use("/api/admin", adminRouter);
 
 // 🧪 Health Check
 app.get("/health", (req, res) => {

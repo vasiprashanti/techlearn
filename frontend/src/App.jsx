@@ -16,6 +16,9 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const Signup = lazy(() => import('./pages/Auth/Signup'))
 const ResetPassword = lazy(() => import('./components/auth/ResetPassword'))
 const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'))
+const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
+const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
+const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
 const DailyChallenge = lazy(() => import('./pages/Dashboard/DailyChallenge'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
@@ -72,6 +75,8 @@ const UILibrary = lazy(() => import('./pages/Build/UILibrary'))
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashbaord/AdminDashboard'))
 const Courses_Admin = lazy(() => import('./pages/AdminDashbaord/Courses'))
+const ProjectsList = lazy(() => import('./pages/AdminDashbaord/ProjectsList'))
+const EditProject = lazy(() => import('./pages/AdminDashbaord/EditProject'))
 const AdminTopicsList = lazy(() => import('./pages/AdminDashbaord/AdminTopicsList'))
 const EditTopicForm = lazy(() => import('./pages/AdminDashbaord/EditTopicForm'))
 const McqUpload = lazy(() => import('./pages/AdminDashbaord/McqUpload'))
@@ -195,6 +200,7 @@ function LayoutWrapper() {
 
   const isStudentSidebarRoute =
     ['/projects', '/leaderboard'].includes(location.pathname) ||
+    location.pathname.startsWith('/demo') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/interview/') ||
     location.pathname.startsWith('/learn/interview-questions') ||
@@ -229,6 +235,10 @@ function LayoutWrapper() {
           
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/demo" element={<DemoDashboard />} />
+            <Route path="/demo/project/day-notes" element={<ProjectDayNotes />} />
+            <Route path="/dashboard/project/day-notes" element={<ProjectDayNotes />} />
+            <Route path="/dashboard/project-overview" element={<ProjectOverview />} />
             <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
             <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
             <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
@@ -318,6 +328,8 @@ function LayoutWrapper() {
           <Route element={<AdminPrivateRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/courses" element={<Courses_Admin />} />
+            <Route path="/admin/projects" element={<ProjectsList />} />
+            <Route path="/admin/projects/edit/:projectId" element={<EditProject />} />
             <Route path="/admin/topics/:courseId" element={<AdminTopicsList />} />
             <Route path="/admin/topics/:courseId/edit/:topicId" element={<EditTopicForm />} />
             <Route path="/admin/codingroundupload" element={<CodingRoundUpload />} />

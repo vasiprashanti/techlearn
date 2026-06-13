@@ -8,8 +8,24 @@ import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
 import Track from "../../models/Track.js";
 import User from "../../models/User.js";
+import StudentProject from "../../models/StudentProject.js";
+import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
+
+const deleteStudentProjectProgress = async (studentIds) => {
+  if (!studentIds || studentIds.length === 0) return;
+  try {
+    const studentProjects = await StudentProject.find({ student_id: { $in: studentIds } }).select("_id").lean();
+    const spIds = studentProjects.map(sp => sp._id);
+    await Promise.all([
+      StudentTaskProgress.deleteMany({ student_project_id: { $in: spIds } }),
+      StudentProject.deleteMany({ student_id: { $in: studentIds } })
+    ]);
+  } catch (err) {
+    console.error("deleteStudentProjectProgress error:", err);
+  }
+};
 
 const DEFAULT_BATCH_TRACK_TYPES = ["Core", "DSA", "SQL"];
 
@@ -310,6 +326,7 @@ export const deleteCollege = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
       Batch.deleteMany({ collegeId }),
     ]);
 
@@ -659,6 +676,7 @@ export const deleteBatchAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 
     await writeAuditLog({
@@ -969,6 +987,7 @@ export const deleteStudentAdmin = async (req, res) => {
       Submission.deleteMany({ studentId }),
       studentEmail ? StudentCodingSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
       studentEmail ? StudentMcqSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+      deleteStudentProjectProgress([studentId]),
     ]);
 
     await Student.findByIdAndDelete(studentId);
@@ -1029,6 +1048,7 @@ export const bulkDeleteBatchesAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 
     for (const batch of batches) {
