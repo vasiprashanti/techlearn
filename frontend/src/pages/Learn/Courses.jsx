@@ -386,24 +386,26 @@ export default function Courses() {
                             </span>
                           </div>
 
-                          <div className={`mb-5 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 bg-gradient-to-r ${bannerStyles[index % bannerStyles.length]} flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]`}>
-                            <span className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[#08295e]/85">
-                              Banner Space
-                            </span>
+                          <div className="mb-5 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
+                            <img
+                              src="/expert-led-banner.jpg"
+                              alt="Expert-Led Course"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
                           </div>
 
                           <h3 className="text-xl font-medium text-center text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#9adfff] transition-colors mb-6">
                             {batch.title}
                           </h3>
 
-                          <div className="grid grid-cols-2 gap-y-5 gap-x-8 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
+                          <div className="grid grid-cols-2 gap-y-5 gap-x-4 px-3 mb-8 border-t border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pt-5">
                             <div className="flex items-center gap-2.5">
                               <Clock className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
                                 <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center justify-end gap-2.5">
                               <Calendar className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
                                 <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>

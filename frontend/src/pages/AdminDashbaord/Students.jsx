@@ -662,12 +662,17 @@ const Students = () => {
               <table className="w-full min-w-[1180px] table-fixed">
                 <thead className="border-b-2 border-black/12 dark:border-white/12">
                   <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-                    {['Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => <th key={col} className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">{col}</th>)}
+                    {['#', 'Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => (
+                      <th key={col} className={`px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 ${col === '#' ? 'w-14' : ''}`}>
+                        {col}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
-                  {filteredStudents.map((student) => (
+                  {filteredStudents.map((student, index) => (
                     <tr key={student.id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
+                      <td className="px-4 py-3 text-sm font-semibold text-black/55 dark:text-white/60">{index + 1}</td>
                       <td className="px-4 py-3 text-sm font-semibold truncate">{student.name}</td>
                       <td className="px-4 py-3 text-[13px] truncate">{student.email}</td>
                       <td className="px-4 py-3 text-sm truncate">{student.college || 'Not available'}</td>
@@ -685,7 +690,7 @@ const Students = () => {
                       </td>
                     </tr>
                   ))}
-                  {filteredStudents.length === 0 && <tr><td colSpan={9} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
+                  {filteredStudents.length === 0 && <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
                 </tbody>
               </table>
             </div>
