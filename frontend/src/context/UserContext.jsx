@@ -77,13 +77,16 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Calculate total XP from courseXP object
-  const calculateTotalXP = (courseXP) => {
-    if (!courseXP || typeof courseXP !== 'object') return 0;
-    
-    return Object.values(courseXP).reduce((total, xpValue) => {
-      return total + (typeof xpValue === 'number' ? xpValue : 0);
-    }, 0);
+  // Calculate total XP from courseXP and exerciseXP objects
+  const calculateTotalXP = (courseXP, exerciseXP) => {
+    let total = 0;
+    if (courseXP && typeof courseXP === 'object') {
+      total += Object.values(courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    }
+    if (exerciseXP && typeof exerciseXP === 'object') {
+      total += Object.values(exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    }
+    return total;
   };
 
   const applyDashboardData = (data) => {
@@ -110,7 +113,7 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(updatedUser));
     }
 
-    const totalXP = calculateTotalXP(data.courseXP);
+    const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP);
     setXp(totalXP);
 
     const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];
@@ -181,6 +184,16 @@ export const UserProvider = ({ children }) => {
     };
 
     initializeUser();
+  }, []);
+
+  // Listen for XP updates to sync dashboard context data
+  useEffect(() => {
+    const handleXPUpdate = () => {
+      fetchUserData();
+    };
+
+    window.addEventListener('xpUpdated', handleXPUpdate);
+    return () => window.removeEventListener('xpUpdated', handleXPUpdate);
   }, []);
 
   return (

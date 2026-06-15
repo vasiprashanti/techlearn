@@ -157,6 +157,7 @@ export default function InterviewSqlQuestionDetail() {
       await practiceAPI.recordSubmission({ questionId: question.id, track: 'SQL', isCorrect: true });
       setSubmissionMessage('Practice progress saved.');
       setIsSubmitted(true);
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }

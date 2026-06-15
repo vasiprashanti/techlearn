@@ -169,6 +169,18 @@ export const getDashboardData = async (req, res) => {
     const totalMcqs = notesMcqCounts[0]?.totalMcqs || 0;
     const completedExercisesCount = progress.completedExercises?.length || 0;
 
+    // Count completed and total daily tasks to include in stats
+    const dailyTaskAttempts = await mongoose.model("DailyTaskAttempt").find({ userId });
+    let completedDailyTasksCount = 0;
+    let totalDailyTasksCount = 0;
+    for (const attempt of dailyTaskAttempts) {
+      completedDailyTasksCount += (attempt.tasksProgress || []).filter((t) => t.status === "Completed").length;
+      totalDailyTasksCount += (attempt.tasksProgress || []).length;
+    }
+
+    const finalCompletedCount = completedExercisesCount + completedDailyTasksCount;
+    const finalTotalExercises = totalExercises + totalDailyTasksCount;
+
     let answeredMcqs = 0;
     const answeredCheckpointMcqs = progress.answeredCheckpointMcqs || {};
     const answeredEntries =
@@ -180,8 +192,8 @@ export const getDashboardData = async (req, res) => {
     }
 
     const exercisePercent =
-      totalExercises > 0
-        ? Math.round((completedExercisesCount / totalExercises) * 1000) / 10
+      finalTotalExercises > 0
+        ? Math.round((finalCompletedCount / finalTotalExercises) * 1000) / 10
         : 0;
     const mcqPercent =
       totalMcqs > 0 ? Math.round((answeredMcqs / totalMcqs) * 1000) / 10 : 0;
@@ -263,8 +275,8 @@ export const getDashboardData = async (req, res) => {
         progressPercent: mcqPercent,
       },
       exerciseProgress: {
-        totalExercises,
-        completedExercises: completedExercisesCount,
+        totalExercises: finalTotalExercises,
+        completedExercises: finalCompletedCount,
         progressPercent: exercisePercent,
       },
       avatar: user?.avatar || "",

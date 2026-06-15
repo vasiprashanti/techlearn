@@ -209,6 +209,7 @@ export default function InterviewDsaQuestionDetail() {
       });
       setSubmissionMessage('Practice progress saved.');
       setIsSubmitted(true);
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
