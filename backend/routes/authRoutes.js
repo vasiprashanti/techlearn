@@ -10,6 +10,7 @@ import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { isAdminIdentity } from "../utils/adminAccess.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -239,8 +240,7 @@ router.post("/firebase", async (req, res) => {
     const [firstName, ...rest] = name?.split(" ") || ["", ""];
     const lastName = rest.join(" ");
 
-    const ADMIN_UIDS = ["AQX8cieAI6NNMtVvNRlT47WxdLu1"];
-    const isAdmin = ADMIN_UIDS.includes(decodedToken.uid);
+    const isAdmin = isAdminIdentity({ email, uid: decodedToken.uid });
     const assignedRole = isAdmin ? "admin" : "user";
 
     if (!email) {
