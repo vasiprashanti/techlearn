@@ -17,6 +17,20 @@ export const compileCode = async (req, res) => {
   if (!language_id)
     return res.status(400).json({ error: "Invalid language selected" });
 
+  if (!process.env.RAPIDAPI_KEY) {
+    console.warn("WARNING: RAPIDAPI_KEY is not defined in .env. Falling back to mock compiler output for testing.");
+    // Simulate successful output execution
+    return res.json({
+      stdout: `[Mock Execution Result]\nCompiled and executed successfully.\nLanguage: ${language}\nInput: ${stdin || "None"}\nSource length: ${source_code ? source_code.length : 0} characters.`,
+      stderr: null,
+      compile_output: null,
+      status: {
+        id: 3,
+        description: "Accepted"
+      }
+    });
+  }
+
   try {
     const response = await axios.post(
       JUDGE0_API,

@@ -99,6 +99,19 @@ export default function Dashboard() {
   const [projectData, setProjectData] = useState(null);
   const [projectLoading, setProjectLoading] = useState(true);
   const [advancementModal, setAdvancementModal] = useState({ isOpen: false, completedDay: 1, nextDay: 2 });
+  
+  // Optimistic UI updates states
+  const [pendingToggles, setPendingToggles] = useState(new Set());
+  const [toast, setToast] = useState({ show: false, message: "", type: "error" });
+
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast((prev) => ({ ...prev, show: false }));
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.show]);
 
   const loadProjectData = async () => {
     try {
@@ -118,6 +131,59 @@ export default function Dashboard() {
   };
 
   const handleProjectTaskToggle = async (taskId) => {
+    if (pendingToggles.has(taskId)) return;
+
+    const task = projectData?.todayTasks?.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Capture previous state for rollback
+    const previousProjectData = { ...projectData };
+    const previousStreak = streak;
+
+    // Invert the task completion state optimistically
+    const nextCompletedState = !task.completed;
+
+    const updatedTasks = projectData.todayTasks.map((t) =>
+      t.id === taskId ? { ...t, completed: nextCompletedState } : t
+    );
+
+    const newCompletedToday = nextCompletedState
+      ? projectData.projectCompletedToday + 1
+      : Math.max(0, projectData.projectCompletedToday - 1);
+
+    const newProgressPercent = projectData.projectTotalToday > 0
+      ? Math.round((newCompletedToday / projectData.projectTotalToday) * 100)
+      : 0;
+
+    const newXpEarned = nextCompletedState
+      ? projectData.projectXpEarned + (task.xp || 0)
+      : Math.max(0, projectData.projectXpEarned - (task.xp || 0));
+
+    // Optimistically update projectData
+    setProjectData((prev) => ({
+      ...prev,
+      todayTasks: updatedTasks,
+      projectCompletedToday: newCompletedToday,
+      projectDayProgress: newProgressPercent,
+      projectXpEarned: newXpEarned,
+    }));
+
+    // Optimistically update streak if this completes the last task of the day
+    const isDayFullyCompletedBefore = projectData.projectCompletedToday === projectData.projectTotalToday;
+    const isDayFullyCompletedAfter = newCompletedToday === projectData.projectTotalToday;
+    if (!isDayFullyCompletedBefore && isDayFullyCompletedAfter) {
+      setStreak((prev) => prev + 1);
+    } else if (isDayFullyCompletedBefore && !isDayFullyCompletedAfter) {
+      setStreak((prev) => Math.max(0, prev - 1));
+    }
+
+    // Set pending state
+    setPendingToggles((prev) => {
+      const next = new Set(prev);
+      next.add(taskId);
+      return next;
+    });
+
     try {
       const currentDayBefore = projectData?.assignment?.current_day || 1;
       const res = await toggleStudentProjectTask(taskId);
@@ -126,9 +192,26 @@ export default function Dashboard() {
           setAdvancementModal({ isOpen: true, completedDay: currentDayBefore, nextDay: res.currentDay });
         }
         await loadProjectData();
+      } else {
+        throw new Error(res?.message || "Failed to update task.");
       }
     } catch (err) {
       console.error("Failed to toggle project task:", err);
+      // Rollback to previous state on error
+      setProjectData(previousProjectData);
+      setStreak(previousStreak);
+      setToast({
+        show: true,
+        message: err.message || "Could not save progress. Please check your connection.",
+        type: "error",
+      });
+    } finally {
+      // Clear pending state
+      setPendingToggles((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
     }
   };
 
@@ -152,6 +235,20 @@ export default function Dashboard() {
           setDailyTasks(list);
           setIsFullyCompleted(payload.data.isFullyCompleted);
           setTaskProgress(payload.data.progressPercent);
+
+          if (payload.data.isFullyCompleted && payload.data.dayNumber) {
+            const seenKey = `daily-task-completed-seen-day-${payload.data.dayNumber}`;
+            const alreadySeen = localStorage.getItem(seenKey);
+            if (!alreadySeen) {
+              setAdvancementModal({
+                isOpen: true,
+                completedDay: payload.data.dayNumber,
+                nextDay: payload.data.dayNumber + 1,
+                isDailyTaskMode: true
+              });
+              localStorage.setItem(seenKey, "true");
+            }
+          }
         }
       }
       setTasksLoaded(true);
@@ -995,7 +1092,7 @@ export default function Dashboard() {
                 DAY COMPLETE!
               </h3>
               <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
-                Awesome effort! You have successfully completed all the tasks for <span className="font-semibold text-slate-800 dark:text-white font-sans">Day {advancementModal.completedDay}</span> of the project.
+                Awesome effort! You have successfully completed all your {advancementModal.isDailyTaskMode ? "Daily Tasks" : "tasks"} for <span className="font-semibold text-slate-800 dark:text-white font-sans">Day {advancementModal.completedDay}</span>{advancementModal.isDailyTaskMode ? "." : " of the project."}
               </p>
               
               <div className="bg-[#3C83F6]/10 dark:bg-white/5 py-4 px-6 rounded-xl border border-[#3C83F6]/20 dark:border-white/10 flex items-center justify-center gap-3">
@@ -1005,27 +1102,45 @@ export default function Dashboard() {
                 </div>
                 <div className="font-bold text-slate-400">→</div>
                 <div className="text-left">
-                  <span className="block text-[8px] font-press-start uppercase text-[#3C83F6] dark:text-[#8fd9ff]">UNLOCKED</span>
+                  <span className="block text-[8px] font-press-start uppercase text-[#3C83F6] dark:text-[#8fd9ff]">{advancementModal.isDailyTaskMode ? "NEXT DAY" : "UNLOCKED"}</span>
                   <span className="font-pixel-header text-[9px] text-[#3C83F6] dark:text-white">DAY {advancementModal.nextDay}</span>
                 </div>
               </div>
               
               <p className="text-xs text-slate-500 dark:text-slate-400 italic font-sans">
-                New lesson notes and tasks have been unlocked for you.
+                {advancementModal.isDailyTaskMode ? "Come back tomorrow for your next daily tasks and keep your streak alive!" : "New lesson notes and tasks have been unlocked for you."}
               </p>
             </div>
 
             <div className="mt-6 flex justify-center">
               <button
                 onClick={() => {
+                  const isDaily = advancementModal.isDailyTaskMode;
                   setAdvancementModal({ isOpen: false, completedDay: 1, nextDay: 2 });
-                  navigate(`/dashboard/project/day-notes?day=${advancementModal.nextDay}`);
+                  if (!isDaily) {
+                    navigate(`/dashboard/project/day-notes?day=${advancementModal.nextDay}`);
+                  }
                 }}
                 className="px-6 py-2.5 bg-[#3C83F6] text-white hover:bg-blue-600 font-press-start text-[9px] rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
               >
-                UNLEASH DAY {advancementModal.nextDay}
+                {advancementModal.isDailyTaskMode ? "AWESOME" : `UNLEASH DAY ${advancementModal.nextDay}`}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Optimistic Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-5 right-5 z-50 transform transition-all duration-300 ease-out translate-y-0 opacity-100">
+          <div className="flex items-center gap-3 bg-red-600 text-white font-press-start text-[10px] sm:text-xs py-3 px-5 rounded-lg shadow-lg border border-red-500 max-w-sm">
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(prev => ({ ...prev, show: false }))} className="ml-auto hover:text-red-200">
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
