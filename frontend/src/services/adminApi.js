@@ -1,3 +1,5 @@
+import { auth } from '../config/firebase';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 const GET_RETRY_ATTEMPTS = 2;
 const GET_RETRY_DELAY_MS = 250;
@@ -5,6 +7,70 @@ const requestCache = new Map();
 const SESSION_CACHE_PREFIX = 'techlearn-admin-cache:';
 
 const getToken = () => localStorage.getItem('token') || localStorage.getItem('authToken');
+
+let sessionRenewalPromise = null;
+
+const renewFirebaseSession = async () => {
+  if (!auth) return false;
+
+  if (!sessionRenewalPromise) {
+    sessionRenewalPromise = (async () => {
+      try {
+        if (typeof auth.authStateReady === 'function') {
+          await auth.authStateReady();
+        }
+
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) return false;
+
+        const idToken = await firebaseUser.getIdToken(true);
+        const response = await fetch(`${API_BASE}/auth/firebase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const payload = await response.json().catch(() => ({}));
+
+        if (!response.ok || !payload.token || !payload.user) return false;
+
+        localStorage.setItem('token', payload.token);
+        localStorage.setItem('userData', JSON.stringify(payload.user));
+        localStorage.setItem('isAdmin', payload.user.role === 'admin' ? 'true' : 'false');
+        return true;
+      } catch (error) {
+        console.warn('Unable to renew the admin session silently:', error.message);
+        return false;
+      } finally {
+        sessionRenewalPromise = null;
+      }
+    })();
+  }
+
+  return sessionRenewalPromise;
+};
+
+const withCurrentAuth = (options = {}) => {
+  const headers = { ...(options.headers || {}) };
+  const token = getToken();
+
+  if (token) headers.Authorization = `Bearer ${token}`;
+  else delete headers.Authorization;
+
+  return { ...options, headers };
+};
+
+const adminFetch = async (url, options = {}) => {
+  let response = await fetch(url, withCurrentAuth(options));
+
+  if (response.status === 401 && await renewFirebaseSession()) {
+    response = await fetch(url, withCurrentAuth(options));
+  }
+
+  return response;
+};
+
+const getErrorMessage = (payload, fallback) =>
+  payload?.error || payload?.message || fallback;
 
 const buildHeaders = (extraHeaders = {}) => ({
   'Content-Type': 'application/json',
@@ -147,14 +213,14 @@ async function request(path, options = {}) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await fetch(`${API_BASE}${path}`, {
+      const response = await adminFetch(`${API_BASE}${path}`, {
         headers: buildHeaders(options.headers),
         ...options,
       });
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => ({}));
-        const errorMessage = errorPayload.message || `Request failed with status ${response.status}`;
+        const errorMessage = getErrorMessage(errorPayload, `Request failed with status ${response.status}`);
         const error = new Error(errorMessage);
 
         if (isGet && isRetriableStatus(response.status) && attempt < maxAttempts) {
@@ -238,7 +304,7 @@ export const adminAPI = {
     formData.append('primaryTrack', primaryTrack || 'General Track');
     formData.append('status', status);
 
-    const response = await fetch(`${API_BASE}/admin/students/bulk-upload`, {
+    const response = await adminFetch(`${API_BASE}/admin/students/bulk-upload`, {
       method: 'POST',
       headers: buildAuthHeaders(),
       body: formData,
@@ -246,7 +312,7 @@ export const adminAPI = {
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(payload.message || 'Bulk student import failed.');
+      throw new Error(getErrorMessage(payload, 'Bulk student import failed.'));
     }
 
     invalidateCacheForPath('/admin/students');
@@ -284,13 +350,13 @@ export const adminAPI = {
   getResources: () => request('/admin/resources'),
   createResource: async (body) => {
     if (body instanceof FormData) {
-      const response = await fetch(`${API_BASE}/admin/resources`, {
+      const response = await adminFetch(`${API_BASE}/admin/resources`, {
         method: 'POST',
         headers: buildAuthHeaders(),
         body,
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || 'Failed to create resource.');
+      if (!response.ok) throw new Error(getErrorMessage(payload, 'Failed to create resource.'));
       invalidateCacheForPath('/admin/resources');
       return unwrapData(payload);
     }
@@ -298,13 +364,13 @@ export const adminAPI = {
   },
   updateResource: async (resourceId, body) => {
     if (body instanceof FormData) {
-      const response = await fetch(`${API_BASE}/admin/resources/${resourceId}`, {
+      const response = await adminFetch(`${API_BASE}/admin/resources/${resourceId}`, {
         method: 'PUT',
         headers: buildAuthHeaders(),
         body,
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || 'Failed to update resource.');
+      if (!response.ok) throw new Error(getErrorMessage(payload, 'Failed to update resource.'));
       invalidateCacheForPath('/admin/resources');
       return unwrapData(payload);
     }
@@ -362,13 +428,13 @@ export const adminAPI = {
   getProjectMetrics: () => request('/admin/projects/summary'),
   createProject: async (body) => {
     if (body instanceof FormData) {
-      const response = await fetch(`${API_BASE}/admin/projects`, {
+      const response = await adminFetch(`${API_BASE}/admin/projects`, {
         method: 'POST',
         headers: buildAuthHeaders(),
         body,
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || 'Failed to create project.');
+      if (!response.ok) throw new Error(getErrorMessage(payload, 'Failed to create project.'));
       invalidateCacheForPath('/admin/projects');
       return unwrapData(payload);
     }
@@ -376,13 +442,13 @@ export const adminAPI = {
   },
   updateProject: async (id, body) => {
     if (body instanceof FormData) {
-      const response = await fetch(`${API_BASE}/admin/projects/${id}`, {
+      const response = await adminFetch(`${API_BASE}/admin/projects/${id}`, {
         method: 'PUT',
         headers: buildAuthHeaders(),
         body,
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || 'Failed to update project.');
+      if (!response.ok) throw new Error(getErrorMessage(payload, 'Failed to update project.'));
       invalidateCacheForPath('/admin/projects');
       return unwrapData(payload);
     }

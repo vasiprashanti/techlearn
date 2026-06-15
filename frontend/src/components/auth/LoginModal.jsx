@@ -68,7 +68,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       const data = await response.json();
 
       if (response.ok && data.token) {
-        localStorage.setItem("isAdmin", data.user?.isAdmin ? "true" : "false");
+        localStorage.setItem("isAdmin", data.user?.role === "admin" ? "true" : "false");
         setSession(data.user, data.token);
         await refetchUserData();
 
@@ -114,7 +114,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
       const result = await login(formData);
       if (result.success) {
         // Set admin status based on user data
-        const isAdmin = result.data?.user?.isAdmin || false;
+        const isAdmin = result.data?.user?.role === "admin";
         localStorage.setItem("isAdmin", isAdmin ? "true" : "false");
 
         // Navigate based on user role
