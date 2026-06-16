@@ -228,21 +228,16 @@ export default function DailyChallengeTest() {
       });
 
       const data = response?.data || {};
+      const finalAttempt = data.attempt || attempt;
       if (data?.attempt) {
         setAttempt(data.attempt);
         setDailyChallengeSession(linkId, { attempt: data.attempt });
       }
-      const summary = [
-        data.evaluationStatus ? `Evaluation Status: ${data.evaluationStatus}` : "",
-        data.feedback || "Submission completed.",
-        typeof data.accuracy === "number" ? `Accuracy: ${data.accuracy}%` : "",
-        typeof data.problemScore === "number" ? `Score: ${data.problemScore}` : "",
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      setOutput(summary);
       setHasSubmitted(true);
+
+      // Automatically end challenge and redirect to results
+      const endResponse = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: finalAttempt?.id });
+      moveToResult(endResponse?.data || {});
     } catch (error) {
       setOutput(error.message || "Submission failed.");
     } finally {

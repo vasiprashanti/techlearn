@@ -680,7 +680,11 @@ export default function Dashboard() {
                           {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
                           <div className="flex w-full justify-end pt-1">
                             <button
-                              onClick={() => navigate('/dashboard/daily-challenge')}
+                              onClick={() => {
+                                if (activeChallenge?.linkId) {
+                                  navigate(`/daily-challenge/${activeChallenge.linkId}`);
+                                }
+                              }}
                               className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                             >
                               Go to Daily challenge <ChevronRight className="w-3 h-3" />
