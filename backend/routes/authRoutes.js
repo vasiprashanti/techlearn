@@ -69,14 +69,24 @@ const formatAuthUser = (user, student = null, batch = null) => ({
   isClub: user.isClub,
   batchId: user.batchId || student?.batchId || null,
   startDate: user.startDate || batch?.startDate || null,
+  programSelection: user.programSelection,
 });
 
 /* ========== REGISTER ========== */
 router.post("/register", async function register(req, res) {
   try {
-    const { firstName, lastName, email, password, confirmPassword } = req.body;
+    const { firstName, lastName, fullName, email, password, confirmPassword } = req.body;
 
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+    let finalFirstName = firstName;
+    let finalLastName = lastName;
+
+    if (fullName) {
+      const parts = fullName.trim().split(" ");
+      finalFirstName = parts[0];
+      finalLastName = parts.slice(1).join(" ") || ".";
+    }
+
+    if (!finalFirstName || !finalLastName || !email || !password || !confirmPassword) {
       return res.status(400).json({ message: "Please fill all fields" });
     }
 
@@ -98,8 +108,8 @@ router.post("/register", async function register(req, res) {
     }
 
     const newUser = await User.create({
-      firstName,
-      lastName,
+      firstName: finalFirstName,
+      lastName: finalLastName,
       email: formattedEmail,
       password,
     });
@@ -110,7 +120,10 @@ router.post("/register", async function register(req, res) {
       user: {
         id: newUser._id,
         firstName: newUser.firstName,
+        lastName: newUser.lastName,
         email: newUser.email,
+        role: newUser.role,
+        programSelection: newUser.programSelection,
       },
       token,
     });

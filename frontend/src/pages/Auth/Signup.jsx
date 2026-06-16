@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { register, googleLogin } from '../../api/authService';
 import { useAuthModalContext } from '../../context/AuthModalContext';
+import { navigateUserByProgram } from '../../utils/navigation';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -78,7 +79,7 @@ export default function Signup() {
       });
 
       localStorage.setItem("token", data.token);
-      navigate("/dashboard");
+      navigateUserByProgram(data.user, navigate);
     } catch (err) {
       setError(err.response?.data?.message || "Signup failed");
     }
@@ -88,7 +89,7 @@ export default function Signup() {
     try {
       const { data } = await googleLogin(response.credential);
       localStorage.setItem("token", data.token);
-      navigate("/dashboard");
+      navigateUserByProgram(data.user, navigate);
     } catch (err) {
       setError(err.response?.data?.message || "Google sign-up failed");
     }

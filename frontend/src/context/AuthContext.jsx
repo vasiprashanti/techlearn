@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { navigateUserByProgram } from '../utils/navigation';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -177,12 +178,8 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      // Redirect based on role
-      if (response.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Redirect based on role and program selection
+      navigateUserByProgram(response.user, navigate);
 
       return { success: true, data: response };
     } catch (error) {
@@ -228,12 +225,8 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      // Redirect based on role
-      if (response.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Redirect based on role and program selection
+      navigateUserByProgram(response.user, navigate);
 
       return { success: true, data: response };
     } catch (error) {
