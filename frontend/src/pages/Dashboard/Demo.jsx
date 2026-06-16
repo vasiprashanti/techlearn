@@ -163,7 +163,7 @@ export default function DemoDashboard() {
       if (!groups[categoryGroup]) {
         groups[categoryGroup] = {
           type: categoryGroup,
-          text: `${categoryGroup} Task`,
+          text: categoryGroup === "MCQ" ? "Technical MCQ" : `${categoryGroup} Task`,
           questions: [],
         };
       }
