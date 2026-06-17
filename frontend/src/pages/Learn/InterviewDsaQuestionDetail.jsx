@@ -347,8 +347,8 @@ export default function InterviewDsaQuestionDetail() {
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden">
-            {/* Card 1: Coding Space (flex-[2], outer rounded-2xl, inner editor sharp) */}
-            <section className="flex-[2] min-h-[350px] lg:min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            {/* Card 1: Coding Space (outer rounded-2xl, inner editor sharp) */}
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
@@ -386,7 +386,7 @@ export default function InterviewDsaQuestionDetail() {
                       type="button"
                       onClick={markSolved}
                       disabled={isSubmitted}
-                      className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
+                      className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
                     >
                       <CheckCircle className="h-3 w-3" />
                       Submit Code
@@ -395,7 +395,7 @@ export default function InterviewDsaQuestionDetail() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden rounded-none border border-white/20 dark:border-gray-700/30">
+              <div className="flex-1 flex flex-col overflow-hidden rounded-none border border-white/20 dark:border-gray-700/30">
                 <Editor
                   height="100%"
                   language={LANGUAGES[selectedLanguage].monacoLanguage}

@@ -313,8 +313,8 @@ export default function InterviewSqlQuestionDetail() {
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden">
-            {/* Card 1: SQL Editor space (flex-[2], outer rounded-2xl, inner editor sharp) */}
-            <section className="flex-[2] min-h-[350px] lg:min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            {/* Card 1: SQL Editor space (outer rounded-2xl, inner editor sharp) */}
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
@@ -353,7 +353,7 @@ export default function InterviewSqlQuestionDetail() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-hidden rounded-none border border-white/20 dark:border-gray-700/30">
+              <div className="flex-1 flex flex-col overflow-hidden rounded-none border border-white/20 dark:border-gray-700/30">
                 <Editor
                   height="100%"
                   defaultLanguage="sql"
