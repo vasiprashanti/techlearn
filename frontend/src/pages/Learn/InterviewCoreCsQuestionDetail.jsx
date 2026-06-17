@@ -236,19 +236,16 @@ export default function InterviewCoreCsQuestionDetail() {
       <div className="max-w-2xl mx-auto">
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
         <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
-          
-          {/* Top Header Row with Difficulty Pill in the top-right corner */}
-          <div className="flex items-center justify-end w-full mb-6 pb-4 border-b border-black/5 dark:border-white/5">
-            <span className={`rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
+          {/* Header row with heading centered and difficulty pill absolute on the right */}
+          <div className="relative flex items-center justify-center w-full mb-6 select-none">
+            <h1 className="text-[10px] md:text-xs font-press-start text-[#3C83F6] dark:text-[#8fd9ff] uppercase">
+              TECHNICAL MCQ
+            </h1>
+            <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
               {question.difficulty}
             </span>
           </div>
-          
-          <h1 className="text-[10px] md:text-xs font-press-start text-[#3C83F6] dark:text-[#8fd9ff] uppercase select-none mb-6">
-            TECHNICAL MCQ
-          </h1>
 
-          {/* Centered Question Box with Question Number Pill */}
           <div className="relative w-full border border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-800/80 rounded-xl p-6 shadow-sm text-center mb-6 mt-3">
             {isDailyMode && (
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#3C83F6] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
