@@ -42,7 +42,7 @@ const getAuthHeaders = () => {
 export const authAPI = {
   // Register new user
   register: async (userData) => {
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const response = await fetch(`${API_BASE}/users/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
