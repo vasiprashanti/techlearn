@@ -94,8 +94,21 @@ export default function InterviewSqlQuestionDetail() {
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('sql');
+  const [isLastSubmissionCorrect, setIsLastSubmissionCorrect] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+
+  const isQueryEmpty = (q) => {
+    if (!q) return true;
+    let cleaned = q.replace(/--.*$/gm, "");
+    cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, "");
+    return cleaned.trim().length === 0;
+  };
 
   const runQuery = async () => {
+    if (isQueryEmpty(code)) {
+      setOutput('Error: Query cannot be empty.');
+      return;
+    }
     setIsRunning(true);
     setOutput('Executing SQL query...');
     setTimeout(() => {
@@ -154,13 +167,28 @@ export default function InterviewSqlQuestionDetail() {
   const [submissionMessage, setSubmissionMessage] = useState('');
 
   const markSolved = async () => {
+    if (isQueryEmpty(code)) {
+      setOutput('Error: Query cannot be empty.');
+      return;
+    }
     try {
-      await practiceAPI.recordSubmission({ questionId: question.id, track: 'SQL', isCorrect: true });
-      setSubmissionMessage('Practice progress saved.');
-      setIsSubmitted(true);
-      window.dispatchEvent(new CustomEvent('xpUpdated'));
+      setOutput('Submitting query for evaluation...');
+      const res = await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'SQL',
+        isCorrect: false,
+        code,
+        finalize: false,
+      });
+      if (res && res.isCorrect) {
+        setOutput('Submission successful! Query is correct.');
+        setIsLastSubmissionCorrect(true);
+      } else {
+        setOutput('Error: Incorrect query. Please check your SQL and try again.');
+        setIsLastSubmissionCorrect(false);
+      }
     } catch (error) {
-      setSubmissionMessage(error?.message || 'Could not save practice progress.');
+      setOutput(`Submission failed: ${error?.message || 'Unknown error occurred'}`);
     }
   };
 
@@ -192,6 +220,43 @@ export default function InterviewSqlQuestionDetail() {
     );
   }
 
+  const handleNext = async () => {
+    if (isLastSubmissionCorrect) {
+      try {
+        await practiceAPI.recordSubmission({
+          questionId: question.id,
+          track: 'SQL',
+          isCorrect: true,
+          code,
+          finalize: true,
+        });
+      } catch (err) {
+        console.error("Failed to finalize task:", err);
+      }
+    }
+    const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : 'dsa';
+    navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
+  };
+
+  const handleFinish = async () => {
+    if (isLastSubmissionCorrect) {
+      try {
+        await practiceAPI.recordSubmission({
+          questionId: question.id,
+          track: 'SQL',
+          isCorrect: true,
+          code,
+          finalize: true,
+        });
+      } catch (err) {
+        console.error("Failed to finalize task:", err);
+      }
+      navigate('/dashboard');
+    } else {
+      setShowFinishModal(true);
+    }
+  };
+
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="h-[calc(100vh-10rem)] flex flex-col overflow-hidden w-full">
@@ -201,14 +266,16 @@ export default function InterviewSqlQuestionDetail() {
           <aside className="w-[35%] md:w-[40%] flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
             {/* Header inside the Left Card */}
             <div className="p-5 border-b border-black/5 dark:border-white/5 shrink-0">
-              <button
-                type="button"
-                onClick={() => navigate(backPath)}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </button>
+              {!isDailyMode && (
+                <button
+                  type="button"
+                  onClick={() => navigate(backPath)}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back
+                </button>
+              )}
               
               <h1 className="text-xl font-bold tracking-tight text-[#0d2a57] dark:text-white mb-2">
                 {question.title}
@@ -280,7 +347,10 @@ export default function InterviewSqlQuestionDetail() {
                   defaultLanguage="sql"
                   value={code}
                   theme={theme === 'dark' ? 'vs-dark' : 'light'}
-                  onChange={(value) => setCode(value ?? '')}
+                  onChange={(value) => {
+                    setCode(value ?? '');
+                    setIsLastSubmissionCorrect(false);
+                  }}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 14,
@@ -309,47 +379,76 @@ export default function InterviewSqlQuestionDetail() {
           </div>
           
           {/* Back & Next Navigation buttons at the bottom right */}
-          {isDailyMode && dailySequence.length > 1 && (
+          {isDailyMode && (
             <div className="flex items-center gap-3">
-              {currentTaskIndex > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
+              <button
+                type="button"
+                onClick={() => {
+                  if (currentTaskIndex === 0) {
+                    navigate('/dashboard');
+                  } else {
                     const prevType = dailySequence[currentTaskIndex - 1].taskType === 'SQL' ? 'sql' : 'dsa';
                     navigate(`/dashboard/practice/${prevType}/${dailySequence[currentTaskIndex - 1].questionId}?mode=daily`);
-                  }}
-                  className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-white/40 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"
-                >
-                  Back
-                </button>
-              )}
+                  }
+                }}
+                className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-white/40 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"
+              >
+                Back
+              </button>
 
-              {isCurrentQuestionCompleted && (
-                currentTaskIndex < dailySequence.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : 'dsa';
-                      navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
-                    }}
-                    className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => navigate('/dashboard')}
-                    className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
-                  >
-                    Finish
-                  </button>
-                )
+              {currentTaskIndex < dailySequence.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFinish}
+                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                >
+                  Finish
+                </button>
               )}
             </div>
           )}
         </footer>
       </div>
+
+      {showFinishModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[#86c4ff]/30 bg-white p-6 shadow-2xl dark:bg-gray-900 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-bold text-[#0d2a57] dark:text-[#8fd9ff] mb-2">
+              Finish without completing the task?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 font-medium">
+              You have not successfully completed this task. If you finish now, your progress will not be saved. Do you want to finish anyway?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFinishModal(false);
+                  navigate('/dashboard');
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition"
+              >
+                Yes, Finish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </UserSidebarLayout>
   );
 }
