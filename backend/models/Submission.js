@@ -79,6 +79,10 @@ const submissionSchema = new mongoose.Schema(
     disciplineScore: Number,
 
     totalScore: Number,
+    xpEarned: {
+      type: Number,
+      default: 0,
+    },
 
     executionTime: Number,
 

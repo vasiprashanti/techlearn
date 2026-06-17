@@ -41,6 +41,8 @@ const formatRoadmap = (roadmap) => ({
       name: batch.name,
     })),
   status: roadmap.status || "Active",
+  attachedNoteTitle: roadmap.attachedNoteTitle || "",
+  attachedNoteDay: roadmap.attachedNoteDay || null,
   updatedAt: roadmap.updatedAt,
   createdAt: roadmap.createdAt,
 });
@@ -77,6 +79,8 @@ export const createRoadmapAdmin = async (req, res) => {
       markdownBody,
       assignedBatchIds,
       status: req.body.status || "Active",
+      attachedNoteTitle: String(req.body.attachedNoteTitle || "").trim(),
+      attachedNoteDay: req.body.attachedNoteDay ? Number(req.body.attachedNoteDay) : null,
       createdBy: req.user?._id || null,
     });
 
@@ -123,6 +127,8 @@ export const updateRoadmapAdmin = async (req, res) => {
           markdownBody,
           assignedBatchIds,
           status: req.body.status || "Active",
+          attachedNoteTitle: String(req.body.attachedNoteTitle || "").trim(),
+          attachedNoteDay: req.body.attachedNoteDay ? Number(req.body.attachedNoteDay) : null,
         },
       },
       { new: true, runValidators: true }

@@ -31,6 +31,15 @@ const resourceSchema = new mongoose.Schema(
       ref: "User",
       default: null,
     },
+    attachedNoteTitle: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    attachedNoteDay: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -5,6 +5,9 @@ import Submission from "../../models/Submission.js";
 import Question from "../../models/Questions.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import Resource from "../../models/Resource.js";
+import UserProgress from "../../models/UserProgress.js";
+import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
+import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import Log from "../../models/Log.js";
 import AuditLog from "../../models/AuditLog.js";
 import {
@@ -19,7 +22,7 @@ import {
 const buildDashboardResponse = async () => {
   const metrics = await computeAdminMetrics();
 
-  const [collegeScores, recentQuestions, activeBatchCards] = await Promise.all([
+  const [collegeScores, recentQuestions, activeBatchCards, userProgressRows, dailyTaskCompletions, projectTaskCompletions] = await Promise.all([
     Submission.aggregate([
       {
         $lookup: {
@@ -76,9 +79,34 @@ const buildDashboardResponse = async () => {
       .limit(6)
       .populate("collegeId", "name")
       .lean(),
+    UserProgress.find().select("courseXP exerciseXP projectXP").lean(),
+    DailyTaskAttempt.aggregate([
+      { $unwind: "$tasksProgress" },
+      { $match: { "tasksProgress.status": "Completed" } },
+      { $count: "count" },
+    ]),
+    StudentTaskProgress.countDocuments({ completed: true }),
   ]);
 
+  const averageXp =
+    userProgressRows.length > 0
+      ? Math.round(
+          userProgressRows.reduce((sum, progress) => {
+            const mapTotal = (value) => {
+              if (!value) return 0;
+              const entries = value instanceof Map ? Array.from(value.values()) : Object.values(value);
+              return entries.reduce((inner, amount) => inner + Number(amount || 0), 0);
+            };
+            return sum + mapTotal(progress.courseXP) + mapTotal(progress.exerciseXP) + mapTotal(progress.projectXP);
+          }, 0) / userProgressRows.length
+        )
+      : 0;
+
   const batchIds = activeBatchCards.map((batch) => batch._id);
+  const tasksCompleted = Number(dailyTaskCompletions[0]?.count || 0) + Number(projectTaskCompletions || 0);
+  const retentionRate = metrics.totalStudents > 0
+    ? Number(((metrics.activeUsers / metrics.totalStudents) * 100).toFixed(0))
+    : 0;
   const studentsByBatch = await Student.aggregate([
     { $match: { batchId: { $in: batchIds } } },
     { $group: { _id: "$batchId", total: { $sum: 1 } } },
@@ -95,6 +123,9 @@ const buildDashboardResponse = async () => {
       { title: "Courses", value: metrics.totalCourses, subtitle: `${metrics.totalQuestions} questions` },
       { title: "Certificates", value: metrics.totalCertificates, subtitle: `${metrics.paymentsApproved} approved payments` },
       { title: "Resources", value: metrics.resourcesUploaded, subtitle: `${metrics.notificationsSent} announcements` },
+      { title: "Average XP", value: averageXp, subtitle: "per learner" },
+      { title: "Tasks Completed", value: tasksCompleted, subtitle: "all task activity" },
+      { title: "Retention Rate", value: `${retentionRate}%`, subtitle: "active recently" },
     ],
     collegeRanking: collegeScores.map((college) => ({
       name: college.name || "Unknown College",
@@ -302,7 +333,7 @@ export const listSubmissionsPage = async (req, res) => {
       filter.studentId = req.query.studentId;
     }
 
-    const [total, submissions, totalToday, acceptedToday, averageExecution] = await Promise.all([
+    const [total, submissions, totalToday, acceptedToday, averageExecution, pendingStudents] = await Promise.all([
       Submission.countDocuments(filter),
       Submission.find(filter)
         .sort({ submittedAt: -1 })
@@ -318,6 +349,14 @@ export const listSubmissionsPage = async (req, res) => {
         { $match: { ...filter, submittedAt: { $gte: todayStart } } },
         { $group: { _id: null, avg: { $avg: "$executionTime" } } },
       ]),
+      Student.find({
+        status: "Active",
+        ...(filter.batchId ? { batchId: filter.batchId } : {}),
+        _id: { $nin: await Submission.distinct("studentId", filter) },
+      })
+        .populate("batchId", "name")
+        .limit(50)
+        .lean(),
     ]);
 
     return res.status(200).json({
@@ -328,6 +367,7 @@ export const listSubmissionsPage = async (req, res) => {
           accepted: acceptedToday,
           successRate: totalToday > 0 ? Number(((acceptedToday / totalToday) * 100).toFixed(0)) : 0,
           avgExecutionTime: `${Number((averageExecution[0]?.avg || 0).toFixed(0))}ms`,
+          pendingStudents: pendingStudents.length,
         },
         submissions: submissions.map((submission) => ({
           id: submission._id,
@@ -337,10 +377,17 @@ export const listSubmissionsPage = async (req, res) => {
           track: getCategoryTitle(submission.questionId || {}),
           lang: "Code",
           status: normalizeSubmissionStatus(submission.status),
+          xpEarned: Number(submission.xpEarned || submission.totalScore || 0),
           exec: submission.executionTime ? `${submission.executionTime}ms` : "-",
           when: submission.submittedAt,
           outputPreview:
             submission.status === "Passed" ? "All test cases passed" : "Failed on hidden test cases",
+        })),
+        pendingStudents: pendingStudents.map((student) => ({
+          id: student._id,
+          name: student.name,
+          email: student.email,
+          batch: student.batchId?.name || "Unknown Batch",
         })),
         pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
       },

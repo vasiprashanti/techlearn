@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +55,7 @@ export default function SubmissionMonitor() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [submissionEntries, setSubmissionEntries] = useState(emptySubmissionState.submissions);
   const [submissionKpis, setSubmissionKpis] = useState(emptySubmissionState.kpis);
+  const [pendingStudents, setPendingStudents] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
@@ -71,12 +72,14 @@ export default function SubmissionMonitor() {
         if (!cancelled) {
           setSubmissionEntries(preferRemoteData(remoteData?.submissions, emptySubmissionState.submissions));
           setSubmissionKpis(preferRemoteData(remoteData?.kpis, emptySubmissionState.kpis));
+          setPendingStudents(preferRemoteData(remoteData?.pendingStudents, []));
         }
       })
       .catch(() => {
         if (!cancelled) {
           setSubmissionEntries(emptySubmissionState.submissions);
           setSubmissionKpis(emptySubmissionState.kpis);
+          setPendingStudents([]);
         }
       });
 
@@ -107,6 +110,28 @@ export default function SubmissionMonitor() {
     const q = tableSearch.toLowerCase();
     return !q || s.student.toLowerCase().includes(q) || s.question.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q);
   });
+
+  const challengeHistory = useMemo(() => {
+    const grouped = new Map();
+    filteredSubs.forEach((submission) => {
+      const key = `${submission.student}-${submission.question}`;
+      const current = grouped.get(key) || {
+        student: submission.student,
+        question: submission.question,
+        batch: submission.batch,
+        attempts: 0,
+        lastStatus: submission.status,
+        xpEarned: 0,
+        lastSubmitted: submission.when,
+      };
+      current.attempts += 1;
+      current.lastStatus = submission.status;
+      current.xpEarned += Number(submission.xpEarned || 0);
+      current.lastSubmitted = submission.when || current.lastSubmitted;
+      grouped.set(key, current);
+    });
+    return Array.from(grouped.values()).slice(0, 8);
+  }, [filteredSubs]);
 
   return (
     <>
@@ -165,6 +190,10 @@ export default function SubmissionMonitor() {
                 <p className="admin-micro-label text-black/40 dark:text-white/40">Submitted</p>
                 <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.when}</p>
               </div>
+              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                <p className="admin-micro-label text-black/40 dark:text-white/40">XP Earned</p>
+                <p className="text-sm mt-1 font-semibold text-[#3C83F6] dark:text-blue-300">{Number(selectedSubmission.xpEarned || 0)} XP</p>
+              </div>
             </div>
             <div className="px-6 pb-6">
               <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
@@ -195,6 +224,7 @@ export default function SubmissionMonitor() {
                 { label: 'Accepted',      value: submissionKpis.accepted, icon: FiCheckCircle },
                 { label: 'Success Rate',  value: `${submissionKpis.successRate}%`, icon: FiCheckCircle },
                 { label: 'Avg Exec Time', value: submissionKpis.avgExecutionTime, icon: FiClock },
+                { label: 'Pending Students', value: submissionKpis.pendingStudents || pendingStudents.length || 0, icon: FiAlertCircle },
               ].map(({ label, value, icon }) => {
                 const KpiIcon = icon;
                 return (
@@ -262,6 +292,10 @@ export default function SubmissionMonitor() {
                           <p className="mt-1"><span className={langPill}>{s.lang}</span></p>
                         </div>
                         <div>
+                          <p className="text-xs text-[#6a8097] dark:text-white/55">XP Earned</p>
+                          <p className="mt-1 text-sm font-semibold text-[#3C83F6] dark:text-blue-300">{Number(s.xpEarned || 0)} XP</p>
+                        </div>
+                        <div>
                           <p className="text-xs text-[#6a8097] dark:text-white/55">Exec Time</p>
                           <p className={`mt-1 text-sm font-semibold tabular-nums ${s.exec === '-' ? 'text-black/25 dark:text-white/25' : 'text-[#6a8097] dark:text-white/60'}`}>{s.exec}</p>
                         </div>
@@ -282,6 +316,62 @@ export default function SubmissionMonitor() {
             </div>
 
             {/* Desktop Table */}
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="admin-section-heading">Pending Students</h2>
+                <span className="text-xs font-semibold text-[#567089] dark:text-white/60">{pendingStudents.length} pending</span>
+              </div>
+              {pendingStudents.length > 0 ? (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {pendingStudents.slice(0, 9).map((student) => (
+                    <div key={student.id} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f0f5fb] dark:bg-white/[0.04] px-3 py-2">
+                      <p className="text-sm font-semibold text-[#1d3149] dark:text-white/90 truncate">{student.name}</p>
+                      <p className="text-xs text-[#6a8097] dark:text-white/55 truncate">{student.batch} · {student.email}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-6 text-center text-sm text-black/35 dark:text-white/35">
+                  No pending students for the current submission view.
+                </p>
+              )}
+            </div>
+
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="admin-section-heading">Challenge History</h2>
+                <span className="text-xs font-semibold text-[#567089] dark:text-white/60">{challengeHistory.length} groups</span>
+              </div>
+              {challengeHistory.length > 0 ? (
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {challengeHistory.map((entry) => (
+                    <div key={`${entry.student}-${entry.question}`} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f0f5fb] dark:bg-white/[0.04] px-3 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1d3149] dark:text-white/90 truncate">{entry.student}</p>
+                          <p className="mt-1 text-xs text-[#6a8097] dark:text-white/55 truncate">{entry.question}</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-[#dce9f6] px-2 py-1 text-[10px] font-bold text-[#3C83F6] dark:bg-white/10 dark:text-blue-300">
+                          {entry.attempts} attempts
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#6a8097] dark:text-white/55">
+                        <span>{entry.batch}</span>
+                        <span>•</span>
+                        <span>{entry.lastStatus}</span>
+                        <span>•</span>
+                        <span>{entry.xpEarned} XP</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-6 text-center text-sm text-black/35 dark:text-white/35">
+                  Challenge history will appear once submissions are available.
+                </p>
+              )}
+            </div>
+
             <div className="hidden lg:block bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-scroll">
               <table className="w-full min-w-[1120px] table-auto">
@@ -291,12 +381,13 @@ export default function SubmissionMonitor() {
                   <col className="w-[22%]" />
                   <col className="w-[12%]" />
                   <col className="w-[15%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[10%]"  />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[9%]"  />
                 </colgroup>
                 <thead>
                   <tr className="bg-[#f0f5fb] dark:bg-white/[0.04] border-b border-black/8 dark:border-white/10">
-                    {['Student', 'Batch', 'Question', 'Language', 'Status', 'Exec Time', 'When'].map(h => (
+                    {['Student', 'Batch', 'Question', 'Language', 'Status', 'XP', 'Exec Time', 'When'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-[#6a8097] dark:text-white/55">{h}</th>
                     ))}
                   </tr>
@@ -324,6 +415,9 @@ export default function SubmissionMonitor() {
                             <StatusIcon className="w-3.5 h-3.5" />
                             {s.status}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-semibold text-[#3C83F6] dark:text-blue-300">{Number(s.xpEarned || 0)} XP</span>
                         </td>
                         <td className="px-4 py-3">
                           <span className={`text-sm font-semibold tabular-nums ${s.exec === '-' ? 'text-black/25 dark:text-white/25' : 'text-[#6a8097] dark:text-white/60'}`}>{s.exec}</span>

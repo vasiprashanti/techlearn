@@ -42,6 +42,11 @@ const studentSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    programSelection: {
+      type: String,
+      enum: ["Placement Sprint", "Full Stack Project Program", "Both"],
+      default: "Placement Sprint",
+    },
 
     status: {
       type: String,

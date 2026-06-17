@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronRight, Lock } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Download, Lock } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import MarkdownContent from '../Learn/MarkdownContent';
@@ -203,6 +203,19 @@ export default function ProjectDayNotes() {
     }
   };
 
+  const downloadCurrentNote = () => {
+    if (isFutureDay || !selectedMarkdown) return;
+    const blob = new Blob([selectedMarkdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `day-${String(selectedDay.day).padStart(2, '0')}-${selectedDay.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'notes'}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const backPath = isDemoRoute ? '/demo' : '/dashboard';
 
   if (!isDemoRoute && realLoading) {
@@ -302,11 +315,21 @@ export default function ProjectDayNotes() {
                       {selectedDay.title}
                     </h2>
                   </div>
-                  {selectedDay.day < currentDay && selectedProgress.complete ? (
-                    <span className="rounded-md border border-[#00113b]/10 bg-white/35 px-3 py-1.5 text-xs font-semibold text-[#00113b] dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff]">
-                      Completed
-                    </span>
-                  ) : null}
+                  <div className="flex items-center gap-2">
+                    {selectedDay.day < currentDay && selectedProgress.complete ? (
+                      <span className="rounded-md border border-[#00113b]/10 bg-white/35 px-3 py-1.5 text-xs font-semibold text-[#00113b] dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff]">
+                        Completed
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={downloadCurrentNote}
+                      className="inline-flex items-center gap-2 rounded-md border border-[#00113b]/10 bg-white/35 px-3 py-1.5 text-xs font-semibold text-[#00113b] transition hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:text-[#8fd9ff] dark:hover:bg-white/10"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </button>
+                  </div>
                 </div>
                 <MarkdownContent compact>{selectedMarkdown}</MarkdownContent>
               </div>

@@ -12,6 +12,11 @@ const taskProgressSchema = new mongoose.Schema(
       enum: ["Coding", "SQL", "MCQ", "Aptitude", "Core CS", "Debugging"],
       required: true,
     },
+    xpValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     status: {
       type: String,
       enum: ["Not Started", "In Progress", "Completed"],

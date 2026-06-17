@@ -27,6 +27,15 @@ const roadmapSchema = new mongoose.Schema(
       enum: ["Active", "Draft", "Archived"],
       default: "Active",
     },
+    attachedNoteTitle: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    attachedNoteDay: {
+      type: Number,
+      default: null,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

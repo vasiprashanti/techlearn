@@ -108,7 +108,10 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     // Populate day assignment tasks
-    const tasksAssigned = dayAssignment.tasks || [];
+    const tasksAssigned = (dayAssignment.tasks || []).filter((task) =>
+      (task.status || "Published") === "Published" &&
+      (!task.batchId || String(task.batchId) === String(batch._id))
+    );
     const populatedTasks = [];
 
     // 4. Resolve daily attempt state or initialize
@@ -123,6 +126,7 @@ export const getTodayDailyTasks = async (req, res) => {
       const defaultProgress = tasksAssigned.map((t) => ({
         questionId: t.questionId,
         taskType: t.taskType,
+        xpValue: Number(t.xpValue || 0),
         status: "Not Started",
         hintsUsed: 0,
         completedAt: null,
@@ -150,10 +154,14 @@ export const getTodayDailyTasks = async (req, res) => {
           const existing = attempt.tasksProgress.find(
             (p) => String(p.questionId) === String(assigned.questionId) && p.taskType === assigned.taskType
           );
+          if (existing) {
+            existing.xpValue = Number(assigned.xpValue || 0);
+          }
           return (
             existing || {
               questionId: assigned.questionId,
               taskType: assigned.taskType,
+              xpValue: Number(assigned.xpValue || 0),
               status: "Not Started",
               hintsUsed: 0,
               completedAt: null,
@@ -176,6 +184,7 @@ export const getTodayDailyTasks = async (req, res) => {
         questionId: t.questionId,
         taskType: t.taskType,
         title: q?.title || `${t.taskType} Task`,
+        xpValue: Number(t.xpValue || 0),
         status: t.status,
         completedAt: t.completedAt,
       });
@@ -272,8 +281,15 @@ export const submitDailyTask = async (req, res) => {
 
     await attempt.save();
 
+    const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
+    const configuredTask = (dayAssignment?.tasks || []).find(
+      (assigned) => String(assigned.questionId) === String(questionId) && assigned.taskType === taskType
+    );
+
     // Calculate XP
-    let xpEarned = calculateTaskXP({ taskType, hintsUsed });
+    let xpEarned = Number(configuredTask?.xpValue || 0) > 0
+      ? Number(configuredTask.xpValue)
+      : calculateTaskXP({ taskType, hintsUsed });
 
     // Calculate bonuses if all completed today
     let bonusXp = 0;
