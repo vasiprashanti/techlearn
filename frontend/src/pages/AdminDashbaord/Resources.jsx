@@ -15,6 +15,8 @@ const createRoadmapForm = () => ({
   markdownBody: '',
   assignedBatchIds: [],
   status: 'Active',
+  attachedNoteTitle: '',
+  attachedNoteDay: '',
   fileName: '',
 });
 
@@ -121,6 +123,8 @@ export default function Resources() {
       markdownBody: roadmap.markdownBody || '',
       assignedBatchIds: (roadmap.assignedBatchIds || []).map((batchId) => String(batchId)),
       status: roadmap.status || 'Active',
+      attachedNoteTitle: roadmap.attachedNoteTitle || '',
+      attachedNoteDay: roadmap.attachedNoteDay || '',
       fileName: 'Assigned Roadmap.md',
     });
     setRoadmapFormError('');
@@ -165,6 +169,8 @@ export default function Resources() {
       markdownBody: roadmapForm.markdownBody.trim(),
       assignedBatchIds: roadmapForm.assignedBatchIds,
       status: roadmapForm.status,
+      attachedNoteTitle: roadmapForm.attachedNoteTitle.trim(),
+      attachedNoteDay: roadmapForm.attachedNoteDay,
     };
 
     try {
@@ -313,6 +319,30 @@ export default function Resources() {
                       <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#122b52] p-3 space-y-3">
+                  <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Attach Resource to Note</p>
+                  <div>
+                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Note Title</label>
+                    <input
+                      value={roadmapForm.attachedNoteTitle}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteTitle: e.target.value }))}
+                      placeholder="e.g. Day 3 Notes"
+                      className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Day Number</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={roadmapForm.attachedNoteDay}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteDay: e.target.value }))}
+                      placeholder="Optional"
+                      className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
+                    />
                   </div>
                 </div>
 

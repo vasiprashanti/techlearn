@@ -12,6 +12,21 @@ const taskAssignmentSchema = new mongoose.Schema(
       ref: "Question",
       required: true,
     },
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+    },
+    xpValue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    status: {
+      type: String,
+      enum: ["Draft", "Published"],
+      default: "Published",
+    },
   },
   { _id: false }
 );

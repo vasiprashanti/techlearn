@@ -33,6 +33,7 @@ const normalizeStudent = (student) => ({
   college: student.college || '',
   batch: student.batch || '',
   track: student.track || 'General Track',
+  programSelection: student.programSelection || 'Placement Sprint',
   accuracy: Number(student.accuracy ?? student.score ?? 0),
   score: Number(student.score || 0),
   streak: Number(student.streak || 0),
@@ -128,7 +129,7 @@ const Students = () => {
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
+  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [bulkImportCollegeId, setBulkImportCollegeId] = useState('');
@@ -228,7 +229,7 @@ const Students = () => {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
+    setStudentForm({ name: '', email: '', collegeId: '', batchId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
     setIsAddFormOpen(true);
   };
 
@@ -243,6 +244,7 @@ const Students = () => {
       collegeId: matchingCollege?.id || '',
       batchId: matchingBatch?.id || '',
       track: student.track || '',
+      programSelection: student.programSelection || 'Placement Sprint',
       status: student.status || 'Active',
     });
     setIsAddFormOpen(true);
@@ -263,6 +265,7 @@ const Students = () => {
         collegeId: studentForm.collegeId,
         batchId: studentForm.batchId,
         primaryTrack: studentForm.track.trim() || 'General Track',
+        programSelection: studentForm.programSelection,
         status: studentForm.status,
       };
       if (editingStudentId) await adminAPI.updateStudent(editingStudentId, payload);
@@ -496,6 +499,19 @@ const Students = () => {
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
                 </div>
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Program</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select value={studentForm.programSelection} onChange={(e) => setStudentForm((prev) => ({ ...prev, programSelection: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                      <option className={dropdownOptionClass} value="Placement Sprint">Placement Sprint</option>
+                      <option className={dropdownOptionClass} value="Full Stack Project Program">Full Stack Project Program</option>
+                      <option className={dropdownOptionClass} value="Both">Both</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Status</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">

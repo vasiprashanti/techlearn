@@ -5,6 +5,47 @@ import { normalizeCategoryType } from "../utils/questionBank.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 
+const normalizeSqlQuery = (query) => {
+  if (!query) return "";
+  
+  // Remove single-line comments starting with --
+  let cleaned = query.replace(/--.*$/gm, "");
+  
+  // Remove multi-line comments /* ... */
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, "");
+  
+  // Convert to lowercase
+  cleaned = cleaned.toLowerCase();
+  
+  // Replace multiple whitespace characters (spaces, tabs, newlines) with a single space
+  cleaned = cleaned.replace(/\s+/g, " ");
+  
+  // Trim spaces and semicolons
+  cleaned = cleaned.trim().replace(/^;+|;+$/g, "").trim();
+  
+  return cleaned;
+};
+
+const isSqlEmpty = (query) => {
+  return normalizeSqlQuery(query).length === 0;
+};
+
+const isCodeEmpty = (code, language) => {
+  if (!code) return true;
+  let cleaned = code;
+  const lang = String(language || "").toLowerCase();
+  if (lang === "python" || lang === "python3") {
+    cleaned = cleaned.replace(/#.*$/gm, "");
+    cleaned = cleaned.replace(/"""[\s\S]*?"""/g, "");
+    cleaned = cleaned.replace(/'''[\s\S]*?'''/g, "");
+  } else {
+    cleaned = cleaned.replace(/\/\/.*$/gm, "");
+    cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, "");
+  }
+  return cleaned.trim().length === 0;
+};
+
+
 const normalizePracticeTrack = (value = "") => {
   const normalized = String(value).trim().toLowerCase();
   if (normalized.includes("dsa") || normalized.includes("data structures")) return "DSA";
@@ -115,16 +156,83 @@ export const recordPracticeSubmission = async (req, res) => {
 
     let canonicalQuestion = null;
     if (mongoose.Types.ObjectId.isValid(questionIdRaw)) {
-      canonicalQuestion = await Question.findById(questionIdRaw)
-        .select("_id categoryId categoryType")
-        .lean();
+      canonicalQuestion = await Question.findById(questionIdRaw).lean();
     }
 
     const selectedAnswer = String(req.body.selectedAnswer || "").trim().toUpperCase();
     const normalizedCategoryType = normalizeCategoryType(canonicalQuestion?.categoryType || req.body.categoryType);
     const isMcqSubmission = normalizedCategoryType === "MCQ" && ["A", "B", "C", "D"].includes(selectedAnswer);
 
-    const isCorrect = Boolean(req.body.isCorrect);
+    let isCorrect = Boolean(req.body.isCorrect);
+
+    if (track === "SQL") {
+      const code = req.body.code;
+      if (!code || isSqlEmpty(code)) {
+        return res.status(400).json({ success: false, message: "Query cannot be empty." });
+      }
+
+      if (canonicalQuestion) {
+        let referenceSolution = canonicalQuestion.solutionCode || "";
+        if (!referenceSolution && canonicalQuestion.content?.referenceSolution?.javascript?.code) {
+          referenceSolution = canonicalQuestion.content.referenceSolution.javascript.code;
+        }
+
+        // Hardcoded fallbacks for seeded questions
+        const idStr = String(canonicalQuestion._id);
+        if (!referenceSolution && idStr === "6a205308e9ad6aec12fc1872") {
+          referenceSolution = "SELECT name FROM employees WHERE salary > 100000;";
+        }
+        if (!referenceSolution && idStr === "6a205308e9ad6aec12fc1873") {
+          referenceSolution = "SELECT email FROM users GROUP BY email HAVING COUNT(email) > 1;";
+        }
+        if (!referenceSolution && canonicalQuestion.content?.starterCode?.javascript?.code) {
+          referenceSolution = canonicalQuestion.content.starterCode.javascript.code;
+        }
+
+        const normalizedUser = normalizeSqlQuery(code);
+        const normalizedRef = normalizeSqlQuery(referenceSolution);
+        
+        isCorrect = (normalizedUser === normalizedRef);
+      } else {
+        isCorrect = true;
+      }
+    } else if (track === "DSA") {
+      const code = req.body.code;
+      const language = req.body.language;
+
+      if (!code || isCodeEmpty(code, language)) {
+        return res.status(400).json({ success: false, message: "Code cannot be empty." });
+      }
+
+      if (canonicalQuestion) {
+        const visibleTestCases = canonicalQuestion.visibleTestCases || canonicalQuestion.content?.visibleTestCases || [];
+        const hiddenTestCases = canonicalQuestion.hiddenTestCases || canonicalQuestion.content?.hiddenTestCases || [];
+        const allTestCases = [...visibleTestCases, ...hiddenTestCases];
+
+        // Filter out completely empty placeholder test cases
+        const validTestCases = allTestCases.filter(tc => tc.input?.trim() || tc.output?.trim());
+
+        if (validTestCases.length > 0) {
+          const { testCodeWithJudge0, LANGUAGE_IDS } = await import("../utils/judgeUtil.js");
+          const langId = LANGUAGE_IDS[String(language || "").toLowerCase()] || 71; // Default to Python
+
+          let allPassed = true;
+          for (const tc of validTestCases) {
+            const judgeRes = await testCodeWithJudge0(code, langId, tc.input, tc.output);
+            if (!judgeRes.passed) {
+              allPassed = false;
+              break;
+            }
+          }
+          isCorrect = allPassed;
+        } else {
+          isCorrect = true;
+        }
+      } else {
+        isCorrect = true;
+      }
+    }
+
     const score = Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : (isCorrect ? 1 : 0);
     const accuracy = Number.isFinite(Number(req.body.accuracy)) ? Number(req.body.accuracy) : (isCorrect ? 100 : 0);
 
@@ -184,7 +292,8 @@ export const recordPracticeSubmission = async (req, res) => {
                 (t) => String(t.questionId) === String(questionIdRaw)
               );
               
-              if (taskIndex !== -1 && attempt.tasksProgress[taskIndex].status !== "Completed") {
+              const finalize = Boolean(req.body.finalize);
+              if (taskIndex !== -1 && attempt.tasksProgress[taskIndex].status !== "Completed" && isCorrect && finalize) {
                 const task = attempt.tasksProgress[taskIndex];
                 task.status = "Completed";
                 task.completedAt = new Date();

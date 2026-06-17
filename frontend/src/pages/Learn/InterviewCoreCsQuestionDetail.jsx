@@ -75,11 +75,15 @@ export default function InterviewCoreCsQuestionDetail() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [submissionMessage, setSubmissionMessage] = useState('');
+  const [isLastSubmissionCorrect, setIsLastSubmissionCorrect] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   useEffect(() => {
     setSelectedOption(null);
     setShowFeedback(false);
     setSubmissionMessage('');
+    setIsLastSubmissionCorrect(false);
+    setShowFinishModal(false);
   }, [questionId]);
   
   const fetchDailyTasks = async () => {
@@ -126,8 +130,14 @@ export default function InterviewCoreCsQuestionDetail() {
   if (loading) {
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="flex h-64 items-center justify-center">
-          <div className="text-gray-900 dark:text-white">Loading question...</div>
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+          <div className="relative flex items-center justify-center">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500"></div>
+            <div className="absolute h-10 w-10 animate-ping rounded-full border-2 border-blue-400/30"></div>
+          </div>
+          <div className="text-sm font-semibold tracking-wide text-blue-700/80 dark:text-blue-300/80 animate-pulse">
+            Loading assessment challenge...
+          </div>
         </div>
       </UserSidebarLayout>
     );
@@ -136,16 +146,22 @@ export default function InterviewCoreCsQuestionDetail() {
   if (!question) {
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="rounded-2xl border border-white/20 bg-white/70 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
+        <div className="rounded-2xl border border-red-200/30 bg-gradient-to-br from-red-50/90 to-red-100/80 p-8 text-center shadow-xl backdrop-blur-xl dark:border-red-900/30 dark:from-red-950/40 dark:to-red-900/20">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mb-4">
+            <span className="text-xl font-bold">!</span>
+          </div>
+          <h2 className="text-lg font-bold text-red-900 dark:text-red-200 mb-2">Question Not Found</h2>
+          <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-6 max-w-md mx-auto">
+            The requested assessment was not found or has been moved. Please return to the practice page.
+          </p>
           <button
             type="button"
             onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:brightness-105 transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            Back to Practice
           </button>
-          <div className="mt-4 text-gray-900 dark:text-white">Question not found.</div>
         </div>
       </UserSidebarLayout>
     );
@@ -153,38 +169,96 @@ export default function InterviewCoreCsQuestionDetail() {
 
   const isCorrect = showFeedback && selectedOption === question.correctIndex;
 
+  const handleMarkSolved = async () => {
+    if (selectedOption === null) return;
+    const correct = selectedOption === question.correctIndex;
+    setShowFeedback(true);
+    setIsLastSubmissionCorrect(correct);
+    
+    try {
+      setSubmissionMessage('Submitting answer for evaluation...');
+      const res = await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'Core CS',
+        isCorrect: correct,
+        selectedAnswer: String.fromCharCode(65 + selectedOption),
+        finalize: false,
+      });
+      if (correct) {
+        setSubmissionMessage('Submission successful! Correct answer.');
+      } else {
+        setSubmissionMessage('Incorrect submission. Please select another option and try again.');
+      }
+    } catch (error) {
+      setSubmissionMessage(error?.message || 'Could not save practice progress.');
+    }
+  };
+
+  const handleNext = async () => {
+    if (isLastSubmissionCorrect) {
+      try {
+        await practiceAPI.recordSubmission({
+          questionId: question.id,
+          track: 'Core CS',
+          isCorrect: true,
+          selectedAnswer: String.fromCharCode(65 + selectedOption),
+          finalize: true,
+        });
+      } catch (err) {
+        console.error("Failed to finalize task:", err);
+      }
+    }
+    const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : dailySequence[currentTaskIndex + 1].taskType === 'MCQ' || dailySequence[currentTaskIndex + 1].taskType === 'Core CS' ? 'core-cs' : 'dsa';
+    navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
+  };
+
+  const handleFinish = async () => {
+    if (isLastSubmissionCorrect) {
+      try {
+        await practiceAPI.recordSubmission({
+          questionId: question.id,
+          track: 'Core CS',
+          isCorrect: true,
+          selectedAnswer: String.fromCharCode(65 + selectedOption),
+          finalize: true,
+        });
+      } catch (err) {
+        console.error("Failed to finalize task:", err);
+      }
+      navigate('/dashboard');
+    } else {
+      setShowFinishModal(true);
+    }
+  };
+
   return (
-    <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-white/20 bg-white/70 p-5 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/40">
-          <button
-            type="button"
-            onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">Core CS Question</h1>
-          <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            {question.tag} • {question.difficulty}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-white/20 bg-white/60 p-6 shadow-sm backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-900/30">
-          <div className="mb-4 flex items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-300">
-            <span className="rounded-full border border-white/20 bg-white/60 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700/20 dark:bg-gray-900/30 dark:text-gray-200">
-              {question.tag}
-            </span>
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${difficultyPillClass[question.difficulty]}`}>
+    <UserSidebarLayout maxWidthClass="max-w-3xl">
+      <div className="max-w-2xl mx-auto">
+        {/* Outer Card - Matching exact Dashboard Overview Card styles */}
+        <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
+          {/* Header row with heading centered and difficulty pill absolute on the right */}
+          <div className="relative flex items-center justify-center w-full mb-6 select-none">
+            <h1 className="text-[10px] md:text-xs font-press-start text-[#3C83F6] dark:text-[#8fd9ff] uppercase">
+              TECHNICAL MCQ
+            </h1>
+            <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
               {question.difficulty}
             </span>
           </div>
 
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{question.question}</h2>
+          <div className="relative w-full border border-black/10 dark:border-white/10 bg-white/80 dark:bg-gray-800/80 rounded-xl p-6 shadow-sm text-center mb-6 mt-3">
+            {isDailyMode && (
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#3C83F6] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
+                Question {currentTaskIndex + 1} of {dailySequence.length}
+              </div>
+            )}
+            <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
+              {question.question}
+            </h2>
+          </div>
 
-          <div className="mt-4 space-y-3">
+          {/* Options Grid (2x2 options layout) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
             {question.options.map((opt, idx) => {
               const optionClass = !showFeedback
                 ? selectedOption === idx
@@ -200,83 +274,144 @@ export default function InterviewCoreCsQuestionDetail() {
                 <button
                   key={idx}
                   type="button"
-                  disabled={showFeedback}
-                  onClick={async () => {
+                  onClick={() => {
                     setSelectedOption(idx);
-                    setShowFeedback(true);
-                    if (isDashboardContext) {
-                      try {
-                        await practiceAPI.recordSubmission({
-                          questionId: question.id,
-                          track: 'Core CS',
-                          isCorrect: idx === question.correctIndex,
-                        });
-                        setSubmissionMessage('Practice progress saved.');
-                        setIsSubmitted(true);
-                        window.dispatchEvent(new CustomEvent('xpUpdated'));
-                      } catch (error) {
-                        setSubmissionMessage(error?.message || 'Could not save practice progress.');
-                      }
-                    }
+                    setShowFeedback(false);
+                    setIsLastSubmissionCorrect(false);
+                    setSubmissionMessage('');
                   }}
-                  className={`w-full rounded-xl border-2 p-4 text-left text-sm transition ${optionClass}`}
+                  className={`relative w-full rounded-xl border-2 p-4 text-center font-semibold text-sm transition min-h-[60px] flex items-center justify-center ${optionClass}`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="font-medium">{opt}</div>
-                    {showFeedback && idx === question.correctIndex ? (
-                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    ) : showFeedback && selectedOption === idx && selectedOption !== question.correctIndex ? (
-                      <X className="h-5 w-5 text-red-600 dark:text-red-400" />
-                    ) : null}
-                  </div>
+                  <span className="leading-tight px-6">{opt}</span>
+                  {showFeedback && idx === question.correctIndex ? (
+                    <CheckCircle className="absolute right-3.5 h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                  ) : showFeedback && selectedOption === idx && selectedOption !== question.correctIndex ? (
+                    <X className="absolute right-3.5 h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+                  ) : null}
                 </button>
               );
             })}
           </div>
 
+          {/* Feedback Section */}
           {showFeedback ? (
             <div
-              className={`mt-5 rounded-xl border p-4 ${
+              className={`mt-5 w-full rounded-xl border p-4 text-left ${
                 isCorrect
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
-                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+                  ? 'border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20'
+                  : 'border-red-200 bg-red-50 dark:border-red-800/40 dark:bg-red-900/20'
               }`}
             >
               <div className={`font-semibold ${isCorrect ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
                 {isCorrect ? 'Correct!' : 'Incorrect'}
               </div>
-              <div className={`mt-1 text-sm ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+              <div className={`mt-1 text-sm leading-relaxed ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                 {question.explanation}
               </div>
             </div>
           ) : null}
+
           {submissionMessage ? (
-            <p className="mt-3 text-xs text-gray-600 dark:text-gray-300">{submissionMessage}</p>
+            <p className="mt-4 text-xs font-semibold text-blue-600 dark:text-blue-400 w-full text-center">{submissionMessage}</p>
           ) : null}
 
-          {isDailyMode && isCurrentQuestionCompleted && (
-            <div className="mt-4">
-              {currentTaskIndex < dailySequence.length - 1 ? (
+          {/* Action Row - Submit Answer or Next/Finish controls */}
+          <div className="mt-8 flex items-center justify-center gap-4 w-full">
+            {isDailyMode ? (
+              <>
                 <button
                   type="button"
-                  onClick={() => navigate(`/dashboard/practice/core-cs/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                  onClick={() => {
+                    if (currentTaskIndex === 0) {
+                      navigate('/dashboard');
+                    } else {
+                      const prevType = dailySequence[currentTaskIndex - 1].taskType === 'SQL' ? 'sql' : dailySequence[currentTaskIndex - 1].taskType === 'MCQ' || dailySequence[currentTaskIndex - 1].taskType === 'Core CS' ? 'core-cs' : 'dsa';
+                      navigate(`/dashboard/practice/${prevType}/${dailySequence[currentTaskIndex - 1].questionId}?mode=daily`);
+                    }
+                  }}
+                  className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white/40 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"
                 >
-                  Next Question
+                  Back
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard')}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
-                >
-                  Finish Daily Task
-                </button>
-              )}
-            </div>
-          )}
+
+                {!showFeedback && !isCurrentQuestionCompleted ? (
+                  <button
+                    type="button"
+                    disabled={selectedOption === null}
+                    onClick={handleMarkSolved}
+                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md transition"
+                  >
+                    Submit Answer
+                  </button>
+                ) : (
+                  currentTaskIndex < dailySequence.length - 1 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                    >
+                      Next
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleFinish}
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                    >
+                      Finish
+                    </button>
+                  )
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={selectedOption === null}
+                onClick={handleMarkSolved}
+                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#3C83F6] hover:bg-[#2563EB] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md transition"
+              >
+                Submit Answer
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {showFinishModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[#86c4ff]/30 bg-white p-6 shadow-2xl dark:bg-gray-900 text-gray-900 dark:text-white">
+            <h3 className="text-lg font-bold text-[#0d2a57] dark:text-[#8fd9ff] mb-2">
+              Finish without completing the task?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 font-medium">
+              You have not successfully completed this task. If you finish now, your progress will not be saved. Do you want to finish anyway?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowFinishModal(false)}
+                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFinishModal(false);
+                  navigate('/dashboard');
+                }}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition"
+              >
+                Yes, Finish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </UserSidebarLayout>
   );
 }
+
+
+
+

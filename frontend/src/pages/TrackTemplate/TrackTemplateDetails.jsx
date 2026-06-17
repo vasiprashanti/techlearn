@@ -70,6 +70,7 @@ export default function TrackTemplateDetails() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [assignedQuestions, setAssignedQuestions] = useState([]);
   const [availableQuestions, setAvailableQuestions] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
   const [trackDetail, setTrackDetail] = useState(null);
   const [isTrackLoading, setIsTrackLoading] = useState(!location.state?.track);
   const [isAddDayModalOpen, setIsAddDayModalOpen] = useState(false);
@@ -77,6 +78,9 @@ export default function TrackTemplateDetails() {
     dayNumber: '1',
     questionId: '',
     taskType: 'Coding',
+    batchId: '',
+    xpValue: '',
+    status: 'Published',
   });
 
   useEffect(() => {
@@ -102,6 +106,9 @@ export default function TrackTemplateDetails() {
       dayNumber: nextDay,
       questionId: '',
       taskType: 'Coding',
+      batchId: trackDetail?.batchId || '',
+      xpValue: '',
+      status: 'Published',
     });
   }, [dayWiseQuestions, trackDetail]);
 
@@ -162,11 +169,36 @@ export default function TrackTemplateDetails() {
     };
   }, [categorySlug, track?.trackType, trackDetail?.availableQuestions]);
 
+  useEffect(() => {
+    let cancelled = false;
+    adminAPI
+      .getBatches()
+      .then((remoteBatches) => {
+        if (!cancelled) {
+          setBatchOptions((Array.isArray(remoteBatches) ? remoteBatches : []).map((batch) => ({
+            id: batch.id || batch._id,
+            name: batch.name || 'Untitled Batch',
+            college: batch.college || '',
+          })));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setBatchOptions([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const openAddTaskModal = (dayNumber) => {
     setAddDayForm({
       dayNumber: String(dayNumber),
       questionId: '',
       taskType: 'Coding',
+      batchId: track?.batchId || '',
+      xpValue: '',
+      status: 'Published',
     });
     setIsAddDayModalOpen(true);
   };
@@ -177,6 +209,9 @@ export default function TrackTemplateDetails() {
       dayNumber: '',
       questionId: '',
       taskType: 'Coding',
+      batchId: '',
+      xpValue: '',
+      status: 'Published',
     });
   };
 
@@ -186,7 +221,12 @@ export default function TrackTemplateDetails() {
       const payload = {
         dayNumber: Number(addDayForm.dayNumber),
         questionId: addDayForm.questionId,
-        ...(track.trackType === 'Daily Task' ? { taskType: addDayForm.taskType } : {}),
+        ...(track.trackType === 'Daily Task' ? {
+          taskType: addDayForm.taskType,
+          batchId: addDayForm.batchId || track.batchId,
+          xpValue: Number(addDayForm.xpValue || 0),
+          status: addDayForm.status,
+        } : {}),
       };
       await adminAPI.assignTrackTemplateDay(templateId, payload);
       // Reload template detail
@@ -269,22 +309,65 @@ export default function TrackTemplateDetails() {
               </div>
 
               {track?.trackType === 'Daily Task' && (
-                <div>
-                  <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Task Type</label>
-                  <div className="relative mt-1.5">
-                    <select
-                      value={addDayForm.taskType}
-                      onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value }))}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
-                    >
-                      <option value="Coding">Coding</option>
-                      <option value="SQL">SQL</option>
-                      <option value="MCQ">MCQ</option>
-                      <option value="Aptitude">Aptitude</option>
-                      <option value="Core CS">Core CS</option>
-                      <option value="Debugging">Debugging</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Task Type</label>
+                    <div className="relative mt-1.5">
+                      <select
+                        value={addDayForm.taskType}
+                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value }))}
+                        className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
+                      >
+                        <option value="Coding">Coding</option>
+                        <option value="SQL">SQL</option>
+                        <option value="MCQ">MCQ</option>
+                        <option value="Aptitude">Aptitude</option>
+                        <option value="Core CS">Core CS</option>
+                        <option value="Debugging">Debugging</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Assign to Batch</label>
+                    <div className="relative mt-1.5">
+                      <select
+                        value={addDayForm.batchId}
+                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, batchId: e.target.value }))}
+                        className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
+                      >
+                        <option value={track?.batchId || ''}>Template Batch</option>
+                        {batchOptions.map((batch) => (
+                          <option key={batch.id} value={batch.id}>{batch.name}</option>
+                        ))}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2335] dark:text-white">XP Value</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={addDayForm.xpValue}
+                      onChange={(e) => setAddDayForm((prev) => ({ ...prev, xpValue: e.target.value }))}
+                      placeholder="0"
+                      className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 text-sm text-[#1a2335] dark:text-white outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Publish Status</label>
+                    <div className="relative mt-1.5">
+                      <select
+                        value={addDayForm.status}
+                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, status: e.target.value }))}
+                        className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
+                      >
+                        <option value="Published">Published</option>
+                        <option value="Draft">Draft</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -414,6 +497,17 @@ export default function TrackTemplateDetails() {
                             <span className="text-[#0b1b38] dark:text-white font-medium">
                               <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[{t.taskType}]</span>
                               {t.questionTitle}
+                              <span className="ml-2 rounded-full bg-[#dfe8f6] px-2 py-0.5 text-[10px] font-bold text-[#3c83f6] dark:bg-white/10 dark:text-blue-300">
+                                {Number(t.xpValue || 0)} XP
+                              </span>
+                              <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${t.status === 'Draft' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'}`}>
+                                {t.status || 'Published'}
+                              </span>
+                              {t.batchName ? (
+                                <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-white/10 dark:text-white/70">
+                                  {t.batchName}
+                                </span>
+                              ) : null}
                             </span>
                             <button
                               onClick={() => removeTaskFromDay(day.dayNumber, t.questionId)}

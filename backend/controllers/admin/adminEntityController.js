@@ -766,6 +766,7 @@ export const listStudentsAdmin = async (req, res) => {
       college: student.collegeId?.name || "Unknown College",
       batch: student.batchId?.name || "Unknown Batch",
       track: student.primaryTrack || "General Track",
+      programSelection: student.programSelection || "Placement Sprint",
       accuracy: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       score: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
       streak: student.streak || 0,
@@ -784,7 +785,7 @@ export const listStudentsAdmin = async (req, res) => {
 
 export const createStudentAdmin = async (req, res) => {
   try {
-    const { name, email, rollNo, collegeId, batchId, primaryTrack, status } = req.body;
+    const { name, email, rollNo, collegeId, batchId, primaryTrack, status, programSelection } = req.body;
     if (!name || !email || !collegeId || !batchId) {
       return res.status(400).json({ success: false, message: "name, email, collegeId and batchId are required." });
     }
@@ -817,6 +818,7 @@ export const createStudentAdmin = async (req, res) => {
       batchId,
       userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
+      programSelection: programSelection || "Placement Sprint",
       status: status || "Active",
     });
 
@@ -825,6 +827,7 @@ export const createStudentAdmin = async (req, res) => {
         $set: {
           batchId,
           startDate: batch.startDate,
+          programSelection: programSelection || "Placement Sprint",
         },
       });
     }
@@ -879,6 +882,7 @@ export const getStudentDetailAdmin = async (req, res) => {
         college: student.collegeId?.name || "Unknown College",
         batch: student.batchId?.name || "Unknown Batch",
         track: student.primaryTrack || "General Track",
+        programSelection: student.programSelection || "Placement Sprint",
         accuracy: score,
         score,
         streak: student.streak || 0,
@@ -908,6 +912,7 @@ export const updateStudentAdmin = async (req, res) => {
       email: req.body.email?.trim()?.toLowerCase(),
       rollNo: req.body.rollNo?.trim(),
       primaryTrack: req.body.primaryTrack?.trim() || req.body.track?.trim() || "General Track",
+      programSelection: req.body.programSelection || "Placement Sprint",
       status: req.body.status,
     };
 
@@ -951,6 +956,7 @@ export const updateStudentAdmin = async (req, res) => {
         $set: {
           batchId: nextBatchId,
           startDate: batch.startDate,
+          programSelection: update.programSelection,
         },
       });
     }

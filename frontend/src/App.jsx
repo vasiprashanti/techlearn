@@ -20,7 +20,6 @@ const DemoDashboard = lazy(() => import('./pages/Dashboard/Demo'))
 const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
-const DailyChallenge = lazy(() => import('./pages/Dashboard/DailyChallenge'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
 const Languages = lazy(() => import('./pages/Dashboard/Languages'))
 const Concepts = lazy(() => import('./pages/Dashboard/Concepts'))
@@ -239,7 +238,6 @@ function LayoutWrapper() {
             <Route path="/demo/project/day-notes" element={<ProjectDayNotes />} />
             <Route path="/dashboard/project/day-notes" element={<ProjectDayNotes />} />
             <Route path="/dashboard/project-overview" element={<ProjectOverview />} />
-            <Route path="/dashboard/daily-challenge" element={<DailyChallenge />} />
             <Route path="/daily-challenge/:linkId" element={<DailyChallengeAccess />} />
             <Route path="/daily-challenge/:linkId/instructions" element={<DailyChallengeInstructions />} />
             <Route path="/daily-challenge/:linkId/test" element={<DailyChallengeTest />} />

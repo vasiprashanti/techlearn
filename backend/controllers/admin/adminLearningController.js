@@ -702,6 +702,7 @@ export const getTrackTemplateDetail = async (req, res) => {
       .populate("batchId", "name")
       .populate("dayAssignments.questionId")
       .populate("dayAssignments.tasks.questionId")
+      .populate("dayAssignments.tasks.batchId", "name")
       .lean();
     if (!template) {
       return res.status(404).json({ success: false, message: "Track template not found." });
@@ -756,7 +757,11 @@ export const getTrackTemplateDetail = async (req, res) => {
           tasks: (assignment.tasks || []).map((t) => ({
             taskType: t.taskType,
             questionId: t.questionId?._id || t.questionId,
+            batchId: t.batchId?._id || t.batchId || template.batchId?._id || template.batchId,
+            batchName: t.batchId?.name || template.batchId?.name || "",
             questionTitle: t.questionId?.title || "Task Question",
+            xpValue: Number(t.xpValue || 0),
+            status: t.status || "Published",
           })),
         })),
         assignedQuestions: (template.dayAssignments || [])
@@ -936,7 +941,7 @@ export const deleteTrackTemplate = async (req, res) => {
 export const assignTrackTemplateDay = async (req, res) => {
   try {
     const { templateId } = req.params;
-    const { dayNumber, questionId, taskType } = req.body;
+    const { dayNumber, questionId, taskType, xpValue, status, batchId } = req.body;
     if (!assertObjectId(templateId, "templateId", res) || !assertObjectId(questionId, "questionId", res)) return;
 
     const template = await TrackTemplate.findById(templateId);
@@ -962,12 +967,28 @@ export const assignTrackTemplateDay = async (req, res) => {
         );
 
         if (existingTaskIndex === -1) {
-          dayAssignment.tasks.push({ taskType, questionId });
+          dayAssignment.tasks.push({
+            taskType,
+            questionId,
+            batchId: batchId || template.batchId || null,
+            xpValue: Number(xpValue || 0),
+            status: status || "Published",
+          });
+        } else {
+          dayAssignment.tasks[existingTaskIndex].batchId = batchId || dayAssignment.tasks[existingTaskIndex].batchId || template.batchId || null;
+          dayAssignment.tasks[existingTaskIndex].xpValue = Number(xpValue || 0);
+          dayAssignment.tasks[existingTaskIndex].status = status || dayAssignment.tasks[existingTaskIndex].status || "Published";
         }
       } else {
         template.dayAssignments.push({
           dayNumber: normalizedDayNumber,
-          tasks: [{ taskType, questionId }],
+          tasks: [{
+            taskType,
+            questionId,
+            batchId: batchId || template.batchId || null,
+            xpValue: Number(xpValue || 0),
+            status: status || "Published",
+          }],
         });
       }
     } else {
@@ -1195,7 +1216,7 @@ export const listResourcesAdmin = async (req, res) => {
 
 export const createResourceAdmin = async (req, res) => {
   try {
-    const { title, category, type, url } = req.body;
+    const { title, category, type, url, attachedNoteTitle, attachedNoteDay } = req.body;
     const allowedResourceCategories = ["Courses", "Important Topics", "Resume Templates"];
     if (!title?.trim() || !category?.trim() || !type) {
       return res.status(400).json({ success: false, message: "title, category and type are required." });
@@ -1214,6 +1235,8 @@ export const createResourceAdmin = async (req, res) => {
       category: category.trim(),
       type: uploaded ? detectResourceType(req.file) : type,
       url: uploaded?.secure_url || url || "",
+      attachedNoteTitle: attachedNoteTitle?.trim() || "",
+      attachedNoteDay: attachedNoteDay ? Number(attachedNoteDay) : null,
       uploadedBy: req.user?._id || null,
     });
 
@@ -1252,6 +1275,8 @@ export const updateResourceAdmin = async (req, res) => {
       title: req.body.title?.trim(),
       category: req.body.category?.trim(),
       type: uploaded ? detectResourceType(req.file) : req.body.type,
+      attachedNoteTitle: req.body.attachedNoteTitle?.trim(),
+      attachedNoteDay: req.body.attachedNoteDay ? Number(req.body.attachedNoteDay) : null,
     };
 
     if (uploaded?.secure_url || req.body.url !== undefined) {

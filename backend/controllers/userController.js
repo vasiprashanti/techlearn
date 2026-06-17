@@ -98,6 +98,17 @@ const ensureDefaultProjectExists = async () => {
   }
 };
 
+const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const getDefaultBatchWindow = () => {
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0);
+  const expiryDate = new Date(startDate);
+  expiryDate.setDate(expiryDate.getDate() + 59);
+  expiryDate.setHours(23, 59, 59, 999);
+  return { startDate, expiryDate };
+};
+
 export const registerUser = async (req, res) => {
   try {
     const { 
@@ -160,15 +171,28 @@ export const registerUser = async (req, res) => {
 
     // Resolve or create College
     const collegeNameText = (collegeName || "TechLearn College").trim();
-    let college = await College.findOne({ name: { $regex: new RegExp(`^${collegeNameText}$`, "i") } });
+    let college = await College.findOne({ name: { $regex: new RegExp(`^${escapeRegex(collegeNameText)}$`, "i") } });
     if (!college) {
-      college = await College.create({ name: collegeNameText });
+      college = await College.create({
+        name: collegeNameText,
+        code: collegeNameText.replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase() || "TLC",
+        status: "Active",
+      });
     }
 
     // Resolve or create Batch
     let batch = await Batch.findOne({ collegeId: college._id, name: "Cohort 1" });
     if (!batch) {
-      batch = await Batch.create({ name: "Cohort 1", collegeId: college._id });
+      const { startDate, expiryDate } = getDefaultBatchWindow();
+      batch = await Batch.create({
+        name: "Cohort 1",
+        collegeId: college._id,
+        startDate,
+        expiryDate,
+        releaseTime: "00:00",
+        status: "Active",
+        assignedTrack: programSelection || "Placement Sprint",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -199,6 +223,9 @@ export const registerUser = async (req, res) => {
     if (student) {
       // Link the existing student profile to the new user account
       student.userId = newUser._id;
+      student.collegeId = student.collegeId || college._id;
+      student.batchId = student.batchId || batch._id;
+      student.programSelection = newUser.programSelection;
       await student.save();
     } else {
       // Create matching Student record
@@ -209,6 +236,7 @@ export const registerUser = async (req, res) => {
         name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
         email: emailCheck,
         primaryTrack: "General Track",
+        programSelection: newUser.programSelection,
         status: "Active",
       });
     }
@@ -217,13 +245,16 @@ export const registerUser = async (req, res) => {
     if (newUser.programSelection === "Full Stack Project Program" || newUser.programSelection === "Both") {
       const defaultProject = await ensureDefaultProjectExists();
       if (defaultProject) {
-        await StudentProject.create({
-          student_id: student._id,
-          project_id: defaultProject._id,
-          status: "Active",
-          current_day: 1,
-          progress_percentage: 0
-        });
+        await StudentProject.findOneAndUpdate(
+          { student_id: student._id, project_id: defaultProject._id, status: "Active" },
+          {
+            $setOnInsert: {
+              current_day: 1,
+              progress_percentage: 0,
+            },
+          },
+          { upsert: true, new: true }
+        );
       }
     }
 

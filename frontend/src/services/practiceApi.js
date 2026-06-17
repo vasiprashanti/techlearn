@@ -36,11 +36,11 @@ export const practiceAPI = {
     return handleResponse(response);
   },
 
-  recordSubmission: async ({ questionId, track, isCorrect }) => {
+  recordSubmission: async ({ questionId, track, isCorrect, code, language, finalize }) => {
     const response = await fetch(`${API_BASE}/practice/submissions`, {
       method: 'POST',
       headers: buildHeaders(),
-      body: JSON.stringify({ questionId, track, isCorrect }),
+      body: JSON.stringify({ questionId, track, isCorrect, code, language, finalize }),
     });
     return handleResponse(response);
   },

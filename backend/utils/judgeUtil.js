@@ -36,7 +36,39 @@ const testCodeWithJudge0 = async (
   expectedOutput
 ) => {
   if (!process.env.RAPIDAPI_KEY) {
-    console.warn("WARNING: RAPIDAPI_KEY is missing. Using mock test case verification.");
+    console.warn("WARNING: RAPIDAPI_KEY is missing. Using mock test case verification with brace checks.");
+    
+    // Perform basic brace matching validation
+    const braces = { '(': ')', '{': '}', '[': ']' };
+    const stack = [];
+    let isBalanced = true;
+    for (const char of (sourceCode || "")) {
+      if (braces[char]) {
+        stack.push(char);
+      } else if (Object.values(braces).includes(char)) {
+        const last = stack.pop();
+        if (braces[last] !== char) {
+          isBalanced = false;
+          break;
+        }
+      }
+    }
+    if (stack.length > 0) isBalanced = false;
+
+    if (!isBalanced) {
+      return {
+        success: false,
+        passed: false,
+        outputMatches: false,
+        actualOutput: "",
+        expectedOutput,
+        error: "Compile Error: Unbalanced brackets, braces, or parentheses detected.",
+        statusId: 6,
+        statusDescription: "Compilation Error",
+        executionTime: 0.1,
+      };
+    }
+
     return {
       success: true,
       passed: true,
