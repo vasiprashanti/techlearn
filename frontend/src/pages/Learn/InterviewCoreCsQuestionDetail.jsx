@@ -285,7 +285,7 @@ export default function InterviewCoreCsQuestionDetail() {
               {question.question}
             </h2>
             {question.description && (
-              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-left border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
+              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-center border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
                 {question.description}
               </p>
             )}
