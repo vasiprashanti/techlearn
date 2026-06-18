@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { Play } from "lucide-react";
+import { useTheme } from "../../context/ThemeContext";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import {
   getDailyChallengeSession,
@@ -21,6 +23,7 @@ const defaultRules = {
 export default function DailyChallengeInstructions() {
   const { linkId } = useParams();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const session = useMemo(() => getDailyChallengeSession(linkId), [linkId]);
   const [loading, setLoading] = useState(true);
@@ -94,41 +97,77 @@ export default function DailyChallengeInstructions() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/30 bg-white/80 p-8 shadow-lg backdrop-blur-xl dark:border-gray-700/30 dark:bg-gray-900/70">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Daily Challenge Instructions</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-5 md:p-6 font-sans text-slate-900 dark:text-slate-100">
+      <div className="absolute left-5 top-5 md:left-6 md:top-6 flex items-center gap-3">
+        <img
+          src={theme === "dark" ? "/logoo2-small.webp" : "/logoo-small.webp"}
+          alt="TLS"
+          className="h-10 w-auto object-contain md:h-12"
+        />
+        <span className="hidden h-7 w-px bg-black/10 dark:bg-white/10 sm:block" />
+        <span className="hidden font-press-start text-[10px] uppercase tracking-wider text-[#00113b]/70 dark:text-[#8fd9ff] sm:block md:text-xs">
+          Daily Challenge
+        </span>
+      </div>
+
+      <div className="w-full max-w-3xl rounded-xl border border-black/5 bg-white/40 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-6">
+        <h1 className="text-center font-press-start text-[10px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff] md:text-xs">
+          Daily Challenge Instructions
+        </h1>
+        <p className="mt-3 text-center text-sm font-semibold leading-relaxed text-[#00113b] dark:text-white md:text-base">
           {challenge?.title || "Read all instructions before starting the challenge."}
         </p>
 
         {loading ? (
-          <p className="mt-6 text-sm text-gray-600 dark:text-gray-300">Loading instructions...</p>
+          <p className="mt-6 text-sm text-[#00113b]/70 dark:text-[#81bde6]">
+            Loading instructions...
+          </p>
         ) : error ? (
-          <p className="mt-6 text-sm text-red-500">{error}</p>
+          <p className="mt-6 text-sm font-semibold text-red-500">{error}</p>
         ) : (
           <>
-            <ul className="mt-6 space-y-3 text-sm text-gray-700 dark:text-gray-200">
-              <li>• Timer limit: <b>{timerLimitMinutes} minutes</b></li>
-              <li>• Maximum runs per question: <b>{rules.runLimitPerQuestion || 5}</b></li>
-              <li>• Submission limit: <b>{rules.submitLimitPerQuestion || 1}</b></li>
-            </ul>
+            <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+              {[
+                ["Timer", `${timerLimitMinutes} minutes`],
+                ["Runs", `${rules.runLimitPerQuestion || 5} per question`],
+                ["Submissions", `${rules.submitLimitPerQuestion || 1} final`],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-lg border border-black/5 bg-white/25 px-3 py-3 text-left dark:border-white/5 dark:bg-black/20"
+                >
+                  <span className="block font-press-start text-[8px] uppercase leading-relaxed text-[#00113b]/55 dark:text-[#81bde6]">
+                    {label}
+                  </span>
+                  <span className="mt-1 block text-sm font-semibold text-[#00113b] dark:text-white">
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
 
-            <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
-              <h2 className="text-sm font-semibold text-blue-700 dark:text-blue-200">Anti-cheat rules</h2>
-              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-blue-700/90 dark:text-blue-200/90">
+            <div className="mt-4 rounded-lg border border-black/5 bg-white/25 p-4 dark:border-white/5 dark:bg-black/20">
+              <h2 className="font-press-start text-[9px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
+                Anti-cheat rules
+              </h2>
+              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[#00113b]/75 dark:text-[#cdeeff]">
                 {(rules.antiCheatRules || defaultRules.antiCheatRules).map((rule) => (
-                  <li key={rule}>{rule}</li>
+                  <li key={rule} className="flex gap-2">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                    <span>{rule}</span>
+                  </li>
                 ))}
               </ul>
             </div>
 
-            <div className="mt-8 flex justify-end">
+            <div className="mt-5 flex justify-center">
               <button
                 type="button"
                 onClick={startTest}
                 disabled={loading}
-                className="rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
               >
+                <Play className="h-3.5 w-3.5" />
                 {loading ? "Preparing..." : "Start Daily Challenge"}
               </button>
             </div>

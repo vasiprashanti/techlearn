@@ -273,8 +273,8 @@ export default function DailyChallengeTest() {
 
   if (!problem) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-        <div className="rounded-xl bg-white/80 px-6 py-5 text-sm text-gray-700 dark:bg-gray-900/70 dark:text-gray-200">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
+        <div className="rounded-xl border border-[#0c34ab]/15 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] px-6 py-5 text-sm text-gray-700 dark:bg-gray-900/70 dark:text-gray-200">
           Loading challenge problem...
         </div>
       </div>
@@ -282,19 +282,33 @@ export default function DailyChallengeTest() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-gray-300/60 bg-white/60 px-6 backdrop-blur-xl dark:border-gray-700 dark:bg-gray-900/60">
-        <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Daily Challenge Test</h1>
-        <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          {theme === "dark" ? (
+            <img
+              src="/logoo2-small.webp"
+              alt="TLS"
+              className="h-10 w-auto object-contain shrink-0"
+            />
+          ) : (
+            <img
+              src="/logoo-small.webp"
+              alt="TLS"
+              className="h-10 w-auto object-contain shrink-0"
+            />
+          )}
+        </div>
+        <div className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200">
           Time Left: <span className={timerWarning ? "text-red-500" : ""}>{formatTime(timeLeft)}</span>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden p-4 gap-4">
+      <div className="flex flex-1 overflow-hidden p-4 gap-3">
         {/* Left Panel (35% Width, Contain all details inside Left Card) */}
-        <section className="w-[35%] md:w-[40%] flex flex-col overflow-hidden rounded-xl border border-gray-300/60 bg-white/75 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-          <div className="p-5 border-b border-gray-300/30 dark:border-gray-700/30 shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">{problem.problemTitle}</h2>
+        <section className="w-[35%] md:w-[40%] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+          <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
+            <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
             
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
@@ -323,11 +337,11 @@ export default function DailyChallengeTest() {
         </section>
 
         {/* Right Panel - Divided into 2 cards (flex-[2] editor, flex-[1] console) */}
-        <div className="flex-grow flex-1 w-[65%] md:w-[60%] flex flex-col gap-4 overflow-hidden">
+        <div className="flex-grow flex-1 w-[65%] md:w-[60%] flex flex-col gap-3 overflow-hidden">
           {/* Card 1: Coding Space (flex-[2]) */}
-          <section className="flex-[2] flex flex-col overflow-hidden rounded-xl border border-gray-300/60 bg-white/75 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-            <div className="mb-3 flex items-center justify-between shrink-0 border-b border-gray-300/30 dark:border-gray-700/30 pb-2">
-              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Code Editor</span>
+          <section className="flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="mb-2 flex items-center justify-between shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
+              <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
               
               {/* Language Selector + Run / Submit buttons */}
               <div className="flex items-center gap-2">
@@ -351,7 +365,7 @@ export default function DailyChallengeTest() {
                   type="button"
                   onClick={handleRun}
                   disabled={running || submitting}
-                  className="inline-flex w-20 justify-center items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-60 transition"
+                  className="inline-flex w-20 justify-center items-center gap-1.5 rounded-lg border border-[#0c34ab]/20 dark:border-white/10 bg-[#0c34ab]/5 dark:bg-white/5 px-2.5 py-1 text-xs font-semibold text-[#0c34ab] dark:text-gray-300 hover:bg-[#0c34ab]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
                 >
                   <Play className="h-3.5 w-3.5" />
                   {running ? "Run..." : "Run"}
@@ -360,10 +374,10 @@ export default function DailyChallengeTest() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={running || submitting || hasSubmitted}
-                  className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-semibold text-white disabled:opacity-60 transition"
+                  className="inline-flex w-32 justify-center items-center gap-1.5 rounded-lg bg-[#0c34ab] hover:bg-[#08257a] px-3 py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                 >
                   <SendHorizontal className="h-3.5 w-3.5" />
-                  {hasSubmitted ? "Submitted" : submitting ? "Submit Code" : "Submit Code"}
+                  {hasSubmitted ? "Submitted" : submitting ? "Submit" : "Submit"}
                 </button>
               </div>
             </div>
@@ -438,11 +452,11 @@ export default function DailyChallengeTest() {
           </section>
 
           {/* Card 2: Terminal Output (flex-[1]) */}
-          <section className="flex-[1] flex flex-col overflow-hidden rounded-xl border border-gray-300/60 bg-white/75 p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/70">
-            <div className="font-semibold mb-2 shrink-0 text-sm text-gray-800 dark:text-gray-200 border-b border-gray-300/30 dark:border-gray-700/30 pb-1.5">
+          <section className="flex-[1] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
               Terminal
             </div>
-            <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6] dark:bg-gray-900/50 p-3 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
+            <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
               {output}
             </pre>
           </section>
@@ -450,16 +464,21 @@ export default function DailyChallengeTest() {
       </div>
 
       {/* Fixed Footer Action Bar */}
-      <footer className="h-16 shrink-0 border-t border-gray-300/60 bg-white/70 px-6 backdrop-blur-xl dark:border-gray-700 dark:bg-gray-900/70 flex items-center justify-between">
-        <div className="text-xs text-gray-600 dark:text-gray-300">
+      <footer className="relative h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-6 backdrop-blur-xl flex items-center justify-between">
+        <div className="text-xs text-gray-600 dark:text-gray-300 select-none">
           Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
         </div>
-        <div className="flex items-center gap-3">
+        
+        <div className="absolute left-1/2 -translate-x-1/2 font-press-start text-[10px] md:text-xs text-[#0c34ab] dark:text-[#8fd9ff] uppercase tracking-wider select-none">
+          DAILY CHALLENGE
+        </div>
+
+        <div className="flex items-center gap-3 z-10">
           <button
             type="button"
             onClick={handleEndChallenge}
             disabled={submitting}
-            className="rounded-lg bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60 transition"
+            className="rounded-xl border border-red-200/50 bg-red-500 hover:bg-red-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60 active:scale-[0.98] transition-all duration-200 shadow-sm"
           >
             End Challenge
           </button>

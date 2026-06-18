@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTheme } from "../../context/ThemeContext";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import {
   getDailyChallengeSession,
@@ -10,6 +11,7 @@ import pixelQuestionImg from '../../assets/pixel-question.png';
 export default function DailyChallengeAccess() {
   const { linkId } = useParams();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const existingSession = useMemo(() => getDailyChallengeSession(linkId), [linkId]);
   const userData = useMemo(() => {
@@ -114,53 +116,63 @@ export default function DailyChallengeAccess() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6 font-sans">
-      <div className="relative w-full max-w-md bg-white dark:bg-[#0a1128] border-2 border-[#3C83F6]/50 rounded-2xl p-6 md:p-8 shadow-2xl text-center border-b-8 border-b-[#3C83F6]">
-        
-        {/* Absolute Top Badge with pixelated solved question image */}
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#3C83F6] text-white p-3 rounded-full border-4 border-white dark:border-[#0a1128] shadow-lg">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-5 md:p-6 font-sans text-slate-900 dark:text-slate-100">
+      <div className="absolute left-5 top-5 md:left-6 md:top-6 flex items-center gap-3">
+        <img
+          src={theme === "dark" ? "/logoo2-small.webp" : "/logoo-small.webp"}
+          alt="TLS"
+          className="h-10 w-auto object-contain md:h-12"
+        />
+        <span className="hidden h-7 w-px bg-black/10 dark:bg-white/10 sm:block" />
+        <span className="hidden font-press-start text-[10px] uppercase tracking-wider text-[#00113b]/70 dark:text-[#8fd9ff] sm:block md:text-xs">
+          Daily Challenge
+        </span>
+      </div>
+
+      <div className="relative w-full max-w-lg rounded-xl border border-black/5 bg-white/40 p-5 pt-10 text-center shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-6 md:pt-11">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 rounded-xl border border-white/70 bg-white/80 p-3 shadow-md dark:border-[#15366f]/45 dark:bg-[#06183d]">
           <img
             src={pixelQuestionImg}
             alt="Daily Challenge Access"
-            className="w-10 h-10 object-contain pixel-icon select-none"
+            className="h-14 w-14 object-contain pixel-icon select-none"
             style={{ imageRendering: 'pixelated' }}
           />
         </div>
 
-        <div className="mt-8 space-y-4">
-          <h3 className="font-pixel-header text-xs tracking-wider text-[#3C83F6] dark:text-[#8fd9ff] uppercase">
+        <div className="mt-8 space-y-3">
+          <h3 className="font-press-start text-[9px] leading-relaxed tracking-wider text-[#00113b] dark:text-[#8fd9ff] uppercase">
             DAILY CHALLENGE ACCESS
           </h3>
-          <p className="text-base font-bold text-slate-800 dark:text-white leading-relaxed">
+          <p className="text-sm font-semibold leading-relaxed text-[#00113b] dark:text-white md:text-base">
             {challengeTitle}
           </p>
           
-          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-xs leading-relaxed text-[#00113b]/70 dark:text-[#81bde6] md:text-sm">
             {otpSent 
               ? "An OTP has been sent to your registered email address. Please enter it below to proceed."
               : "To ensure a secure environment, click the button below to get an OTP on your registered email address."
             }
           </p>
 
-          <div className="mt-6 space-y-4">
+          <div className="space-y-3 pt-2">
             {otpSent && (
               <input
                 type="text"
                 value={otp}
                 onChange={(event) => setOtp(event.target.value)}
                 placeholder="Enter OTP"
-                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                className="w-full rounded-md border border-[#86c4ff]/40 bg-[#f2faff]/90 px-3 py-2 text-sm text-[#001862] outline-none transition placeholder:text-[#6f8fb7] focus:border-[#2d7fe8]/70 focus:ring-4 focus:ring-[#76c7ff]/20 dark:border-[#6bb8ec]/25 dark:bg-[#0a2f6f]/60 dark:text-[#9cd6ff] dark:placeholder:text-[#77afd8] dark:focus:border-[#8fd9ff]/70"
               />
             )}
 
-            {error && <p className="text-sm text-red-500 font-semibold">{error}</p>}
+            {error && <p className="text-xs font-semibold text-red-500 md:text-sm">{error}</p>}
 
             {!otpSent ? (
               <button
                 type="button"
                 onClick={sendOtp}
                 disabled={loading}
-                className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60 shadow-lg shadow-blue-500/20"
+                className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
               >
                 {loading ? "Sending OTP..." : "Get OTP"}
               </button>
@@ -169,7 +181,7 @@ export default function DailyChallengeAccess() {
                 type="button"
                 onClick={verifyOtp}
                 disabled={loading}
-                className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60 shadow-lg shadow-emerald-500/20"
+                className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
               >
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
