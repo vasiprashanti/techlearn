@@ -114,6 +114,11 @@ export default function InterviewCoreCsQuestionDetail() {
         setSelectedOption(optIndex);
         setShowFeedback(true);
         setIsLastSubmissionCorrect(currentTask.isCorrect === true);
+        if (currentTask.isCorrect === true) {
+          setSubmissionMessage('Submission successful! Correct answer.');
+        } else {
+          setSubmissionMessage('Incorrect Submission Please refer to the solution above');
+        }
       }
     } else {
       setSelectedOption(null);
@@ -256,8 +261,8 @@ export default function InterviewCoreCsQuestionDetail() {
   };
 
   return (
-    <UserSidebarLayout maxWidthClass="max-w-3xl">
-      <div className="max-w-2xl mx-auto">
+    <UserSidebarLayout maxWidthClass="max-w-3xl lg:max-w-5xl">
+      <div className="max-w-2xl lg:max-w-4xl mx-auto">
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
         <div className="border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
           {/* Header row with heading centered and difficulty pill absolute on the right */}
