@@ -323,14 +323,14 @@ export default function InterviewDsaQuestionDetail() {
         {/* Workspace Body split */}
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
-          <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+          <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
             {/* Header inside the Left Card */}
             <div className="p-5 border-b border-black/5 dark:border-white/5 shrink-0">
               {!isDailyMode && (
                 <button
                   type="button"
                   onClick={() => navigate(dsaListPath)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#0c34ab] hover:text-[#08257a] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
@@ -362,7 +362,7 @@ export default function InterviewDsaQuestionDetail() {
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden">
             {/* Card 1: Coding Space (outer rounded-2xl, inner editor sharp) */}
-            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 p-4 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
@@ -389,7 +389,7 @@ export default function InterviewDsaQuestionDetail() {
                     type="button"
                     onClick={runCode}
                     disabled={isRunning}
-                    className="inline-flex w-20 justify-center items-center gap-1.5 rounded-lg border border-[#86c4ff]/55 bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#6fbfff]/40"
+                    className="inline-flex w-20 justify-center items-center gap-1.5 rounded-lg border border-transparent bg-[#0c34ab] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#08257a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-transparent dark:bg-[#0c34ab] dark:hover:bg-[#08257a]"
                   >
                     <Play className="h-3 w-3" />
                     {isRunning ? 'Run...' : 'Run'}
@@ -400,7 +400,7 @@ export default function InterviewDsaQuestionDetail() {
                       type="button"
                       onClick={markSolved}
                       disabled={isSubmitted}
-                      className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+                      className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg border border-transparent bg-[#0c34ab]/10 hover:bg-[#0c34ab]/25 text-[#0c34ab] px-3 py-1.5 text-xs font-semibold dark:border-transparent dark:bg-[#0c34ab] dark:hover:bg-[#08257a] dark:text-white transition-all duration-200"
                     >
                       <CheckCircle className="h-3 w-3" />
                       Submit Code
@@ -429,7 +429,7 @@ export default function InterviewDsaQuestionDetail() {
             </section>
 
             {/* Card 2: Terminal / Output Console (flex-[1], outer rounded-2xl, inner terminal sharp) */}
-            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 p-4 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff] border-b border-black/5 dark:border-white/5 pb-1.5">
                 Terminal
               </div>
@@ -460,7 +460,7 @@ export default function InterviewDsaQuestionDetail() {
                     navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                   }
                 }}
-                className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-white/40 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"
+                className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#0c34ab]/20 dark:border-gray-700 bg-[#0c34ab]/5 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-[#0c34ab] dark:text-gray-300 hover:bg-[#0c34ab]/15 dark:hover:bg-black/50 transition-all duration-200 shadow-sm"
               >
                 Back
               </button>
@@ -469,7 +469,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-[#0c34ab] hover:bg-[#08257a] active:scale-[0.98] px-4 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
                 >
                   Next
                 </button>
@@ -477,7 +477,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
+                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
                 >
                   Finish
                 </button>
