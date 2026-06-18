@@ -736,7 +736,7 @@ const CodingCompiler = ({ user, contestData }) => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="flex items-center gap-2 px-4 h-10 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition hover:bg-blue-700"
+              className="flex items-center gap-2 px-5 h-11 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition hover:bg-blue-700"
             >
               <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Run"}
             </button>
@@ -804,7 +804,7 @@ const CodingCompiler = ({ user, contestData }) => {
             isRunning ||
             submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
           }
-          className="px-4 py-2 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-2.5 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
             ? "Already Submitted"
