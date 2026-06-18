@@ -3,7 +3,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
-import { FiChevronDown, FiPlus, FiTrash2, FiEdit2, FiSearch, FiFolder, FiArchive, FiUsers, FiClock, FiExternalLink, FiCopy, FiUpload, FiX, FiSave } from "react-icons/fi";
+import { FiChevronDown, FiPlus, FiTrash2, FiSearch, FiFolder, FiArchive, FiUsers, FiClock, FiExternalLink, FiCopy, FiUpload, FiX, FiSave, FiActivity, FiTrendingUp } from "react-icons/fi";
 
 const CATEGORIES = [
   "Java Full Stack",
@@ -18,13 +18,18 @@ const CATEGORIES = [
   "Other"
 ];
 
+const STATUS_FILTERS = ["All", "Draft", "Published", "Archived"];
+
 export default function ProjectsList() {
   const [projects, setProjects] = useState([]);
   const [metrics, setMetrics] = useState({
     totalProjects: 0,
     activeProjects: 0,
     archivedProjects: 0,
-    studentsAssigned: 0
+    studentsAssigned: 0,
+    studentsActive: 0,
+    averageProgress: 0,
+    completionRate: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +37,11 @@ export default function ProjectsList() {
   // Search, Filter, Sort state
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Projects");
+  const [selectedStatus, setSelectedStatus] = useState("All");
   const [sortBy, setSortBy] = useState("created_desc");
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   // Create Project Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -79,7 +88,10 @@ export default function ProjectsList() {
           totalProjects: metricsData.totalProjects || 0,
           activeProjects: metricsData.activeProjects || 0,
           archivedProjects: metricsData.archivedProjects || 0,
-          studentsAssigned: metricsData.studentsAssigned || 0
+          studentsAssigned: metricsData.studentsAssigned || 0,
+          studentsActive: metricsData.studentsActive || 0,
+          averageProgress: metricsData.averageProgress || 0,
+          completionRate: metricsData.completionRate || 0
         });
       }
     } catch (err) {
@@ -87,6 +99,50 @@ export default function ProjectsList() {
       setError(err.message || "Failed to load project database.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const selectedProjects = projects.filter((project) => selectedProjectIds.includes(project._id));
+
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjectIds((prev) =>
+      prev.includes(projectId) ? prev.filter((id) => id !== projectId) : [...prev, projectId]
+    );
+  };
+
+  const clearSelection = () => {
+    setSelectedProjectIds([]);
+    setBulkDeleteConfirm(false);
+  };
+
+  const handleBulkArchive = async () => {
+    if (selectedProjectIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      const archiveTargets = selectedProjects.filter((project) => project.status !== "Archived");
+      await Promise.all(archiveTargets.map((project) => adminAPI.archiveProject(project._id)));
+      clearSelection();
+      fetchData();
+    } catch (err) {
+      console.error("Bulk archive failed:", err);
+      alert(`Bulk archive failed: ${err.message}`);
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProjectIds.length === 0) return;
+    setBulkActionLoading(true);
+    try {
+      await Promise.all(selectedProjectIds.map((projectId) => adminAPI.deleteProject(projectId)));
+      clearSelection();
+      fetchData();
+    } catch (err) {
+      console.error("Bulk delete failed:", err);
+      alert(`Bulk delete failed: ${err.message}`);
+    } finally {
+      setBulkActionLoading(false);
     }
   };
 
@@ -224,8 +280,10 @@ export default function ProjectsList() {
         const cleanModel = project.category.endsWith("s") ? project.category.slice(0, -1) : project.category;
         categoryMatches = cleanModel.toLowerCase().trim() === cleanSelected.toLowerCase().trim();
       }
+
+      const statusMatches = selectedStatus === "All" || project.status === selectedStatus;
       
-      return titleMatches && categoryMatches;
+      return titleMatches && categoryMatches && statusMatches;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -453,6 +511,25 @@ export default function ProjectsList() {
         </div>
       )}
 
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setBulkDeleteConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-rose-500 dark:text-rose-400">Delete Selected Projects?</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              This will delete {selectedProjectIds.length} selected project{selectedProjectIds.length === 1 ? "" : "s"} and related days, tasks, and assignments.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <button onClick={() => setBulkDeleteConfirm(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 transition">Cancel</button>
+              <button onClick={handleBulkDelete} disabled={bulkActionLoading} className="px-4 py-2 rounded-xl text-sm font-medium bg-rose-500 hover:bg-rose-600 text-white transition shadow-sm disabled:opacity-60">
+                {bulkActionLoading ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
       <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}>
@@ -471,7 +548,7 @@ export default function ProjectsList() {
           </div>
 
           {/* Metrics Dashboard Row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
                 <FiFolder className="w-5 h-5" />
@@ -488,7 +565,7 @@ export default function ProjectsList() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-[#0c1833] dark:text-white leading-none">{metrics.activeProjects}</h3>
-                <p className="text-[11px] font-semibold text-slate-400 mt-1">Active</p>
+                <p className="text-[11px] font-semibold text-slate-400 mt-1">Published Projects</p>
               </div>
             </div>
 
@@ -509,6 +586,36 @@ export default function ProjectsList() {
               <div>
                 <h3 className="text-xl font-bold text-[#0c1833] dark:text-white leading-none">{metrics.studentsAssigned}</h3>
                 <p className="text-[11px] font-semibold text-slate-400 mt-1">Students Assigned</p>
+              </div>
+            </div>
+
+            <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
+                <FiActivity className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#0c1833] dark:text-white leading-none">{metrics.studentsActive}</h3>
+                <p className="text-[11px] font-semibold text-slate-400 mt-1">Students Active</p>
+              </div>
+            </div>
+
+            <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
+                <FiTrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#0c1833] dark:text-white leading-none">{metrics.averageProgress}%</h3>
+                <p className="text-[11px] font-semibold text-slate-400 mt-1">Average Progress</p>
+              </div>
+            </div>
+
+            <div className="bg-white/80 dark:bg-[#0f274f]/80 border border-white/40 dark:border-white/5 backdrop-blur-md p-4 rounded-2xl flex items-center gap-4 shadow-[0_4px_18px_rgba(0,0,0,0.02)]">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-300">
+                <FiUsers className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-[#0c1833] dark:text-white leading-none">{metrics.completionRate}%</h3>
+                <p className="text-[11px] font-semibold text-slate-400 mt-1">Completion Rate</p>
               </div>
             </div>
           </div>
@@ -571,6 +678,44 @@ export default function ProjectsList() {
             ))}
           </div>
 
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none whitespace-nowrap">
+            {STATUS_FILTERS.map((status) => (
+              <button
+                key={status}
+                onClick={() => setSelectedStatus(status)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
+                  selectedStatus === status
+                    ? "bg-[#001b54] text-white shadow-sm"
+                    : "bg-white/60 hover:bg-white/90 text-slate-600 dark:bg-[#0f1f43]/45 dark:text-slate-300"
+                }`}
+              >
+                {status === "All" ? "All Status" : status}
+              </button>
+            ))}
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedProjectIds.length > 0 && (
+            <div className="sticky top-0 z-20 rounded-2xl border border-blue-500/20 bg-white/95 dark:bg-[#0a1737]/95 shadow-lg backdrop-blur-md px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-[#0c1833] dark:text-white">{selectedProjectIds.length} project{selectedProjectIds.length === 1 ? "" : "s"} selected</p>
+                <p className="text-[11px] font-semibold text-slate-400">Bulk actions apply to the selected project cards.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={clearSelection} className="px-4 py-2 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/15 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 transition">Clear</button>
+                <button onClick={handleBulkArchive} disabled={bulkActionLoading} className="px-4 py-2 rounded-xl text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white transition disabled:opacity-60 flex items-center gap-1.5">
+                  <FiArchive className="w-3.5 h-3.5" />
+                  {bulkActionLoading ? "Archiving..." : "Bulk Archive"}
+                </button>
+                <button onClick={() => setBulkDeleteConfirm(true)} disabled={bulkActionLoading} className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-500 hover:bg-rose-600 text-white transition disabled:opacity-60 flex items-center gap-1.5">
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  Bulk Delete
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Project List / Grid */}
           {loading ? (
             <div className="text-center py-20">
@@ -588,17 +733,28 @@ export default function ProjectsList() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAndSortedProjects.map((project) => (
-                <div key={project._id} className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-[24px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.015)] hover:shadow-lg transition-all flex flex-col justify-between group">
+              {filteredAndSortedProjects.map((project) => {
+                const isSelected = selectedProjectIds.includes(project._id);
+                return (
+                <div key={project._id} className={`bg-white dark:bg-[#0f274f] border rounded-[24px] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.015)] hover:shadow-lg transition-all flex flex-col justify-between group ${isSelected ? "border-blue-500/60 ring-2 ring-blue-500/15" : "border-white/40 dark:border-white/5"}`}>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleProjectSelection(project._id)}
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
+                          aria-label={`Select ${project.title}`}
+                        />
+                        <div className="min-w-0">
                         <h2 className="text-[15px] font-bold text-[#0c1833] dark:text-white line-clamp-1 truncate leading-snug" title={project.title}>
                           {project.title}
                         </h2>
                         <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-400">
                           {project.category}
                         </span>
+                        </div>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-[10px] ${getStatusColor(project.status === "Published" ? "Active" : project.status)}`}>
                         {project.status === "Published" ? "Active" : project.status}
@@ -661,7 +817,7 @@ export default function ProjectsList() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 

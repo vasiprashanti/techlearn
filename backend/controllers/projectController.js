@@ -303,17 +303,39 @@ export const deleteProject = async (req, res) => {
 
 export const getProjectsSummary = async (req, res) => {
   try {
-    const totalProjects = await Project.countDocuments();
-    const activeProjects = await Project.countDocuments({ status: "Published" });
-    const archivedProjects = await Project.countDocuments({ status: "Archived" });
-
-    // Distinct assigned students across active StudentProjects
-    const studentsAssignedResult = await StudentProject.aggregate([
-      { $match: { status: "Active" } },
-      { $group: { _id: "$student_id" } },
-      { $count: "count" },
+    const [
+      totalProjects,
+      activeProjects,
+      archivedProjects,
+      studentAssignmentStats,
+    ] = await Promise.all([
+      Project.countDocuments(),
+      Project.countDocuments({ status: "Published" }),
+      Project.countDocuments({ status: "Archived" }),
+      StudentProject.aggregate([
+        {
+          $group: {
+            _id: null,
+            studentsAssigned: { $sum: 1 },
+            studentsActive: {
+              $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] },
+            },
+            studentsCompleted: {
+              $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+            },
+            averageProgress: { $avg: "$progress_percentage" },
+          },
+        },
+      ]),
     ]);
-    const studentsAssigned = studentsAssignedResult[0]?.count || 0;
+
+    const assignmentStats = studentAssignmentStats[0] || {};
+    const studentsAssigned = assignmentStats.studentsAssigned || 0;
+    const studentsActive = assignmentStats.studentsActive || 0;
+    const averageProgress = Math.round(assignmentStats.averageProgress || 0);
+    const completionRate = studentsAssigned > 0
+      ? Math.round(((assignmentStats.studentsCompleted || 0) / studentsAssigned) * 100)
+      : 0;
 
     return res.status(200).json({
       success: true,
@@ -321,6 +343,9 @@ export const getProjectsSummary = async (req, res) => {
       activeProjects,
       archivedProjects,
       studentsAssigned,
+      studentsActive,
+      averageProgress,
+      completionRate,
     });
   } catch (err) {
     console.error("Get Projects Summary Error:", err);
