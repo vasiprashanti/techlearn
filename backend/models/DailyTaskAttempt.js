@@ -30,6 +30,30 @@ const taskProgressSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    selectedOption: {
+      type: String,
+      default: "",
+    },
+    isCorrect: {
+      type: Boolean,
+      default: null,
+    },
+    attempted: {
+      type: Boolean,
+      default: false,
+    },
+    code: {
+      type: String,
+      default: "",
+    },
+    language: {
+      type: String,
+      default: "",
+    },
+    accuracy: {
+      type: Number,
+      default: null,
+    },
   },
   { _id: false }
 );

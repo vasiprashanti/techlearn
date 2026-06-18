@@ -42,8 +42,14 @@ export default function InterviewSqlQuestionDetail() {
       });
       if (res.ok) {
         const payload = await res.json();
-        if (payload?.success && payload?.data?.tasks) {
-          setDailyTasksList(payload.data.tasks);
+        if (payload?.success) {
+          if (payload.data?.isFullyCompleted) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+          if (payload.data?.tasks) {
+            setDailyTasksList(payload.data.tasks);
+          }
         }
       }
     } catch (err) {
@@ -67,13 +73,20 @@ export default function InterviewSqlQuestionDetail() {
     return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
   }, [dailySequence, questionId]);
 
-  const isCurrentQuestionCompleted = useMemo(() => {
-    if (isSubmitted) return true;
-    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
-      return dailySequence[currentTaskIndex].status === 'Completed';
+  useEffect(() => {
+    if (isDailyMode && dailySequence[currentTaskIndex]) {
+      const currentTask = dailySequence[currentTaskIndex];
+      if (currentTask.code) {
+        setCode(currentTask.code);
+        setIsLastSubmissionCorrect(currentTask.isCorrect || false);
+        setOutput('');
+        return;
+      }
     }
-    return false;
-  }, [dailySequence, currentTaskIndex, isSubmitted]);
+    setCode('-- Write your SQL query here\nSELECT * FROM users;\n');
+    setIsLastSubmissionCorrect(false);
+    setOutput('');
+  }, [questionId, isDailyMode, dailySequence, currentTaskIndex]);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,40 +246,34 @@ export default function InterviewSqlQuestionDetail() {
   }
 
   const handleNext = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'SQL',
-          isCorrect: true,
-          code,
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'SQL',
+        isCorrect: isLastSubmissionCorrect,
+        code,
+        finalize: false,
+      });
+    } catch (err) {
+      console.error("Failed to save progress:", err);
     }
     const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : 'dsa';
     navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
   };
 
   const handleFinish = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'SQL',
-          isCorrect: true,
-          code,
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
-      navigate('/dashboard');
-    } else {
-      setShowFinishModal(true);
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'SQL',
+        isCorrect: isLastSubmissionCorrect,
+        code,
+        finalize: true,
+      });
+    } catch (err) {
+      console.error("Failed to finalize task:", err);
     }
+    navigate('/dashboard');
   };
 
   return (
@@ -399,8 +406,9 @@ export default function InterviewSqlQuestionDetail() {
                   if (currentTaskIndex === 0) {
                     navigate('/dashboard');
                   } else {
-                    const prevType = dailySequence[currentTaskIndex - 1].taskType === 'SQL' ? 'sql' : 'dsa';
-                    navigate(`/dashboard/practice/${prevType}/${dailySequence[currentTaskIndex - 1].questionId}?mode=daily`);
+                    const prevTask = dailySequence[currentTaskIndex - 1];
+                    const prevType = prevTask.taskType === 'SQL' ? 'sql' : 'dsa';
+                    navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                   }
                 }}
                 className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-white/40 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"

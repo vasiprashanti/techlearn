@@ -73,25 +73,33 @@ export const getQuestionsByCategory = async (req, res) => {
 
 export const getQuestionById = async (req, res) => {
   try {
-    const question = await Question.findById(req.params.questionId).lean();
+    const question = await Question.findById(req.params.questionId)
+      .select('+content.correctOption')
+      .lean();
 
     if (!question || !question.isActive) {
       return res.status(404).json({ success: false, message: 'Question not found' });
     }
 
     // Sanitize sensitive fields before returning to client (student)
+    const isMcq = question.categoryType === 'MCQ';
+
     if (question.content) {
       delete question.content.hiddenTestCases;
-      delete question.content.correctOption;
       delete question.content.referenceSolution;
-      delete question.content.explanation;
-      delete question.content.solutionNotes;
+      if (!isMcq) {
+        delete question.content.correctOption;
+        delete question.content.explanation;
+        delete question.content.solutionNotes;
+      }
     }
 
     // Also sanitize legacy/compatibility fields on the root level
     delete question.hiddenTestCases;
     delete question.solutionCode;
-    delete question.editorial;
+    if (!isMcq) {
+      delete question.editorial;
+    }
 
     return res.status(200).json({ success: true, data: question });
   } catch (err) {

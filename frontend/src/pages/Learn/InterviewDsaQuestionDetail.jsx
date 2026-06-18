@@ -54,8 +54,14 @@ export default function InterviewDsaQuestionDetail() {
       });
       if (res.ok) {
         const payload = await res.json();
-        if (payload?.success && payload?.data?.tasks) {
-          setDailyTasksList(payload.data.tasks);
+        if (payload?.success) {
+          if (payload.data?.isFullyCompleted) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+          if (payload.data?.tasks) {
+            setDailyTasksList(payload.data.tasks);
+          }
         }
       }
     } catch (err) {
@@ -79,13 +85,7 @@ export default function InterviewDsaQuestionDetail() {
     return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
   }, [dailySequence, questionId]);
 
-  const isCurrentQuestionCompleted = useMemo(() => {
-    if (isSubmitted) return true;
-    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
-      return dailySequence[currentTaskIndex].status === 'Completed';
-    }
-    return false;
-  }, [dailySequence, currentTaskIndex, isSubmitted]);
+
 
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -149,9 +149,29 @@ export default function InterviewDsaQuestionDetail() {
   const [showFinishModal, setShowFinishModal] = useState(false);
 
   useEffect(() => {
+    if (!isDailyMode) {
+      setCode(details?.starterCode || '');
+      setOutput('');
+    }
+  }, [questionId, details?.starterCode, isDailyMode]);
+
+  useEffect(() => {
+    if (isDailyMode && dailySequence[currentTaskIndex]) {
+      const currentTask = dailySequence[currentTaskIndex];
+      if (currentTask.code) {
+        setCode(currentTask.code);
+        if (currentTask.language) {
+          setSelectedLanguage(currentTask.language);
+        }
+        setIsLastSubmissionCorrect(currentTask.isCorrect || false);
+        setOutput('');
+        return;
+      }
+    }
     setCode(details?.starterCode || '');
+    setIsLastSubmissionCorrect(false);
     setOutput('');
-  }, [questionId, details?.starterCode]);
+  }, [questionId, details?.starterCode, isDailyMode, dailySequence, currentTaskIndex]);
 
   if (loading) {
     return (
@@ -265,42 +285,36 @@ export default function InterviewDsaQuestionDetail() {
   };
 
   const handleNext = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'DSA',
-          isCorrect: true,
-          code,
-          language: selectedLanguage,
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'DSA',
+        isCorrect: isLastSubmissionCorrect,
+        code,
+        language: selectedLanguage,
+        finalize: false,
+      });
+    } catch (err) {
+      console.error("Failed to save progress:", err);
     }
     const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : 'dsa';
     navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
   };
 
   const handleFinish = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'DSA',
-          isCorrect: true,
-          code,
-          language: selectedLanguage,
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
-      navigate('/dashboard');
-    } else {
-      setShowFinishModal(true);
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'DSA',
+        isCorrect: isLastSubmissionCorrect,
+        code,
+        language: selectedLanguage,
+        finalize: true,
+      });
+    } catch (err) {
+      console.error("Failed to finalize task:", err);
     }
+    navigate('/dashboard');
   };
 
   return (
@@ -441,8 +455,9 @@ export default function InterviewDsaQuestionDetail() {
                   if (currentTaskIndex === 0) {
                     navigate('/dashboard');
                   } else {
-                    const prevType = dailySequence[currentTaskIndex - 1].taskType === 'SQL' ? 'sql' : 'dsa';
-                    navigate(`/dashboard/practice/${prevType}/${dailySequence[currentTaskIndex - 1].questionId}?mode=daily`);
+                    const prevTask = dailySequence[currentTaskIndex - 1];
+                    const prevType = prevTask.taskType === 'SQL' ? 'sql' : 'dsa';
+                    navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                   }
                 }}
                 className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#86c4ff]/55 bg-white/40 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"

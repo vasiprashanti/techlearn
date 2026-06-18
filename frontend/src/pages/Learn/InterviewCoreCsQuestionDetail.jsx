@@ -47,16 +47,34 @@ export default function InterviewCoreCsQuestionDetail() {
     practiceAPI.getQuestionById(questionId)
       .then((data) => {
         if (!cancelled && data) {
-          const options = (data.options || []).map(opt => opt.optionText);
-          const correctIndex = (data.options || []).findIndex(opt => opt.isCorrect);
+          let options = [];
+          if (data.content?.options && data.content.options.length > 0) {
+            options = data.content.options.map(opt => opt.text);
+          } else if (data.options && data.options.length > 0) {
+            options = data.options.map(opt => opt.optionText || opt.text || opt);
+          } else {
+            options = ['A', 'B', 'C', 'D'];
+          }
+
+          let correctIndex = 0;
+          if (data.content?.correctOption) {
+            const letter = data.content.correctOption.toUpperCase();
+            correctIndex = ['A', 'B', 'C', 'D'].indexOf(letter);
+            if (correctIndex === -1) correctIndex = 0;
+          } else if (data.options && data.options.length > 0) {
+            const foundIndex = data.options.findIndex(opt => opt.isCorrect);
+            if (foundIndex !== -1) correctIndex = foundIndex;
+          }
+
           setQuestion({
             id: String(data._id),
             tag: data.categoryTitle || 'Core CS',
             difficulty: data.difficulty || 'Easy',
             question: data.title || '',
-            options: options.length > 0 ? options : ['A', 'B', 'C', 'D'],
-            correctIndex: correctIndex !== -1 ? correctIndex : 0,
-            explanation: data.explanation || data.content?.explanation || 'No explanation provided.'
+            description: data.description || '',
+            options,
+            correctIndex,
+            explanation: data.content?.explanation || data.explanation || data.editorial || 'No explanation provided.'
           });
         }
         if (!cancelled) setLoading(false);
@@ -72,19 +90,39 @@ export default function InterviewCoreCsQuestionDetail() {
     return () => { cancelled = true; };
   }, [questionId]);
 
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [submissionMessage, setSubmissionMessage] = useState('');
-  const [isLastSubmissionCorrect, setIsLastSubmissionCorrect] = useState(false);
-  const [showFinishModal, setShowFinishModal] = useState(false);
+  const dailySequence = useMemo(() => {
+    if (!isDailyMode) return [];
+    return dailyTasksList.filter(t => t.taskType === 'MCQ' || t.taskType === 'Core CS');
+  }, [dailyTasksList, isDailyMode]);
+
+  const currentTaskIndex = useMemo(() => {
+    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
+  }, [dailySequence, questionId]);
+
+  const currentTask = useMemo(() => {
+    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
+      return dailySequence[currentTaskIndex];
+    }
+    return null;
+  }, [dailySequence, currentTaskIndex]);
 
   useEffect(() => {
-    setSelectedOption(null);
-    setShowFeedback(false);
-    setSubmissionMessage('');
-    setIsLastSubmissionCorrect(false);
-    setShowFinishModal(false);
-  }, [questionId]);
+    if (isDailyMode && currentTask && currentTask.attempted && question) {
+      const optionLetter = currentTask.selectedOption;
+      const optIndex = ['A', 'B', 'C', 'D'].indexOf(optionLetter);
+      if (optIndex !== -1) {
+        setSelectedOption(optIndex);
+        setShowFeedback(true);
+        setIsLastSubmissionCorrect(currentTask.isCorrect === true);
+      }
+    } else {
+      setSelectedOption(null);
+      setShowFeedback(false);
+      setSubmissionMessage('');
+      setIsLastSubmissionCorrect(false);
+      setShowFinishModal(false);
+    }
+  }, [questionId, currentTask, question, isDailyMode]);
   
   const fetchDailyTasks = async () => {
     try {
@@ -94,8 +132,14 @@ export default function InterviewCoreCsQuestionDetail() {
       });
       if (res.ok) {
         const payload = await res.json();
-        if (payload?.success && payload?.data?.tasks) {
-          setDailyTasksList(payload.data.tasks);
+        if (payload?.success) {
+          if (payload.data?.isFullyCompleted) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+          if (payload.data?.tasks) {
+            setDailyTasksList(payload.data.tasks);
+          }
         }
       }
     } catch (err) {
@@ -110,14 +154,11 @@ export default function InterviewCoreCsQuestionDetail() {
     }
   }, [questionId, isDailyMode]);
 
-  const dailySequence = useMemo(() => {
-    if (!isDailyMode) return [];
-    return dailyTasksList.filter(t => t.taskType === 'MCQ' || t.taskType === 'Core CS');
-  }, [dailyTasksList, isDailyMode]);
-
-  const currentTaskIndex = useMemo(() => {
-    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
-  }, [dailySequence, questionId]);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState('');
+  const [isLastSubmissionCorrect, setIsLastSubmissionCorrect] = useState(false);
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   const isCurrentQuestionCompleted = useMemo(() => {
     if (isSubmitted) return true;
@@ -187,48 +228,31 @@ export default function InterviewCoreCsQuestionDetail() {
       if (correct) {
         setSubmissionMessage('Submission successful! Correct answer.');
       } else {
-        setSubmissionMessage('Incorrect submission. Please select another option and try again.');
+        setSubmissionMessage('Incorrect Submission Please refer to the solution above');
       }
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
   };
 
-  const handleNext = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'Core CS',
-          isCorrect: true,
-          selectedAnswer: String.fromCharCode(65 + selectedOption),
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
-    }
+  const handleNext = () => {
     const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : dailySequence[currentTaskIndex + 1].taskType === 'MCQ' || dailySequence[currentTaskIndex + 1].taskType === 'Core CS' ? 'core-cs' : 'dsa';
     navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
   };
-
+ 
   const handleFinish = async () => {
-    if (isLastSubmissionCorrect) {
-      try {
-        await practiceAPI.recordSubmission({
-          questionId: question.id,
-          track: 'Core CS',
-          isCorrect: true,
-          selectedAnswer: String.fromCharCode(65 + selectedOption),
-          finalize: true,
-        });
-      } catch (err) {
-        console.error("Failed to finalize task:", err);
-      }
-      navigate('/dashboard');
-    } else {
-      setShowFinishModal(true);
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'Core CS',
+        isCorrect: isLastSubmissionCorrect,
+        selectedAnswer: selectedOption !== null ? String.fromCharCode(65 + selectedOption) : "",
+        finalize: true,
+      });
+    } catch (err) {
+      console.error("Failed to finalize task:", err);
     }
+    navigate('/dashboard');
   };
 
   return (
@@ -255,6 +279,11 @@ export default function InterviewCoreCsQuestionDetail() {
             <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
               {question.question}
             </h2>
+            {question.description && (
+              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-left border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
+                {question.description}
+              </p>
+            )}
           </div>
 
           {/* Options Grid (2x2 options layout) */}
@@ -274,13 +303,16 @@ export default function InterviewCoreCsQuestionDetail() {
                 <button
                   key={idx}
                   type="button"
+                  disabled={currentTask?.attempted || showFeedback}
                   onClick={() => {
                     setSelectedOption(idx);
                     setShowFeedback(false);
                     setIsLastSubmissionCorrect(false);
                     setSubmissionMessage('');
                   }}
-                  className={`relative w-full rounded-xl border-2 p-4 text-center font-semibold text-sm transition min-h-[60px] flex items-center justify-center ${optionClass}`}
+                  className={`relative w-full rounded-xl border-2 p-4 text-center font-semibold text-sm transition min-h-[60px] flex items-center justify-center ${optionClass} ${
+                    (currentTask?.attempted || showFeedback) ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                  }`}
                 >
                   <span className="leading-tight px-6">{opt}</span>
                   {showFeedback && idx === question.correctIndex ? (
@@ -325,8 +357,9 @@ export default function InterviewCoreCsQuestionDetail() {
                     if (currentTaskIndex === 0) {
                       navigate('/dashboard');
                     } else {
-                      const prevType = dailySequence[currentTaskIndex - 1].taskType === 'SQL' ? 'sql' : dailySequence[currentTaskIndex - 1].taskType === 'MCQ' || dailySequence[currentTaskIndex - 1].taskType === 'Core CS' ? 'core-cs' : 'dsa';
-                      navigate(`/dashboard/practice/${prevType}/${dailySequence[currentTaskIndex - 1].questionId}?mode=daily`);
+                      const prevTask = dailySequence[currentTaskIndex - 1];
+                      const prevType = prevTask.taskType === 'SQL' ? 'sql' : prevTask.taskType === 'MCQ' || prevTask.taskType === 'Core CS' ? 'core-cs' : 'dsa';
+                      navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                     }
                   }}
                   className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white/40 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-black/50 transition"
@@ -377,37 +410,6 @@ export default function InterviewCoreCsQuestionDetail() {
         </div>
       </div>
 
-      {showFinishModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#86c4ff]/30 bg-white p-6 shadow-2xl dark:bg-gray-900 text-gray-900 dark:text-white">
-            <h3 className="text-lg font-bold text-[#0d2a57] dark:text-[#8fd9ff] mb-2">
-              Finish without completing the task?
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 font-medium">
-              You have not successfully completed this task. If you finish now, your progress will not be saved. Do you want to finish anyway?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowFinishModal(false)}
-                className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFinishModal(false);
-                  navigate('/dashboard');
-                }}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition"
-              >
-                Yes, Finish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </UserSidebarLayout>
   );
 }

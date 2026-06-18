@@ -40,8 +40,14 @@ export default function InterviewAptitudeQuestionDetail() {
       });
       if (res.ok) {
         const payload = await res.json();
-        if (payload?.success && payload?.data?.tasks) {
-          setDailyTasksList(payload.data.tasks);
+        if (payload?.success) {
+          if (payload.data?.isFullyCompleted) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+          if (payload.data?.tasks) {
+            setDailyTasksList(payload.data.tasks);
+          }
         }
       }
     } catch (err) {
