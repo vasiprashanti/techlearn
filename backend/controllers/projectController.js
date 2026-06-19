@@ -670,8 +670,8 @@ export const deleteProjectTask = async (req, res) => {
 
 export const searchStudents = async (req, res) => {
   try {
-    const { query, projectId } = req.query;
-    if (!query) {
+    const { query = "", projectId, batchId } = req.query;
+    if (!query.trim() && !batchId) {
       return res.status(200).json([]);
     }
 
@@ -685,15 +685,23 @@ export const searchStudents = async (req, res) => {
       excludedStudentIds = assigned.map(a => a.student_id);
     }
 
-    const searchRegex = new RegExp(query, "i");
+    const searchRegex = new RegExp(query.trim(), "i");
+    const matchingBatches = query.trim()
+      ? await Batch.find({ name: searchRegex }).select("_id").lean()
+      : [];
     const searchFilter = {
       status: "Active",
-      $or: [
+    };
+
+    if (query.trim()) {
+      searchFilter.$or = [
         { name: searchRegex },
         { email: searchRegex },
-        { rollNo: searchRegex }
-      ]
-    };
+        { rollNo: searchRegex },
+        { batchId: { $in: matchingBatches.map((batch) => batch._id) } },
+      ];
+    }
+    if (batchId) searchFilter.batchId = batchId;
 
     if (excludedStudentIds.length > 0) {
       searchFilter._id = { $nin: excludedStudentIds };
@@ -744,7 +752,7 @@ export const assignStudents = async (req, res) => {
       if (activeAssignment) {
         const reason = activeAssignment.project_id.toString() === projectId
           ? "Already assigned to this project."
-          : "Already has active project.";
+          : "Student already has an active project.";
         skipped.push({ studentId, name: student.name, reason });
         continue;
       }
@@ -792,6 +800,19 @@ export const getAssignedStudents = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    const assignmentIds = assignments.map((assignment) => assignment._id);
+    const projectDays = await ProjectDay.find({ project_id: projectId }).select("_id").lean();
+    const projectTasks = await ProjectTask.find({ project_day_id: { $in: projectDays.map((day) => day._id) } }).select("_id xp_value").lean();
+    const taskXpById = new Map(projectTasks.map((task) => [task._id.toString(), task.xp_value || 0]));
+    const completedProgress = assignmentIds.length
+      ? await StudentTaskProgress.find({ student_project_id: { $in: assignmentIds }, completed: true }).select("student_project_id project_task_id").lean()
+      : [];
+    const xpByAssignment = new Map();
+    completedProgress.forEach((progress) => {
+      const assignmentId = progress.student_project_id.toString();
+      xpByAssignment.set(assignmentId, (xpByAssignment.get(assignmentId) || 0) + (taskXpById.get(progress.project_task_id.toString()) || 0));
+    });
+
     const result = assignments.map(a => ({
       _id: a._id,
       studentId: a.student_id?._id || null,
@@ -801,6 +822,7 @@ export const getAssignedStudents = async (req, res) => {
       batch: a.student_id?.batchId?.name || "No Batch",
       current_day: a.current_day,
       progress_percentage: a.progress_percentage,
+      xp_earned: xpByAssignment.get(a._id.toString()) || 0,
       status: a.status,
       assigned_at: a.assigned_at || a.createdAt
     }));
@@ -808,6 +830,57 @@ export const getAssignedStudents = async (req, res) => {
     return res.status(200).json(result);
   } catch (err) {
     console.error("Get Assigned Students Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getProjectAssignmentHealth = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const [project, assignments] = await Promise.all([
+      Project.findById(projectId).lean(),
+      StudentProject.find({ project_id: projectId, status: { $ne: "Archived" } }).select("_id status current_day progress_percentage assigned_at updatedAt").lean(),
+    ]);
+    if (!project) return res.status(404).json({ success: false, message: "Project not found." });
+
+    const assignmentIds = assignments.map((assignment) => assignment._id);
+    const projectDays = await ProjectDay.find({ project_id: projectId }).select("_id").lean();
+    const projectTasks = await ProjectTask.find({ project_day_id: { $in: projectDays.map((day) => day._id) } }).select("_id xp_value").lean();
+    const xpByTask = new Map(projectTasks.map((task) => [task._id.toString(), task.xp_value || 0]));
+    const completedProgress = assignmentIds.length
+      ? await StudentTaskProgress.find({ student_project_id: { $in: assignmentIds }, completed: true }).select("student_project_id project_task_id").lean()
+      : [];
+    const xpByAssignment = new Map();
+    completedProgress.forEach((progress) => {
+      const key = progress.student_project_id.toString();
+      xpByAssignment.set(key, (xpByAssignment.get(key) || 0) + (xpByTask.get(progress.project_task_id.toString()) || 0));
+    });
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const studentsAssigned = assignments.length;
+    const studentsStarted = assignments.filter((assignment) => assignment.current_day > 1 || assignment.progress_percentage > 0).length;
+    const studentsActiveToday = assignments.filter((assignment) => assignment.status === "Active" && new Date(assignment.updatedAt) >= startOfToday).length;
+    const studentsCompleted = assignments.filter((assignment) => assignment.status === "Completed").length;
+    const studentsBehindSchedule = assignments.filter((assignment) => {
+      if (assignment.status !== "Active") return false;
+      const elapsedDays = Math.floor((Date.now() - new Date(assignment.assigned_at).getTime()) / 86400000) + 1;
+      const expectedDay = Math.min(project.duration_days, Math.max(1, elapsedDays));
+      return assignment.current_day < expectedDay;
+    }).length;
+
+    return res.status(200).json({
+      success: true,
+      studentsAssigned,
+      studentsStarted,
+      studentsActiveToday,
+      studentsCompleted,
+      averageProgress: studentsAssigned ? Math.round(assignments.reduce((sum, assignment) => sum + (assignment.progress_percentage || 0), 0) / studentsAssigned) : 0,
+      averageXp: studentsAssigned ? Math.round(Array.from(xpByAssignment.values()).reduce((sum, xp) => sum + xp, 0) / studentsAssigned) : 0,
+      studentsBehindSchedule,
+    });
+  } catch (err) {
+    console.error("Get Project Assignment Health Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

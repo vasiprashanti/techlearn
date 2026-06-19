@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { adminAPI } from "../../services/adminApi";
-import { FiSearch, FiUserPlus, FiUserMinus, FiCheckSquare, FiAlertCircle, FiClock } from "react-icons/fi";
+import { FiSearch, FiUserPlus, FiUserMinus, FiCheckSquare, FiAlertCircle, FiFilter } from "react-icons/fi";
 
 export default function StudentAssignmentPanel({ projectId }) {
   const [loading, setLoading] = useState(true);
@@ -9,12 +9,18 @@ export default function StudentAssignmentPanel({ projectId }) {
   const [success, setSuccess] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [batches, setBatches] = useState([]);
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState(new Set());
 
   const [assignments, setAssignments] = useState([]);
   const [assignmentFeedback, setAssignmentFeedback] = useState(null);
+  const [cohortStatusFilter, setCohortStatusFilter] = useState("All");
+  const [progressFilter, setProgressFilter] = useState("All");
+  const [batchFilter, setBatchFilter] = useState("All");
+  const [health, setHealth] = useState({ studentsAssigned: 0, studentsStarted: 0, studentsActiveToday: 0, studentsCompleted: 0, averageProgress: 0, averageXp: 0, studentsBehindSchedule: 0 });
   
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [studentToRemove, setStudentToRemove] = useState(null);
@@ -22,6 +28,8 @@ export default function StudentAssignmentPanel({ projectId }) {
   useEffect(() => {
     if (projectId) {
       fetchAssignments();
+      fetchAssignmentHealth();
+      adminAPI.getBatches().then((data) => setBatches(data || [])).catch(() => setBatches([]));
     }
   }, [projectId]);
 
@@ -38,14 +46,24 @@ export default function StudentAssignmentPanel({ projectId }) {
     }
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
+  const fetchAssignmentHealth = async () => {
+    try {
+      const data = await adminAPI.getProjectAssignmentHealth(projectId);
+      setHealth((current) => ({ ...current, ...data }));
+    } catch (err) {
+      console.error("Failed to load project assignment health:", err);
+    }
+  };
 
+  const runSearch = async (query = searchQuery, batchId = selectedBatchId) => {
+    if (!query.trim() && !batchId) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
     setError("");
     try {
-      const data = await adminAPI.searchStudents(projectId, searchQuery.trim());
+      const data = await adminAPI.searchStudents(projectId, query.trim(), batchId);
       setSearchResults(data || []);
       setSelectedStudentIds(new Set());
     } catch (err) {
@@ -53,6 +71,16 @@ export default function StudentAssignmentPanel({ projectId }) {
     } finally {
       setSearching(false);
     }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => runSearch(), 250);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedBatchId]);
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    runSearch();
   };
 
   const handleToggleStudent = (studentId) => {
@@ -99,6 +127,7 @@ export default function StudentAssignmentPanel({ projectId }) {
 
         // Refresh list
         fetchAssignments();
+        fetchAssignmentHealth();
       }
     } catch (err) {
       setError(err.message || "Failed to assign students to project.");
@@ -121,6 +150,7 @@ export default function StudentAssignmentPanel({ projectId }) {
       setShowRemoveConfirm(false);
       setStudentToRemove(null);
       fetchAssignments();
+      fetchAssignmentHealth();
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err.message || "Failed to remove student.");
@@ -142,6 +172,20 @@ export default function StudentAssignmentPanel({ projectId }) {
     }
   };
 
+  const filteredAssignments = assignments.filter((assignment) => {
+    const status = assignment.progress_percentage === 0 && assignment.status === "Active" ? "Not Started" : assignment.status;
+    const statusMatches = cohortStatusFilter === "All" || status === cohortStatusFilter;
+    const batchMatches = batchFilter === "All" || assignment.batch === batchFilter;
+    const progress = assignment.progress_percentage || 0;
+    const progressMatches = progressFilter === "All" ||
+      (progressFilter === "0%" && progress === 0) ||
+      (progressFilter === "1-25%" && progress >= 1 && progress <= 25) ||
+      (progressFilter === "26-50%" && progress >= 26 && progress <= 50) ||
+      (progressFilter === "51-75%" && progress >= 51 && progress <= 75) ||
+      (progressFilter === "76%+" && progress >= 76);
+    return statusMatches && batchMatches && progressMatches;
+  });
+
   return (
     <div className="space-y-6">
       
@@ -158,6 +202,23 @@ export default function StudentAssignmentPanel({ projectId }) {
           <span>{success}</span>
         </div>
       )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        {[
+          ["Students Assigned", health.studentsAssigned],
+          ["Students Started", health.studentsStarted],
+          ["Active Today", health.studentsActiveToday],
+          ["Completed", health.studentsCompleted],
+          ["Average Progress", `${health.averageProgress}%`],
+          ["Average XP", health.averageXp],
+          ["Behind Schedule", health.studentsBehindSchedule],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-white/40 bg-white p-3 shadow-[0_4px_18px_rgba(0,0,0,0.015)] dark:border-white/5 dark:bg-[#0f274f]">
+            <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+            <p className="mt-1.5 text-lg font-bold text-[#0c1833] dark:text-white">{value}</p>
+          </div>
+        ))}
+      </div>
 
       {/* Assignment Feedback Report Summary Modal / Alert */}
       {assignmentFeedback && (
@@ -227,7 +288,7 @@ export default function StudentAssignmentPanel({ projectId }) {
           </h4>
 
           {/* Search Input Box */}
-          <form onSubmit={handleSearch} className="flex gap-1.5 w-full">
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 w-full">
             <div className="relative flex-1">
               <input
                 type="text"
@@ -235,15 +296,16 @@ export default function StudentAssignmentPanel({ projectId }) {
                 onChange={(e) => {
                   const val = e.target.value;
                   setSearchQuery(val);
-                  if (!val.trim()) {
-                    setSearchResults([]);
-                  }
                 }}
-                placeholder="Name, email, roll number..."
+                placeholder="Search by name, email, batch, or roll number..."
                 className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
               />
               <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
             </div>
+            <select value={selectedBatchId} onChange={(e) => setSelectedBatchId(e.target.value)} className="rounded-xl border border-black/10 bg-white/80 px-3 py-2 text-xs font-semibold text-slate-600 outline-none dark:border-white/15 dark:bg-[#0f1f43] dark:text-white">
+              <option value="">All batches</option>
+              {batches.map((batch) => <option key={batch._id} value={batch._id}>{batch.name}</option>)}
+            </select>
             <button
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm transition"
@@ -318,15 +380,21 @@ export default function StudentAssignmentPanel({ projectId }) {
 
         {/* Bottom Section: Assigned Students Table */}
         <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_18px_rgba(0,0,0,0.015)] min-h-[300px]">
-          <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider border-b border-black/5 dark:border-white/5 pb-3 mb-4">
-            Assigned Cohort ({assignments.length})
-          </h4>
+          <div className="flex flex-col gap-3 border-b border-black/5 dark:border-white/5 pb-3 mb-4 lg:flex-row lg:items-center lg:justify-between">
+            <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider">Assigned Cohort ({filteredAssignments.length})</h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <FiFilter className="text-slate-400" />
+              <select value={cohortStatusFilter} onChange={(e) => setCohortStatusFilter(e.target.value)} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-600 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"><option>All</option><option>Not Started</option><option>Active</option><option>Completed</option></select>
+              <select value={progressFilter} onChange={(e) => setProgressFilter(e.target.value)} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-600 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"><option>All</option><option>0%</option><option>1-25%</option><option>26-50%</option><option>51-75%</option><option>76%+</option></select>
+              <select value={batchFilter} onChange={(e) => setBatchFilter(e.target.value)} className="rounded-lg border border-black/10 bg-white px-2 py-1.5 text-[10px] font-semibold text-slate-600 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"><option>All</option>{[...new Set(assignments.map((assignment) => assignment.batch))].map((batch) => <option key={batch}>{batch}</option>)}</select>
+            </div>
+          </div>
 
           {loading ? (
             <div className="text-center py-20">
               <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
             </div>
-          ) : assignments.length === 0 ? (
+          ) : filteredAssignments.length === 0 ? (
             <div className="text-center py-12 text-slate-400 text-xs font-medium">
               No students currently assigned to this project. Use the panel above to assign students.
             </div>
@@ -345,7 +413,7 @@ export default function StudentAssignmentPanel({ projectId }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {assignments.map((assignment) => (
+                  {filteredAssignments.map((assignment) => (
                     <tr key={assignment._id} className="border-b border-black/5 dark:border-white/5 hover:bg-slate-50/50 dark:hover:bg-black/5 transition-colors">
                       <td className="py-4 px-4 text-left">
                         <p className="font-bold text-slate-800 dark:text-slate-100">{assignment.name}</p>
@@ -355,6 +423,7 @@ export default function StudentAssignmentPanel({ projectId }) {
                       <td className="py-4 px-4 text-center font-bold text-slate-800 dark:text-white">{assignment.current_day}</td>
                       <td className="py-4 px-4 text-center font-bold text-slate-800 dark:text-white">
                         <span className="text-blue-500 font-extrabold">{assignment.progress_percentage}%</span>
+                        <p className="mt-1 text-[9px] font-semibold text-slate-400">{assignment.xp_earned || 0} XP</p>
                       </td>
                       <td className="py-4 px-4 text-center">
                         <span className={`px-2.5 py-1 rounded-full text-[9px] ${getStatusStyle(assignment.status)}`}>
