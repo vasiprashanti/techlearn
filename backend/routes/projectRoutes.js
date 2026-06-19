@@ -22,7 +22,9 @@ import {
   getAssignedStudents,
   removeStudent,
   getProjectDayDetails,
-  getProjectProgress
+  getProjectProgress,
+  getProjectAnalytics,
+  duplicateProjectDay,
 } from "../controllers/projectController.js";
 
 const router = express.Router();
@@ -44,6 +46,7 @@ router.post("/:projectId/assign", protect, isAdmin, assignStudents);
 router.get("/:projectId/students", protect, isAdmin, getAssignedStudents);
 router.put("/:projectId/students/:studentId/remove", protect, isAdmin, removeStudent);
 router.get("/:projectId/progress", protect, isAdmin, getProjectProgress);
+router.get("/:projectId/analytics", protect, isAdmin, getProjectAnalytics);
 
 // Project Days routes
 router.post("/days", protect, isAdmin, createProjectDay);
@@ -51,6 +54,7 @@ router.get("/:projectId/days", protect, isAdmin, getProjectDays);
 router.get("/days/:dayId/details", protect, isAdmin, getProjectDayDetails);
 router.put("/days/:id", protect, isAdmin, updateProjectDay);
 router.delete("/days/:id", protect, isAdmin, deleteProjectDay);
+router.post("/days/:id/duplicate", protect, isAdmin, duplicateProjectDay);
 
 // Project Tasks routes
 router.post("/tasks", protect, isAdmin, createProjectTask);

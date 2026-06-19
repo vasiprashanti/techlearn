@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { adminAPI } from "../../services/adminApi";
 import MarkdownContent from "../../pages/Learn/MarkdownContent";
-import { FiSave, FiUpload, FiTrash2, FiEdit2, FiCheck, FiX, FiPlus, FiBookOpen } from "react-icons/fi";
+import { FiSave, FiUpload, FiTrash2, FiEdit2, FiCheck, FiX, FiPlus, FiBookOpen, FiDownload, FiChevronDown, FiChevronUp } from "react-icons/fi";
 
-export default function DayConfiguration({ dayId, dayNumber, onSave }) {
+export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay, deletingDay = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -20,6 +20,12 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
   const [isSavingTask, setIsSavingTask] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [studentsHaveStarted, setStudentsHaveStarted] = useState(false);
+  const [pendingNotesMarkdown, setPendingNotesMarkdown] = useState("");
+  const [notesAction, setNotesAction] = useState("");
+  const [showNotesConfirm, setShowNotesConfirm] = useState(false);
+  const [showDeleteDayConfirm, setShowDeleteDayConfirm] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(true);
 
   useEffect(() => {
     if (dayId) {
@@ -36,6 +42,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
         setTopicTitle(res.day.topic_title || "");
         setNotesMarkdown(res.day.notes_markdown || "");
         setTasks(res.tasks || []);
+        setStudentsHaveStarted(Boolean(res.studentsHaveStarted));
       }
     } catch (err) {
       console.error("Fetch Day Error:", err);
@@ -67,6 +74,18 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
     }
   };
 
+  const saveNotesMarkdown = async (text, successMessage) => {
+    try {
+      await adminAPI.updateProjectDay(dayId, { notes_markdown: text });
+      setNotesMarkdown(text);
+      setSuccess(successMessage);
+      if (onSave) onSave();
+      setTimeout(() => setSuccess(""), 2500);
+    } catch (err) {
+      setError(err.message || "Failed to update markdown notes.");
+    }
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,19 +101,43 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target.result;
-      try {
-        await adminAPI.updateProjectDay(dayId, { notes_markdown: text });
-        setNotesMarkdown(text);
-        setSuccess("Markdown notes uploaded successfully!");
-        setTimeout(() => setSuccess(""), 2500);
-      } catch (err) {
-        setError(err.message || "Failed to upload markdown file.");
+      if (studentsHaveStarted && notesMarkdown) {
+        setPendingNotesMarkdown(text);
+        setNotesAction("replace");
+        setShowNotesConfirm(true);
+      } else {
+        await saveNotesMarkdown(text, "Markdown notes uploaded successfully!");
       }
     };
     reader.onerror = () => {
       setError("Error reading the file.");
     };
     reader.readAsText(file);
+  };
+
+  const handleDeleteNotes = () => {
+    if (!notesMarkdown) return;
+    setNotesAction("delete");
+    setShowNotesConfirm(true);
+  };
+
+  const confirmNotesAction = async () => {
+    const isDelete = notesAction === "delete";
+    await saveNotesMarkdown(isDelete ? "" : pendingNotesMarkdown, isDelete ? "Markdown notes deleted." : "Markdown notes replaced successfully!");
+    setPendingNotesMarkdown("");
+    setNotesAction("");
+    setShowNotesConfirm(false);
+  };
+
+  const handleDownloadNotes = () => {
+    if (!notesMarkdown) return;
+    const blob = new Blob([notesMarkdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `day-${String(dayNumber).padStart(2, "0")}-notes.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   // Task creation
@@ -232,7 +275,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
       )}
 
       {/* Main Split Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 gap-6 ${previewOpen ? "lg:grid-cols-2" : ""}`}>
         
         {/* Left Side: Information, Topic and Markdown Upload */}
         <div className="space-y-6">
@@ -271,7 +314,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
               <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
                 Lesson Notes (.md)
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <label className="cursor-pointer bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-blue-500 hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
                   <FiUpload className="text-sm" />
                   <input
@@ -282,10 +325,27 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
                   />
                   {notesMarkdown ? "Replace Markdown" : "Upload Markdown"}
                 </label>
+                {notesMarkdown && (
+                  <>
+                    <button type="button" onClick={handleDownloadNotes} className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-blue-500 shadow-sm transition hover:bg-black/5 dark:border-white/15 dark:bg-[#0f1f43]" title="Download Markdown">
+                      <FiDownload className="text-sm" /> Download
+                    </button>
+                    <button type="button" onClick={handleDeleteNotes} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs font-semibold text-rose-500 transition hover:bg-rose-500/10" title="Delete Markdown">
+                      <FiTrash2 className="text-sm" /> Delete
+                    </button>
+                  </>
+                )}
                 <span className="text-[10px] text-slate-400 font-medium">
                   {notesMarkdown ? "Markdown stored in database" : "No notes uploaded yet"}
                 </span>
               </div>
+            </div>
+
+            <div className="pt-3 border-t border-black/5 dark:border-white/5">
+              <button type="button" onClick={() => setShowDeleteDayConfirm(true)} disabled={deletingDay} className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 transition hover:text-rose-600 disabled:opacity-50">
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {deletingDay ? "Deleting day..." : "Delete Day"}
+              </button>
             </div>
           </div>
 
@@ -411,11 +471,14 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
         </div>
 
         {/* Right Side: Markdown Preview Panel */}
-        <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.015)] flex flex-col h-full min-h-[500px]">
-          <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider border-b border-black/5 dark:border-white/5 pb-3 flex items-center gap-1.5 mb-4">
-            <FiBookOpen className="text-blue-500" />
-            Markdown Notes Preview
-          </h4>
+        {previewOpen && <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.015)] flex flex-col h-full min-h-[500px]">
+          <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3 mb-4">
+            <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+              <FiBookOpen className="text-blue-500" />
+              Markdown Notes Preview
+            </h4>
+            <button type="button" onClick={() => setPreviewOpen(false)} className="p-1 text-slate-400 transition hover:text-blue-500" title="Collapse preview"><FiChevronUp /></button>
+          </div>
 
           <div className="flex-1 overflow-y-auto border border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-black/10 rounded-xl p-6 prose dark:prose-invert max-w-none max-h-[550px] admin-dashboard-typography">
             {notesMarkdown ? (
@@ -429,9 +492,15 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
       </div>
+
+      {!previewOpen && (
+        <button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-500 transition hover:text-blue-600">
+          <FiChevronDown /> Show Markdown Preview
+        </button>
+      )}
 
       {/* Delete Task Confirmation Modal */}
       {showDeleteConfirm && taskToDelete && createPortal(
@@ -441,6 +510,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
             <h2 className="text-lg font-semibold text-rose-500 dark:text-rose-400">Delete Task?</h2>
             <p className="text-sm text-slate-600 dark:text-slate-300">
               Are you sure you want to delete <strong className="text-slate-800 dark:text-white">&ldquo;{taskToDelete.task_description}&rdquo;</strong>? This action cannot be undone.
+              {studentsHaveStarted && <span className="mt-2 block font-semibold text-amber-600 dark:text-amber-400">This change may affect active students.</span>}
             </p>
             <div className="flex items-center justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
               <button 
@@ -459,6 +529,34 @@ export default function DayConfiguration({ dayId, dayNumber, onSave }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {showNotesConfirm && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowNotesConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 bg-white/95 p-6 shadow-2xl dark:border-white/10 dark:bg-[#0a1737]/95 space-y-4">
+            <h2 className="text-lg font-semibold text-amber-600 dark:text-amber-400">{notesAction === "delete" ? "Delete Markdown Notes?" : "Replace Markdown Notes?"}</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{studentsHaveStarted ? "This change may affect active students." : "This change cannot be undone."}</p>
+            <div className="flex justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <button type="button" onClick={() => setShowNotesConfirm(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-slate-500">Cancel</button>
+              <button type="button" onClick={confirmNotesAction} className="px-4 py-2 rounded-xl text-sm font-medium bg-rose-500 text-white">Confirm</button>
+            </div>
+          </div>
+        </div>, document.body
+      )}
+
+      {showDeleteDayConfirm && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowDeleteDayConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 bg-white/95 p-6 shadow-2xl dark:border-white/10 dark:bg-[#0a1737]/95 space-y-4">
+            <h2 className="text-lg font-semibold text-rose-500">Delete Day {dayNumber}?</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">This deletes the day, its markdown notes, and all associated tasks.{studentsHaveStarted && <span className="mt-2 block font-semibold text-amber-600 dark:text-amber-400">This change may affect active students.</span>}</p>
+            <div className="flex justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <button type="button" onClick={() => setShowDeleteDayConfirm(false)} className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-slate-500">Cancel</button>
+              <button type="button" onClick={() => { setShowDeleteDayConfirm(false); onDeleteDay?.(); }} className="px-4 py-2 rounded-xl text-sm font-medium bg-rose-500 text-white">Delete Day</button>
+            </div>
+          </div>
+        </div>, document.body
       )}
 
     </div>

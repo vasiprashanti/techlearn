@@ -64,6 +64,27 @@ const getCodeFileName = (language) => {
   return fileNames[language] || 'code';
 };
 
+const getYouTubeEmbedUrl = (href = '') => {
+  try {
+    const url = new URL(href);
+    const videoId = url.hostname.includes('youtu.be')
+      ? url.pathname.slice(1)
+      : url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).pop();
+    return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : '';
+  } catch {
+    return '';
+  }
+};
+
+const isYouTubeUrl = (href = '') => {
+  try {
+    const hostname = new URL(href).hostname;
+    return /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i.test(hostname);
+  } catch {
+    return false;
+  }
+};
+
 const createMarkdownComponents = (compact = false) => {
   const headingOneClass = compact
     ? 'text-lg md:text-xl font-medium text-[#001862] dark:text-white mt-8 mb-4 tracking-tight'
@@ -100,6 +121,7 @@ const createMarkdownComponents = (compact = false) => {
     a: ({children, href}) => {
       const label = getInlineText(children).trim();
       const isRunCodeLink = href?.startsWith('/compiler') && label.toLowerCase() === 'run code';
+      const youtubeEmbedUrl = isYouTubeUrl(href) ? getYouTubeEmbedUrl(href) : '';
 
       if (isRunCodeLink) {
         return (
@@ -109,6 +131,20 @@ const createMarkdownComponents = (compact = false) => {
           >
             {children}
           </a>
+        );
+      }
+
+      if (youtubeEmbedUrl) {
+        return (
+          <span className="my-6 block overflow-hidden rounded-2xl border border-[#001862]/15 bg-black shadow-sm">
+            <iframe
+              className="aspect-video w-full"
+              src={youtubeEmbedUrl}
+              title={label || 'YouTube video'}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </span>
         );
       }
 
@@ -123,6 +159,7 @@ const createMarkdownComponents = (compact = false) => {
         </a>
       );
     },
+    img: ({src, alt}) => <img src={src} alt={alt || ''} className="my-6 max-h-[480px] w-auto max-w-full rounded-2xl border border-[#001862]/10 object-contain shadow-sm" loading="lazy" />,
     blockquote: ({children}) => (
       <blockquote className={`${compact ? 'my-5 pl-4 py-1.5' : 'my-8 pl-6 py-2'} border-l-4 border-[#3C83F6] bg-gradient-to-r from-[#3C83F6]/5 to-transparent rounded-r-2xl`}>
         <div className={`text-[#001862] dark:text-white/65 italic ${compact ? 'text-sm' : 'text-lg'}`}>{children}</div>
