@@ -426,6 +426,7 @@ export const adminAPI = {
   getProjects: () => request('/admin/projects'),
   getProject: (id) => request(`/admin/projects/${id}`),
   getProjectMetrics: () => request('/admin/projects/summary'),
+  getProjectAnalytics: (projectId) => request(`/admin/projects/${projectId}/analytics`),
   createProject: async (body) => {
     if (body instanceof FormData) {
       const response = await adminFetch(`${API_BASE}/admin/projects`, {
@@ -462,6 +463,7 @@ export const adminAPI = {
   updateProjectDay: (id, body) => request(`/admin/projects/days/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   getProjectDays: (projectId) => request(`/admin/projects/${projectId}/days`),
   deleteProjectDay: (id) => request(`/admin/projects/days/${id}`, { method: 'DELETE' }),
+  duplicateProjectDay: (id) => request(`/admin/projects/days/${id}/duplicate`, { method: 'POST' }),
 
   createProjectTask: (body) => request('/admin/projects/tasks', { method: 'POST', body: JSON.stringify(body) }),
   updateProjectTask: (id, body) => request(`/admin/projects/tasks/${id}`, { method: 'PUT', body: JSON.stringify(body) }),

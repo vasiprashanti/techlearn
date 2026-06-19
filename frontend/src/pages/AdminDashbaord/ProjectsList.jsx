@@ -48,10 +48,9 @@ export default function ProjectsList() {
   const [createForm, setCreateForm] = useState({
     title: "",
     description: "",
-    category: "Java Full Stack",
+    category: "",
     duration_days: "",
-    xp_requirement: "",
-    status: "Draft"
+    xp_requirement: ""
   });
   const [overviewFile, setOverviewFile] = useState(null);
   const [createSaving, setCreateSaving] = useState(false);
@@ -194,17 +193,26 @@ export default function ProjectsList() {
 
   const handleDuplicateClick = async (project) => {
     try {
-      const payload = {
-        title: `${project.title} (Copy)`,
-        description: project.description,
-        category: project.category,
-        duration_days: project.duration_days,
-        xp_requirement: project.xp_requirement,
-        overview_markdown_content: project.overview_markdown_content,
-        overview_markdown_file_url: project.overview_markdown_file_url,
-        status: "Draft"
-      };
-      await adminAPI.createProject(payload);
+      if (!project.overview_markdown_content) {
+        throw new Error("This project cannot be duplicated because its overview markdown is missing.");
+      }
+
+      const formData = new FormData();
+      formData.append("title", `${project.title} (Copy)`);
+      formData.append("description", project.description);
+      formData.append("category", project.category);
+      formData.append("duration_days", project.duration_days);
+      formData.append("xp_requirement", project.xp_requirement || 0);
+      formData.append(
+        "overviewFile",
+        new File(
+          [project.overview_markdown_content],
+          project.overview_markdown_original_name || "overview.md",
+          { type: "text/markdown" }
+        )
+      );
+
+      await adminAPI.createProject(formData);
       fetchData();
       alert("Project duplicated successfully as a Draft!");
     } catch (err) {
@@ -233,6 +241,7 @@ export default function ProjectsList() {
     e.preventDefault();
     if (!createForm.title.trim()) return setCreateError("Project Title is required.");
     if (!createForm.description.trim()) return setCreateError("Project Description is required.");
+    if (!createForm.category) return setCreateError("Please select a project category.");
     if (!createForm.duration_days || Number(createForm.duration_days) <= 0) return setCreateError("Duration must be a positive number.");
     if (!overviewFile) return setCreateError("Please upload an Overview Markdown file.");
 
@@ -246,21 +255,22 @@ export default function ProjectsList() {
       formData.append("category", createForm.category);
       formData.append("duration_days", createForm.duration_days);
       formData.append("xp_requirement", createForm.xp_requirement || 0);
-      formData.append("status", createForm.status);
       formData.append("overviewFile", overviewFile);
 
-      await adminAPI.createProject(formData);
+      const createdProject = await adminAPI.createProject(formData);
+      const projectId = createdProject?.project?._id || createdProject?._id;
+      if (!projectId) throw new Error("Project was created, but its setup page could not be opened.");
+
       setShowCreateModal(false);
       setCreateForm({
         title: "",
         description: "",
-        category: "Java Full Stack",
+        category: "",
         duration_days: "",
-        xp_requirement: "",
-        status: "Draft"
+        xp_requirement: ""
       });
       setOverviewFile(null);
-      fetchData();
+      navigate(`/admin/projects/edit/${projectId}?tab=days-tasks&generated=1`);
     } catch (err) {
       console.error("Create Project Modal Submit Error:", err);
       setCreateError(err.message || "Failed to create project.");
@@ -368,33 +378,20 @@ export default function ProjectsList() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Category*</label>
-                  <select
-                    name="category"
-                    value={createForm.category}
-                    onChange={handleCreateInputChange}
-                    className={categoryFormInputClass}
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} className={dropdownOptionClass} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Status*</label>
-                  <select
-                    name="status"
-                    value={createForm.status}
-                    onChange={handleCreateInputChange}
-                    className={categoryFormInputClass}
-                  >
-                    <option className={dropdownOptionClass} value="Draft">Draft</option>
-                    <option className={dropdownOptionClass} value="Published">Published</option>
-                    <option className={dropdownOptionClass} value="Archived">Archived</option>
-                  </select>
-                </div>
+              <div>
+                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Category*</label>
+                <select
+                  name="category"
+                  value={createForm.category}
+                  onChange={handleCreateInputChange}
+                  className={categoryFormInputClass}
+                  required
+                >
+                  <option className={dropdownOptionClass} value="" disabled>Select a category</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat} className={dropdownOptionClass} value={cat}>{cat}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
