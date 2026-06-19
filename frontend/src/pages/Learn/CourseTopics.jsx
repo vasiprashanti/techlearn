@@ -56,7 +56,6 @@ const CourseTopics = () => {
   const scrollContainerRef = useRef(null);
   const lastContentScrollTopRef = useRef(0);
   const touchStartYRef = useRef(null);
-  const [isNotesAtEnd, setIsNotesAtEnd] = useState(false);
 
   const [backendCourse, setBackendCourse] = useState(cachedCourse);
   const [loading, setLoading] = useState(!cachedCourse);
@@ -146,11 +145,6 @@ const CourseTopics = () => {
     };
   };
 
-  const syncNotesEndState = (node = scrollContainerRef.current) => {
-    const { atBottom, canScroll } = getNotesScrollState(node);
-    setIsNotesAtEnd(!canScroll || atBottom);
-  };
-
   const isSidebarScrollEvent = (event) => {
     return Boolean(event.target?.closest?.('[data-course-sidebar="true"]'));
   };
@@ -169,7 +163,6 @@ const CourseTopics = () => {
     if (!shouldScrollNotes) return false;
 
     scroller.scrollTop += deltaY;
-    syncNotesEndState(scroller);
     return true;
   };
 
@@ -214,19 +207,10 @@ const CourseTopics = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     lastContentScrollTopRef.current = 0;
     setIsCourseHeaderHidden(false);
-    setIsNotesAtEnd(false);
-    window.requestAnimationFrame(() => syncNotesEndState());
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: false, isScrollingDown: false },
     }));
   }, [selectedTopic]);
-
-  useEffect(() => {
-    if (!shouldControlPageScroll) return undefined;
-
-    const frame = window.requestAnimationFrame(() => syncNotesEndState());
-    return () => window.cancelAnimationFrame(frame);
-  }, [shouldControlPageScroll, currentTopic?.id, currentTopic?.notesContent]);
 
   const handleContentScroll = (event) => {
     const currentScrollTop = event.currentTarget.scrollTop;
@@ -234,8 +218,6 @@ const CourseTopics = () => {
     const shouldHideHeader = currentScrollTop > 24 && isScrollingDown;
 
     lastContentScrollTopRef.current = Math.max(currentScrollTop, 0);
-    syncNotesEndState(event.currentTarget);
-
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: shouldHideHeader, isScrollingDown },
     }));
@@ -258,19 +240,17 @@ const CourseTopics = () => {
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
 
-    if (!isNotesAtEnd) {
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    }
+    // The topic reader owns vertical scrolling. Keeping the document locked
+    // prevents a touch gesture at the end of the notes from reaching the
+    // app shell and revealing the global footer on mobile.
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [isNotesAtEnd, shouldControlPageScroll]);
+  }, [shouldControlPageScroll]);
 
   if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
