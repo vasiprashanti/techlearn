@@ -296,6 +296,15 @@ export default function Dashboard() {
   }, [dailyTasks]);
 
   const handleGroupClick = (group) => {
+    if (isFullyCompleted) {
+      setToast({
+        show: true,
+        message: "You have already completed today's daily tasks. Access is locked.",
+        type: "info",
+      });
+      return;
+    }
+
     const nextUncompleted = group.questions.find((q) => !q.completed) || group.questions[0];
     if (!nextUncompleted) return;
 

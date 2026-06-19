@@ -293,48 +293,129 @@ export const recordPracticeSubmission = async (req, res) => {
               );
               
               const finalize = Boolean(req.body.finalize);
-              if (taskIndex !== -1 && attempt.tasksProgress[taskIndex].status !== "Completed" && isCorrect && finalize) {
+              if (taskIndex !== -1 && !attempt.isFullyCompleted) {
                 const task = attempt.tasksProgress[taskIndex];
-                task.status = "Completed";
-                task.completedAt = new Date();
                 
-                const totalTasksCount = attempt.tasksProgress.length;
-                const completedTasksCount = attempt.tasksProgress.filter((t) => t.status === "Completed").length;
-                const justCompletedDay = (completedTasksCount === totalTasksCount) && !attempt.isFullyCompleted;
-                
-                if (completedTasksCount === totalTasksCount) {
-                  attempt.isFullyCompleted = true;
-                }
-                
-                await attempt.save();
-                
-                // Award XP
-                const { calculateTaskXP, TASK_XP } = await import("../services/xpService.js");
-                let xpEarned = calculateTaskXP({ taskType: task.taskType, hintsUsed: task.hintsUsed });
-                let bonusXp = 0;
-                if (justCompletedDay) {
-                  bonusXp += TASK_XP.ALL_COMPLETED_BONUS;
+                if (!finalize) {
+                  if (task.taskType === "Coding" || task.taskType === "SQL") {
+                    task.code = req.body.code || "";
+                    task.language = req.body.language || "";
+                    task.isCorrect = isCorrect;
+                    task.accuracy = accuracy;
+                    task.attempted = true;
+                    task.status = "In Progress";
+                    await attempt.save();
+                  } else {
+                    // MCQ, Aptitude, Core CS
+                    if (!task.attempted) {
+                      task.status = "Completed";
+                      task.selectedOption = selectedAnswer || "";
+                      task.isCorrect = isCorrect;
+                      task.attempted = true;
+                      task.completedAt = new Date();
+                      await attempt.save();
+                    }
+                  }
+                } else {
+                  // When final Finish is clicked (finalize: true)
+                  // First ensure the current (final) task is marked as completed if it wasn't already
+                  if (task.taskType === "Coding" || task.taskType === "SQL") {
+                    task.code = req.body.code || "";
+                    task.language = req.body.language || "";
+                    task.isCorrect = isCorrect;
+                    task.accuracy = accuracy;
+                    task.attempted = true;
+                    task.status = "Completed";
+                    task.completedAt = new Date();
+                  } else {
+                    if (!task.attempted) {
+                      task.status = "Completed";
+                      task.selectedOption = selectedAnswer || "";
+                      task.isCorrect = isCorrect;
+                      task.attempted = true;
+                      task.completedAt = new Date();
+                    }
+                  }
+                  
+                  const isSameTrack = (taskType) => {
+                    if (track === "DSA") return taskType === "Coding" || taskType === "Debugging";
+                    if (track === "SQL") return taskType === "SQL";
+                    if (track === "Aptitude") return taskType === "Aptitude";
+                    if (track === "Core CS") return taskType === "MCQ" || taskType === "Core CS";
+                    return false;
+                  };
+
+                  // Check if there are any tasks with status "Not Started" BEFORE we finalize this track
                   const skippedAny = attempt.tasksProgress.some((t) => t.status === "Not Started");
-                  if (!skippedAny) {
-                    bonusXp += TASK_XP.NO_SKIP_BONUS;
+
+                  // Also mark any other unattempted tasks in this track as attempted (but incorrect) to prevent cheats
+                  // And finalize any "In Progress" tasks in this track
+                  attempt.tasksProgress.forEach((t) => {
+                    if (isSameTrack(t.taskType)) {
+                      if (!t.attempted) {
+                        t.status = "Completed";
+                        t.attempted = true;
+                        t.isCorrect = false;
+                        t.completedAt = new Date();
+                      } else if (t.status === "In Progress") {
+                        t.status = "Completed";
+                        t.completedAt = t.completedAt || new Date();
+                      }
+                    }
+                  });
+
+                  // Check if the entire day's tasks are now completed
+                  const allCompleted = attempt.tasksProgress.every((t) => t.status === "Completed");
+                  if (allCompleted) {
+                    attempt.isFullyCompleted = true;
+                  }
+                  
+                  await attempt.save();
+                  
+                  // Award XP only for correct tasks in this track
+                  const { calculateTaskXP, TASK_XP } = await import("../services/xpService.js");
+                  let totalXpAdded = 0;
+                  
+                  attempt.tasksProgress.forEach((t) => {
+                    if (isSameTrack(t.taskType)) {
+                      let xpEarned = calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed });
+                      if (t.taskType === "Coding" || t.taskType === "SQL") {
+                        const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+                        const fraction = Math.max(0, Math.min(100, acc)) / 100;
+                        totalXpAdded += Math.round(xpEarned * fraction);
+                      } else {
+                        if (t.isCorrect === true) {
+                          totalXpAdded += xpEarned;
+                        }
+                      }
+                    }
+                  });
+                  
+                  // Add bonuses only if all tasks are completed
+                  if (allCompleted) {
+                    totalXpAdded += TASK_XP.ALL_COMPLETED_BONUS;
+                    if (!skippedAny) {
+                      totalXpAdded += TASK_XP.NO_SKIP_BONUS;
+                    }
+                  }
+                  
+                  if (totalXpAdded > 0) {
+                    let progress = await mongoose.model("UserProgress").findOne({ userId: req.user._id });
+                    if (!progress) {
+                      progress = new (mongoose.model("UserProgress"))({
+                        userId: req.user._id,
+                        courseXP: new Map(),
+                        exerciseXP: new Map(),
+                        completedExercises: [],
+                      });
+                    }
+                    
+                    const courseIdKey = String(trackTemplate._id);
+                    const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
+                    progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
+                    await progress.save();
                   }
                 }
-                const totalXpAdded = xpEarned + bonusXp;
-                
-                let progress = await mongoose.model("UserProgress").findOne({ userId: req.user._id });
-                if (!progress) {
-                  progress = new (mongoose.model("UserProgress"))({
-                    userId: req.user._id,
-                    courseXP: new Map(),
-                    exerciseXP: new Map(),
-                    completedExercises: [],
-                  });
-                }
-                
-                const courseIdKey = String(trackTemplate._id);
-                const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
-                progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
-                await progress.save();
               }
             }
           }

@@ -187,6 +187,12 @@ export const getTodayDailyTasks = async (req, res) => {
         xpValue: Number(t.xpValue || 0),
         status: t.status,
         completedAt: t.completedAt,
+        selectedOption: t.selectedOption || "",
+        isCorrect: t.isCorrect,
+        attempted: t.attempted || false,
+        code: t.code || "",
+        language: t.language || "",
+        accuracy: t.accuracy,
       });
     }
 

@@ -26,6 +26,24 @@ try {
 export const createProject = async (req, res) => {
   try {
     const { title, description, category, duration_days, xp_requirement } = req.body;
+    const durationDaysNum = Number(duration_days);
+
+    if (!title?.trim()) {
+      return res.status(400).json({ success: false, message: "Project Title is required." });
+    }
+    if (!description?.trim()) {
+      return res.status(400).json({ success: false, message: "Project Description is required." });
+    }
+    if (!category) {
+      return res.status(400).json({ success: false, message: "Project Category is required." });
+    }
+    if (!Number.isFinite(durationDaysNum) || durationDaysNum <= 0) {
+      return res.status(400).json({ success: false, message: "Duration must be a positive number." });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "An Overview Markdown file is required." });
+    }
+
     let overview_markdown_content = req.body.overview_markdown_content || "";
     let overview_markdown_file_url = "";
     let overview_markdown_original_name = "";
@@ -52,8 +70,6 @@ export const createProject = async (req, res) => {
       }
     }
 
-    const durationDaysNum = Number(duration_days);
-
     // Create the project
     const project = await Project.create({
       title,
@@ -64,7 +80,7 @@ export const createProject = async (req, res) => {
       overview_markdown_content,
       overview_markdown_file_url,
       overview_markdown_original_name,
-      status: req.body.status || "Draft",
+      status: "Draft",
     });
 
     // Auto-generate ProjectDays Day 1 -> Day N
@@ -184,6 +200,31 @@ export const updateProject = async (req, res) => {
     if (description) project.description = description;
     if (category) project.category = category;
     if (xp_requirement !== undefined) project.xp_requirement = Number(xp_requirement);
+    if (status === "Published") {
+      const days = await ProjectDay.find({ project_id: project._id }).select("_id notes_markdown").lean();
+      const dayIds = days.map((day) => day._id);
+      const taskCounts = await ProjectTask.aggregate([
+        { $match: { project_day_id: { $in: dayIds } } },
+        { $group: { _id: "$project_day_id", count: { $sum: 1 } } },
+      ]);
+      const taskCountByDay = new Map(taskCounts.map((entry) => [entry._id.toString(), entry.count]));
+      const emptyDays = days.length !== project.duration_days;
+      const missingNotes = days.some((day) => !day.notes_markdown?.trim());
+      const missingTasks = days.some((day) => !taskCountByDay.get(day._id.toString()));
+
+      if (emptyDays || missingNotes || missingTasks) {
+        const errors = [];
+        if (emptyDays) errors.push("all project days must be present");
+        if (missingNotes) errors.push("each day needs markdown notes");
+        if (missingTasks) errors.push("each day needs at least one task");
+        return res.status(400).json({
+          success: false,
+          message: `Project cannot be published: ${errors.join(", ")}.`,
+          validation: { emptyDays, missingNotes, missingTasks },
+        });
+      }
+    }
+
     if (status) project.status = status;
 
     if (req.body.overview_markdown_content !== undefined) {
@@ -303,17 +344,39 @@ export const deleteProject = async (req, res) => {
 
 export const getProjectsSummary = async (req, res) => {
   try {
-    const totalProjects = await Project.countDocuments();
-    const activeProjects = await Project.countDocuments({ status: "Published" });
-    const archivedProjects = await Project.countDocuments({ status: "Archived" });
-
-    // Distinct assigned students across active StudentProjects
-    const studentsAssignedResult = await StudentProject.aggregate([
-      { $match: { status: "Active" } },
-      { $group: { _id: "$student_id" } },
-      { $count: "count" },
+    const [
+      totalProjects,
+      activeProjects,
+      archivedProjects,
+      studentAssignmentStats,
+    ] = await Promise.all([
+      Project.countDocuments(),
+      Project.countDocuments({ status: "Published" }),
+      Project.countDocuments({ status: "Archived" }),
+      StudentProject.aggregate([
+        {
+          $group: {
+            _id: null,
+            studentsAssigned: { $sum: 1 },
+            studentsActive: {
+              $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] },
+            },
+            studentsCompleted: {
+              $sum: { $cond: [{ $eq: ["$status", "Completed"] }, 1, 0] },
+            },
+            averageProgress: { $avg: "$progress_percentage" },
+          },
+        },
+      ]),
     ]);
-    const studentsAssigned = studentsAssignedResult[0]?.count || 0;
+
+    const assignmentStats = studentAssignmentStats[0] || {};
+    const studentsAssigned = assignmentStats.studentsAssigned || 0;
+    const studentsActive = assignmentStats.studentsActive || 0;
+    const averageProgress = Math.round(assignmentStats.averageProgress || 0);
+    const completionRate = studentsAssigned > 0
+      ? Math.round(((assignmentStats.studentsCompleted || 0) / studentsAssigned) * 100)
+      : 0;
 
     return res.status(200).json({
       success: true,
@@ -321,9 +384,68 @@ export const getProjectsSummary = async (req, res) => {
       activeProjects,
       archivedProjects,
       studentsAssigned,
+      studentsActive,
+      averageProgress,
+      completionRate,
     });
   } catch (err) {
     console.error("Get Projects Summary Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getProjectAnalytics = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const project = await Project.findById(projectId).lean();
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+
+    const assignments = await StudentProject.find({
+      project_id: projectId,
+      status: { $ne: "Archived" },
+    }).select("_id status progress_percentage").lean();
+    const assignmentIds = assignments.map((assignment) => assignment._id);
+    const projectDays = await ProjectDay.find({ project_id: projectId }).select("_id").lean();
+    const projectTasks = await ProjectTask.find({
+      project_day_id: { $in: projectDays.map((day) => day._id) },
+    }).select("_id xp_value").lean();
+    const taskXpById = new Map(projectTasks.map((task) => [task._id.toString(), task.xp_value || 0]));
+    const completedProgress = assignmentIds.length
+      ? await StudentTaskProgress.find({
+          student_project_id: { $in: assignmentIds },
+          completed: true,
+        }).select("student_project_id project_task_id").lean()
+      : [];
+
+    const xpByAssignment = new Map();
+    completedProgress.forEach((progress) => {
+      const assignmentId = progress.student_project_id.toString();
+      const taskXp = taskXpById.get(progress.project_task_id.toString()) || 0;
+      xpByAssignment.set(assignmentId, (xpByAssignment.get(assignmentId) || 0) + taskXp);
+    });
+
+    const totalStudents = assignments.length;
+    const activeStudents = assignments.filter((assignment) => assignment.status === "Active").length;
+    const completedStudents = assignments.filter((assignment) => assignment.status === "Completed").length;
+    const averageProgress = totalStudents
+      ? Math.round(assignments.reduce((sum, assignment) => sum + (assignment.progress_percentage || 0), 0) / totalStudents)
+      : 0;
+    const averageXp = totalStudents
+      ? Math.round(Array.from(xpByAssignment.values()).reduce((sum, value) => sum + value, 0) / totalStudents)
+      : 0;
+
+    return res.status(200).json({
+      success: true,
+      totalStudents,
+      activeStudents,
+      averageProgress,
+      averageXp,
+      completionRate: totalStudents ? Math.round((completedStudents / totalStudents) * 100) : 0,
+    });
+  } catch (err) {
+    console.error("Get Project Analytics Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -432,6 +554,48 @@ export const deleteProjectDay = async (req, res) => {
     return res.status(200).json({ success: true, message: "Project day deleted successfully." });
   } catch (err) {
     console.error("Delete Project Day Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const duplicateProjectDay = async (req, res) => {
+  try {
+    const sourceDay = await ProjectDay.findById(req.params.id).lean();
+    if (!sourceDay) {
+      return res.status(404).json({ success: false, message: "Project day not found." });
+    }
+
+    const [project, lastDay, sourceTasks] = await Promise.all([
+      Project.findById(sourceDay.project_id),
+      ProjectDay.findOne({ project_id: sourceDay.project_id }).sort({ day_number: -1 }).lean(),
+      ProjectTask.find({ project_day_id: sourceDay._id }).lean(),
+    ]);
+    if (!project) {
+      return res.status(404).json({ success: false, message: "Project not found." });
+    }
+
+    const newDayNumber = (lastDay?.day_number || 0) + 1;
+    const duplicateDay = await ProjectDay.create({
+      project_id: sourceDay.project_id,
+      day_number: newDayNumber,
+      topic_title: `${sourceDay.topic_title || `Day ${sourceDay.day_number} Topic`} (Copy)`,
+      notes_markdown: sourceDay.notes_markdown || "",
+    });
+
+    if (sourceTasks.length) {
+      await ProjectTask.insertMany(sourceTasks.map(({ task_description, xp_value }) => ({
+        project_day_id: duplicateDay._id,
+        task_description,
+        xp_value,
+      })));
+    }
+
+    project.duration_days = Math.max(project.duration_days, newDayNumber);
+    await project.save();
+
+    return res.status(201).json({ success: true, day: duplicateDay, message: "Day duplicated successfully." });
+  } catch (err) {
+    console.error("Duplicate Project Day Error:", err);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -681,12 +845,20 @@ export const getProjectDayDetails = async (req, res) => {
       return res.status(404).json({ success: false, message: "Project day not found." });
     }
 
-    const tasks = await ProjectTask.find({ project_day_id: dayId }).sort({ createdAt: 1 }).lean();
+    const [tasks, studentsHaveStarted] = await Promise.all([
+      ProjectTask.find({ project_day_id: dayId }).sort({ createdAt: 1 }).lean(),
+      StudentProject.exists({
+        project_id: day.project_id,
+        status: { $in: ["Active", "Completed"] },
+        $or: [{ current_day: { $gt: 1 } }, { progress_percentage: { $gt: 0 } }],
+      }),
+    ]);
 
     return res.status(200).json({
       success: true,
       day,
-      tasks
+      tasks,
+      studentsHaveStarted: Boolean(studentsHaveStarted),
     });
   } catch (err) {
     console.error("Get Project Day Details Error:", err);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, Eye, EyeOff, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
@@ -21,6 +21,15 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
   const { register, setSession } = useAuth();
   const { refetchUserData } = useUser();
   const navigate = useNavigate();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const hasMinLength = formData.password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(formData.password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_]/.test(formData.password);
+  const passwordsMatch = formData.password === formData.confirmPassword;
+  const showMatchError = formData.confirmPassword.length > 0 && !passwordsMatch;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -74,6 +83,16 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
     e.preventDefault();
     setError('');
 
+    if (!hasMinLength || !hasUppercase || !hasSpecialChar) {
+      setError("Password does not meet all requirements");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     try {
       const result = await register(formData);
 
@@ -108,6 +127,8 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
         confirmPassword: ''
       });
       setError('');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }
   }, [isOpen]);
 
@@ -167,28 +188,65 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
               />
             </div>
 
-            <div>
+             <div>
               <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  className="w-full pl-4 pr-10 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <div className="mt-2 space-y-1.5">
+                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasMinLength ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
+                  <span>At least 8 characters</span>
+                </div>
+                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasUppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasUppercase ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
+                  <span>At least 1 uppercase letter</span>
+                </div>
+                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasSpecialChar ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
+                  <span>At least 1 special character</span>
+                </div>
+              </div>
             </div>
 
             <div>
               <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Confirm password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirmPassword"
+                  className="w-full pl-4 pr-10 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Confirm password"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {showMatchError && (
+                <p className="text-xs font-semibold text-red-500 mt-1.5 select-none">
+                  Passwords do not match
+                </p>
+              )}
             </div>
 
             <button

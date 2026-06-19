@@ -83,8 +83,27 @@ export default function TrackTemplateDetails() {
     status: 'Published',
   });
 
+  const [allCategories, setAllCategories] = useState([]);
+
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    adminAPI
+      .getQuestionCategories()
+      .then((remoteCategories) => {
+        if (!cancelled) {
+          setAllCategories(preferRemoteData(remoteCategories, []));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAllCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const track = useMemo(() => {
@@ -93,24 +112,87 @@ export default function TrackTemplateDetails() {
     return null;
   }, [trackDetail, location.state, templateId]);
 
+  // Helper to determine if track has MCQ and/or Coding category elements
+  const { hasMcq, hasCoding } = useMemo(() => {
+    const categories = track?.category
+      ? track.category.split(',').map((c) => c.trim().toLowerCase())
+      : [];
+    
+    let mcq = false;
+    let coding = false;
+
+    categories.forEach((catName) => {
+      const dbCat = allCategories.find(
+        (c) => c.title && c.title.toLowerCase() === catName
+      );
+      if (dbCat) {
+        if (dbCat.categoryType === 'MCQ') mcq = true;
+        if (dbCat.categoryType === 'Coding') coding = true;
+      }
+    });
+
+    const fallbackMcq = categories.includes('mcq') || categories.includes('aptitude') || categories.includes('core cs');
+    const fallbackCoding = categories.includes('coding') || categories.includes('debugging');
+
+    return { hasMcq: mcq || fallbackMcq, hasCoding: coding || fallbackCoding };
+  }, [track?.category, allCategories]);
+
+  const defaultTaskType = useMemo(() => {
+    if (hasMcq && !hasCoding) {
+      return 'MCQ';
+    }
+    return 'Coding';
+  }, [hasMcq, hasCoding]);
+
   const categorySlug = track ? categorySlugMap[track.category] : null;
-  const dayWiseQuestions = availableQuestions;
+
+  const filteredQuestions = useMemo(() => {
+    if (!addDayForm.taskType) return availableQuestions;
+
+    const taskTypeLower = addDayForm.taskType.toLowerCase();
+    const isTaskTypeCoding = ['coding', 'sql', 'debugging'].includes(taskTypeLower);
+    const isTaskTypeMcq = ['mcq', 'aptitude', 'core cs'].includes(taskTypeLower);
+
+    return availableQuestions.filter((question) => {
+      const qCatName = question.track ? question.track.toLowerCase() : '';
+      const dbCat = allCategories.find(
+        (c) => c.title && c.title.toLowerCase() === qCatName
+      );
+
+      if (dbCat) {
+        if (isTaskTypeCoding) return dbCat.categoryType === 'Coding';
+        if (isTaskTypeMcq) return dbCat.categoryType === 'MCQ';
+      }
+
+      // Fallback matching if category is not found in database list
+      if (isTaskTypeCoding) {
+        return ['coding', 'debugging'].includes(qCatName) || !['mcq', 'aptitude', 'core cs'].includes(qCatName);
+      }
+      if (isTaskTypeMcq) {
+        return ['mcq', 'aptitude', 'core cs'].includes(qCatName);
+      }
+
+      return true;
+    });
+  }, [availableQuestions, addDayForm.taskType, allCategories]);
+
+  const dayWiseQuestions = filteredQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
   const isDarkMode = theme === 'dark';
 
   useEffect(() => {
     const remoteAssigned = trackDetail?.assignedQuestions;
-    setAssignedQuestions(preferRemoteData(remoteAssigned, dayWiseQuestions));
+    setAssignedQuestions(preferRemoteData(remoteAssigned, availableQuestions));
     const nextDay = String(Math.max(0, ...(trackDetail?.dayAssignments || []).map((d) => Number(d.dayNumber))) + 1);
     setAddDayForm({
       dayNumber: nextDay,
       questionId: '',
-      taskType: 'Coding',
+      taskType: defaultTaskType,
       batchId: trackDetail?.batchId || '',
       xpValue: '',
       status: 'Published',
     });
-  }, [dayWiseQuestions, trackDetail]);
+  }, [availableQuestions, trackDetail, defaultTaskType]);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,7 +277,7 @@ export default function TrackTemplateDetails() {
     setAddDayForm({
       dayNumber: String(dayNumber),
       questionId: '',
-      taskType: 'Coding',
+      taskType: defaultTaskType,
       batchId: track?.batchId || '',
       xpValue: '',
       status: 'Published',
@@ -208,7 +290,7 @@ export default function TrackTemplateDetails() {
     setAddDayForm({
       dayNumber: '',
       questionId: '',
-      taskType: 'Coding',
+      taskType: defaultTaskType,
       batchId: '',
       xpValue: '',
       status: 'Published',
@@ -315,15 +397,23 @@ export default function TrackTemplateDetails() {
                     <div className="relative mt-1.5">
                       <select
                         value={addDayForm.taskType}
-                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value }))}
+                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value, questionId: '' }))}
                         className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
                       >
-                        <option value="Coding">Coding</option>
-                        <option value="SQL">SQL</option>
-                        <option value="MCQ">MCQ</option>
-                        <option value="Aptitude">Aptitude</option>
-                        <option value="Core CS">Core CS</option>
-                        <option value="Debugging">Debugging</option>
+                        {(!hasMcq || hasCoding || (!hasMcq && !hasCoding)) && (
+                          <>
+                            <option value="Coding">Coding</option>
+                            <option value="SQL">SQL</option>
+                            <option value="Debugging">Debugging</option>
+                          </>
+                        )}
+                        {(!hasCoding || hasMcq || (!hasMcq && !hasCoding)) && (
+                          <>
+                            <option value="MCQ">MCQ</option>
+                            <option value="Aptitude">Aptitude</option>
+                            <option value="Core CS">Core CS</option>
+                          </>
+                        )}
                       </select>
                       <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
                     </div>

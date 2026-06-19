@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
-import { FiArrowLeft, FiSave, FiUpload, FiX, FiFileText, FiArchive, FiTrash2, FiEdit2 } from "react-icons/fi";
+import { FiArrowLeft, FiSave, FiUpload, FiX, FiArchive, FiTrash2, FiEdit2, FiBookOpen, FiCopy } from "react-icons/fi";
 import DayConfiguration from "../../components/AdminDashbaord/DayConfiguration";
 import StudentAssignmentPanel from "../../components/AdminDashbaord/StudentAssignmentPanel";
 import ProjectProgressMonitor from "../../components/AdminDashbaord/ProjectProgressMonitor";
+import MarkdownContent from "../Learn/MarkdownContent";
 
 const CATEGORIES = [
   "Java Full Stack",
@@ -25,7 +26,11 @@ const TABS = ["Overview", "Days & Tasks", "Students", "Submissions"];
 
 export default function EditProject() {
   const { projectId } = useParams();
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [searchParams] = useSearchParams();
+  const isGeneratedProjectFlow = searchParams.get("generated") === "1";
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") === "days-tasks" ? "Days & Tasks" : "Overview"
+  );
   const [isEditing, setIsEditing] = useState(false);
 
   // Project data state (original details fetched from DB)
@@ -67,6 +72,9 @@ export default function EditProject() {
   const [projectDays, setProjectDays] = useState([]);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [loadingDays, setLoadingDays] = useState(false);
+  const [analytics, setAnalytics] = useState({ totalStudents: 0, activeStudents: 0, averageProgress: 0, averageXp: 0, completionRate: 0 });
+  const [duplicatingDayId, setDuplicatingDayId] = useState(null);
+  const [deletingDayId, setDeletingDayId] = useState(null);
 
   const navigate = useNavigate();
   const { theme } = useTheme();
@@ -75,7 +83,14 @@ export default function EditProject() {
 
   useEffect(() => {
     fetchProject();
+    fetchProjectAnalytics();
   }, [projectId]);
+
+  useEffect(() => {
+    if (isGeneratedProjectFlow) {
+      setSuccess("Project created as a Draft. Days and tasks have been auto-generated and are ready to configure.");
+    }
+  }, [isGeneratedProjectFlow]);
 
   useEffect(() => {
     if (activeTab === "Days & Tasks" && projectId) {
@@ -93,6 +108,51 @@ export default function EditProject() {
       setError("Failed to fetch project days checklist.");
     } finally {
       setLoadingDays(false);
+    }
+  };
+
+  const fetchProjectAnalytics = async () => {
+    try {
+      const data = await adminAPI.getProjectAnalytics(projectId);
+      setAnalytics({
+        totalStudents: data?.totalStudents || 0,
+        activeStudents: data?.activeStudents || 0,
+        averageProgress: data?.averageProgress || 0,
+        averageXp: data?.averageXp || 0,
+        completionRate: data?.completionRate || 0,
+      });
+    } catch (err) {
+      console.error("Error fetching project analytics:", err);
+    }
+  };
+
+  const handleDuplicateDay = async (dayId) => {
+    setDuplicatingDayId(dayId);
+    setError("");
+    try {
+      await adminAPI.duplicateProjectDay(dayId);
+      await Promise.all([fetchProject(), fetchProjectDays()]);
+      setSelectedDayIndex(projectDays.length);
+      setSuccess("Day duplicated with its topic, markdown notes, and tasks.");
+    } catch (err) {
+      setError(err.message || "Failed to duplicate the day.");
+    } finally {
+      setDuplicatingDayId(null);
+    }
+  };
+
+  const handleDeleteDay = async (dayId) => {
+    setDeletingDayId(dayId);
+    setError("");
+    try {
+      await adminAPI.deleteProjectDay(dayId);
+      await Promise.all([fetchProject(), fetchProjectDays()]);
+      setSelectedDayIndex(0);
+      setSuccess("Day and its tasks deleted successfully.");
+    } catch (err) {
+      setError(err.message || "Failed to delete the day.");
+    } finally {
+      setDeletingDayId(null);
     }
   };
 
@@ -345,7 +405,37 @@ export default function EditProject() {
           {/* Tab Contents */}
           <div className="pt-4">
             {activeTab === "Overview" && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                  {[
+                    ["Total Students", analytics.totalStudents],
+                    ["Active Students", analytics.activeStudents],
+                    ["Average Progress", `${analytics.averageProgress}%`],
+                    ["Average XP", analytics.averageXp],
+                    ["Completion Rate", `${analytics.completionRate}%`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-4 shadow-[0_4px_18px_rgba(0,0,0,0.015)]">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                      <p className="mt-2 text-xl font-bold text-[#0c1833] dark:text-white">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)]">
+                  <div className="flex items-center gap-2 border-b border-black/5 dark:border-white/5 pb-3 mb-4">
+                    <FiBookOpen className="text-blue-500" />
+                    <h3 className="text-sm font-bold text-[#0c1833] dark:text-white">Project Overview</h3>
+                  </div>
+                  {projectDetails.overview_markdown_content ? (
+                    <div className="max-w-none admin-dashboard-typography">
+                      <MarkdownContent compact>{projectDetails.overview_markdown_content}</MarkdownContent>
+                    </div>
+                  ) : (
+                    <p className="py-8 text-center text-xs font-medium text-slate-400">No overview markdown has been uploaded yet.</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
                 
                 {/* Left Card: Project Details (2/3 width) */}
                 <div className="lg:col-span-2 bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)] flex flex-col justify-between h-full">
@@ -581,11 +671,17 @@ export default function EditProject() {
                   </div>
                 </div>
 
+                </div>
               </div>
             )}
 
             {activeTab === "Days & Tasks" && (
               <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)] space-y-4">
+                {success && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3.5 rounded-xl text-xs font-semibold">
+                    {success}
+                  </div>
+                )}
                 <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
                   <h3 className="text-sm font-bold text-[#0c1833] dark:text-white uppercase tracking-wider">
                     Days Checklist & Configuration
@@ -602,6 +698,18 @@ export default function EditProject() {
                   </p>
                 ) : (
                   <div className="space-y-3">
+                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {projectDays.map((day, idx) => (
+                        <button
+                          key={day._id}
+                          type="button"
+                          onClick={() => setSelectedDayIndex(idx)}
+                          className={`shrink-0 rounded-lg border px-3 py-2 text-[10px] font-bold transition ${selectedDayIndex === idx ? "border-blue-500 bg-blue-500 text-white" : "border-black/10 bg-white/70 text-slate-500 hover:border-blue-500/40 dark:border-white/10 dark:bg-black/10 dark:text-slate-300"}`}
+                        >
+                          Day {day.day_number}
+                        </button>
+                      ))}
+                    </div>
                     {projectDays.map((day, idx) => {
                       const isExpanded = selectedDayIndex === idx;
                       return (
@@ -614,23 +722,35 @@ export default function EditProject() {
                           }`}
                         >
                           {/* Accordion Trigger Day Card Header */}
-                          <button
-                            onClick={() => setSelectedDayIndex(isExpanded ? null : idx)}
-                            className="w-full text-left p-4 flex items-center justify-between outline-none"
-                          >
-                            <div>
+                          <div className="w-full p-4 flex items-center justify-between gap-4">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDayIndex(isExpanded ? null : idx)}
+                              className="min-w-0 flex-1 text-left outline-none"
+                            >
                               <h4 className="text-xs font-bold text-slate-800 dark:text-white">
                                 Day {day.day_number}: {day.topic_title || `Day ${day.day_number} Topic`}
                               </h4>
                               <p className="text-[10px] font-semibold text-slate-400 mt-1">
                                 {day.taskCount || 0} Tasks &bull; {day.totalXp || 0} XP
                               </p>
-                            </div>
+                            </button>
                             
-                            <span className="text-[10px] font-bold text-blue-500 hover:text-blue-600 transition-all">
-                              {isExpanded ? "Collapse ▲" : "Configure ▼"}
-                            </span>
-                          </button>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={(event) => { event.stopPropagation(); handleDuplicateDay(day._id); }}
+                                disabled={duplicatingDayId === day._id}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-blue-500 disabled:opacity-50"
+                              >
+                                <FiCopy className="h-3 w-3" />
+                                {duplicatingDayId === day._id ? "Duplicating..." : "Duplicate"}
+                              </button>
+                              <span className="text-[10px] font-bold text-blue-500 hover:text-blue-600 transition-all">
+                                {isExpanded ? "Collapse ▲" : "Configure ▼"}
+                              </span>
+                            </div>
+                          </div>
 
                           {/* Expanded Day Details & Config Panel */}
                           {isExpanded && (
@@ -639,6 +759,8 @@ export default function EditProject() {
                                 dayId={day._id}
                                 dayNumber={day.day_number}
                                 onSave={fetchProjectDays}
+                                onDeleteDay={() => handleDeleteDay(day._id)}
+                                deletingDay={deletingDayId === day._id}
                               />
                             </div>
                           )}
