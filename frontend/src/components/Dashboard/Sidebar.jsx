@@ -85,7 +85,7 @@ const Sidebar = () => {
             return `flex flex-col items-center justify-center gap-1.5 w-[3.65rem] h-[3.65rem] md:w-[4.15rem] md:h-[4.15rem] rounded-[1.1rem] transition-all duration-300 ease-out select-none
             ${
               isCurrent
-                ? "bg-[#e4f6ff] text-[#00113b] font-semibold shadow-md shadow-blue-600/10 border border-[#7ec9ff]/35 dark:bg-[#0b3ef2] dark:text-white dark:shadow-md dark:shadow-blue-600/20 dark:border-blue-400/20"
+                ? "bg-[#e4f6ff] text-[#00113b] font-semibold shadow-md shadow-blue-600/10 border border-[#7ec9ff]/35 dark:bg-[#2563eb] dark:text-white dark:shadow-md dark:shadow-blue-600/20 dark:border-blue-400/20"
                 : "text-[#00113b]/70 dark:text-slate-400 hover:text-[#00113b] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 font-normal border border-transparent"
             }`;
           }}

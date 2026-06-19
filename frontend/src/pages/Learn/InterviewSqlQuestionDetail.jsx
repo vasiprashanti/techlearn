@@ -282,21 +282,21 @@ export default function InterviewSqlQuestionDetail() {
         {/* Workspace Body split */}
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
-          <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+          <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
             {/* Header inside the Left Card */}
-            <div className="p-5 border-b border-black/5 dark:border-white/5 shrink-0">
+            <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
               {!isDailyMode && (
                 <button
                   type="button"
                   onClick={() => navigate(backPath)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#0c34ab] hover:text-[#08257a] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </button>
               )}
               
-              <h1 className="text-xl font-bold tracking-tight text-[#0d2a57] dark:text-white mb-2">
+              <h1 className="text-lg font-bold tracking-tight text-[#0d2a57] dark:text-white mb-2">
                 {question.title}
               </h1>
 
@@ -311,7 +311,7 @@ export default function InterviewSqlQuestionDetail() {
             </div>
 
             {/* Scrollable description inside the Left Card */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-5">
               <div className="prose prose-slate max-w-none dark:prose-invert text-sm">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes}</ReactMarkdown>
               </div>
@@ -320,15 +320,15 @@ export default function InterviewSqlQuestionDetail() {
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-4 lg:overflow-hidden">
-            {/* Card 1: SQL Editor space (outer rounded-2xl, inner editor sharp) */}
-            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 p-4 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
-                <div className="flex items-center gap-3">
+            {/* Card 1: SQL Editor space (outer rounded-xl, inner editor sharp) */}
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 bg-white/20 p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
+                <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
                   <select
                     value={selectedLanguage}
                     onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="rounded-lg border border-gray-300 px-2 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                    className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
                     <option value="sql">SQL (PostgreSQL)</option>
                     <option value="mysql">SQL (MySQL)</option>
@@ -336,12 +336,12 @@ export default function InterviewSqlQuestionDetail() {
                 </div>
                 
                 {/* Run / Submit buttons in Top Right Corner of Editor Card */}
-                <div className="flex items-center gap-2 self-end sm:self-auto">
+                <div className="flex items-center gap-2 justify-end w-full sm:w-auto z-10">
                   <button
                     type="button"
                     onClick={runQuery}
                     disabled={isRunning}
-                    className="inline-flex w-24 justify-center items-center gap-1.5 rounded-lg border border-transparent bg-[#0c34ab] px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#08257a] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 dark:border-transparent dark:bg-[#0c34ab] dark:hover:bg-[#08257a]"
+                    className="flex-1 sm:flex-initial sm:w-24 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isRunning ? 'Run...' : 'Run Query'}
                   </button>
@@ -351,16 +351,16 @@ export default function InterviewSqlQuestionDetail() {
                       type="button"
                       onClick={markSolved}
                       disabled={isSubmitted}
-                      className="inline-flex w-36 justify-center items-center gap-1.5 rounded-lg border border-transparent bg-[#0c34ab]/10 hover:bg-[#0c34ab]/25 text-[#0c34ab] px-3 py-1.5 text-xs font-semibold dark:border-transparent dark:bg-[#0c34ab] dark:hover:bg-[#08257a] dark:text-white transition-all duration-200"
+                      className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                     >
-                      <CheckCircle className="h-3 w-3" />
+                      <CheckCircle className="h-3.5 w-3.5" />
                       Submit Query
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col overflow-hidden rounded-none border border-white/20 dark:border-gray-700/30">
+              <div className="flex-1 flex flex-col overflow-hidden rounded-none border border-gray-300 dark:border-gray-700">
                 <Editor
                   height="100%"
                   defaultLanguage="sql"
@@ -379,12 +379,12 @@ export default function InterviewSqlQuestionDetail() {
               </div>
             </section>
 
-            {/* Card 2: Terminal / Console Output (flex-[1], outer rounded-2xl, inner terminal sharp) */}
-            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-2xl border border-[#0c34ab]/20 bg-white/20 p-4 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+            {/* Card 2: Terminal / Console Output (flex-[1], outer rounded-xl, inner terminal sharp) */}
+            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 bg-white/20 p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff] border-b border-black/5 dark:border-white/5 pb-1.5">
                 Terminal
               </div>
-              <pre className="flex-grow overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-relaxed bg-white/50 dark:bg-black/35 p-3 rounded-none border dark:border-gray-700/50 text-[#0d2a57] dark:text-emerald-400">
+              <pre className="flex-grow overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
                 {output || 'Run your query to see result output here.'}
               </pre>
             </section>
@@ -392,35 +392,37 @@ export default function InterviewSqlQuestionDetail() {
         </div>
 
         {/* Bottom Action Bar */}
-        <footer className="h-16 shrink-0 mt-4 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
-          <div className="text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">
-            {submissionMessage || (isDailyMode && `Daily Task Question ${currentTaskIndex + 1} of ${dailySequence.length}`)}
-          </div>
-          
-          {/* Back & Next Navigation buttons at the bottom right */}
-          {isDailyMode && (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  if (currentTaskIndex === 0) {
-                    navigate('/dashboard');
-                  } else {
-                    const prevTask = dailySequence[currentTaskIndex - 1];
-                    const prevType = prevTask.taskType === 'SQL' ? 'sql' : 'dsa';
-                    navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
-                  }
-                }}
-                className="inline-flex w-24 justify-center items-center gap-2 rounded-xl border border-[#0c34ab]/20 dark:border-gray-700 bg-[#0c34ab]/5 dark:bg-black/35 px-4 py-2 text-sm font-semibold text-[#0c34ab] dark:text-gray-300 hover:bg-[#0c34ab]/15 dark:hover:bg-black/50 transition-all duration-200 shadow-sm"
-              >
-                Back
-              </button>
+        {isDailyMode && (
+          <footer className="relative h-11 shrink-0 mt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between select-none">
+            {/* Back button fixed to the bottom-left corner */}
+            <button
+              type="button"
+              onClick={() => {
+                if (currentTaskIndex === 0) {
+                  navigate('/dashboard');
+                } else {
+                  const prevTask = dailySequence[currentTaskIndex - 1];
+                  const prevType = prevTask.taskType === 'SQL' ? 'sql' : 'dsa';
+                  navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2563eb]/15 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-3 py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+            >
+              Back
+            </button>
 
+            {/* Daily Tasks X/N centered between them */}
+            <div className="absolute left-1/2 -translate-x-1/2 font-press-start text-[9px] md:text-[10px] text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider">
+              {`SQL TASK ${currentTaskIndex + 1}/${dailySequence.length}`}
+            </div>
+
+            {/* Next/Finish button fixed to the bottom-right corner */}
+            <div>
               {currentTaskIndex < dailySequence.length - 1 ? (
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-[#0c34ab] hover:bg-[#08257a] active:scale-[0.98] px-4 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-4 py-1 text-xs font-semibold text-white shadow-sm transition-all duration-200"
                 >
                   Next
                 </button>
@@ -428,14 +430,14 @@ export default function InterviewSqlQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="inline-flex w-28 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1 text-xs font-semibold text-white shadow-sm hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
                 >
                   Finish
                 </button>
               )}
             </div>
-          )}
-        </footer>
+          </footer>
+        )}
       </div>
 
       {showFinishModal && (

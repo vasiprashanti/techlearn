@@ -97,20 +97,20 @@ export default function DailyChallengeInstructions() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-5 md:p-6 font-sans text-slate-900 dark:text-slate-100">
-      <div className="absolute left-5 top-5 md:left-6 md:top-6 flex items-center gap-3">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-4 md:p-6 font-sans text-slate-900 dark:text-slate-100">
+      <div className="w-full max-w-2xl flex items-center gap-3 mb-6 md:absolute md:left-6 md:top-6 md:mb-0 md:w-auto justify-center md:justify-start select-none">
         <img
           src={theme === "dark" ? "/logoo2-small.webp" : "/logoo-small.webp"}
           alt="TLS"
-          className="h-10 w-auto object-contain md:h-12"
+          className="h-9 w-auto object-contain md:h-12 shrink-0"
         />
-        <span className="hidden h-7 w-px bg-black/10 dark:bg-white/10 sm:block" />
-        <span className="hidden font-press-start text-[10px] uppercase tracking-wider text-[#00113b]/70 dark:text-[#8fd9ff] sm:block md:text-xs">
+        <span className="h-6 w-px bg-black/10 dark:bg-white/10 shrink-0" />
+        <span className="font-press-start text-[8.5px] sm:text-[10px] uppercase tracking-wider text-[#00113b]/70 dark:text-[#8fd9ff] md:text-xs whitespace-nowrap shrink-0">
           Daily Challenge
         </span>
       </div>
 
-      <div className="w-full max-w-3xl rounded-xl border border-black/5 bg-white/40 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-6">
+      <div className="w-full max-w-2xl rounded-xl border border-black/5 bg-white/40 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-6">
         <h1 className="text-center font-press-start text-[10px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff] md:text-xs">
           Daily Challenge Instructions
         </h1>

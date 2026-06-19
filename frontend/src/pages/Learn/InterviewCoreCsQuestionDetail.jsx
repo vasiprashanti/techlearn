@@ -264,10 +264,10 @@ export default function InterviewCoreCsQuestionDetail() {
     <UserSidebarLayout maxWidthClass="max-w-3xl lg:max-w-5xl">
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
-        <div className="border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
+        <div className="border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
           {/* Header row with heading centered and difficulty pill absolute on the right */}
           <div className="relative flex items-center justify-center w-full mb-6 select-none">
-            <h1 className="text-[10px] md:text-xs font-press-start text-[#0c34ab] dark:text-[#8fd9ff] uppercase">
+            <h1 className="text-[10px] md:text-xs font-press-start text-[#2563eb] dark:text-[#8fd9ff] uppercase">
               TECHNICAL MCQ
             </h1>
             <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
@@ -275,9 +275,9 @@ export default function InterviewCoreCsQuestionDetail() {
             </span>
           </div>
 
-          <div className="relative w-full border border-[#0c34ab]/20 dark:border-white/10 bg-white/30 dark:bg-gray-800/80 rounded-xl p-6 shadow-md shadow-[#0c34ab]/5 text-center mb-6 mt-3">
+          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-center mb-6 mt-3">
             {isDailyMode && (
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#0c34ab] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
                 Question {currentTaskIndex + 1} of {dailySequence.length}
               </div>
             )}
@@ -296,13 +296,13 @@ export default function InterviewCoreCsQuestionDetail() {
             {question.options.map((opt, idx) => {
               const optionClass = !showFeedback
                 ? selectedOption === idx
-                  ? 'border-[#0c34ab] bg-[#0c34ab]/10 dark:bg-[#0c34ab]/20 text-[#0c34ab] dark:text-[#a0baff]'
-                  : 'border-[#0c34ab]/20 dark:border-gray-600 bg-white/30 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 hover:border-[#0c34ab] dark:hover:border-blue-400 hover:bg-white/50 dark:hover:bg-gray-800/70'
+                  ? 'border-[#2563eb] bg-[#2563eb]/10 dark:bg-[#2563eb]/20 text-[#2563eb] dark:text-[#a0baff]'
+                  : 'border-[#2563eb]/20 dark:border-gray-600/70 bg-[#e5f3ff]/35 dark:bg-[#091b40]/50 text-gray-800 dark:text-gray-200 hover:border-[#2563eb] dark:hover:border-blue-400 hover:bg-[#e5f3ff]/60 dark:hover:bg-[#091b40]/75'
                 : idx === question.correctIndex
                   ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                   : selectedOption === idx
                     ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                    : 'border-[#0c34ab]/10 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/40 text-gray-600 dark:text-gray-300';
+                    : 'border-[#2563eb]/10 dark:border-gray-700/30 bg-[#e5f3ff]/10 dark:bg-[#091b40]/20 text-gray-600/60 dark:text-gray-400/60';
 
               return (
                 <button
@@ -349,7 +349,7 @@ export default function InterviewCoreCsQuestionDetail() {
           ) : null}
 
           {submissionMessage ? (
-            <p className="mt-4 text-xs font-semibold text-[#0c34ab] dark:text-blue-400 w-full text-center">{submissionMessage}</p>
+            <p className="mt-4 text-xs font-semibold text-[#2563eb] dark:text-blue-400 w-full text-center">{submissionMessage}</p>
           ) : null}
 
           {/* Action Row - Submit Answer or Next/Finish controls */}
@@ -367,7 +367,7 @@ export default function InterviewCoreCsQuestionDetail() {
                       navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                     }
                   }}
-                  className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-[#0c34ab]/20 dark:border-gray-700 bg-[#0c34ab]/5 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-[#0c34ab] dark:text-gray-300 hover:bg-[#0c34ab]/15 dark:hover:bg-black/50 shadow-sm transition-all duration-200"
+                  className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-[#2563eb]/20 dark:border-gray-700 bg-[#2563eb]/5 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-black/50 shadow-sm transition-all duration-200"
                 >
                   Back
                 </button>
@@ -377,7 +377,7 @@ export default function InterviewCoreCsQuestionDetail() {
                     type="button"
                     disabled={selectedOption === null}
                     onClick={handleMarkSolved}
-                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#0c34ab] hover:bg-[#08257a] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     Submit Answer
                   </button>
@@ -386,7 +386,7 @@ export default function InterviewCoreCsQuestionDetail() {
                     <button
                       type="button"
                       onClick={handleNext}
-                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#0c34ab] hover:bg-[#08257a] active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
                     >
                       Next
                     </button>
@@ -406,7 +406,7 @@ export default function InterviewCoreCsQuestionDetail() {
                 type="button"
                 disabled={selectedOption === null}
                 onClick={handleMarkSolved}
-                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#0c34ab] hover:bg-[#08257a] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
               >
                 Submit Answer
               </button>

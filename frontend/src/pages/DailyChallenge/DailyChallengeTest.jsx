@@ -274,7 +274,7 @@ export default function DailyChallengeTest() {
   if (!problem) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-6">
-        <div className="rounded-xl border border-[#0c34ab]/15 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] px-6 py-5 text-sm text-gray-700 dark:bg-gray-900/70 dark:text-gray-200">
+        <div className="rounded-xl border border-[#2563eb]/15 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] px-6 py-5 text-sm text-gray-700 dark:bg-gray-900/70 dark:text-gray-200">
           Loading challenge problem...
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function DailyChallengeTest() {
   }
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+    <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           {theme === "dark" ? (
@@ -304,9 +304,9 @@ export default function DailyChallengeTest() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden p-4 gap-3">
-        {/* Left Panel (35% Width, Contain all details inside Left Card) */}
-        <section className="w-[35%] md:w-[40%] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
+        {/* Left Panel (35% Width on large screens, stacks on mobile) */}
+        <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
           <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
             <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
             
@@ -336,15 +336,14 @@ export default function DailyChallengeTest() {
           </div>
         </section>
 
-        {/* Right Panel - Divided into 2 cards (flex-[2] editor, flex-[1] console) */}
-        <div className="flex-grow flex-1 w-[65%] md:w-[60%] flex flex-col gap-3 overflow-hidden">
-          {/* Card 1: Coding Space (flex-[2]) */}
-          <section className="flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-            <div className="mb-2 flex items-center justify-between shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
-              <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
-              
-              {/* Language Selector + Run / Submit buttons */}
-              <div className="flex items-center gap-2">
+        {/* Right Panel - Stacks on mobile */}
+        <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
+          {/* Card 1: Coding Space */}
+          <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
+              <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
+                
                 <select
                   value={selectedLanguage}
                   onChange={(event) => {
@@ -352,7 +351,7 @@ export default function DailyChallengeTest() {
                     setSelectedLanguage(nextLanguage);
                     setCode(LANGUAGES[nextLanguage].starter);
                   }}
-                  className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white mr-1"
+                  className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 >
                   {Object.values(LANGUAGES).map((language) => (
                     <option key={language.id} value={language.id}>
@@ -360,12 +359,15 @@ export default function DailyChallengeTest() {
                     </option>
                   ))}
                 </select>
+              </div>
 
+              {/* Run / Submit buttons */}
+              <div className="flex items-center gap-2 justify-end w-full sm:w-auto z-10">
                 <button
                   type="button"
                   onClick={handleRun}
                   disabled={running || submitting}
-                  className="inline-flex w-20 justify-center items-center gap-1.5 rounded-lg border border-[#0c34ab]/20 dark:border-white/10 bg-[#0c34ab]/5 dark:bg-white/5 px-2.5 py-1 text-xs font-semibold text-[#0c34ab] dark:text-gray-300 hover:bg-[#0c34ab]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+                  className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
                 >
                   <Play className="h-3.5 w-3.5" />
                   {running ? "Run..." : "Run"}
@@ -374,7 +376,7 @@ export default function DailyChallengeTest() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={running || submitting || hasSubmitted}
-                  className="inline-flex w-32 justify-center items-center gap-1.5 rounded-lg bg-[#0c34ab] hover:bg-[#08257a] px-3 py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                  className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                 >
                   <SendHorizontal className="h-3.5 w-3.5" />
                   {hasSubmitted ? "Submitted" : submitting ? "Submit" : "Submit"}
@@ -451,8 +453,8 @@ export default function DailyChallengeTest() {
             </div>
           </section>
 
-          {/* Card 2: Terminal Output (flex-[1]) */}
-          <section className="flex-[1] flex flex-col overflow-hidden rounded-xl border border-[#0c34ab]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+          {/* Card 2: Terminal Output */}
+          <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
             <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
               Terminal
             </div>
@@ -464,21 +466,21 @@ export default function DailyChallengeTest() {
       </div>
 
       {/* Fixed Footer Action Bar */}
-      <footer className="relative h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-6 backdrop-blur-xl flex items-center justify-between">
-        <div className="text-xs text-gray-600 dark:text-gray-300 select-none">
+      <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
+        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap">
           Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 font-press-start text-[10px] md:text-xs text-[#0c34ab] dark:text-[#8fd9ff] uppercase tracking-wider select-none">
+        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap">
           DAILY CHALLENGE
         </div>
 
-        <div className="flex items-center gap-3 z-10">
+        <div className="flex items-center z-10">
           <button
             type="button"
             onClick={handleEndChallenge}
             disabled={submitting}
-            className="rounded-xl border border-red-200/50 bg-red-500 hover:bg-red-600 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60 active:scale-[0.98] transition-all duration-200 shadow-sm"
+            className="rounded-lg sm:rounded-xl border border-red-200/50 bg-red-500 hover:bg-red-600 px-2.5 py-1 sm:px-5 sm:py-2 text-[10px] sm:text-sm font-semibold text-white disabled:opacity-60 active:scale-[0.98] transition-all duration-200 shadow-sm whitespace-nowrap"
           >
             End Challenge
           </button>
