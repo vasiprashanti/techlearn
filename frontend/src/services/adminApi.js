@@ -471,9 +471,14 @@ export const adminAPI = {
   getProjectTasksByDay: (dayId) => request(`/admin/projects/days/${dayId}/tasks`),
 
   // Phase 2
-  searchStudents: (projectId, query) => request(`/admin/projects/students/search?projectId=${projectId}&query=${encodeURIComponent(query)}`),
+  searchStudents: (projectId, query = '', batchId = '') => {
+    const params = new URLSearchParams({ projectId, query });
+    if (batchId) params.set('batchId', batchId);
+    return request(`/admin/projects/students/search?${params.toString()}`);
+  },
   assignStudents: (projectId, studentIds) => request(`/admin/projects/${projectId}/assign`, { method: 'POST', body: JSON.stringify({ studentIds }) }),
   getAssignedStudents: (projectId) => request(`/admin/projects/${projectId}/students`),
+  getProjectAssignmentHealth: (projectId) => request(`/admin/projects/${projectId}/assignment-health`),
   removeStudent: (projectId, studentId) => request(`/admin/projects/${projectId}/students/${studentId}/remove`, { method: 'PUT' }),
   getProjectDayDetails: (dayId) => request(`/admin/projects/days/${dayId}/details`),
   getProjectProgress: (projectId) => request(`/admin/projects/${projectId}/progress`),

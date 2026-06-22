@@ -24,6 +24,7 @@ import {
   getProjectDayDetails,
   getProjectProgress,
   getProjectAnalytics,
+  getProjectAssignmentHealth,
   duplicateProjectDay,
 } from "../controllers/projectController.js";
 
@@ -47,6 +48,7 @@ router.get("/:projectId/students", protect, isAdmin, getAssignedStudents);
 router.put("/:projectId/students/:studentId/remove", protect, isAdmin, removeStudent);
 router.get("/:projectId/progress", protect, isAdmin, getProjectProgress);
 router.get("/:projectId/analytics", protect, isAdmin, getProjectAnalytics);
+router.get("/:projectId/assignment-health", protect, isAdmin, getProjectAssignmentHealth);
 
 // Project Days routes
 router.post("/days", protect, isAdmin, createProjectDay);

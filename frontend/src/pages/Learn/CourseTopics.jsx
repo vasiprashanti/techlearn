@@ -56,7 +56,6 @@ const CourseTopics = () => {
   const scrollContainerRef = useRef(null);
   const lastContentScrollTopRef = useRef(0);
   const touchStartYRef = useRef(null);
-  const [isNotesAtEnd, setIsNotesAtEnd] = useState(false);
 
   const [backendCourse, setBackendCourse] = useState(cachedCourse);
   const [loading, setLoading] = useState(!cachedCourse);
@@ -131,8 +130,6 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
-  const shouldControlPageScroll = Boolean(currentCourse && currentTopic);
-
   const getNotesScrollState = (node = scrollContainerRef.current) => {
     if (!node) return { atTop: true, atBottom: true, canScroll: false };
 
@@ -144,11 +141,6 @@ const CourseTopics = () => {
       atBottom: node.scrollTop >= maxScrollTop - 2,
       canScroll,
     };
-  };
-
-  const syncNotesEndState = (node = scrollContainerRef.current) => {
-    const { atBottom, canScroll } = getNotesScrollState(node);
-    setIsNotesAtEnd(!canScroll || atBottom);
   };
 
   const isSidebarScrollEvent = (event) => {
@@ -169,11 +161,11 @@ const CourseTopics = () => {
     if (!shouldScrollNotes) return false;
 
     scroller.scrollTop += deltaY;
-    syncNotesEndState(scroller);
     return true;
   };
 
   const handlePrimaryAreaWheel = (event) => {
+    if (window.innerWidth < 768) return;
     if (isSidebarScrollEvent(event)) return;
 
     if (scrollNotesBy(event.deltaY)) {
@@ -183,6 +175,7 @@ const CourseTopics = () => {
   };
 
   const handlePrimaryAreaTouchStart = (event) => {
+    if (window.innerWidth < 768) return;
     if (isSidebarScrollEvent(event)) {
       touchStartYRef.current = null;
       return;
@@ -192,6 +185,7 @@ const CourseTopics = () => {
   };
 
   const handlePrimaryAreaTouchMove = (event) => {
+    if (window.innerWidth < 768) return;
     if (isSidebarScrollEvent(event) || touchStartYRef.current === null) return;
 
     const currentY = event.touches?.[0]?.clientY;
@@ -214,19 +208,10 @@ const CourseTopics = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     lastContentScrollTopRef.current = 0;
     setIsCourseHeaderHidden(false);
-    setIsNotesAtEnd(false);
-    window.requestAnimationFrame(() => syncNotesEndState());
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: false, isScrollingDown: false },
     }));
   }, [selectedTopic]);
-
-  useEffect(() => {
-    if (!shouldControlPageScroll) return undefined;
-
-    const frame = window.requestAnimationFrame(() => syncNotesEndState());
-    return () => window.cancelAnimationFrame(frame);
-  }, [shouldControlPageScroll, currentTopic?.id, currentTopic?.notesContent]);
 
   const handleContentScroll = (event) => {
     const currentScrollTop = event.currentTarget.scrollTop;
@@ -234,8 +219,6 @@ const CourseTopics = () => {
     const shouldHideHeader = currentScrollTop > 24 && isScrollingDown;
 
     lastContentScrollTopRef.current = Math.max(currentScrollTop, 0);
-    syncNotesEndState(event.currentTarget);
-
     window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
       detail: { isScrolled: shouldHideHeader, isScrollingDown },
     }));
@@ -251,26 +234,6 @@ const CourseTopics = () => {
       }));
     };
   }, []);
-
-  useEffect(() => {
-    if (!shouldControlPageScroll) return undefined;
-
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    if (!isNotesAtEnd) {
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, [isNotesAtEnd, shouldControlPageScroll]);
 
   if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
@@ -297,7 +260,7 @@ const CourseTopics = () => {
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative z-10 flex h-screen flex-1 flex-col overflow-hidden pt-20 transition-all duration-700 ease-in-out md:pt-24">
+      <main className="relative z-10 flex min-h-screen flex-1 flex-col overflow-visible pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
         
         {/* Top Header */}
         <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
@@ -373,7 +336,7 @@ const CourseTopics = () => {
           onWheel={handlePrimaryAreaWheel}
           onTouchStart={handlePrimaryAreaTouchStart}
           onTouchMove={handlePrimaryAreaTouchMove}
-          className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
+          className="flex-1 min-h-0 overflow-visible md:overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
         >
           <aside
             data-course-sidebar="true"
@@ -408,7 +371,7 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="relative min-h-0 overflow-y-auto px-4 pb-10 pt-0 transition-all duration-500 ease-out md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="relative min-h-0 overflow-visible px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
