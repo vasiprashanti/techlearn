@@ -114,11 +114,7 @@ export default function InterviewCoreCsQuestionDetail() {
         setSelectedOption(optIndex);
         setShowFeedback(true);
         setIsLastSubmissionCorrect(currentTask.isCorrect === true);
-        if (currentTask.isCorrect === true) {
-          setSubmissionMessage('Submission successful! Correct answer.');
-        } else {
-          setSubmissionMessage('Incorrect Submission Please refer to the solution above');
-        }
+        setSubmissionMessage('');
       }
     } else {
       setSelectedOption(null);
@@ -230,19 +226,20 @@ export default function InterviewCoreCsQuestionDetail() {
         selectedAnswer: String.fromCharCode(65 + selectedOption),
         finalize: false,
       });
-      if (correct) {
-        setSubmissionMessage('Submission successful! Correct answer.');
-      } else {
-        setSubmissionMessage('Incorrect Submission Please refer to the solution above');
-      }
+      setSubmissionMessage('');
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
   };
 
   const handleNext = () => {
-    const nextType = dailySequence[currentTaskIndex + 1].taskType === 'SQL' ? 'sql' : dailySequence[currentTaskIndex + 1].taskType === 'MCQ' || dailySequence[currentTaskIndex + 1].taskType === 'Core CS' ? 'core-cs' : 'dsa';
-    navigate(`/dashboard/practice/${nextType}/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
+    const nextTask = dailySequence[currentTaskIndex + 1];
+    if (!nextTask) {
+      navigate('/dashboard');
+      return;
+    }
+    const nextType = nextTask.taskType === 'SQL' ? 'sql' : nextTask.taskType === 'MCQ' || nextTask.taskType === 'Core CS' ? 'core-cs' : 'dsa';
+    navigate(`/dashboard/practice/${nextType}/${nextTask.questionId}?mode=daily`);
   };
  
   const handleFinish = async () => {
@@ -331,7 +328,7 @@ export default function InterviewCoreCsQuestionDetail() {
           </div>
 
           {/* Feedback Section */}
-          {showFeedback ? (
+          {showFeedback && question.explanation && question.explanation !== 'No explanation provided.' && question.explanation !== 'No explanation provided' ? (
             <div
               className={`mt-5 w-full rounded-xl border p-4 text-left ${
                 isCorrect
@@ -359,7 +356,7 @@ export default function InterviewCoreCsQuestionDetail() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (currentTaskIndex === 0) {
+                    if (currentTaskIndex <= 0 || !dailySequence[currentTaskIndex - 1]) {
                       navigate('/dashboard');
                     } else {
                       const prevTask = dailySequence[currentTaskIndex - 1];

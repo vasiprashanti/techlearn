@@ -278,7 +278,7 @@ export default function Dashboard() {
   // Group the daily tasks for the checklist display
   const groupedTasks = useMemo(() => {
     const groups = {};
-    dailyTasks.forEach((task) => {
+    dailyTasks.forEach((task, index) => {
       let categoryGroup = task.type;
       if (task.type === "Coding" || task.type === "Debugging") categoryGroup = "Coding";
       else if (task.type === "MCQ" || task.type === "Core CS") categoryGroup = "MCQ";
@@ -290,21 +290,24 @@ export default function Dashboard() {
           type: categoryGroup,
           text: categoryGroup === "MCQ" ? "Technical MCQ" : `${categoryGroup} Task`,
           questions: [],
+          firstIndex: index,
         };
       }
       groups[categoryGroup].questions.push(task);
     });
 
-    return Object.values(groups).map((group) => {
-      const completedCount = group.questions.filter((q) => q.completed).length;
-      const totalCount = group.questions.length;
-      return {
-        type: group.type,
-        text: group.text,
-        completed: totalCount > 0 && completedCount === totalCount,
-        questions: group.questions,
-      };
-    });
+    return Object.values(groups)
+      .sort((a, b) => a.firstIndex - b.firstIndex)
+      .map((group) => {
+        const completedCount = group.questions.filter((q) => q.completed).length;
+        const totalCount = group.questions.length;
+        return {
+          type: group.type,
+          text: group.text,
+          completed: totalCount > 0 && completedCount === totalCount,
+          questions: group.questions,
+        };
+      });
   }, [dailyTasks]);
 
   const handleGroupClick = (group) => {
@@ -823,7 +826,7 @@ export default function Dashboard() {
                       <PlaceholderBar className="h-4 w-12 rounded-md" />
                     </div>
                     {/* Task list loading */}
-                    <div className="flex-1 flex flex-col gap-2 justify-center my-1.5">
+                    <div className="flex-1 flex flex-col gap-2 justify-start mt-2 mb-1.5">
                       {Array.from({ length: 3 }).map((_, index) => (
                         <div key={`task-loading-${index}`} className="flex items-center justify-between w-full py-2 px-3 rounded-sm border border-slate-400/30 dark:border-[#15366f]/45 bg-black/5 dark:bg-white/5 animate-pulse">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -857,7 +860,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Task List */}
-                    <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
+                    <div className="flex-1 flex flex-col gap-1.5 justify-start mt-2 mb-0.5">
                       {projectData.todayTasks && projectData.todayTasks.length > 0 ? (
                         projectData.todayTasks.map(task => (
                           <div
@@ -930,7 +933,7 @@ export default function Dashboard() {
                     </div>
 
                      {/* Task List - Staged background elements added back */}
-                    <div className="flex-1 flex flex-col gap-1 justify-center my-0.5">
+                    <div className="flex-1 flex flex-col gap-1.5 justify-start mt-2 mb-0.5">
                       {groupedTasks.length > 0 ? (
                         groupedTasks.map(group => (
                           <div

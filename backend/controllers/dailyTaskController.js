@@ -142,38 +142,71 @@ export const getTodayDailyTasks = async (req, res) => {
       });
       await attempt.save();
     } else {
-      // Synchronize with updated template if assignments changed
-      const assignedTaskKeys = tasksAssigned.map((t) => `${t.questionId}-${t.taskType}`);
-      const attemptTaskKeys = attempt.tasksProgress.map((t) => `${t.questionId}-${t.taskType}`);
-      const setsMatch =
-        assignedTaskKeys.length === attemptTaskKeys.length &&
-        assignedTaskKeys.every((key) => attemptTaskKeys.includes(key));
+      // Check if attempt is from a previous calendar day in IST
+      const attemptDateIST = getISTDateParts(attempt.createdAt);
+      const nowIST = getISTDateParts(new Date());
+      const isDifferentDay =
+        attemptDateIST.year !== nowIST.year ||
+        attemptDateIST.month !== nowIST.month ||
+        attemptDateIST.date !== nowIST.date;
 
-      if (!setsMatch) {
-        const newProgress = tasksAssigned.map((assigned) => {
-          const existing = attempt.tasksProgress.find(
-            (p) => String(p.questionId) === String(assigned.questionId) && p.taskType === assigned.taskType
-          );
-          if (existing) {
-            existing.xpValue = Number(assigned.xpValue || 0);
-          }
-          return (
-            existing || {
-              questionId: assigned.questionId,
-              taskType: assigned.taskType,
-              xpValue: Number(assigned.xpValue || 0),
-              status: "Not Started",
-              hintsUsed: 0,
-              completedAt: null,
-            }
-          );
+      if (isDifferentDay) {
+        // Delete the stale attempt
+        await DailyTaskAttempt.deleteOne({ _id: attempt._id });
+
+        // Reset the attempt's progress and recreate fresh
+        const defaultProgress = tasksAssigned.map((t) => ({
+          questionId: t.questionId,
+          taskType: t.taskType,
+          xpValue: Number(t.xpValue || 0),
+          status: "Not Started",
+          hintsUsed: 0,
+          completedAt: null,
+        }));
+
+        attempt = new DailyTaskAttempt({
+          userId,
+          batchId: batch._id,
+          trackId: trackTemplate._id,
+          dayNumber,
+          tasksProgress: defaultProgress,
+          isFullyCompleted: false,
         });
-
-        attempt.tasksProgress = newProgress;
-        const total = newProgress.length;
-        const completed = newProgress.filter((p) => p.status === "Completed").length;
-        attempt.isFullyCompleted = total > 0 && completed === total;
         await attempt.save();
+      } else {
+        // Synchronize with updated template if assignments changed
+        const assignedTaskKeys = tasksAssigned.map((t) => `${t.questionId}-${t.taskType}`);
+        const attemptTaskKeys = attempt.tasksProgress.map((t) => `${t.questionId}-${t.taskType}`);
+        const setsMatch =
+          assignedTaskKeys.length === attemptTaskKeys.length &&
+          assignedTaskKeys.every((key) => attemptTaskKeys.includes(key));
+
+        if (!setsMatch) {
+          const newProgress = tasksAssigned.map((assigned) => {
+            const existing = attempt.tasksProgress.find(
+              (p) => String(p.questionId) === String(assigned.questionId) && p.taskType === assigned.taskType
+            );
+            if (existing) {
+              existing.xpValue = Number(assigned.xpValue || 0);
+            }
+            return (
+              existing || {
+                questionId: assigned.questionId,
+                taskType: assigned.taskType,
+                xpValue: Number(assigned.xpValue || 0),
+                status: "Not Started",
+                hintsUsed: 0,
+                completedAt: null,
+              }
+            );
+          });
+
+          attempt.tasksProgress = newProgress;
+          const total = newProgress.length;
+          const completed = newProgress.filter((p) => p.status === "Completed").length;
+          attempt.isFullyCompleted = total > 0 && completed === total;
+          await attempt.save();
+        }
       }
     }
 
@@ -263,6 +296,46 @@ export const submitDailyTask = async (req, res) => {
       trackId: trackTemplate._id,
       dayNumber,
     });
+
+    if (attempt) {
+      const attemptDateIST = getISTDateParts(attempt.createdAt);
+      const nowIST = getISTDateParts(new Date());
+      const isDifferentDay =
+        attemptDateIST.year !== nowIST.year ||
+        attemptDateIST.month !== nowIST.month ||
+        attemptDateIST.date !== nowIST.date;
+
+      if (isDifferentDay) {
+        // Delete the stale attempt
+        await DailyTaskAttempt.deleteOne({ _id: attempt._id });
+
+        // Resolve tasks assigned for default progress reset
+        const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
+        const tasksAssigned = dayAssignment ? (dayAssignment.tasks || []).filter((task) =>
+          (task.status || "Published") === "Published" &&
+          (!task.batchId || String(task.batchId) === String(batch._id))
+        ) : [];
+
+        const defaultProgress = tasksAssigned.map((t) => ({
+          questionId: t.questionId,
+          taskType: t.taskType,
+          xpValue: Number(t.xpValue || 0),
+          status: "Not Started",
+          hintsUsed: 0,
+          completedAt: null,
+        }));
+
+        attempt = new DailyTaskAttempt({
+          userId,
+          batchId: batch._id,
+          trackId: trackTemplate._id,
+          dayNumber,
+          tasksProgress: defaultProgress,
+          isFullyCompleted: false,
+        });
+        await attempt.save();
+      }
+    }
 
     if (!attempt) {
       return res.status(400).json({ success: false, message: "Attempt state not initialized for this day." });
