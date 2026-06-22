@@ -803,7 +803,34 @@ export default function Dashboard() {
 
               {/* Daily Tasks Card / Project Tasks - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-2 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col justify-between min-h-[220px] lg:h-[250px]">
-                {hasActiveProject && projectData ? (
+                {projectLoading || !tasksLoaded ? (
+                  <>
+                    {/* Header loading */}
+                    <div className="flex items-center justify-between shrink-0 mb-2">
+                      <PlaceholderBar className="h-4 w-32 rounded-md" />
+                      <PlaceholderBar className="h-4 w-12 rounded-md" />
+                    </div>
+                    {/* Task list loading */}
+                    <div className="flex-1 flex flex-col gap-2 justify-center my-1.5">
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <div key={`task-loading-${index}`} className="flex items-center justify-between w-full py-2 px-3 rounded-sm border border-slate-400/30 dark:border-[#15366f]/45 bg-black/5 dark:bg-white/5 animate-pulse">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <PlaceholderBar className="w-3.5 h-3.5 rounded-sm" />
+                            <PlaceholderBar className="h-3 w-3/4 rounded-md" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Progress bar loading */}
+                    <div className="mt-1 shrink-0 w-full">
+                      <div className="flex justify-between items-center mb-1">
+                        <PlaceholderBar className="h-2.5 w-16 rounded-md" />
+                        <PlaceholderBar className="h-2.5 w-10 rounded-md" />
+                      </div>
+                      <PlaceholderBar className="h-2 w-full rounded-full" />
+                    </div>
+                  </>
+                ) : hasActiveProject && projectData ? (
                   <>
                     {/* Header */}
                     <div className="flex items-center justify-between shrink-0 mb-1 text-left">

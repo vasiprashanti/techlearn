@@ -177,9 +177,19 @@ export const getTodayDailyTasks = async (req, res) => {
       }
     }
 
-    // Populate actual details of the tasks from Question Bank
+    // Populate actual details of the tasks from Question Bank in a single optimized query
+    const questionIds = attempt.tasksProgress.map((t) => t.questionId);
+    const questions = await Question.find({ _id: { $in: questionIds } })
+      .select("title categoryType")
+      .lean();
+    
+    const questionsMap = (questions || []).reduce((acc, q) => {
+      acc[q._id.toString()] = q;
+      return acc;
+    }, {});
+
     for (const t of attempt.tasksProgress) {
-      const q = await Question.findById(t.questionId).select("title categoryType").lean();
+      const q = questionsMap[t.questionId?.toString()];
       populatedTasks.push({
         questionId: t.questionId,
         taskType: t.taskType,
