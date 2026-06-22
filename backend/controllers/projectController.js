@@ -732,6 +732,9 @@ export const assignStudents = async (req, res) => {
     if (!project) {
       return res.status(404).json({ success: false, message: "Project not found." });
     }
+    if (project.status === "Archived") {
+      return res.status(400).json({ success: false, message: "Archived projects cannot receive new student assignments." });
+    }
 
     const assigned = [];
     const skipped = [];

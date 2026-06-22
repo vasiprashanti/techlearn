@@ -763,6 +763,8 @@ export const listStudentsAdmin = async (req, res) => {
       id: student._id,
       name: student.name,
       email: student.email,
+      collegeId: student.collegeId?._id || student.collegeId,
+      batchId: student.batchId?._id || student.batchId,
       college: student.collegeId?.name || "Unknown College",
       batch: student.batchId?.name || "Unknown Batch",
       track: student.primaryTrack || "General Track",

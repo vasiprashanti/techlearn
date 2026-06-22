@@ -187,6 +187,9 @@ questionSchema.index({ categoryId: 1, categoryType: 1 });
 questionSchema.index({ categorySlug: 1, status: 1 });
 questionSchema.index({ trackType: 1 });
 questionSchema.index({ categoryId: 1, isActive: 1 });
+questionSchema.index({ status: 1, difficulty: 1, createdAt: -1 });
+questionSchema.index({ tags: 1, status: 1 });
+questionSchema.index({ title: "text", tags: "text" });
 
 questionSchema.pre('save', function (next) {
   // Only enforce the new question-bank validation when the new fields are being used.

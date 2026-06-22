@@ -288,6 +288,46 @@ export const recordPracticeSubmission = async (req, res) => {
             });
             
             if (attempt) {
+              const attemptDateIST = getISTDateParts(attempt.createdAt);
+              const nowIST = getISTDateParts(new Date());
+              const isDifferentDay =
+                attemptDateIST.year !== nowIST.year ||
+                attemptDateIST.month !== nowIST.month ||
+                attemptDateIST.date !== nowIST.date;
+
+              if (isDifferentDay) {
+                // Delete the stale attempt
+                await mongoose.model("DailyTaskAttempt").deleteOne({ _id: attempt._id });
+
+                // Resolve tasks assigned for default progress reset
+                const dayAssignment = (trackTemplate.dayAssignments || []).find((assignment) => Number(assignment.dayNumber) === Number(dayNumber));
+                const tasksAssigned = dayAssignment ? (dayAssignment.tasks || []).filter((task) =>
+                  (task.status || "Published") === "Published" &&
+                  (!task.batchId || String(task.batchId) === String(batch._id))
+                ) : [];
+
+                const defaultProgress = tasksAssigned.map((t) => ({
+                  questionId: t.questionId,
+                  taskType: t.taskType,
+                  xpValue: Number(t.xpValue || 0),
+                  status: "Not Started",
+                  hintsUsed: 0,
+                  completedAt: null,
+                }));
+
+                attempt = new (mongoose.model("DailyTaskAttempt"))({
+                  userId: req.user._id,
+                  batchId: batch._id,
+                  trackId: trackTemplate._id,
+                  dayNumber,
+                  tasksProgress: defaultProgress,
+                  isFullyCompleted: false,
+                });
+                await attempt.save();
+              }
+            }
+
+            if (attempt) {
               const taskIndex = attempt.tasksProgress.findIndex(
                 (t) => String(t.questionId) === String(questionIdRaw)
               );
@@ -308,7 +348,7 @@ export const recordPracticeSubmission = async (req, res) => {
                   } else {
                     // MCQ, Aptitude, Core CS
                     if (!task.attempted) {
-                      task.status = "Completed";
+                      task.status = "In Progress";
                       task.selectedOption = selectedAnswer || "";
                       task.isCorrect = isCorrect;
                       task.attempted = true;

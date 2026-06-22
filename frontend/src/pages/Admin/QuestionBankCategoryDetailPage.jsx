@@ -239,7 +239,7 @@ export const QuestionBankCategoryDetailPage = () => {
 
   const handleSaveQuestion = async () => {
     if (!questionForm.title.trim()) {
-      setFormError('Question title is required.');
+      setFormError('Question prompt is required.');
       return;
     }
 
@@ -319,11 +319,11 @@ export const QuestionBankCategoryDetailPage = () => {
 
   const titleField = (
     <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Question title*</label>
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Tag*</label>
       <input
         value={questionForm.title}
         onChange={(e) => updateFormField('title', e.target.value)}
-        placeholder="Enter question title"
+        placeholder="Enter question tag"
         className={questionFormInputClass}
       />
     </div>

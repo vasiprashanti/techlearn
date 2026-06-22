@@ -58,6 +58,7 @@ export default function ProjectDayNotes() {
   const [realError, setRealError] = useState('');
   const [realProject, setRealProject] = useState(null);
   const [realDayNotes, setRealDayNotes] = useState(null);
+  const [realPendingTaskIds, setRealPendingTaskIds] = useState(new Set());
   const [advancementModal, setAdvancementModal] = useState({ isOpen: false, completedDay: 1, nextDay: 2 });
 
   // Demo state (reads from local storage)
@@ -117,6 +118,18 @@ export default function ProjectDayNotes() {
   };
 
   const handleRealTaskToggle = async (taskId) => {
+    if (realPendingTaskIds.has(taskId) || !realDayNotes) return;
+    const previousDayNotes = realDayNotes;
+    const task = realDayNotes.tasks?.find((item) => item.id === taskId);
+    if (!task) return;
+
+    setRealDayNotes((current) => ({
+      ...current,
+      tasks: current.tasks.map((item) => item.id === taskId ? { ...item, completed: !item.completed } : item),
+    }));
+    setRealPendingTaskIds((current) => new Set(current).add(taskId));
+    setRealError('');
+
     try {
       const currentDayBefore = realDayNotes?.day || 1;
       const res = await toggleStudentProjectTask(taskId);
@@ -125,9 +138,19 @@ export default function ProjectDayNotes() {
           setAdvancementModal({ isOpen: true, completedDay: currentDayBefore, nextDay: res.currentDay });
         }
         await fetchRealProject(realDayNotes.day);
+      } else {
+        throw new Error(res?.message || 'Unable to update this task.');
       }
     } catch (err) {
       console.error('Failed to toggle task:', err);
+      setRealDayNotes(previousDayNotes);
+      setRealError(err.message || 'Unable to save task progress. Your change was reverted.');
+    } finally {
+      setRealPendingTaskIds((current) => {
+        const next = new Set(current);
+        next.delete(taskId);
+        return next;
+      });
     }
   };
 
@@ -355,13 +378,15 @@ export default function ProjectDayNotes() {
               <div className="mt-5 space-y-2">
                 {selectedDay.tasks && selectedDay.tasks.length > 0 ? (
                   selectedDay.tasks.map((task) => {
-                    const isLocked = selectedDay.day > currentDay;
+                    const isLocked = isDemoRoute
+                      ? selectedDay.day > currentDay
+                      : selectedDay.day !== currentDay;
 
                     return (
                       <button
                         key={task.id}
                         type="button"
-                        disabled={isLocked}
+                        disabled={isLocked || (!isDemoRoute && realPendingTaskIds.has(task.id))}
                         onClick={() => handleTaskClick(selectedDay.day, task.id)}
                         className="group flex w-full items-center gap-3 rounded-sm border border-slate-400/60 bg-transparent px-3 py-3 text-left transition-all duration-300 hover:border-[#00113b] hover:shadow-[0_0_8px_rgba(0,17,59,0.22)] disabled:cursor-not-allowed disabled:opacity-55 dark:border-slate-600/60"
                       >

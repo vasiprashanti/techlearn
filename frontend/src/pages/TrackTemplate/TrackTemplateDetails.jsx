@@ -474,7 +474,9 @@ export default function TrackTemplateDetails() {
                   >
                     <option value="">Select a question</option>
                     {dayWiseQuestions.map((question) => (
-                      <option key={question.id} value={question.id}>{question.title}</option>
+                      <option key={question.id} value={question.id}>
+                        {(question.tags || []).join(', ') || 'No tag'} - {question.title}
+                      </option>
                     ))}
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
@@ -552,7 +554,7 @@ export default function TrackTemplateDetails() {
               </div>
               <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
                 <p className="text-sm text-[#5f7491] dark:text-slate-300">Questions Assigned</p>
-                <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{Math.min(track.totalDays, dayWiseQuestions.length)}</p>
+                <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{trackDetail?.questionsAssigned ?? track.questionsAssigned ?? 0}</p>
               </div>
               <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
                 <p className="text-sm text-[#5f7491] dark:text-slate-300">Assigned Batch</p>

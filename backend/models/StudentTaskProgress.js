@@ -22,6 +22,11 @@ const studentTaskProgressSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    xp_awarded_value: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     completed_at: {
       type: Date,
       default: null,
