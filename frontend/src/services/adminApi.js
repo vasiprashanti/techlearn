@@ -337,6 +337,7 @@ export const adminAPI = {
   getTrackTemplates: () => request('/admin/track-templates'),
   getTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}`),
   createTrackTemplate: (body) => request('/admin/track-templates', { method: 'POST', body: JSON.stringify(body) }),
+  duplicateTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}/duplicate`, { method: 'POST' }),
   updateTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}`, { method: 'DELETE' }),
   bulkDeleteTrackTemplates: (templateIds) => request('/admin/track-templates/bulk-delete', { method: 'POST', body: JSON.stringify({ templateIds }) }),

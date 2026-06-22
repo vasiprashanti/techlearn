@@ -35,6 +35,7 @@ import {
   createQuestionAdmin,
   createResourceAdmin,
   createTrackTemplate,
+  duplicateTrackTemplate,
   deleteQuestionCategory,
   deleteQuestionAdmin,
   deleteResourceAdmin,
@@ -119,6 +120,7 @@ router.delete("/questions/:questionId", deleteQuestionAdmin);
 
 router.get("/track-templates", listTrackTemplates);
 router.post("/track-templates", createTrackTemplate);
+router.post("/track-templates/:templateId/duplicate", duplicateTrackTemplate);
 router.get("/track-templates/:templateId", getTrackTemplateDetail);
 router.put("/track-templates/:templateId", updateTrackTemplate);
 router.delete("/track-templates/:templateId", deleteTrackTemplate);

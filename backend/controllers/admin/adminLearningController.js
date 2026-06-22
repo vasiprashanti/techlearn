@@ -440,11 +440,16 @@ export const listQuestionsAdmin = async (req, res) => {
 
     if (req.query.status) query.status = req.query.status;
     if (req.query.difficulty) query.difficulty = req.query.difficulty;
+    if (req.query.search) {
+      const expression = new RegExp(req.query.search.trim(), "i");
+      query.$and = [...(query.$and || []), { $or: [{ title: expression }, { tags: expression }, { description: expression }] }];
+    }
 
+    const sortOptions = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, prompt: { title: 1 }, difficulty: { difficulty: 1 } };
     const questions = await Question.find(query)
       .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution")
       .populate("categoryId", "title slug categoryType")
-      .sort({ createdAt: -1 })
+      .sort(sortOptions[req.query.sort] || sortOptions.newest)
       .lean();
     const data = questions.map((question) => formatQuestionForAdmin(question, question.categoryId || category));
 
@@ -611,7 +616,7 @@ export const listTrackTemplates = async (req, res) => {
         name: template.name,
         description: template.description,
         totalDays: template.totalDays,
-        questionsAssigned: template.dayAssignments?.length || 0,
+        questionsAssigned: (template.dayAssignments || []).reduce((count, day) => count + (day.questionId ? 1 : 0) + (day.tasks?.length || 0), 0),
         status: template.status,
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
@@ -635,19 +640,18 @@ export const createTrackTemplate = async (req, res) => {
     const { name, description, status, iconKey, batchId } = req.body;
     const category = req.body.category || req.body.trackType;
 
-    if (!name?.trim() || !category?.trim() || !req.body.startDate || !batchId) {
-      return res.status(400).json({ success: false, message: "Template name, category/trackType, startDate and batchId are required." });
+    if (!name?.trim() || !category?.trim() || !req.body.startDate) {
+      return res.status(400).json({ success: false, message: "Template name, category/trackType and startDate are required." });
     }
 
-    if (!assertObjectId(batchId, "batchId", res)) return;
-
-    const batch = await Batch.findById(batchId).lean();
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "Assigned batch not found." });
+    if (batchId) {
+      if (!assertObjectId(batchId, "batchId", res)) return;
+      const batch = await Batch.findById(batchId).lean();
+      if (!batch) return res.status(404).json({ success: false, message: "Assigned batch not found." });
     }
 
     const trackType = req.body.trackType || "Daily Challenge";
-    if (trackType === "Daily Challenge" || trackType === "Daily Task") {
+    if (batchId && (trackType === "Daily Challenge" || trackType === "Daily Task")) {
       const existing = await TrackTemplate.findOne({
         batchId,
         trackType,
@@ -682,7 +686,7 @@ export const createTrackTemplate = async (req, res) => {
       category: category.trim(),
       startDate: schedule.startDate,
       endDate: schedule.endDate,
-      batchId,
+      batchId: batchId || null,
       totalDays: schedule.totalDays,
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
@@ -690,7 +694,7 @@ export const createTrackTemplate = async (req, res) => {
       versionHistory: [{ version: 1, label: "v1 - Initial template", changedBy: getActorName(req.user) }],
     });
 
-    await syncTemplateToTrack(template);
+    if (template.batchId) await syncTemplateToTrack(template);
 
     await writeAuditLog({
       verb: "Created",
@@ -762,7 +766,10 @@ export const getTrackTemplateDetail = async (req, res) => {
         name: template.name,
         description: template.description,
         totalDays: template.totalDays,
-        questionsAssigned: template.dayAssignments?.length || 0,
+        questionsAssigned: (template.dayAssignments || []).reduce(
+          (count, assignment) => count + (assignment.questionId ? 1 : 0) + (assignment.tasks?.length || 0),
+          0
+        ),
         status: template.status,
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
@@ -800,6 +807,7 @@ export const getTrackTemplateDetail = async (req, res) => {
         availableQuestions: availableQuestions.map((question) => ({
           id: question._id,
           title: question.title,
+          tags: question.tags || [],
           difficulty: question.difficulty,
           track: getCategoryTitle(question),
         })),
@@ -808,6 +816,47 @@ export const getTrackTemplateDetail = async (req, res) => {
   } catch (error) {
     console.error("getTrackTemplateDetail error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch track template details." });
+  }
+};
+
+export const duplicateTrackTemplate = async (req, res) => {
+  try {
+    const { templateId } = req.params;
+    if (!assertObjectId(templateId, "templateId", res)) return;
+
+    const source = await TrackTemplate.findById(templateId).lean();
+    if (!source) {
+      return res.status(404).json({ success: false, message: "Track template not found." });
+    }
+
+    const copy = await TrackTemplate.create({
+      name: `${source.name} Copy`,
+      trackType: source.trackType,
+      description: source.description || "",
+      category: source.category,
+      startDate: source.startDate,
+      endDate: source.endDate,
+      batchId: null,
+      totalDays: source.totalDays,
+      status: "Draft",
+      iconKey: source.iconKey || "code",
+      dayAssignments: source.dayAssignments || [],
+      versionHistory: [{ version: 1, label: "v1 - Duplicated template", changedBy: getActorName(req.user) }],
+    });
+
+    await writeAuditLog({
+      verb: "Created",
+      entityType: "TrackTemplate",
+      entityId: copy._id,
+      action: "Duplicated track template",
+      detail: copy.name,
+      actor: req.user,
+    });
+
+    return res.status(201).json({ success: true, data: copy });
+  } catch (error) {
+    console.error("duplicateTrackTemplate error:", error);
+    return res.status(500).json({ success: false, message: "Failed to duplicate track template." });
   }
 };
 

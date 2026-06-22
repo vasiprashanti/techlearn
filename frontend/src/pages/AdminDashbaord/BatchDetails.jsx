@@ -35,6 +35,9 @@ const BatchDetails = () => {
   const [tracks, setTracks] = useState([]);
   const [tableSearch, setTableSearch] = useState('');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [studentMode, setStudentMode] = useState('existing');
+  const [existingStudents, setExistingStudents] = useState([]);
+  const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
@@ -47,7 +50,8 @@ const BatchDetails = () => {
       adminAPI.getColleges().catch(() => []),
       adminAPI.getBatches().catch(() => []),
       adminAPI.getTrackTemplates().catch(() => []),
-    ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
+      adminAPI.getStudents().catch(() => []),
+    ]).then(([remoteColleges, remoteBatches, remoteTracks, remoteStudents]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
       const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
@@ -55,6 +59,7 @@ const BatchDetails = () => {
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
       setTracks(uniqueTracks);
+      setExistingStudents(preferRemoteData(remoteStudents, []));
     }).catch(() => {});
   }, []);
 
@@ -129,10 +134,40 @@ const BatchDetails = () => {
       track: batch.tracks?.[0]?.name || tracks?.[0] || '',
       status: 'Active'
     });
+    setStudentMode('existing');
+    setSelectedExistingStudentId('');
     setIsAddFormOpen(true);
   };
 
   const saveStudent = async () => {
+    if (studentMode === 'existing') {
+      const selectedStudent = existingStudents.find((student) => String(student.id || student._id) === String(selectedExistingStudentId));
+      if (!selectedStudent) return setFormError('Select an existing student.');
+
+      setFormError('');
+      setIsSavingStudent(true);
+      try {
+        await adminAPI.updateStudent(selectedStudent.id || selectedStudent._id, {
+          name: selectedStudent.name,
+          email: selectedStudent.email,
+          collegeId: studentForm.collegeId,
+          batchId: studentForm.batchId,
+          primaryTrack: selectedStudent.track || studentForm.track || 'General Track',
+          programSelection: selectedStudent.programSelection || 'Placement Sprint',
+          status: selectedStudent.status || 'Active',
+        });
+        const [remoteBatch, remoteStudents] = await Promise.all([adminAPI.getBatch(batchId), adminAPI.getStudents()]);
+        setBatchDetail(preferRemoteData(remoteBatch, null));
+        setExistingStudents(preferRemoteData(remoteStudents, []));
+        setIsAddFormOpen(false);
+      } catch (error) {
+        setFormError(error.message || 'Failed to add existing student to this batch');
+      } finally {
+        setIsSavingStudent(false);
+      }
+      return;
+    }
+
     if (!studentForm.name.trim()) return setFormError('Name is required');
     if (!studentForm.email.trim()) return setFormError('Email is required');
     if (!studentForm.collegeId) return setFormError('College is required');
@@ -367,6 +402,24 @@ const BatchDetails = () => {
               <button onClick={() => setIsAddFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
             <div className="p-6 space-y-4">
+              <div className="inline-flex rounded-xl border border-black/10 dark:border-white/10 p-1 bg-black/[0.03] dark:bg-white/5">
+                <button onClick={() => setStudentMode('existing')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'existing' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>Existing student</button>
+                <button onClick={() => setStudentMode('new')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'new' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>New student</button>
+              </div>
+              {studentMode === 'existing' ? (
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Student*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                    <select value={selectedExistingStudentId} onChange={(e) => setSelectedExistingStudentId(e.target.value)} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                      <option className={dropdownOptionClass} value="">Select existing student</option>
+                      {existingStudents.filter((student) => String(student.batchId || '') !== String(batch.id || batchId)).map((student) => <option className={dropdownOptionClass} key={student.id || student._id} value={student.id || student._id}>{student.name} - {student.email}</option>)}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
+                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">The student will be moved to this batch. Their existing profile and progress stay intact.</p>
+                </div>
+              ) : (
+                <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Name*</label>
@@ -399,6 +452,8 @@ const BatchDetails = () => {
                   </div>
                 </div>
               </div>
+                </>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Track*</label>
@@ -433,7 +488,7 @@ const BatchDetails = () => {
               {formError && <p className="text-xs text-red-500">{formError}</p>}
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
-                <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : 'Add Student'}</button>
+                <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
               </div>
             </div>
           </div>
