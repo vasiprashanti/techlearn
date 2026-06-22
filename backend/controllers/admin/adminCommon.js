@@ -141,6 +141,7 @@ export const listKnownQuestionCategories = async () => {
     subtitle: category.description || "",
     icon: category.icon || "chart",
     categoryType: category.categoryType,
+    status: category.status,
   }));
 };
 

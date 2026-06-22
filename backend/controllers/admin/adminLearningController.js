@@ -215,6 +215,7 @@ export const listQuestionCategories = async (req, res) => {
           active,
           icon: category.icon,
           categoryType: category.categoryType,
+          status: category.status,
         };
       })
     );
