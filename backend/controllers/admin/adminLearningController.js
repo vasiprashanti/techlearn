@@ -232,7 +232,7 @@ const removeQuestionAssignmentAcrossTemplates = async (questionId) => {
 
 export const createQuestionCategory = async (req, res) => {
   try {
-    const { title, subtitle, icon } = req.body;
+    const { title, subtitle, icon, status } = req.body;
     const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title?.trim()) {
@@ -259,6 +259,7 @@ export const createQuestionCategory = async (req, res) => {
       description: subtitle?.trim() || "Custom question category",
       icon: icon || "chart",
       categoryType,
+      status: status || "Draft",
       createdBy: req.user?._id,
     });
 
@@ -310,6 +311,7 @@ export const updateQuestionCategory = async (req, res) => {
     const nextTitle = req.body.title?.trim() || category.title;
     const nextSubtitle = req.body.subtitle?.trim() || category.description;
     const nextIcon = req.body.icon || category.icon;
+    const nextStatus = req.body.status || category.status;
 
     const nextSlug = slugifyCategory(nextTitle);
     if (!nextSlug) {
@@ -332,6 +334,7 @@ export const updateQuestionCategory = async (req, res) => {
     category.title = nextTitle;
     category.description = nextSubtitle;
     category.icon = nextIcon;
+    category.status = nextStatus;
     await category.save();
 
     await Question.updateMany(
@@ -593,20 +596,31 @@ export const deleteQuestionAdmin = async (req, res) => {
 export const listTrackTemplates = async (req, res) => {
   try {
     const templates = await TrackTemplate.find().populate("batchId", "name").sort({ createdAt: -1 }).lean();
-    const data = templates.map((template) => ({
-      id: template._id,
-      name: template.name,
-      description: template.description,
-      totalDays: template.totalDays,
-      questionsAssigned: template.dayAssignments?.length || 0,
-      status: template.status,
-      category: template.category,
-      iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
-      startDate: template.startDate,
-      endDate: template.endDate,
-      batchId: template.batchId?._id || template.batchId,
-      assignedBatch: template.batchId?.name || "",
-    }));
+    const data = templates.map((template) => {
+      let effectiveType = template.trackType || "Daily Challenge";
+      if (effectiveType === "Daily Challenge") {
+        const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
+        const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
+        if (hasTasks || isDailyTaskCategory) {
+          effectiveType = "Daily Task";
+        }
+      }
+      return {
+        id: template._id,
+        name: template.name,
+        description: template.description,
+        totalDays: template.totalDays,
+        questionsAssigned: template.dayAssignments?.length || 0,
+        status: template.status,
+        category: template.category,
+        iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
+        startDate: template.startDate,
+        endDate: template.endDate,
+        batchId: template.batchId?._id || template.batchId,
+        assignedBatch: template.batchId?.name || "",
+        trackType: effectiveType,
+      };
+    });
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -708,8 +722,17 @@ export const getTrackTemplateDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
+    let effectiveType = template.trackType || "Daily Challenge";
+    if (effectiveType === "Daily Challenge") {
+      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
+      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
+      if (hasTasks || isDailyTaskCategory) {
+        effectiveType = "Daily Task";
+      }
+    }
+
     let questionFilter = { status: "Active", isActive: { $ne: false } };
-    if (template.trackType === "Daily Task") {
+    if (effectiveType === "Daily Task") {
       if (template.category && template.category !== "Daily Task") {
         const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
         if (categoriesList.length > 0) {
@@ -747,7 +770,7 @@ export const getTrackTemplateDetail = async (req, res) => {
         batchId: template.batchId?._id || template.batchId,
         assignedBatch: template.batchId?.name || "",
         versionHistory: template.versionHistory || [],
-        trackType: template.trackType || "Daily Challenge",
+        trackType: effectiveType,
         dayAssignments: (template.dayAssignments || []).map((assignment) => ({
           dayNumber: assignment.dayNumber,
           questionId: assignment.questionId?._id || assignment.questionId,
@@ -797,7 +820,16 @@ export const updateTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const nextTrackType = req.body.trackType || template.trackType;
+    let currentTrackType = template.trackType || "Daily Challenge";
+    if (currentTrackType === "Daily Challenge") {
+      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
+      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
+      if (hasTasks || isDailyTaskCategory) {
+        currentTrackType = "Daily Task";
+      }
+    }
+
+    const nextTrackType = req.body.trackType || currentTrackType;
     const nextBatchId = req.body.batchId || template.batchId;
     if (nextTrackType === "Daily Challenge" || nextTrackType === "Daily Task") {
       const existing = await TrackTemplate.findOne({
@@ -828,9 +860,12 @@ export const updateTrackTemplate = async (req, res) => {
       }
       template.batchId = req.body.batchId;
     }
-    if (req.body.trackType && !req.body.category) {
-      template.category = req.body.trackType.trim();
-      template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
+    if (req.body.trackType) {
+      template.trackType = req.body.trackType;
+      if (!req.body.category) {
+        template.category = req.body.trackType.trim();
+        template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
+      }
     }
     if (req.body.status) template.status = req.body.status;
 
