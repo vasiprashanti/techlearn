@@ -4,14 +4,16 @@ import {
   getActiveProject,
   getProjectOverview,
   getDayNotes,
-  toggleTask
+  toggleTask,
+  requireProjectProgram,
 } from "../controllers/studentProjectController.js";
 
 const router = express.Router();
 
-router.get("/active", protect, getActiveProject);
-router.get("/overview", protect, getProjectOverview);
-router.get("/day-notes/:dayNumber", protect, getDayNotes);
-router.post("/tasks/:taskId/toggle", protect, toggleTask);
+router.use(protect, requireProjectProgram);
+router.get("/active", getActiveProject);
+router.get("/overview", getProjectOverview);
+router.get("/day-notes/:dayNumber", getDayNotes);
+router.post("/tasks/:taskId/toggle", toggleTask);
 
 export default router;

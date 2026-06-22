@@ -95,3 +95,14 @@ export const optionalProtect = async (req, res, next) => {
     return next();
   }
 };
+
+export const requirePlacementProgram = (req, res, next) => {
+  if (["Placement Sprint", "Both"].includes(req.user?.programSelection)) {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: "Placement access is not enabled for this account.",
+  });
+};

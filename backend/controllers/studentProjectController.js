@@ -7,6 +7,18 @@ import StudentTaskProgress from "../models/StudentTaskProgress.js";
 import UserProgress from "../models/UserProgress.js";
 import User from "../models/User.js";
 
+const PROJECT_PROGRAMS = new Set(["Full Stack Project Program", "Both"]);
+
+export const requireProjectProgram = (req, res, next) => {
+  if (!PROJECT_PROGRAMS.has(req.user?.programSelection)) {
+    return res.status(403).json({
+      success: false,
+      message: "Project access is not enabled for this account.",
+    });
+  }
+  return next();
+};
+
 // Helper to get active project for current student
 const getStudentActiveAssignment = async (userId) => {
   let student = await Student.findOne({ userId });
@@ -29,9 +41,14 @@ const getStudentActiveAssignment = async (userId) => {
   const assignment = await StudentProject.findOne({
     student_id: student._id,
     status: "Active"
-  }).populate("project_id");
+  }).populate({ path: "project_id", match: { status: "Published" } });
 
-  return { student, assignment };
+  return { student, assignment: assignment?.project_id ? assignment : null };
+};
+
+const getAwardedXp = (progress, taskXpById) => {
+  if (!progress.xp_awarded) return 0;
+  return progress.xp_awarded_value || taskXpById.get(progress.project_task_id.toString()) || 0;
 };
 
 // ==========================================
@@ -59,9 +76,10 @@ export const getActiveProject = async (req, res) => {
     // Fetch progress records
     const progressRecords = await StudentTaskProgress.find({
       student_project_id: assignment._id,
-      completed: true
     }).lean();
-    const completedTaskIds = new Set(progressRecords.map(p => p.project_task_id.toString()));
+    const completedTaskIds = new Set(
+      progressRecords.filter((progress) => progress.completed).map((progress) => progress.project_task_id.toString())
+    );
     const projectCompletedTotal = completedTaskIds.size;
 
     // Compute overall progress
@@ -92,8 +110,7 @@ export const getActiveProject = async (req, res) => {
     const taskXpMap = new Map(allTasks.map(t => [t._id.toString(), t.xp_value]));
     let projectXpEarned = 0;
     progressRecords.forEach(p => {
-      const xpVal = taskXpMap.get(p.project_task_id.toString()) || 0;
-      projectXpEarned += xpVal;
+      projectXpEarned += getAwardedXp(p, taskXpMap);
     });
 
     const projectCompletedToday = todayTasks.filter(t => t.completed).length;
@@ -106,6 +123,7 @@ export const getActiveProject = async (req, res) => {
     return res.status(200).json({
       success: true,
       hasActiveProject: true,
+      dashboardMode: "project",
       assignment: {
         _id: assignment._id,
         current_day: assignment.current_day,
@@ -251,8 +269,8 @@ export const toggleTask = async (req, res) => {
     }
 
     // Block completion of future day tasks
-    if (dayDoc.day_number > assignment.current_day) {
-      return res.status(403).json({ success: false, message: "Cannot complete tasks for future days" });
+    if (dayDoc.day_number !== assignment.current_day) {
+      return res.status(403).json({ success: false, message: "Tasks can only be updated for the current project day." });
     }
 
     // Toggle completion status
@@ -270,6 +288,7 @@ export const toggleTask = async (req, res) => {
         project_task_id: taskId,
         completed: true,
         xp_awarded: true,
+        xp_awarded_value: task.xp_value,
         completed_at: Date.now()
       });
       xpAwardedThisTime = task.xp_value;
@@ -281,6 +300,7 @@ export const toggleTask = async (req, res) => {
       // If marked complete again and XP was never awarded, award it
       if (progress.completed && !progress.xp_awarded) {
         progress.xp_awarded = true;
+        progress.xp_awarded_value = task.xp_value;
         xpAwardedThisTime = task.xp_value;
       }
     }

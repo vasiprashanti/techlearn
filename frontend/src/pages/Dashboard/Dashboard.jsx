@@ -116,7 +116,7 @@ export default function Dashboard() {
   const loadProjectData = async () => {
     try {
       const res = await getStudentActiveProject();
-      if (res && res.success && res.hasActiveProject) {
+      if (res && res.success && res.dashboardMode === "project" && res.hasActiveProject) {
         setHasActiveProject(true);
         setProjectData(res);
       } else {
@@ -259,7 +259,19 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    loadTodayTasks();
+    const storedProgram = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("userData") || "{}").programSelection;
+      } catch {
+        return "";
+      }
+    })();
+
+    if (storedProgram !== "Full Stack Project Program") {
+      loadTodayTasks();
+    } else {
+      setTasksLoaded(true);
+    }
     loadProjectData();
   }, []);
 
