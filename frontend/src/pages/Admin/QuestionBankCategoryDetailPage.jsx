@@ -369,6 +369,18 @@ export const QuestionBankCategoryDetailPage = () => {
     </div>
   );
 
+  const explanationField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
+      <input
+        value={questionForm.explanation}
+        onChange={(e) => updateFormField('explanation', e.target.value)}
+        placeholder="Explain why this option is correct"
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
   const tagsField = (
     <div className="md:col-span-2">
       <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
@@ -463,17 +475,13 @@ export const QuestionBankCategoryDetailPage = () => {
                   <>
                     {descriptionField}
                     {dynamicHostField}
-                    {tagsField}
-                    {difficultyField}
-                    {trackTypeField}
+                    {explanationField}
                     {titleField}
                   </>
                 ) : (
                   <>
                     {titleField}
-                    {trackTypeField}
                     {difficultyField}
-                    {tagsField}
                     {descriptionField}
                     {dynamicHostField}
                   </>

@@ -25,61 +25,43 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
         {questions.map((question, index) => (
           <article
             key={question.id || question._id}
-            className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-4 flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group"
+            className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-5 flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group"
           >
             <div className="flex justify-between items-start gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</p>
-                <h4 className="mt-1 text-base font-semibold text-slate-900 dark:text-white line-clamp-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</span>
+                  <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase ${difficultyPillClass(question.difficulty)}`}>
+                    {question.difficulty || 'Easy'}
+                  </span>
+                </div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-3 leading-relaxed">
                   {getPrompt(question)}
                 </h4>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {(question.tags || []).join(', ') || 'No tag'}
-                </p>
-              </div>
-              <span className={`shrink-0 inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
-                {question.difficulty || 'Easy'}
-              </span>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <p className="text-slate-400 dark:text-slate-500 font-medium">Created</p>
-                <p className="mt-0.5 text-slate-700 dark:text-slate-350">
-                  {question.created ? new Date(question.created).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <p className="text-slate-400 dark:text-slate-500 font-medium">Status</p>
-                <p className="mt-0.5">
-                  <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-semibold leading-none ${statusPillClass(question.status || 'Active')}`}>
-                    {question.status || 'Active'}
-                  </span>
-                </p>
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-3 text-slate-700 dark:text-slate-300">
+            <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-3 text-slate-700 dark:text-slate-350">
               <button
                 onClick={() => onView && onView(question)}
                 className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
                 aria-label="View question"
               >
-                <FiEye className="w-4 h-4" />
+                <FiEye className="w-4.5 h-4.5" />
               </button>
               <button
                 onClick={() => onEdit && onEdit(question)}
                 className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
                 aria-label="Edit question"
               >
-                <FiEdit2 className="w-4 h-4" />
+                <FiEdit2 className="w-4.5 h-4.5" />
               </button>
               <button
                 onClick={() => onDelete && onDelete(question)}
                 className="p-2 rounded-lg hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                 aria-label="Delete question"
               >
-                <FiTrash2 className="w-4 h-4" />
+                <FiTrash2 className="w-4.5 h-4.5" />
               </button>
             </div>
           </article>
@@ -96,16 +78,12 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-[#0a1737] backdrop-blur-xl shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
-            <table className="w-full min-w-[1080px]">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10 bg-[#edf3fb] dark:bg-white/[0.01]">
                   <th className="w-16 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prompt</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tag</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Track</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Created</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
                 </tr>
               </thead>
@@ -121,23 +99,9 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     <td className="px-5 py-4 text-sm font-semibold text-slate-900 dark:text-white max-w-[360px]">
                       <p className="line-clamp-2" title={getPrompt(question)}>{getPrompt(question)}</p>
                     </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-350 font-medium max-w-[180px] truncate">
-                      {(question.tags || []).join(', ') || 'No tag'}
-                    </td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                         {question.difficulty || 'Easy'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-350 font-medium">
-                      {question.track || question.trackType || 'General'}
-                    </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-500 dark:text-slate-400 font-mono">
-                      {question.created ? new Date(question.created).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${statusPillClass(question.status || 'Active')}`}>
-                        {question.status || 'Active'}
                       </span>
                     </td>
                     <td className="px-5 py-4">
@@ -170,7 +134,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
 
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                       No questions found.
                     </td>
                   </tr>

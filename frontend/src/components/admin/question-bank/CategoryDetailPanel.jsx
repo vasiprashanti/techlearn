@@ -115,7 +115,7 @@ export const CategoryDetailPanel = ({
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search by prompt, tag, or track..."
+                placeholder="Search by prompt..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-10 border-0 bg-transparent pl-10 pr-3.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 focus:outline-none"
@@ -133,23 +133,6 @@ export const CategoryDetailPanel = ({
                 <option className={dropdownOptionClass}>Easy</option>
                 <option className={dropdownOptionClass}>Medium</option>
                 <option className={dropdownOptionClass}>Hard</option>
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-550" />
-            </div>
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[140px]">
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none">
-                <option className={dropdownOptionClass}>All statuses</option>
-                <option className={dropdownOptionClass}>Active</option>
-                <option className={dropdownOptionClass}>Draft</option>
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-550" />
-            </div>
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[140px]">
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none">
-                <option value="newest" className={dropdownOptionClass}>Newest first</option>
-                <option value="oldest" className={dropdownOptionClass}>Oldest first</option>
-                <option value="prompt" className={dropdownOptionClass}>Prompt A-Z</option>
-                <option value="difficulty" className={dropdownOptionClass}>Difficulty</option>
               </select>
               <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-550" />
             </div>
