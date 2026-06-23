@@ -1,5 +1,7 @@
 import User from "../models/User.js";
 import UserProgress from "../models/UserProgress.js";
+import PracticeSubmission from "../models/PracticeSubmission.js";
+import StudentMcqSubmission from "../models/StudentMcqSubmission.js";
 
 const DEFAULT_LIMIT = 20;
 
@@ -30,13 +32,48 @@ export const getPublicLeaderboard = async (req, res) => {
       .populate("userId", "firstName lastName email avatar role")
       .lean();
 
-    const leaderboardRows = progressRows
-      .filter((row) => row.userId && row.userId.role !== "admin")
+    const learnerRows = progressRows.filter((row) => row.userId && row.userId.role !== "admin");
+    const learnerIds = learnerRows.map((row) => row.userId._id);
+    const learnerEmails = learnerRows
+      .map((row) => String(row.userId.email || "").trim().toLowerCase())
+      .filter(Boolean);
+    const [practiceSolvedCounts, collegeMcqSubmissions] = await Promise.all([
+      learnerIds.length
+        ? PracticeSubmission.aggregate([
+            { $match: { userId: { $in: learnerIds }, isCorrect: true } },
+            { $group: { _id: "$userId", solvedCount: { $sum: 1 } } },
+          ])
+        : [],
+      learnerEmails.length
+        ? StudentMcqSubmission.find({ studentEmail: { $in: learnerEmails } })
+            .select("studentEmail answers")
+            .lean()
+        : [],
+    ]);
+    const practiceSolvedByUserId = new Map(
+      practiceSolvedCounts.map((entry) => [String(entry._id), entry.solvedCount])
+    );
+    const collegeMcqSolvedByEmail = new Map();
+    collegeMcqSubmissions.forEach((submission) => {
+      const email = String(submission.studentEmail || "").trim().toLowerCase();
+      const correctAnswers = (submission.answers || []).filter((answer) => answer.isCorrect).length;
+      collegeMcqSolvedByEmail.set(email, (collegeMcqSolvedByEmail.get(email) || 0) + correctAnswers);
+    });
+
+    const leaderboardRows = learnerRows
       .map((row) => {
         const courseXp = sumMapValues(row.courseXP);
         const exerciseXp = sumMapValues(row.exerciseXP);
         const projectXp = sumMapValues(row.projectXP);
         const totalXp = courseXp + exerciseXp + projectXp;
+
+        const completedExercises = Array.isArray(row.completedExercises)
+          ? row.completedExercises.length
+          : 0;
+        const solvedCount =
+          (practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
+          (collegeMcqSolvedByEmail.get(String(row.userId.email || "").trim().toLowerCase()) || 0) ||
+          completedExercises;
 
         return {
           userId: row.userId._id.toString(),
@@ -46,16 +83,15 @@ export const getPublicLeaderboard = async (req, res) => {
           courseXp,
           exerciseXp,
           projectXp,
-          completedExercises: Array.isArray(row.completedExercises)
-            ? row.completedExercises.length
-            : 0,
+          completedExercises,
+          solvedCount,
           updatedAt: row.updatedAt,
         };
       })
       .sort((a, b) => {
         if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
-        if (b.completedExercises !== a.completedExercises) {
-          return b.completedExercises - a.completedExercises;
+        if (b.solvedCount !== a.solvedCount) {
+          return b.solvedCount - a.solvedCount;
         }
         return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
       })
@@ -86,6 +122,7 @@ export const getPublicLeaderboard = async (req, res) => {
             exerciseXp: 0,
             projectXp: 0,
             completedExercises: 0,
+            solvedCount: 0,
           };
         }
       }

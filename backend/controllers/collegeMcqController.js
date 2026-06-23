@@ -1,5 +1,6 @@
 import CollegeMcq from "../models/CollegeMcq.js";
 import StudentMcqSubmission from "../models/StudentMcqSubmission.js";
+import Student from "../models/Student.js";
 import { sendMail } from "../utils/mailer.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -48,6 +49,56 @@ const getMcqTimeStatus = (mcq) => {
       ? Math.max(0, Math.floor((mcqStartTime - now) / (1000 * 60)))
       : 0,
   };
+};
+
+const toDayKey = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const calculateSubmissionStreak = (submissions) => {
+  const activityDays = new Set(
+    submissions.map((submission) => toDayKey(submission.submittedAt)).filter(Boolean)
+  );
+  if (!activityDays.size) return 0;
+
+  const cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  const today = cursor.toISOString().slice(0, 10);
+  const yesterday = new Date(cursor);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+  if (!activityDays.has(today)) {
+    if (!activityDays.has(yesterday.toISOString().slice(0, 10))) return 0;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  let streak = 0;
+  while (activityDays.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+};
+
+const updateStudentQuizActivity = async (email, submittedAt) => {
+  const studentEmail = String(email || "").trim().toLowerCase();
+  if (!studentEmail) return;
+
+  const [student, submissions] = await Promise.all([
+    Student.findOne({ email: studentEmail }),
+    StudentMcqSubmission.find({ studentEmail }).select("submittedAt").lean(),
+  ]);
+
+  if (!student) return;
+
+  const streak = calculateSubmissionStreak(submissions);
+  student.streak = streak;
+  student.longestStreak = Math.max(student.longestStreak || 0, streak);
+  student.testsTaken = (student.testsTaken || 0) + 1;
+  student.lastActiveAt = submittedAt;
+  await student.save();
 };
 
 // Admin: Create a new college MCQ
@@ -435,8 +486,9 @@ export const submitCollegeMcqAnswers = async (req, res) => {
   try {
     const { linkId } = req.params;
     const { email, answers } = req.body;
+    const studentEmail = String(email || "").trim().toLowerCase();
 
-    if (!email || !answers) {
+    if (!studentEmail || !answers) {
       return res.status(400).json({
         success: false,
         message: "Email and answers are required",
@@ -484,7 +536,7 @@ export const submitCollegeMcqAnswers = async (req, res) => {
     // Check if student has already submitted (one submission per MCQ per student)
     const existingSubmission = await StudentMcqSubmission.findOne({
       collegeMcqId: collegeMcq._id,
-      studentEmail: email,
+      studentEmail,
     });
 
     if (existingSubmission) {
@@ -533,7 +585,7 @@ export const submitCollegeMcqAnswers = async (req, res) => {
     // Double-check no submission exists (race condition prevention)
     const doubleCheckSubmission = await StudentMcqSubmission.findOne({
       collegeMcqId: collegeMcq._id,
-      studentEmail: email,
+      studentEmail,
     });
 
     if (doubleCheckSubmission) {
@@ -546,12 +598,14 @@ export const submitCollegeMcqAnswers = async (req, res) => {
     // Save submission
     const submission = new StudentMcqSubmission({
       collegeMcqId: collegeMcq._id,
-      studentEmail: email,
+      studentEmail,
       answers: processedAnswers,
       score,
     });
 
     await submission.save();
+
+    await updateStudentQuizActivity(studentEmail, submission.submittedAt);
 
     // Update total attempts count
     await CollegeMcq.findByIdAndUpdate(collegeMcq._id, {
