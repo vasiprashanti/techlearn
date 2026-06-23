@@ -93,14 +93,12 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-[#0a1737] backdrop-blur-xl shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
-            <table className="w-full min-w-[820px]">
+            <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10 bg-[#edf3fb] dark:bg-white/[0.01]">
                   <th className="w-16 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prompt</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Created</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
                 </tr>
               </thead>
@@ -119,14 +117,6 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     <td className="px-5 py-4">
                       <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                         {question.difficulty || 'Easy'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-500 dark:text-slate-400 font-mono">
-                      {question.created ? new Date(question.created).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${statusPillClass(question.status || 'Active')}`}>
-                        {question.status || 'Active'}
                       </span>
                     </td>
                     <td className="px-5 py-4">
@@ -159,7 +149,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
 
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                       No questions found.
                     </td>
                   </tr>
