@@ -25,58 +25,43 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
         {questions.map((question, index) => (
           <article
             key={question.id || question._id}
-            className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-4 flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group"
+            className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-5 flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group"
           >
             <div className="flex justify-between items-start gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</p>
-                <h4 className="mt-1 text-base font-semibold text-slate-900 dark:text-white line-clamp-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</span>
+                  <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase ${difficultyPillClass(question.difficulty)}`}>
+                    {question.difficulty || 'Easy'}
+                  </span>
+                </div>
+                <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-3 leading-relaxed">
                   {getPrompt(question)}
                 </h4>
               </div>
-              <span className={`shrink-0 inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
-                {question.difficulty || 'Easy'}
-              </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <p className="text-slate-400 dark:text-slate-500 font-medium">Created</p>
-                <p className="mt-0.5 text-slate-700 dark:text-slate-350">
-                  {question.created ? new Date(question.created).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-              <div>
-                <p className="text-slate-400 dark:text-slate-500 font-medium">Status</p>
-                <p className="mt-0.5">
-                  <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-semibold leading-none ${statusPillClass(question.status || 'Active')}`}>
-                    {question.status || 'Active'}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-3 text-slate-700 dark:text-slate-300">
+            <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-3 text-slate-700 dark:text-slate-350">
               <button
                 onClick={() => onView && onView(question)}
                 className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
                 aria-label="View question"
               >
-                <FiEye className="w-4 h-4" />
+                <FiEye className="w-4.5 h-4.5" />
               </button>
               <button
                 onClick={() => onEdit && onEdit(question)}
                 className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
                 aria-label="Edit question"
               >
-                <FiEdit2 className="w-4 h-4" />
+                <FiEdit2 className="w-4.5 h-4.5" />
               </button>
               <button
                 onClick={() => onDelete && onDelete(question)}
                 className="p-2 rounded-lg hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                 aria-label="Delete question"
               >
-                <FiTrash2 className="w-4 h-4" />
+                <FiTrash2 className="w-4.5 h-4.5" />
               </button>
             </div>
           </article>
