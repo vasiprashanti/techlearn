@@ -12,6 +12,7 @@ const XPBadge = () => {
   const [progress, setProgress] = useState({
     totalCourseXP: 0,
     totalExerciseXP: 0,
+    totalProjectXP: 0,
     courseXP: {},
     exerciseXP: {}
   });
@@ -44,17 +45,20 @@ const XPBadge = () => {
       const data = await progressAPI.getUserProgress();
       const courseXPValues = Object.values(data.courseXP || {});
       const exerciseXPValues = Object.values(data.exerciseXP || {});
+      const projectXPValues = Object.values(data.projectXP || {});
 
       const totalFromCourse = courseXPValues.reduce((sum, xp) => sum + xp, 0);
       const totalFromExercise = exerciseXPValues.reduce((sum, xp) => sum + xp, 0);
+      const totalFromProject = projectXPValues.reduce((sum, xp) => sum + xp, 0);
 
-      const total = totalFromCourse + totalFromExercise;
+      const total = totalFromCourse + totalFromExercise + totalFromProject;
 
       setTotalXP(total);
       setProgress({
        ...data,
       totalCourseXP: totalFromCourse,
       totalExerciseXP: totalFromExercise,
+      totalProjectXP: totalFromProject,
       });
 
     } catch (error) {
@@ -63,6 +67,7 @@ const XPBadge = () => {
       setProgress({
         totalCourseXP: 0,
         totalExerciseXP: 0,
+        totalProjectXP: 0,
         courseXP: {},
         exerciseXP: {}
       });

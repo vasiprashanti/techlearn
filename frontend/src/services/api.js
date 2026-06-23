@@ -433,6 +433,7 @@ export const dataAdapters = {
     userId: backendProgress.userId,
     courseXP: backendProgress.courseXP || {},
     exerciseXP: backendProgress.exerciseXP || {},
+    projectXP: backendProgress.projectXP || {},
     totalCourseXP: backendProgress.totalCourseXP || 0,
     totalExerciseXP: backendProgress.totalExerciseXP || 0,
     // Note: Backend /user-progress endpoint doesn't return these fields

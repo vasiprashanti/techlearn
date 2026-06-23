@@ -3,6 +3,7 @@ import Notes from "../models/Notes.js";
 import UserProgress from "../models/UserProgress.js";
 import Topic from "../models/Topic.js";
 import Submission from "../models/Submission.js";
+import { invalidateDashboardCache } from "./dashboardController.js";
 
 export const submitCheckpointMcq = async (req, res) => {
   try {
@@ -65,6 +66,8 @@ export const submitCheckpointMcq = async (req, res) => {
 
     const notesIdStr = notesId.toString();
     const answered = userProgress.answeredCheckpointMcqs.get(notesIdStr) || [];
+    const isFirstAttempt = !answered.includes(checkpointMcqId);
+    const awardedXp = isFirstAttempt ? xpAwarded : 0;
     const isClub = user.isClub;
 
     // For logged-in non-club users: limit to 5 MCQs per course
@@ -86,7 +89,7 @@ export const submitCheckpointMcq = async (req, res) => {
       }
 
       // Check if user has reached the 5 MCQ limit for this course
-      if (totalAnsweredForCourse >= 5 && !answered.includes(checkpointMcqId)) {
+      if (totalAnsweredForCourse >= 5 && isFirstAttempt) {
         return res.status(200).json({
           isCorrect,
           correctAnswer: mcq.correctAnswer,
@@ -105,7 +108,7 @@ export const submitCheckpointMcq = async (req, res) => {
       }
 
       // Save answer if not already saved and within limit
-      if (!answered.includes(checkpointMcqId)) {
+      if (isFirstAttempt) {
         answered.push(checkpointMcqId);
         userProgress.answeredCheckpointMcqs.set(notesIdStr, answered);
       }
@@ -114,10 +117,11 @@ export const submitCheckpointMcq = async (req, res) => {
       if (courseId) {
         const courseIdStr = courseId.toString();
         const currentXP = userProgress.courseXP.get(courseIdStr) || 0;
-        userProgress.courseXP.set(courseIdStr, currentXP + xpAwarded);
+        userProgress.courseXP.set(courseIdStr, currentXP + awardedXp);
       }
 
       await userProgress.save();
+      invalidateDashboardCache(userId);
 
       // Create a canonical Submission record for analytics if Notes is bridged to Question bank
       try {
@@ -134,7 +138,7 @@ export const submitCheckpointMcq = async (req, res) => {
               questionId: notes.questionBankId,
               categoryId: topic ? topic.categoryId : null,
               categoryType: "Notes",
-              totalScore: xpAwarded,
+              totalScore: awardedXp,
               status: isCorrect ? "Passed" : "Failed",
               submittedAt: new Date(),
               snapshotConstraints: `checkpoint:${checkpointMcqId}`,
@@ -159,25 +163,24 @@ export const submitCheckpointMcq = async (req, res) => {
       return res.status(200).json({
         isCorrect,
         correctAnswer: mcq.correctAnswer,
-        xpAwarded,
+        xpAwarded: awardedXp,
         explanation: mcq.explanation || null,
         checkpointMcqId,
         notesId,
         saved: true,
         userType: "logged-in",
         courseXP: courseXPObject,
-        mcqsUsed:
-          totalAnsweredForCourse + (answered.includes(checkpointMcqId) ? 0 : 1),
-        mcqsRemaining: Math.max(0, 5 - (totalAnsweredForCourse + 1)),
+        mcqsUsed: totalAnsweredForCourse + (isFirstAttempt ? 1 : 0),
+        mcqsRemaining: Math.max(0, 5 - (totalAnsweredForCourse + (isFirstAttempt ? 1 : 0))),
         message:
-          totalAnsweredForCourse + 1 >= 4
+          totalAnsweredForCourse + (isFirstAttempt ? 1 : 0) >= 4
             ? "Almost at your limit! Upgrade to Club for unlimited access."
             : "Progress saved!",
       });
     }
 
     // Club members: Unlimited access with full features
-    if (!answered.includes(checkpointMcqId)) {
+    if (isFirstAttempt) {
       answered.push(checkpointMcqId);
       userProgress.answeredCheckpointMcqs.set(notesIdStr, answered);
     }
@@ -186,10 +189,11 @@ export const submitCheckpointMcq = async (req, res) => {
     if (courseId) {
       const courseIdStr = courseId.toString();
       const currentXP = userProgress.courseXP.get(courseIdStr) || 0;
-      userProgress.courseXP.set(courseIdStr, currentXP + xpAwarded);
+      userProgress.courseXP.set(courseIdStr, currentXP + awardedXp);
     }
 
     await userProgress.save();
+    invalidateDashboardCache(userId);
 
     // Get updated courseXP for frontend display
     const courseXPObject = {};
@@ -202,7 +206,7 @@ export const submitCheckpointMcq = async (req, res) => {
     return res.status(200).json({
       isCorrect,
       correctAnswer: mcq.correctAnswer,
-      xpAwarded,
+      xpAwarded: awardedXp,
       explanation: mcq.explanation || null,
       checkpointMcqId,
       notesId,

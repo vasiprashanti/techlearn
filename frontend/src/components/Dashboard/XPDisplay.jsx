@@ -20,7 +20,8 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
       const data = await progressAPI.getUserProgress();
       const courseXP = data.courseXP ? Object.values(data.courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
       const exerciseXP = data.exerciseXP ? Object.values(data.exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
-      const totalXP = courseXP + exerciseXP;
+      const projectXP = data.projectXP ? Object.values(data.projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
+      const totalXP = courseXP + exerciseXP + projectXP;
       setXpData({
         points: totalXP,
         loading: false,
