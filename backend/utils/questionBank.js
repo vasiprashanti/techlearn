@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 export const CATEGORY_TYPES = ["Coding", "MCQ", "Notes"];
 
 const CATEGORY_TYPE_ALIASES = {
@@ -78,7 +79,7 @@ const buildReferenceSolution = (referenceLanguage, solutionCode) => {
   };
 };
 
-export const buildCentralQuestionPayload = ({ category, body = {}, existingQuestion = null }) => {
+export const buildCentralQuestionPayload = async ({ category, body = {}, existingQuestion = null }) => {
   const categoryType = normalizeCategoryType(category?.categoryType || existingQuestion?.categoryType);
   if (!categoryType) {
     throw new Error("A valid categoryType is required.");
@@ -119,8 +120,54 @@ export const buildCentralQuestionPayload = ({ category, body = {}, existingQuest
     content.solutionNotes = String(body.solutionNotes ?? body.editorial ?? content.solutionNotes ?? "");
   }
 
+  // Resolve and generate unique title
+  let titleVal = String(body.title ?? existingQuestion?.title ?? "").trim();
+  const categoryTitleVal = category?.title || body.categoryTitle || existingQuestion?.categoryTitle || "";
+  
+  const categoryTitleLower = categoryTitleVal.toLowerCase();
+  const titleLower = titleVal.toLowerCase();
+
+  const isPlaceholderTitle =
+    !titleVal ||
+    titleLower === categoryTitleLower ||
+    titleLower === "jsp" ||
+    titleLower === "coding" ||
+    titleLower === "mcq" ||
+    titleLower === "notes" ||
+    titleLower === "general";
+
+  if (isPlaceholderTitle && description) {
+    const cleanPrompt = description.replace(/[#*`_]/g, "").replace(/\s+/g, " ").trim();
+    const words = cleanPrompt.split(" ").slice(0, 4).join(" ");
+    if (words) {
+      titleVal = words;
+    }
+  }
+
+  if (!titleVal) {
+    titleVal = "Question";
+  }
+
+  let baseTitle = titleVal.trim();
+  let uniqueTitle = baseTitle;
+  let index = 1;
+  const QuestionModel = mongoose.model("Question");
+
+  while (true) {
+    const query = { title: uniqueTitle, isActive: true };
+    if (existingQuestion?._id) {
+      query._id = { $ne: existingQuestion._id };
+    }
+    const exists = await QuestionModel.findOne(query);
+    if (!exists) {
+      break;
+    }
+    uniqueTitle = `${baseTitle} ${index}`;
+    index++;
+  }
+
   const payload = {
-    title: String(body.title ?? existingQuestion?.title ?? "").trim(),
+    title: uniqueTitle,
     description,
     difficulty: body.difficulty || existingQuestion?.difficulty || "Easy",
     tags,
@@ -129,7 +176,7 @@ export const buildCentralQuestionPayload = ({ category, body = {}, existingQuest
     categoryId: category?._id || existingQuestion?.categoryId,
     categoryType,
     categorySlug: category?.slug || body.categorySlug || existingQuestion?.categorySlug || "",
-    categoryTitle: category?.title || body.categoryTitle || existingQuestion?.categoryTitle || "",
+    categoryTitle: categoryTitleVal,
     trackType: body.trackType || existingQuestion?.trackType || category?.title || "General",
     content,
   };

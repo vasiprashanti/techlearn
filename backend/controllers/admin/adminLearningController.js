@@ -462,10 +462,10 @@ export const listQuestionsAdmin = async (req, res) => {
 
 export const createQuestionAdmin = async (req, res) => {
   try {
-    const { title, categorySlug, categoryId } = req.body;
+    const { title, categorySlug, categoryId, description, problemDescription } = req.body;
 
-    if (!title?.trim()) {
-      return res.status(400).json({ success: false, message: "Question title is required." });
+    if (!title?.trim() && !description && !problemDescription) {
+      return res.status(400).json({ success: false, message: "Question title or prompt description is required." });
     }
 
     let category = null;
@@ -480,7 +480,7 @@ export const createQuestionAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Selected central Question Bank category does not exist." });
     }
 
-    const payload = buildCentralQuestionPayload({ category, body: req.body });
+    const payload = await buildCentralQuestionPayload({ category, body: req.body });
     const question = await Question.create(payload);
 
     await writeAuditLog({
@@ -539,7 +539,7 @@ export const updateQuestionAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Question must belong to an existing central category." });
     }
 
-    const payload = buildCentralQuestionPayload({
+    const payload = await buildCentralQuestionPayload({
       category,
       body: req.body,
       existingQuestion: existing,
