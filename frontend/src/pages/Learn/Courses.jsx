@@ -273,8 +273,8 @@ export default function Courses() {
   }
 
   return (
-    <div className="w-full min-h-screen font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] bg-transparent">
-      <main className="z-10 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-auto">
+    <div className="w-full min-h-screen min-w-0 overflow-x-clip font-sans antialiased text-[#00113b] dark:text-[#8fd9ff] bg-transparent">
+      <main className="z-10 min-w-0 px-4 sm:px-6 md:px-12 lg:px-16 pb-12 overflow-x-clip overflow-y-auto">
         <div className="max-w-[1600px] mx-auto space-y-12">
 
           <section className="pt-6 space-y-10">

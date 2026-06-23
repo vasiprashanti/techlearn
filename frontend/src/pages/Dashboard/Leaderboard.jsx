@@ -75,6 +75,7 @@ const Leaderboard = () => {
   const entries = useMemo(() => leaderboardData.entries || [], [leaderboardData.entries]);
   const currentUser = leaderboardData.currentUser;
   const topThree = useMemo(() => entries.slice(0, 3), [entries]);
+  const getSolvedCount = (entry) => entry.solvedCount ?? entry.completedExercises ?? 0;
 
   const getTrendIcon = (rank) => {
     if (rank <= 3) return <TrendingUp className="w-4 h-4 text-green-500" />;
@@ -276,7 +277,7 @@ const Leaderboard = () => {
                               <div className="min-w-0">
                                 <p className="text-xs md:text-sm font-semibold text-black dark:text-white truncate">{entry.name}</p>
                                 <p className="text-[9px] md:text-[10px] text-black/40 dark:text-white/40 md:hidden truncate mt-0.5">
-                                  {entry.completedExercises || 0} completed
+                                  {getSolvedCount(entry)} completed
                                 </p>
                               </div>
                             </div>
@@ -289,7 +290,7 @@ const Leaderboard = () => {
 
                             <div className="w-28 shrink-0 hidden md:flex items-center justify-end">
                               <span className="text-[9px] md:text-[10px] text-black/60 dark:text-white/60 font-medium px-2 py-0.5 bg-black/5 dark:bg-white/5 rounded-full truncate border border-black/[0.03] dark:border-white/[0.03]">
-                                {entry.completedExercises || 0} solved
+                                {getSolvedCount(entry)} solved
                               </span>
                             </div>
                           </div>

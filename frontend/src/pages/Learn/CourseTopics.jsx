@@ -254,16 +254,16 @@ const CourseTopics = () => {
   }
 
   return (
-    <div className={`flex min-h-full w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-full w-full min-w-0 overflow-x-clip font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
       
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative z-10 flex min-h-screen flex-1 flex-col overflow-visible pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
+      <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
         
         {/* Top Header */}
-        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-7 md:px-12 transition-all duration-300 ease-out ${
+        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-4 sm:px-7 md:px-12 transition-all duration-300 ease-out ${
           isCourseHeaderHidden
             ? "max-h-0 py-0 opacity-0 pointer-events-none"
             : "max-h-32 pt-4 pb-4 opacity-100"
@@ -336,7 +336,7 @@ const CourseTopics = () => {
           onWheel={handlePrimaryAreaWheel}
           onTouchStart={handlePrimaryAreaTouchStart}
           onTouchMove={handlePrimaryAreaTouchMove}
-          className="flex-1 min-h-0 overflow-visible md:overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
+          className="flex-1 min-h-0 min-w-0 overflow-x-clip md:overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
         >
           <aside
             data-course-sidebar="true"
@@ -371,12 +371,12 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="relative min-h-0 overflow-visible px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="relative min-h-0 min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
               {/* Reading Content */}
-              <div className="course-notes-text px-6 py-2 md:px-10 lg:px-12 md:py-3 min-h-[60vh]">
+              <div className="course-notes-text min-w-0 px-1 sm:px-6 py-2 md:px-10 lg:px-12 md:py-3 min-h-[60vh]">
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
@@ -414,23 +414,23 @@ const CourseTopics = () => {
               </div>
 
               {/* Premium Navigation Footer */}
-              <div className="dashboard-surface flex items-center justify-between mt-8 p-4 rounded-[1.5rem] shadow-sm">
+              <div className="dashboard-surface flex items-center justify-between gap-2 mt-8 p-3 sm:p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
+                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex shrink-0 items-center gap-2 px-3 sm:px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
                 </button>
               ) : <div className="w-24" />}
 
-              <span className="text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/40 px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
+              <span className="shrink-0 text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/40 px-3 sm:px-5 py-2.5 bg-black/5 dark:bg-white/5 rounded-xl">
                 {selectedTopic + 1} / {totalTopics}
               </span>
 
               {!isLastTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
+                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex items-center gap-2 px-8 py-3.5">
+                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
                   Complete <CheckCircle className="w-4 h-4" />
                 </button>
               )}

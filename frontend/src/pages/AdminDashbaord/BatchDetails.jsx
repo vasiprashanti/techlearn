@@ -363,7 +363,7 @@ const BatchDetails = () => {
                             <td className="px-4 py-3">
                               {isPlaceholder ? '-' : (
                                 <span className={`justify-self-start inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${scorePillClass(student.score)}`}>
-                                  {student.score}%
+                                  {student.scoreDisplay || `${student.score}%`}
                                 </span>
                               )}
                             </td>

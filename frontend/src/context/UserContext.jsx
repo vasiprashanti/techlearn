@@ -77,14 +77,26 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Calculate total XP from courseXP and exerciseXP objects
-  const calculateTotalXP = (courseXP, exerciseXP) => {
+  // Calculate total XP based on user track (programSelection)
+  const calculateTotalXP = (courseXP, exerciseXP, projectXP, programSelection) => {
     let total = 0;
+    if (programSelection === "Full Stack Project Program") {
+      if (projectXP && typeof projectXP === 'object') {
+        total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
+      return total;
+    }
+
     if (courseXP && typeof courseXP === 'object') {
       total += Object.values(courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
     }
     if (exerciseXP && typeof exerciseXP === 'object') {
       total += Object.values(exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    }
+    if (programSelection === "Both") {
+      if (projectXP && typeof projectXP === 'object') {
+        total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
     }
     return total;
   };
@@ -113,7 +125,7 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(updatedUser));
     }
 
-    const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP);
+    const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP, data.projectXP, data.user?.programSelection || user?.programSelection);
     setXp(totalXP);
 
     const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];

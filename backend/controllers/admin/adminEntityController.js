@@ -29,6 +29,37 @@ const deleteStudentProjectProgress = async (studentIds) => {
 
 const DEFAULT_BATCH_TRACK_TYPES = ["Core", "DSA", "SQL"];
 
+const toUtcDayKey = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+};
+
+const calculateCurrentStreak = (submissions) => {
+  const activityDays = new Set(
+    submissions.map((submission) => toUtcDayKey(submission.submittedAt)).filter(Boolean)
+  );
+  if (!activityDays.size) return 0;
+
+  const cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  const today = cursor.toISOString().slice(0, 10);
+  const yesterday = new Date(cursor);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+  if (!activityDays.has(today)) {
+    if (!activityDays.has(yesterday.toISOString().slice(0, 10))) return 0;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+
+  let streak = 0;
+  while (activityDays.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+};
+
 const ensureDefaultBatchTracks = async (batchId, session) => {
   let existingTracksQuery = Track.find({ batchId }).select("trackType");
   if (session) {
@@ -474,6 +505,27 @@ export const getBatchDetail = async (req, res) => {
         .lean(),
     ]);
 
+    const studentEmails = students
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+    const mcqSubmissions = studentEmails.length
+      ? await StudentMcqSubmission.find({ studentEmail: { $in: studentEmails } })
+          .populate("collegeMcqId", "questions")
+          .lean()
+      : [];
+    const latestMcqSubmissionByEmail = new Map();
+    const mcqSubmissionsByEmail = new Map();
+    mcqSubmissions.forEach((submission) => {
+      const email = String(submission.studentEmail || "").trim().toLowerCase();
+      const emailSubmissions = mcqSubmissionsByEmail.get(email) || [];
+      emailSubmissions.push(submission);
+      mcqSubmissionsByEmail.set(email, emailSubmissions);
+      const current = latestMcqSubmissionByEmail.get(email);
+      if (!current || new Date(submission.submittedAt) > new Date(current.submittedAt)) {
+        latestMcqSubmissionByEmail.set(email, submission);
+      }
+    });
+
     const avgScore =
       submissions.length > 0
         ? Number(
@@ -566,6 +618,9 @@ export const getBatchDetail = async (req, res) => {
           return [];
         })(),
         studentsTable: students.map((student) => {
+          const studentEmail = String(student.email || "").trim().toLowerCase();
+          const latestMcqSubmission = latestMcqSubmissionByEmail.get(studentEmail);
+          const mcqStreak = calculateCurrentStreak(mcqSubmissionsByEmail.get(studentEmail) || []);
           const studentSubs = submissions.filter(
             (submission) => String(submission.studentId) === String(student._id)
           );
@@ -578,13 +633,21 @@ export const getBatchDetail = async (req, res) => {
                   ).toFixed(0)
                 )
               : 0;
+          const totalMcqQuestions = latestMcqSubmission?.collegeMcqId?.questions?.length || latestMcqSubmission?.answers?.length || 0;
+          const correctMcqAnswers = latestMcqSubmission?.answers?.filter((answer) => answer.isCorrect).length ?? latestMcqSubmission?.score ?? 0;
+          const mcqScorePercent = totalMcqQuestions > 0
+            ? Math.round((correctMcqAnswers / totalMcqQuestions) * 100)
+            : score;
+
           return {
             id: student._id,
             name: student.name,
             email: student.email,
-            accuracy: score,
-            score,
-            streak: `${student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
+            accuracy: latestMcqSubmission ? mcqScorePercent : score,
+            score: latestMcqSubmission ? mcqScorePercent : score,
+            scoreDisplay: latestMcqSubmission ? `${correctMcqAnswers}/${totalMcqQuestions}` : `${score}%`,
+            scoreType: latestMcqSubmission ? "mcq" : "percentage",
+            streak: `${latestMcqSubmission ? mcqStreak : student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
           };
         }),
       },

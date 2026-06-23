@@ -243,12 +243,12 @@ const CourseQuiz = () => {
   }
 
   return (
-    <div className={`min-h-screen relative overflow-hidden font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`min-h-screen relative min-w-0 overflow-x-clip font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
       
       <div className="relative z-10 pt-24 pb-12">
-        <div className="container px-6 mx-auto max-w-4xl">
+        <div className="container min-w-0 px-4 sm:px-6 mx-auto max-w-4xl">
           
           {!quizStarted ? (
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center">
