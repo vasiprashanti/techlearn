@@ -5,6 +5,8 @@ import Question from "../models/Questions.js";
 import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
 import UserProgress from "../models/UserProgress.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
+import { invalidateDashboardCache } from "./dashboardController.js";
+import { updateStudentStreak } from "../utils/streakUtil.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -384,12 +386,6 @@ export const submitDailyTask = async (req, res) => {
     let bonusXp = 0;
     if (justCompletedDay) {
       bonusXp += TASK_XP.ALL_COMPLETED_BONUS; // +25 XP
-      
-      // Checking if any task was skipped
-      const skippedAny = attempt.tasksProgress.some((t) => t.status === "Not Started");
-      if (!skippedAny) {
-        bonusXp += TASK_XP.NO_SKIP_BONUS; // +10 XP
-      }
     }
 
     const totalXpAdded = xpEarned + bonusXp;
@@ -410,6 +406,8 @@ export const submitDailyTask = async (req, res) => {
     const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
     progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
     await progress.save();
+    invalidateDashboardCache(userId);
+    await updateStudentStreak(email);
 
     return res.status(200).json({
       success: true,

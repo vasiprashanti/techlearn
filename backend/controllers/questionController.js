@@ -16,13 +16,13 @@ export const createQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
-    const { title } = req.body;
+    const { title, description, problemDescription } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ success: false, message: 'title is required' });
+    if (!title && !description && !problemDescription) {
+      return res.status(400).json({ success: false, message: 'title or question prompt description is required' });
     }
 
-    const payload = buildCentralQuestionPayload({ category, body: req.body });
+    const payload = await buildCentralQuestionPayload({ category, body: req.body });
     const question = await Question.create(payload);
 
     return res.status(201).json({ success: true, data: question });
@@ -155,7 +155,7 @@ export const updateQuestion = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Category not found for this question' });
     }
 
-    const nextPayload = buildCentralQuestionPayload({
+    const nextPayload = await buildCentralQuestionPayload({
       category,
       body: updates,
       existingQuestion: existing,

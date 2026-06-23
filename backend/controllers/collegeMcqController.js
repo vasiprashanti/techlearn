@@ -82,23 +82,19 @@ const calculateSubmissionStreak = (submissions) => {
   return streak;
 };
 
+import { updateStudentStreak } from "../utils/streakUtil.js";
+
 const updateStudentQuizActivity = async (email, submittedAt) => {
   const studentEmail = String(email || "").trim().toLowerCase();
   if (!studentEmail) return;
 
-  const [student, submissions] = await Promise.all([
-    Student.findOne({ email: studentEmail }),
-    StudentMcqSubmission.find({ studentEmail }).select("submittedAt").lean(),
-  ]);
-
+  const student = await Student.findOne({ email: studentEmail });
   if (!student) return;
 
-  const streak = calculateSubmissionStreak(submissions);
-  student.streak = streak;
-  student.longestStreak = Math.max(student.longestStreak || 0, streak);
   student.testsTaken = (student.testsTaken || 0) + 1;
-  student.lastActiveAt = submittedAt;
   await student.save();
+
+  await updateStudentStreak(studentEmail);
 };
 
 // Admin: Create a new college MCQ

@@ -6,6 +6,7 @@ import ProjectTask from "../models/ProjectTask.js";
 import StudentTaskProgress from "../models/StudentTaskProgress.js";
 import UserProgress from "../models/UserProgress.js";
 import User from "../models/User.js";
+import { invalidateDashboardCache } from "./dashboardController.js";
 
 const PROJECT_PROGRAMS = new Set(["Full Stack Project Program", "Both"]);
 
@@ -322,6 +323,7 @@ export const toggleTask = async (req, res) => {
       const currentXp = userProgress.projectXP.get(pIdStr) || 0;
       userProgress.projectXP.set(pIdStr, currentXp + xpAwardedThisTime);
       await userProgress.save();
+      invalidateDashboardCache(req.user._id);
     }
 
     // Check if the current day has been fully completed

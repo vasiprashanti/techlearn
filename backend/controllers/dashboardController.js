@@ -142,6 +142,7 @@ export const getDashboardData = async (req, res) => {
       const emptyPayload = {
         courseXP: {},
         exerciseXP: {},
+        projectXP: {},
         totalCourseXP: {},
         totalExerciseXP: {},
         completedExercises: [],

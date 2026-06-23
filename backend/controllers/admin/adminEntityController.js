@@ -495,11 +495,21 @@ export const getBatchDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    const [tracks, students, submissions, trackTemplates] = await Promise.all([
+    const students = await Student.find({ batchId }).lean();
+    const studentIds = students.map((s) => s._id);
+
+    const [tracks, submissions, trackTemplates] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
-      Student.find({ batchId }).lean(),
-      Submission.find({ batchId }).lean(),
-      TrackTemplate.find({ batchId })
+      Submission.find(
+        studentIds.length
+          ? { $or: [{ batchId }, { studentId: { $in: studentIds } }] }
+          : { batchId }
+      ).lean(),
+      TrackTemplate.find(
+        batch.assignedDailyTaskTrack
+          ? { $or: [{ batchId }, { _id: batch.assignedDailyTaskTrack }] }
+          : { batchId }
+      )
         .populate("dayAssignments.questionId", "title")
         .populate("dayAssignments.tasks.questionId", "title")
         .lean(),
@@ -620,10 +630,13 @@ export const getBatchDetail = async (req, res) => {
         studentsTable: students.map((student) => {
           const studentEmail = String(student.email || "").trim().toLowerCase();
           const latestMcqSubmission = latestMcqSubmissionByEmail.get(studentEmail);
-          const mcqStreak = calculateCurrentStreak(mcqSubmissionsByEmail.get(studentEmail) || []);
           const studentSubs = submissions.filter(
             (submission) => String(submission.studentId) === String(student._id)
           );
+          const mcqStreak = calculateCurrentStreak([
+            ...(mcqSubmissionsByEmail.get(studentEmail) || []),
+            ...studentSubs,
+          ]);
           const score =
             studentSubs.length > 0
               ? Number(
@@ -633,21 +646,53 @@ export const getBatchDetail = async (req, res) => {
                   ).toFixed(0)
                 )
               : 0;
+          const trackMcqSubmissions = studentSubs.filter(s => s.categoryType === "MCQ");
+          const correctTrackMcqAnswers = trackMcqSubmissions.filter(sub => sub.status === "Passed").length;
+          
+          // Get the active track template assigned to this batch
+          const activeTrackTemplate = trackTemplates.find(t => String(t._id) === String(batch.assignedDailyTaskTrack));
+          const trackMcqQuestionIds = new Set();
+          if (activeTrackTemplate) {
+            (activeTrackTemplate.dayAssignments || []).forEach((day) => {
+              (day.tasks || []).forEach((task) => {
+                if (task.taskType === "MCQ" && task.questionId) {
+                  const qIdStr = task.questionId._id ? String(task.questionId._id) : String(task.questionId);
+                  trackMcqQuestionIds.add(qIdStr);
+                }
+              });
+            });
+          }
+          const totalTrackMcqQuestions = trackMcqQuestionIds.size || trackMcqSubmissions.length;
+          const trackMcqScorePercent = totalTrackMcqQuestions > 0
+            ? Math.round((correctTrackMcqAnswers / totalTrackMcqQuestions) * 100)
+            : score;
+
           const totalMcqQuestions = latestMcqSubmission?.collegeMcqId?.questions?.length || latestMcqSubmission?.answers?.length || 0;
           const correctMcqAnswers = latestMcqSubmission?.answers?.filter((answer) => answer.isCorrect).length ?? latestMcqSubmission?.score ?? 0;
           const mcqScorePercent = totalMcqQuestions > 0
             ? Math.round((correctMcqAnswers / totalMcqQuestions) * 100)
             : score;
 
+          const hasTrackMcq = trackMcqSubmissions.length > 0;
+          const hasCollegeMcq = !!latestMcqSubmission;
+          const showMcqFormat = hasCollegeMcq || hasTrackMcq || (trackMcqQuestionIds.size > 0 && studentSubs.length === 0);
+
+          const finalAccuracy = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
+          const finalScore = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
+          const scoreDisplay = hasCollegeMcq 
+            ? `${correctMcqAnswers}/${totalMcqQuestions}` 
+            : (showMcqFormat ? `${correctTrackMcqAnswers}/${totalTrackMcqQuestions}` : `${score}%`);
+          const scoreType = showMcqFormat ? "mcq" : "percentage";
+
           return {
             id: student._id,
             name: student.name,
             email: student.email,
-            accuracy: latestMcqSubmission ? mcqScorePercent : score,
-            score: latestMcqSubmission ? mcqScorePercent : score,
-            scoreDisplay: latestMcqSubmission ? `${correctMcqAnswers}/${totalMcqQuestions}` : `${score}%`,
-            scoreType: latestMcqSubmission ? "mcq" : "percentage",
-            streak: `${latestMcqSubmission ? mcqStreak : student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
+            accuracy: finalAccuracy,
+            score: finalScore,
+            scoreDisplay,
+            scoreType,
+            streak: `${mcqStreak || student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
           };
         }),
       },
