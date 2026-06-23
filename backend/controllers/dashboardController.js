@@ -76,7 +76,7 @@ export const getDashboardData = async (req, res) => {
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
       User.findById(userId).select("avatar photoUrl email firstName lastName name role").lean(),
       UserProgress.findOne({ userId })
-        .select("courseXP exerciseXP completedExercises answeredCheckpointMcqs createdAt")
+        .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
           path: "completedExercises.exerciseId",
           select: "title courseId",
@@ -208,6 +208,7 @@ export const getDashboardData = async (req, res) => {
 
     const courseXPObject = toPlainMap(progress.courseXP);
     const exerciseXPObject = toPlainMap(progress.exerciseXP);
+    const projectXPObject = toPlainMap(progress.projectXP);
 
     const allCourseIds = [...new Set([
       ...Object.keys(courseXPObject),
@@ -262,6 +263,7 @@ export const getDashboardData = async (req, res) => {
     const payload = {
       courseXP: courseXPObject,
       exerciseXP: exerciseXPObject,
+      projectXP: projectXPObject,
       totalCourseXP: totalCourseXPObject,
       totalExerciseXP: totalExerciseXPObject,
       completedExercises: progress.completedExercises || [],

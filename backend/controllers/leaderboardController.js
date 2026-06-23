@@ -29,14 +29,27 @@ export const getPublicLeaderboard = async (req, res) => {
         : DEFAULT_LIMIT;
 
     const progressRows = await UserProgress.find({})
-      .populate("userId", "firstName lastName email avatar role")
+      .populate("userId", "firstName lastName email avatar role batchId programSelection")
       .lean();
 
-    const learnerRows = progressRows.filter((row) => row.userId && row.userId.role !== "admin");
+    const isProjectUser = req.user && req.user.programSelection === "Full Stack Project Program";
+
+    let filteredRows = progressRows.filter((row) => row.userId && row.userId.role !== "admin");
+
+    if (isProjectUser) {
+      const userBatchIdStr = req.user.batchId ? req.user.batchId.toString() : null;
+      filteredRows = filteredRows.filter((row) => {
+        const rowBatchIdStr = row.userId.batchId ? row.userId.batchId.toString() : null;
+        return rowBatchIdStr && rowBatchIdStr === userBatchIdStr;
+      });
+    }
+
+    const learnerRows = filteredRows;
     const learnerIds = learnerRows.map((row) => row.userId._id);
     const learnerEmails = learnerRows
       .map((row) => String(row.userId.email || "").trim().toLowerCase())
       .filter(Boolean);
+
     const [practiceSolvedCounts, collegeMcqSubmissions] = await Promise.all([
       learnerIds.length
         ? PracticeSubmission.aggregate([
@@ -50,6 +63,7 @@ export const getPublicLeaderboard = async (req, res) => {
             .lean()
         : [],
     ]);
+
     const practiceSolvedByUserId = new Map(
       practiceSolvedCounts.map((entry) => [String(entry._id), entry.solvedCount])
     );
@@ -62,18 +76,20 @@ export const getPublicLeaderboard = async (req, res) => {
 
     const leaderboardRows = learnerRows
       .map((row) => {
-        const courseXp = sumMapValues(row.courseXP);
-        const exerciseXp = sumMapValues(row.exerciseXP);
+        const courseXp = isProjectUser ? 0 : sumMapValues(row.courseXP);
+        const exerciseXp = isProjectUser ? 0 : sumMapValues(row.exerciseXP);
         const projectXp = sumMapValues(row.projectXP);
         const totalXp = courseXp + exerciseXp + projectXp;
 
-        const completedExercises = Array.isArray(row.completedExercises)
+        const completedExercises = isProjectUser ? 0 : (Array.isArray(row.completedExercises)
           ? row.completedExercises.length
-          : 0;
-        const solvedCount =
+          : 0);
+
+        const solvedCount = isProjectUser ? 0 : (
           (practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
           (collegeMcqSolvedByEmail.get(String(row.userId.email || "").trim().toLowerCase()) || 0) ||
-          completedExercises;
+          completedExercises
+        );
 
         return {
           userId: row.userId._id.toString(),
