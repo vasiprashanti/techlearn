@@ -6,6 +6,7 @@ import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
 import UserProgress from "../models/UserProgress.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
+import { updateStudentStreak } from "../utils/streakUtil.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -406,6 +407,7 @@ export const submitDailyTask = async (req, res) => {
     progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
     await progress.save();
     invalidateDashboardCache(userId);
+    await updateStudentStreak(email);
 
     return res.status(200).json({
       success: true,

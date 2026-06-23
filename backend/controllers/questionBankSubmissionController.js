@@ -3,6 +3,7 @@ import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
 import Category from "../models/Category.js";
 import Student from "../models/Student.js";
+import { updateStudentStreak } from "../utils/streakUtil.js";
 import Batch from "../models/Batch.js";
 import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
@@ -528,6 +529,9 @@ export const submitSolution = [
       submission.totalScore = scores.totalScore;
 
       await submission.save();
+      if (req.user?.email) {
+        await updateStudentStreak(req.user.email);
+      }
 
       res.json({
         success: true,
@@ -666,6 +670,10 @@ export const submitMcqAnswer = async (req, res) => {
     });
 
     await Question.findByIdAndUpdate(question._id, { $inc: { solvedCount: isCorrect ? 1 : 0 } });
+
+    if (req.user?.email) {
+      await updateStudentStreak(req.user.email);
+    }
 
     return res.status(201).json({
       success: true,

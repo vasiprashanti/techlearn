@@ -81,11 +81,11 @@ export const getPublicLeaderboard = async (req, res) => {
         const projectXp = sumMapValues(row.projectXP);
         const totalXp = courseXp + exerciseXp + projectXp;
 
-        const completedExercises = isProjectUser ? 0 : (Array.isArray(row.completedExercises)
+        const completedExercises = Array.isArray(row.completedExercises)
           ? row.completedExercises.length
-          : 0);
+          : 0;
 
-        const solvedCount = isProjectUser ? 0 : (
+        const solvedCount = (
           (practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
           (collegeMcqSolvedByEmail.get(String(row.userId.email || "").trim().toLowerCase()) || 0) ||
           completedExercises
