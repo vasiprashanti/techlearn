@@ -188,13 +188,13 @@ const CourseDetails = () => {
   };
 
   return (
-    <div className={`flex min-h-full w-full font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-full w-full min-w-0 overflow-x-clip font-sans antialiased text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
       <ScrollProgress />
       
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="flex-1 transition-all duration-700 ease-in-out z-10 pt-24 md:pt-28 pb-12 px-6 md:px-12 lg:px-16 overflow-auto">
+      <main className="flex-1 min-w-0 transition-all duration-700 ease-in-out z-10 pt-24 md:pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-x-clip overflow-y-auto">
         <div className="max-w-[1600px] mx-auto space-y-8">
           
           {/* Top Header */}
@@ -333,12 +333,12 @@ const CourseDetails = () => {
                       key={module.id}
                       className="dashboard-surface rounded-2xl p-6 md:p-8 transition-all hover:-translate-y-0.5 group"
                     >
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-5">
+                      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 mb-6">
+                        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
                           <div className="w-10 h-10 bg-[#dbf1ff] dark:bg-[#0d366f] rounded-xl border border-[#9fd3ff]/60 dark:border-[#79c5ff]/40 flex items-center justify-center text-[#3C83F6] dark:text-[#8fd9ff] font-medium text-sm group-hover:scale-105 transition-transform">
                             {index + 1}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <h4 className="text-lg font-medium text-[#0d2a57] dark:text-[#8fd9ff] mb-1">
                               {module.title}
                             </h4>
@@ -354,7 +354,7 @@ const CourseDetails = () => {
                         )}
                       </div>
                       
-                      <ul className="space-y-3 ml-14 border-l border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pl-5">
+                      <ul className="space-y-3 ml-8 sm:ml-14 border-l border-[#9fcfff]/45 dark:border-[#6bb8ec]/35 pl-4 sm:pl-5">
                         {module.topics.map((topic, topicIndex) => (
                           <li key={topicIndex} className="text-sm text-[#4c6f9a] dark:text-[#7fb8e2] font-light relative before:absolute before:-left-[25px] before:top-1/2 before:-translate-y-1/2 before:w-2 before:h-px before:bg-[#9fcfff]/60 dark:before:bg-[#6bb8ec]/55">
                             {topic}

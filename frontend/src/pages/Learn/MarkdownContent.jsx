@@ -64,6 +64,14 @@ const getCodeFileName = (language) => {
   return fileNames[language] || 'code';
 };
 
+const compilerLanguageByMarkdownLanguage = {
+  html: 'html',
+  htm: 'html',
+  python: 'python',
+  py: 'python',
+  java: 'java',
+};
+
 const getYouTubeEmbedUrl = (href = '') => {
   try {
     const url = new URL(href);
@@ -124,14 +132,7 @@ const createMarkdownComponents = (compact = false) => {
       const youtubeEmbedUrl = isYouTubeUrl(href) ? getYouTubeEmbedUrl(href) : '';
 
       if (isRunCodeLink) {
-        return (
-          <a
-            href={href}
-            className="inline-flex items-center rounded-md border border-[#001862]/20 bg-white/70 px-3 py-2 font-press-start text-[8px] uppercase tracking-normal text-lavender no-underline shadow-sm transition hover:border-[#001862]/40 hover:bg-white"
-          >
-            {children}
-          </a>
-        );
+        return null;
       }
 
       if (youtubeEmbedUrl) {
@@ -181,11 +182,21 @@ const createMarkdownComponents = (compact = false) => {
       const language = getCodeLanguage(children);
       const fileName = getCodeFileName(language);
       const codeText = getCodeText(children);
+      const compilerLanguage = compilerLanguageByMarkdownLanguage[language];
 
       const handleCopy = () => {
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
           navigator.clipboard.writeText(codeText);
         }
+      };
+
+      const handleRun = () => {
+        if (!compilerLanguage || typeof window === 'undefined') return;
+        window.sessionStorage.setItem(
+          'techlearn:compiler-draft',
+          JSON.stringify({ language: compilerLanguage, code: codeText })
+        );
+        window.location.assign('/compiler');
       };
 
       return (
@@ -207,13 +218,16 @@ const createMarkdownComponents = (compact = false) => {
                 <Copy className="h-3.5 w-3.5" />
                 Copy
               </button>
-              <a
-                href="/compiler"
-                className="flex items-center gap-1.5 rounded-md bg-[#0000a8] px-3 py-1.5 text-xs font-semibold text-white no-underline transition-colors hover:bg-[#0000d0]"
-              >
-                <Play className="h-3.5 w-3.5 fill-current" />
-                Run Code
-              </a>
+              {compilerLanguage ? (
+                <button
+                  type="button"
+                  onClick={handleRun}
+                  className="flex items-center gap-1.5 rounded-md bg-[#0000a8] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#0000d0]"
+                >
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  Run
+                </button>
+              ) : null}
             </div>
           </div>
           <pre className={`${compact ? 'p-4 text-[12px]' : 'p-5 text-[13px]'} overflow-x-auto font-mono leading-[1.7] text-slate-100 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]`}>

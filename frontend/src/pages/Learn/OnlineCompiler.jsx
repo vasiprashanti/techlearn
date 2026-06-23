@@ -101,12 +101,27 @@ public class Main {
   }
 };
 
+const readCompilerDraft = () => {
+  try {
+    const raw = window.sessionStorage.getItem('techlearn:compiler-draft');
+    if (!raw) return null;
+
+    const draft = JSON.parse(raw);
+    if (!LANGUAGES[draft?.language] || !String(draft?.code || '').trim()) return null;
+    return { language: draft.language, code: draft.code };
+  } catch {
+    return null;
+  }
+};
+
 const OnlineCompiler = () => {
   const { theme } = useTheme();
-  const [selectedLanguage, setSelectedLanguage] = useState('html');
+  const initialDraftRef = useRef(readCompilerDraft());
+  const preserveInitialDraftRef = useRef(Boolean(initialDraftRef.current));
+  const [selectedLanguage, setSelectedLanguage] = useState(() => initialDraftRef.current?.language || 'html');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [code, setCode] = useState(LANGUAGES.html.defaultCode);
+  const [code, setCode] = useState(() => initialDraftRef.current?.code || LANGUAGES.html.defaultCode);
   const [output, setOutput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
@@ -184,6 +199,11 @@ const OnlineCompiler = () => {
 
   // Update code when language changes
   useEffect(() => {
+    if (preserveInitialDraftRef.current) {
+      preserveInitialDraftRef.current = false;
+      window.sessionStorage.removeItem('techlearn:compiler-draft');
+      return;
+    }
     setCode(LANGUAGES[selectedLanguage].defaultCode);
     setOutput('');
   }, [selectedLanguage]);
