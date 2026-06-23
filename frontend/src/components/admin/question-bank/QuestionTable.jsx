@@ -33,9 +33,6 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                 <h4 className="mt-1 text-base font-semibold text-slate-900 dark:text-white line-clamp-2">
                   {getPrompt(question)}
                 </h4>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {(question.tags || []).join(', ') || 'No tag'}
-                </p>
               </div>
               <span className={`shrink-0 inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                 {question.difficulty || 'Easy'}
@@ -96,14 +93,12 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-[#0a1737] backdrop-blur-xl shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
-            <table className="w-full min-w-[1080px]">
+            <table className="w-full min-w-[820px]">
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10 bg-[#edf3fb] dark:bg-white/[0.01]">
                   <th className="w-16 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prompt</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tag</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty</th>
-                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Track</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Created</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Status</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
@@ -121,16 +116,10 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     <td className="px-5 py-4 text-sm font-semibold text-slate-900 dark:text-white max-w-[360px]">
                       <p className="line-clamp-2" title={getPrompt(question)}>{getPrompt(question)}</p>
                     </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-350 font-medium max-w-[180px] truncate">
-                      {(question.tags || []).join(', ') || 'No tag'}
-                    </td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                         {question.difficulty || 'Easy'}
                       </span>
-                    </td>
-                    <td className="px-5 py-4 text-xs md:text-sm text-slate-600 dark:text-slate-350 font-medium">
-                      {question.track || question.trackType || 'General'}
                     </td>
                     <td className="px-5 py-4 text-xs md:text-sm text-slate-500 dark:text-slate-400 font-mono">
                       {question.created ? new Date(question.created).toLocaleDateString() : 'N/A'}
@@ -170,7 +159,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
 
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                       No questions found.
                     </td>
                   </tr>
