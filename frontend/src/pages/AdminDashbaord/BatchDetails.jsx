@@ -36,7 +36,13 @@ const BatchDetails = () => {
   const [tableSearch, setTableSearch] = useState('');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [studentMode, setStudentMode] = useState('existing');
-  const [existingStudents, setExistingStudents] = useState([]);
+  const [existingStudentResults, setExistingStudentResults] = useState([]);
+  const [existingStudentQuery, setExistingStudentQuery] = useState('');
+  const [existingStudentCollegeId, setExistingStudentCollegeId] = useState('');
+  const [existingStudentStatus, setExistingStudentStatus] = useState('');
+  const [existingStudentSort, setExistingStudentSort] = useState('name-asc');
+  const [isSearchingExistingStudents, setIsSearchingExistingStudents] = useState(false);
+  const [existingStudentSearchTotal, setExistingStudentSearchTotal] = useState(0);
   const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
@@ -50,8 +56,7 @@ const BatchDetails = () => {
       adminAPI.getColleges().catch(() => []),
       adminAPI.getBatches().catch(() => []),
       adminAPI.getTrackTemplates().catch(() => []),
-      adminAPI.getStudents().catch(() => []),
-    ]).then(([remoteColleges, remoteBatches, remoteTracks, remoteStudents]) => {
+    ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
       const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
@@ -59,7 +64,6 @@ const BatchDetails = () => {
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
       setTracks(uniqueTracks);
-      setExistingStudents(preferRemoteData(remoteStudents, []));
     }).catch(() => {});
   }, []);
 
@@ -136,12 +140,62 @@ const BatchDetails = () => {
     });
     setStudentMode('existing');
     setSelectedExistingStudentId('');
+    setExistingStudentResults([]);
+    setExistingStudentQuery('');
+    setExistingStudentSearchTotal(0);
+    setExistingStudentStatus('');
+    setExistingStudentSort('name-asc');
+    setExistingStudentCollegeId(matchingCollege?.id || '');
     setIsAddFormOpen(true);
   };
 
+  useEffect(() => {
+    if (!isAddFormOpen || studentMode !== 'existing') return undefined;
+
+    const query = existingStudentQuery.trim();
+    if (query.length < 2) {
+      setExistingStudentResults([]);
+      setExistingStudentSearchTotal(0);
+      setIsSearchingExistingStudents(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsSearchingExistingStudents(true);
+      try {
+        const result = await adminAPI.searchExistingStudents({
+          q: query,
+          collegeId: existingStudentCollegeId,
+          excludeBatchId: batch.id || batchId,
+          status: existingStudentStatus,
+          sort: existingStudentSort,
+          limit: 20,
+        });
+        if (!cancelled) {
+          setExistingStudentResults(result?.items || []);
+          setExistingStudentSearchTotal(result?.total || 0);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setExistingStudentResults([]);
+          setExistingStudentSearchTotal(0);
+          setFormError(error.message || 'Unable to search existing students.');
+        }
+      } finally {
+        if (!cancelled) setIsSearchingExistingStudents(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isAddFormOpen, studentMode, existingStudentQuery, existingStudentCollegeId, existingStudentStatus, existingStudentSort, batch.id, batchId]);
+
   const saveStudent = async () => {
     if (studentMode === 'existing') {
-      const selectedStudent = existingStudents.find((student) => String(student.id || student._id) === String(selectedExistingStudentId));
+      const selectedStudent = existingStudentResults.find((student) => String(student.id || student._id) === String(selectedExistingStudentId));
       if (!selectedStudent) return setFormError('Select an existing student.');
 
       setFormError('');
@@ -152,13 +206,12 @@ const BatchDetails = () => {
           email: selectedStudent.email,
           collegeId: studentForm.collegeId,
           batchId: studentForm.batchId,
-          primaryTrack: selectedStudent.track || studentForm.track || 'General Track',
+          primaryTrack: studentForm.track || selectedStudent.track || 'General Track',
           programSelection: selectedStudent.programSelection || 'Placement Sprint',
-          status: selectedStudent.status || 'Active',
+          status: studentForm.status || selectedStudent.status || 'Active',
         });
-        const [remoteBatch, remoteStudents] = await Promise.all([adminAPI.getBatch(batchId), adminAPI.getStudents()]);
+        const remoteBatch = await adminAPI.getBatch(batchId);
         setBatchDetail(preferRemoteData(remoteBatch, null));
-        setExistingStudents(preferRemoteData(remoteStudents, []));
         setIsAddFormOpen(false);
       } catch (error) {
         setFormError(error.message || 'Failed to add existing student to this batch');
@@ -407,16 +460,104 @@ const BatchDetails = () => {
                 <button onClick={() => setStudentMode('new')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'new' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>New student</button>
               </div>
               {studentMode === 'existing' ? (
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Student*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
-                    <select value={selectedExistingStudentId} onChange={(e) => setSelectedExistingStudentId(e.target.value)} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
-                      <option className={dropdownOptionClass} value="">Select existing student</option>
-                      {existingStudents.filter((student) => String(student.batchId || '') !== String(batch.id || batchId)).map((student) => <option className={dropdownOptionClass} key={student.id || student._id} value={student.id || student._id}>{student.name} - {student.email}</option>)}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                <div className="space-y-3">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Find existing student*</label>
+                    <div className="relative mt-1">
+                      <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/45" />
+                      <input
+                        value={existingStudentQuery}
+                        onChange={(e) => {
+                          setExistingStudentQuery(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        placeholder="Search name, email, or roll number"
+                        className={`pl-9 ${studentFormInputClass}`}
+                      />
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">The student will be moved to this batch. Their existing profile and progress stay intact.</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="relative">
+                      <select
+                        value={existingStudentCollegeId}
+                        onChange={(e) => {
+                          setExistingStudentCollegeId(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="">All colleges</option>
+                        {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={existingStudentStatus}
+                        onChange={(e) => {
+                          setExistingStudentStatus(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="">All statuses</option>
+                        <option className={dropdownOptionClass} value="Active">Active</option>
+                        <option className={dropdownOptionClass} value="Inactive">Inactive</option>
+                        <option className={dropdownOptionClass} value="Suspended">Suspended</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={existingStudentSort}
+                        onChange={(e) => setExistingStudentSort(e.target.value)}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="name-asc">Name A-Z</option>
+                        <option className={dropdownOptionClass} value="name-desc">Name Z-A</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
+
+                  <div className="min-h-[128px] max-h-56 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#0f1f43]/70 divide-y divide-black/5 dark:divide-white/10">
+                    {existingStudentQuery.trim().length < 2 ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">Type at least two characters to search students.</p>
+                    ) : isSearchingExistingStudents ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">Searching students...</p>
+                    ) : existingStudentResults.length === 0 ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">No matching students outside this batch.</p>
+                    ) : (
+                      existingStudentResults.map((student) => {
+                        const studentId = student.id || student._id;
+                        const isSelected = String(studentId) === String(selectedExistingStudentId);
+                        return (
+                          <button
+                            type="button"
+                            key={studentId}
+                            onClick={() => {
+                              setSelectedExistingStudentId(studentId);
+                              setStudentForm((prev) => ({ ...prev, track: student.track || prev.track, status: student.status || prev.status }));
+                            }}
+                            className={`w-full px-3 py-2.5 text-left transition-colors ${isSelected ? 'bg-[#3C83F6]/10 dark:bg-[#7fb1ff]/15' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'}`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{student.name}</p>
+                                <p className="mt-0.5 text-xs text-black/50 dark:text-white/55 truncate">{student.email}{student.rollNo ? ` · ${student.rollNo}` : ''}</p>
+                              </div>
+                              <span className="shrink-0 max-w-[40%] truncate rounded-full bg-black/[0.05] dark:bg-white/[0.08] px-2 py-0.5 text-[10px] text-black/55 dark:text-white/60">{student.batch}</span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {existingStudentQuery.trim().length >= 2 && !isSearchingExistingStudents && existingStudentSearchTotal > existingStudentResults.length && (
+                    <p className="text-xs text-black/45 dark:text-white/45">Showing the first {existingStudentResults.length} of {existingStudentSearchTotal} matching students. Refine the search to narrow it down.</p>
+                  )}
+                  <p className="text-xs text-black/45 dark:text-white/45">The student will be moved to this batch. Their existing profile and progress stay intact.</p>
                 </div>
               ) : (
                 <>

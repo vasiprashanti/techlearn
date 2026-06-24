@@ -22,6 +22,7 @@ import {
   listBatches,
   listColleges,
   listStudentsAdmin,
+  searchExistingStudentsAdmin,
   updateBatchAdmin,
   updateCollege,
   updateStudentAdmin,
@@ -103,6 +104,7 @@ router.put("/batches/:batchId/activate", activateBatchAdmin);
 
 router.get("/students", listStudentsAdmin);
 router.post("/students", createStudentAdmin);
+router.get("/students/search", searchExistingStudentsAdmin);
 router.get("/students/:studentId", getStudentDetailAdmin);
 router.put("/students/:studentId", updateStudentAdmin);
 router.delete("/students/:studentId", deleteStudentAdmin);

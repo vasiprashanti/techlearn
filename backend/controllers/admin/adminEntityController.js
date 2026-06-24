@@ -10,6 +10,7 @@ import Track from "../../models/Track.js";
 import User from "../../models/User.js";
 import StudentProject from "../../models/StudentProject.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
+import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
 
@@ -87,6 +88,55 @@ const ensureDefaultBatchTracks = async (batchId, session) => {
     await Track.create(missingTrackDocs);
   }
   return [...existingTracks, ...missingTrackDocs];
+};
+
+const getTrackTemplateForAssignment = async (templateId) => {
+  if (!templateId || !mongoose.Types.ObjectId.isValid(templateId)) return null;
+  return TrackTemplate.findOne({ _id: templateId, status: { $ne: "Archived" } }).lean();
+};
+
+const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
+  const students = await Student.find({ batchId }).select("_id").session(session).lean();
+  const studentIds = students.map((student) => student._id);
+  if (!studentIds.length) return 0;
+
+  const now = new Date();
+  if (previousTrackTemplateId && String(previousTrackTemplateId) !== String(trackTemplateId)) {
+    await StudentTrackAssignment.bulkWrite(
+      studentIds.map((studentId) => ({
+        updateOne: {
+          filter: { studentId, trackTemplateId: previousTrackTemplateId },
+          update: {
+            $set: { batchId, status: "Draft", deactivatedAt: now },
+            $setOnInsert: { assignedAt: now, activatedAt: now },
+          },
+          upsert: true,
+        },
+      })),
+      { session, ordered: true }
+    );
+  }
+
+  await StudentTrackAssignment.updateMany(
+    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $ne: trackTemplateId } },
+    { $set: { status: "Draft", deactivatedAt: now } },
+    { session }
+  );
+  await StudentTrackAssignment.bulkWrite(
+    studentIds.map((studentId) => ({
+      updateOne: {
+        filter: { studentId, trackTemplateId },
+        update: {
+          $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
+          $setOnInsert: { assignedAt: now },
+        },
+        upsert: true,
+      },
+    })),
+    { session, ordered: true }
+  );
+  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackName } }, { session });
+  return studentIds.length;
 };
 
 export const listColleges = async (req, res) => {
@@ -357,6 +407,7 @@ export const deleteCollege = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
       Batch.deleteMany({ collegeId }),
     ]);
@@ -384,6 +435,7 @@ export const listBatches = async (req, res) => {
     const batches = await Batch.find()
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
+      .populate("assignedTrackTemplate", "name category trackType status")
       .lean();
 
     const batchIds = batches.map((batch) => batch._id);
@@ -405,11 +457,15 @@ export const listBatches = async (req, res) => {
       id: batch._id,
       name: batch.name,
       college: batch.collegeId?.name || "Unknown College",
-      assignedTrack: batch.assignedTrack || "",
+      assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
+      assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+      assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
       batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
       status: batch.status,
       start: formatDateLabel(batch.startDate),
       end: formatDateLabel(batch.expiryDate),
+      startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
+      expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
       students: studentMap[String(batch._id)] || 0,
       accuracy: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
       avgScore: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
@@ -424,7 +480,7 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, batchSize } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, batchSize } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -433,6 +489,12 @@ export const createBatchAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
     }
     if (!assertObjectId(collegeId, "collegeId", res)) return;
+    const trackTemplate = assignedTrackTemplateId
+      ? await getTrackTemplateForAssignment(assignedTrackTemplateId)
+      : null;
+    if (assignedTrackTemplateId && !trackTemplate) {
+      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    }
 
     const session = await mongoose.startSession();
     let batch;
@@ -445,7 +507,8 @@ export const createBatchAdmin = async (req, res) => {
               name: name.trim(),
               startDate,
               expiryDate,
-              assignedTrack: assignedTrack?.trim() || "",
+              assignedTrack: trackTemplate?.category || assignedTrack?.trim() || "",
+              assignedTrackTemplate: trackTemplate?._id || null,
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
@@ -490,7 +553,10 @@ export const getBatchDetail = async (req, res) => {
     const { batchId } = req.params;
     if (!assertObjectId(batchId, "batchId", res)) return;
 
-    const batch = await Batch.findById(batchId).populate("collegeId", "name").lean();
+    const batch = await Batch.findById(batchId)
+      .populate("collegeId", "name")
+      .populate("assignedTrackTemplate", "name category trackType status")
+      .lean();
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
@@ -505,11 +571,13 @@ export const getBatchDetail = async (req, res) => {
           ? { $or: [{ batchId }, { studentId: { $in: studentIds } }] }
           : { batchId }
       ).lean(),
-      TrackTemplate.find(
-        batch.assignedDailyTaskTrack
-          ? { $or: [{ batchId }, { _id: batch.assignedDailyTaskTrack }] }
-          : { batchId }
-      )
+      TrackTemplate.find({
+        $or: [
+          { batchId },
+          ...(batch.assignedDailyTaskTrack ? [{ _id: batch.assignedDailyTaskTrack }] : []),
+          ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
+        ],
+      })
         .populate("dayAssignments.questionId", "title")
         .populate("dayAssignments.tasks.questionId", "title")
         .lean(),
@@ -558,7 +626,9 @@ export const getBatchDetail = async (req, res) => {
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
         college: batch.collegeId?.name || "Unknown College",
-        assignedTrack: batch.assignedTrack || "",
+        assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
+        assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+        assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
@@ -713,11 +783,44 @@ export const updateBatchAdmin = async (req, res) => {
         ? null
         : Number(req.body.batchSize);
 
+    const existingBatch = await Batch.findById(batchId).lean();
+    if (!existingBatch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    const requestedTemplateId = req.body.assignedTrackTemplateId || null;
+    const previousTrackTemplateId = existingBatch.assignedTrackTemplate || null;
+    const trackTemplateChanged = String(requestedTemplateId || "") !== String(previousTrackTemplateId || "");
+    const trackTemplate = requestedTemplateId
+      ? await getTrackTemplateForAssignment(requestedTemplateId)
+      : null;
+    if (requestedTemplateId && !trackTemplate) {
+      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    }
+
+    const existingActiveAssignments = trackTemplateChanged
+      ? await StudentTrackAssignment.countDocuments({ batchId, status: "Active" })
+      : 0;
+    const requiresConfirmation = trackTemplateChanged && (
+      Boolean(previousTrackTemplateId) ||
+      Boolean(existingBatch.assignedTrack) ||
+      existingActiveAssignments > 0
+    );
+    if (requiresConfirmation && req.body.confirmTrackReplacement !== true) {
+      return res.status(409).json({
+        success: false,
+        code: "TRACK_REPLACEMENT_CONFIRMATION_REQUIRED",
+        message: "Confirm replacing the active track for every student in this batch.",
+        data: { activeAssignments: existingActiveAssignments },
+      });
+    }
+
     const update = {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
-      assignedTrack: req.body.assignedTrack?.trim() || "",
+      assignedTrack: trackTemplate?.category || req.body.assignedTrack?.trim() || "",
+      assignedTrackTemplate: trackTemplate?._id || null,
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
@@ -728,9 +831,34 @@ export const updateBatchAdmin = async (req, res) => {
       update.collegeId = req.body.collegeId;
     }
 
-    const batch = await Batch.findByIdAndUpdate(batchId, { $set: update }, { new: true, runValidators: true });
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "Batch not found." });
+    const session = await mongoose.startSession();
+    let batch;
+    let reassignedStudents = 0;
+    try {
+      await session.withTransaction(async () => {
+        batch = await Batch.findByIdAndUpdate(
+          batchId,
+          { $set: update },
+          { new: true, runValidators: true, session }
+        );
+        if (trackTemplateChanged && trackTemplate) {
+          reassignedStudents = await applyTrackTemplateToBatchStudents({
+            batchId,
+            trackTemplateId: trackTemplate._id,
+            previousTrackTemplateId,
+            trackName: trackTemplate.name,
+            session,
+          });
+        } else if (trackTemplateChanged) {
+          await StudentTrackAssignment.updateMany(
+            { batchId, status: "Active" },
+            { $set: { status: "Draft", deactivatedAt: new Date() } },
+            { session }
+          );
+        }
+      });
+    } finally {
+      await session.endSession();
     }
 
     await ensureDefaultBatchTracks(batchId);
@@ -740,11 +868,13 @@ export const updateBatchAdmin = async (req, res) => {
       entityType: "Batch",
       entityId: batch._id,
       action: "Updated batch",
-      detail: batch.name,
+      detail: trackTemplateChanged && trackTemplate
+        ? `${batch.name} - assigned ${trackTemplate.name} to ${reassignedStudents} students`
+        : batch.name,
       actor: req.user,
     });
 
-    return res.status(200).json({ success: true, data: batch });
+    return res.status(200).json({ success: true, data: batch, reassignedStudents });
   } catch (error) {
     console.error("updateBatchAdmin error:", error);
     return res.status(500).json({
@@ -784,6 +914,7 @@ export const deleteBatchAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 
@@ -890,6 +1021,66 @@ export const listStudentsAdmin = async (req, res) => {
   } catch (error) {
     console.error("listStudentsAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch students." });
+  }
+};
+
+export const searchExistingStudentsAdmin = async (req, res) => {
+  try {
+    const search = String(req.query.q || "").trim();
+    if (search.length < 2) {
+      return res.status(200).json({ success: true, data: { items: [], page: 1, limit: 20, total: 0, hasMore: false } });
+    }
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(25, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
+    const query = {};
+    if (req.query.collegeId) {
+      if (!assertObjectId(req.query.collegeId, "collegeId", res)) return;
+      query.collegeId = req.query.collegeId;
+    }
+    if (req.query.excludeBatchId) {
+      if (!assertObjectId(req.query.excludeBatchId, "excludeBatchId", res)) return;
+      query.batchId = { $ne: new mongoose.Types.ObjectId(req.query.excludeBatchId) };
+    }
+    if (req.query.status && ["Active", "Inactive", "Suspended"].includes(req.query.status)) {
+      query.status = req.query.status;
+    }
+
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const searchPattern = new RegExp(escapedSearch, "i");
+    query.$or = [{ name: searchPattern }, { email: searchPattern }, { rollNo: searchPattern }];
+    const sort = req.query.sort === "name-desc" ? { name: -1, email: 1 } : { name: 1, email: 1 };
+
+    const [students, total] = await Promise.all([
+      Student.find(query)
+        .select("name email rollNo collegeId batchId primaryTrack programSelection status")
+        .populate("collegeId", "name")
+        .populate("batchId", "name")
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Student.countDocuments(query),
+    ]);
+
+    const items = students.map((student) => ({
+      id: student._id,
+      name: student.name,
+      email: student.email,
+      rollNo: student.rollNo || "",
+      collegeId: student.collegeId?._id || student.collegeId,
+      college: student.collegeId?.name || "Unknown College",
+      batchId: student.batchId?._id || student.batchId,
+      batch: student.batchId?.name || "Unknown Batch",
+      track: student.primaryTrack || "General Track",
+      programSelection: student.programSelection || "Placement Sprint",
+      status: student.status || "Active",
+    }));
+
+    return res.status(200).json({ success: true, data: { items, page, limit, total, hasMore: page * limit < total } });
+  } catch (error) {
+    console.error("searchExistingStudentsAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to search existing students." });
   }
 };
 
@@ -1103,6 +1294,7 @@ export const deleteStudentAdmin = async (req, res) => {
       Submission.deleteMany({ studentId }),
       studentEmail ? StudentCodingSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
       studentEmail ? StudentMcqSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+      StudentTrackAssignment.deleteMany({ studentId }),
       deleteStudentProjectProgress([studentId]),
     ]);
 
@@ -1164,6 +1356,7 @@ export const bulkDeleteBatchesAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 
