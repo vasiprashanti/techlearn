@@ -1,5 +1,8 @@
 import TrackTemplate from "../../models/TrackTemplate.js";
 import mongoose from "mongoose";
+import { calculateTaskXP, TASK_XP } from "../../services/xpService.js";
+import PracticeSubmission from "../../models/PracticeSubmission.js";
+import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Student from "../../models/Student.js";
@@ -10,6 +13,7 @@ import Track from "../../models/Track.js";
 import User from "../../models/User.js";
 import StudentProject from "../../models/StudentProject.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
+import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
 
@@ -87,6 +91,55 @@ const ensureDefaultBatchTracks = async (batchId, session) => {
     await Track.create(missingTrackDocs);
   }
   return [...existingTracks, ...missingTrackDocs];
+};
+
+const getTrackTemplateForAssignment = async (templateId) => {
+  if (!templateId || !mongoose.Types.ObjectId.isValid(templateId)) return null;
+  return TrackTemplate.findOne({ _id: templateId, status: { $ne: "Archived" } }).lean();
+};
+
+const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
+  const students = await Student.find({ batchId }).select("_id").session(session).lean();
+  const studentIds = students.map((student) => student._id);
+  if (!studentIds.length) return 0;
+
+  const now = new Date();
+  if (previousTrackTemplateId && String(previousTrackTemplateId) !== String(trackTemplateId)) {
+    await StudentTrackAssignment.bulkWrite(
+      studentIds.map((studentId) => ({
+        updateOne: {
+          filter: { studentId, trackTemplateId: previousTrackTemplateId },
+          update: {
+            $set: { batchId, status: "Draft", deactivatedAt: now },
+            $setOnInsert: { assignedAt: now, activatedAt: now },
+          },
+          upsert: true,
+        },
+      })),
+      { session, ordered: true }
+    );
+  }
+
+  await StudentTrackAssignment.updateMany(
+    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $ne: trackTemplateId } },
+    { $set: { status: "Draft", deactivatedAt: now } },
+    { session }
+  );
+  await StudentTrackAssignment.bulkWrite(
+    studentIds.map((studentId) => ({
+      updateOne: {
+        filter: { studentId, trackTemplateId },
+        update: {
+          $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
+          $setOnInsert: { assignedAt: now },
+        },
+        upsert: true,
+      },
+    })),
+    { session, ordered: true }
+  );
+  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackName } }, { session });
+  return studentIds.length;
 };
 
 export const listColleges = async (req, res) => {
@@ -357,6 +410,7 @@ export const deleteCollege = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
       Batch.deleteMany({ collegeId }),
     ]);
@@ -384,6 +438,7 @@ export const listBatches = async (req, res) => {
     const batches = await Batch.find()
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
+      .populate("assignedTrackTemplate", "name category trackType status")
       .lean();
 
     const batchIds = batches.map((batch) => batch._id);
@@ -405,11 +460,15 @@ export const listBatches = async (req, res) => {
       id: batch._id,
       name: batch.name,
       college: batch.collegeId?.name || "Unknown College",
-      assignedTrack: batch.assignedTrack || "",
+      assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
+      assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+      assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
       batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
       status: batch.status,
       start: formatDateLabel(batch.startDate),
       end: formatDateLabel(batch.expiryDate),
+      startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
+      expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
       students: studentMap[String(batch._id)] || 0,
       accuracy: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
       avgScore: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
@@ -424,7 +483,7 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, batchSize } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, batchSize } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -433,6 +492,12 @@ export const createBatchAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
     }
     if (!assertObjectId(collegeId, "collegeId", res)) return;
+    const trackTemplate = assignedTrackTemplateId
+      ? await getTrackTemplateForAssignment(assignedTrackTemplateId)
+      : null;
+    if (assignedTrackTemplateId && !trackTemplate) {
+      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    }
 
     const session = await mongoose.startSession();
     let batch;
@@ -445,7 +510,8 @@ export const createBatchAdmin = async (req, res) => {
               name: name.trim(),
               startDate,
               expiryDate,
-              assignedTrack: assignedTrack?.trim() || "",
+              assignedTrack: trackTemplate?.category || assignedTrack?.trim() || "",
+              assignedTrackTemplate: trackTemplate?._id || null,
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
@@ -490,7 +556,10 @@ export const getBatchDetail = async (req, res) => {
     const { batchId } = req.params;
     if (!assertObjectId(batchId, "batchId", res)) return;
 
-    const batch = await Batch.findById(batchId).populate("collegeId", "name").lean();
+    const batch = await Batch.findById(batchId)
+      .populate("collegeId", "name")
+      .populate("assignedTrackTemplate", "name category trackType status")
+      .lean();
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
@@ -498,26 +567,47 @@ export const getBatchDetail = async (req, res) => {
     const students = await Student.find({ batchId }).lean();
     const studentIds = students.map((s) => s._id);
 
-    const [tracks, submissions, trackTemplates] = await Promise.all([
+    const studentEmails = students
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    const users = studentEmails.length
+      ? await User.find({ email: { $in: studentEmails } }).select("_id email").lean()
+      : [];
+
+    const userEmailToIdMap = new Map();
+    const userIds = [];
+    users.forEach(u => {
+      const email = String(u.email || "").trim().toLowerCase();
+      userEmailToIdMap.set(email, u._id);
+      userIds.push(u._id);
+    });
+
+    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
         studentIds.length
           ? { $or: [{ batchId }, { studentId: { $in: studentIds } }] }
           : { batchId }
       ).lean(),
-      TrackTemplate.find(
-        batch.assignedDailyTaskTrack
-          ? { $or: [{ batchId }, { _id: batch.assignedDailyTaskTrack }] }
-          : { batchId }
-      )
+      TrackTemplate.find({
+        $or: [
+          { batchId },
+          ...(batch.assignedDailyTaskTrack ? [{ _id: batch.assignedDailyTaskTrack }] : []),
+          ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
+        ],
+      })
         .populate("dayAssignments.questionId", "title")
         .populate("dayAssignments.tasks.questionId", "title")
         .lean(),
+      userIds.length
+        ? PracticeSubmission.find({ userId: { $in: userIds } }).lean()
+        : Promise.resolve([]),
+      userIds.length
+        ? DailyTaskAttempt.find({ userId: { $in: userIds }, batchId }).lean()
+        : Promise.resolve([]),
     ]);
 
-    const studentEmails = students
-      .map((student) => String(student.email || "").trim().toLowerCase())
-      .filter(Boolean);
     const mcqSubmissions = studentEmails.length
       ? await StudentMcqSubmission.find({ studentEmail: { $in: studentEmails } })
           .populate("collegeMcqId", "questions")
@@ -536,20 +626,407 @@ export const getBatchDetail = async (req, res) => {
       }
     });
 
-    const avgScore =
-      submissions.length > 0
-        ? Number(
-            (
-              submissions.reduce((sum, submission) => sum + (submission.totalScore || 0), 0) /
-              submissions.length
-            ).toFixed(0)
-          )
-        : 0;
+    const localCombineDateAndTime = (date, timeString = "00:00") => {
+      if (!date) return new Date();
+      const d = new Date(date);
+      const [hours, minutes] = String(timeString || "00:00").split(":");
+      d.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
+      return d;
+    };
 
-    const avgStreak =
-      students.length > 0
-        ? Number((students.reduce((sum, student) => sum + (student.streak || 0), 0) / students.length).toFixed(0))
-        : 0;
+    const now = new Date();
+    const utcOffset = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istTime = utcOffset + (3600000 * 5.5);
+    const istDate = new Date(istTime);
+    const year = istDate.getUTCFullYear();
+    const month = istDate.getUTCMonth();
+    const day = istDate.getUTCDate();
+
+    const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - 5.5 * 60 * 60 * 1000);
+    const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - 5.5 * 60 * 60 * 1000);
+
+    const activeTrackTemplate = trackTemplates.find(t => String(t._id) === String(batch.assignedDailyTaskTrack));
+    let totalMCQsInTemplateToday = 0;
+    let totalSQLInTemplateToday = 0;
+    let totalCodingInTemplateToday = 0;
+    const allottedTypesToday = [];
+    let dayNumber = 0;
+    if (activeTrackTemplate) {
+      const releaseStart = localCombineDateAndTime(activeTrackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+      dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      const dayAssignment = activeTrackTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+      if (dayAssignment) {
+        (dayAssignment.tasks || []).forEach((t) => {
+          const type = t.taskType;
+          if (type && !allottedTypesToday.includes(type)) {
+            allottedTypesToday.push(type);
+          }
+        });
+        if (dayAssignment.questionId && !allottedTypesToday.includes("Coding")) {
+          allottedTypesToday.push("Coding");
+        }
+        totalMCQsInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS").length;
+        totalSQLInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "SQL").length;
+        totalCodingInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "Coding" || t.taskType === "Debugging").length;
+        if (dayAssignment.questionId) {
+          totalCodingInTemplateToday += 1;
+        }
+      }
+    }
+
+    const batchQuestionIds = new Set();
+    (trackTemplates || []).forEach((template) => {
+      (template.dayAssignments || []).forEach((day) => {
+        if (day.questionId) {
+          batchQuestionIds.add(String(day.questionId._id || day.questionId));
+        }
+        (day.tasks || []).forEach((task) => {
+          if (task.questionId) {
+            batchQuestionIds.add(String(task.questionId._id || task.questionId));
+          }
+        });
+      });
+    });
+    (tracks || []).forEach((track) => {
+      (track.orderedQuestionIds || []).forEach((q) => {
+        const qId = q._id || q;
+        if (qId) {
+          batchQuestionIds.add(String(qId));
+        }
+      });
+    });
+
+    const computedStudentsTable = students.map((student) => {
+      const studentEmail = String(student.email || "").trim().toLowerCase();
+      const studentUserId = student.userId || userEmailToIdMap.get(studentEmail);
+
+      const studentSubsAllTime = submissions.filter((submission) => {
+        const matchesStudent = String(submission.studentId) === String(student._id);
+        const matchesBatchDirectly = submission.batchId && String(submission.batchId) === String(batch._id);
+        const matchesBatchQuestion = submission.questionId && batchQuestionIds.has(String(submission.questionId._id || submission.questionId));
+        return matchesStudent && (matchesBatchDirectly || matchesBatchQuestion);
+      });
+      const studentMcqSubsAllTime = mcqSubmissions.filter(
+        (sub) => String(sub.studentEmail || "").trim().toLowerCase() === studentEmail
+      );
+      const studentPracticeSubsAllTime = practiceSubmissions.filter((sub) => {
+        const matchesStudent = studentUserId && String(sub.userId) === String(studentUserId);
+        const matchesBatchQuestion = sub.questionBankId && batchQuestionIds.has(String(sub.questionBankId));
+        return matchesStudent && matchesBatchQuestion;
+      });
+
+      const allCombinedSubs = [
+        ...studentSubsAllTime.map(s => ({ ...s, type: "Submission", date: new Date(s.submittedAt || s.createdAt) })),
+        ...studentMcqSubsAllTime.map(s => ({ ...s, type: "StudentMcqSubmission", date: new Date(s.submittedAt) })),
+        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt) }))
+      ].sort((a, b) => b.date - a.date);
+
+      const latestAttempt = allCombinedSubs[0];
+      const lastAttemptAt = latestAttempt ? latestAttempt.date.toISOString() : null;
+
+      const todayCombinedSubs = allCombinedSubs.filter(sub => sub.date >= todayStart && sub.date <= todayEnd);
+
+      let todayScore = "—";
+      let todayXp = 0;
+      let status = "Not Started";
+      let todayScoresDetail = { mcq: "—", coding: "—", sql: "—" };
+
+      const isBatchClosed = batch.status === "Expired" || batch.status === "Archived" || (batch.expiryDate && new Date(batch.expiryDate) < now);
+
+      const todayAttempt = dailyTaskAttempts.find(
+        (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === dayNumber
+      );
+
+      const hasRealAttemptToday = (todayAttempt && todayAttempt.tasksProgress.some(t => t.status !== "Not Started")) ||
+                                 (todayCombinedSubs.length > 0);
+
+      if (hasRealAttemptToday) {
+        status = (todayAttempt && todayAttempt.isFullyCompleted) ? "Completed" : "In Progress";
+
+        if (todayAttempt) {
+          const mcqTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
+          const correctMcq = mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const totalMcq = Math.max(mcqTasks.length, totalMCQsInTemplateToday || 0);
+          if (totalMcq > 0) {
+            const attemptedAnyMcq = mcqTasks.some(t => t.status === "Completed");
+            todayScoresDetail.mcq = attemptedAnyMcq ? `${correctMcq}/${totalMcq}` : `—/${totalMcq}`;
+          }
+
+          const sqlTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "SQL");
+          const correctSql = sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const totalSql = Math.max(sqlTasks.length, totalSQLInTemplateToday || 0);
+          if (totalSql > 0) {
+            const attemptedAnySql = sqlTasks.some(t => t.status === "Completed");
+            todayScoresDetail.sql = attemptedAnySql ? `${correctSql}/${totalSql}` : `—/${totalSql}`;
+          }
+
+          const codingTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "Coding" || t.taskType === "Debugging");
+          const completedCoding = codingTasks.filter(t => t.status === "Completed");
+          const totalCoding = Math.max(codingTasks.length, totalCodingInTemplateToday || 0);
+          if (totalCoding > 0) {
+            if (completedCoding.length > 0) {
+              const totalAccuracy = completedCoding.reduce((sum, t) => sum + (t.accuracy ?? (t.isCorrect ? 100 : 0)), 0);
+              const avgAccuracy = Math.round(totalAccuracy / completedCoding.length);
+              todayScoresDetail.coding = `${avgAccuracy}/100`;
+            } else {
+              todayScoresDetail.coding = `—/100`;
+            }
+          }
+
+          let xpFromAttempt = 0;
+          let completedCount = 0;
+          todayAttempt.tasksProgress.forEach(t => {
+            if (t.status === "Completed") {
+              completedCount++;
+              
+              const isMcqLike = t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS";
+              if (isMcqLike && t.isCorrect !== true) {
+                return;
+              }
+
+              const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed || 0 });
+              if (t.taskType === "Coding" || t.taskType === "SQL") {
+                const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+                const fraction = Math.max(0, Math.min(100, acc)) / 100;
+                xpFromAttempt += Math.round(baseXp * fraction);
+              } else {
+                xpFromAttempt += baseXp;
+              }
+            }
+          });
+          if (completedCount > 0 && completedCount === todayAttempt.tasksProgress.length) {
+            xpFromAttempt += (TASK_XP.ALL_COMPLETED_BONUS || 25);
+            xpFromAttempt += (TASK_XP.NO_SKIP_BONUS || 10);
+          }
+          todayXp = xpFromAttempt;
+        } else {
+          const todayMcqSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && s.categoryType === "MCQ") ||
+            (s.type === "PracticeSubmission" && (s.categoryType === "MCQ" || s.track === "Core CS" || s.track === "Aptitude"))
+          );
+          const correctMcqCount = todayMcqSubs.filter(s => s.status === "Passed" || s.isCorrect === true).length;
+          const totalMcqCount = Math.max(todayMcqSubs.length, totalMCQsInTemplateToday || 0);
+          if (totalMcqCount > 0) {
+            todayScoresDetail.mcq = `${correctMcqCount}/${totalMcqCount}`;
+          } else {
+            const todayCollegeMcqSubs = todayCombinedSubs.filter(s => s.type === "StudentMcqSubmission");
+            if (todayCollegeMcqSubs.length > 0) {
+              const latestCollege = todayCollegeMcqSubs[0];
+              const total = latestCollege.answers?.length || latestCollege.collegeMcqId?.questions?.length || 0;
+              const correct = latestCollege.answers?.filter(a => a.isCorrect).length ?? latestCollege.score ?? 0;
+              todayScoresDetail.mcq = total > 0 ? `${correct}/${total}` : "—";
+            }
+          }
+
+          const todaySqlSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && (s.track === "SQL" || s.questionId?.trackType === "SQL" || s.questionId?.categorySlug === "sql")) ||
+            (s.type === "PracticeSubmission" && s.track === "SQL")
+          );
+          if (todaySqlSubs.length > 0) {
+            const latestSql = todaySqlSubs[0];
+            if (latestSql.type === "PracticeSubmission") {
+              todayScoresDetail.sql = latestSql.isCorrect ? "1/1" : "0/1";
+            } else {
+              const passed = latestSql.finalSubmissionResults?.passedTestCases ?? (latestSql.status === "Passed" ? 1 : 0);
+              const total = latestSql.finalSubmissionResults?.totalTestCases ?? 1;
+              todayScoresDetail.sql = `${passed}/${total}`;
+            }
+          }
+
+          const todayCodingSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && (s.categoryType === "Coding" || s.questionId?.categoryType === "Coding" || s.track === "DSA" || s.questionId?.trackType === "DSA") && !(s.track === "SQL" || s.questionId?.trackType === "SQL" || s.questionId?.categorySlug === "sql")) ||
+            (s.type === "PracticeSubmission" && s.track === "DSA")
+          );
+          if (todayCodingSubs.length > 0) {
+            const latestCoding = todayCodingSubs[0];
+            if (latestCoding.type === "PracticeSubmission") {
+              todayScoresDetail.coding = `${latestCoding.accuracy ?? (latestCoding.isCorrect ? 100 : 0)}/100`;
+            } else {
+              todayScoresDetail.coding = `${latestCoding.accuracyScore ?? latestCoding.totalScore ?? 0}/100`;
+            }
+          }
+
+          todayXp = todayCombinedSubs
+            .filter(s => s.type === "Submission")
+            .reduce((sum, s) => sum + (s.xpEarned || 0), 0);
+        }
+
+        const activeTypes = allottedTypesToday.length > 0 ? allottedTypesToday : ["MCQ", "Coding", "SQL"];
+        if (activeTypes.length === 1) {
+          const singleType = String(activeTypes[0]).toLowerCase();
+          if (singleType === "mcq" || singleType === "aptitude" || singleType === "core cs") {
+            todayScore = todayScoresDetail.mcq;
+          } else if (singleType === "sql") {
+            todayScore = todayScoresDetail.sql;
+          } else {
+            todayScore = todayScoresDetail.coding;
+          }
+        } else {
+          todayScore = "View Scores";
+        }
+      } else {
+        status = isBatchClosed ? "Not Attempted" : "Not Started";
+      }
+
+      return {
+        id: student._id,
+        name: student.name,
+        email: student.email,
+        todayScore,
+        todayScoresDetail,
+        todayXp,
+        lastAttemptAt,
+        status,
+      };
+    });
+
+    const activeCount = computedStudentsTable.filter(s => s.status === "Completed" || s.status === "In Progress").length;
+    const inactiveCount = students.length - activeCount;
+
+    const resolvedTracks = (() => {
+      const templateTracks = (trackTemplates || []).map((template) => {
+        let days = [];
+        let questionsAssigned = 0;
+        const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
+        
+        sortedDays.forEach((day) => {
+          const mcq = [];
+          const coding = [];
+          const sql = [];
+
+          if (template.trackType === "Daily Task") {
+            (day.tasks || []).forEach((t) => {
+              const title = t.questionId?.title;
+              if (!title) return;
+              questionsAssigned += 1;
+              
+              const type = String(t.taskType).toLowerCase();
+              if (type === "mcq" || type === "aptitude") {
+                mcq.push(title);
+              } else if (type === "sql") {
+                sql.push(title);
+              } else {
+                coding.push(title);
+              }
+            });
+          } else {
+            const title = day.questionId?.title;
+            if (title) {
+              questionsAssigned += 1;
+              const type = String(template.trackType).toLowerCase();
+              if (type === "sql") {
+                sql.push(title);
+              } else if (type === "mcq") {
+                mcq.push(title);
+              } else {
+                coding.push(title);
+              }
+            }
+          }
+
+          if (mcq.length > 0 || coding.length > 0 || sql.length > 0) {
+            days.push({
+              dayNumber: day.dayNumber,
+              mcq,
+              coding,
+              sql
+            });
+          }
+        });
+
+        return {
+          id: template._id,
+          name: template.name || `${template.trackType} Track`,
+          questionsAssigned,
+          days,
+        };
+      }).filter((t) => t.questionsAssigned > 0);
+
+      const merged = [...templateTracks];
+      const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
+      
+      if (tracks && tracks.length > 0) {
+        tracks.forEach((track) => {
+          if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
+            const mcq = [];
+            const coding = [];
+            const sql = [];
+
+            track.orderedQuestionIds.forEach((q) => {
+              const title = q.title;
+              if (!title) return;
+              const type = String(track.trackType).toLowerCase();
+              if (type === "sql" || String(q.trackType).toLowerCase() === "sql") {
+                sql.push(title);
+              } else if (type === "mcq" || String(q.categoryType).toLowerCase() === "mcq") {
+                mcq.push(title);
+              } else {
+                coding.push(title);
+              }
+            });
+
+            const days = [];
+            if (mcq.length > 0 || coding.length > 0 || sql.length > 0) {
+              days.push({
+                dayNumber: 1,
+                mcq,
+                coding,
+                sql
+              });
+            }
+
+            merged.push({
+              id: track._id,
+              name: `${track.trackType} Track`,
+              questionsAssigned: track.orderedQuestionIds.length,
+              days,
+            });
+          }
+        });
+      }
+
+      if (merged.length > 0) return merged;
+
+      if (batch.assignedTrack) {
+        return [
+          {
+            id: `assigned-${batch._id}`,
+            name: String(batch.assignedTrack).trim(),
+            questionsAssigned: 0,
+            days: [],
+          },
+        ];
+      }
+      return [];
+    })();
+
+    const activeTrackTemplatesToday = (trackTemplates || []).filter((template) => {
+      const releaseStart = localCombineDateAndTime(template.startDate || batch.startDate, batch.releaseTime || "00:00");
+      if (now < releaseStart || (batch.expiryDate && now > new Date(batch.expiryDate))) {
+        return false;
+      }
+      const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+      if (!dayAssignment) return false;
+      const hasTasks = dayAssignment.tasks && dayAssignment.tasks.length > 0;
+      const hasDirectQuestion = !!dayAssignment.questionId;
+      return hasTasks || hasDirectQuestion;
+    });
+
+    let currentActiveTrack = "None";
+    if (activeTrackTemplatesToday.length === 1) {
+      currentActiveTrack = activeTrackTemplatesToday[0].name || `${activeTrackTemplatesToday[0].trackType} Track`;
+    } else if (activeTrackTemplatesToday.length > 1) {
+      currentActiveTrack = "Multiple Tracks";
+    } else {
+      if (activeTrackTemplate) {
+        currentActiveTrack = activeTrackTemplate.name || "None";
+      } else if (batch.assignedTrack) {
+        currentActiveTrack = batch.assignedTrack;
+      } else if (resolvedTracks.length > 0) {
+        currentActiveTrack = resolvedTracks[0].name || "None";
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -558,143 +1035,21 @@ export const getBatchDetail = async (req, res) => {
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
         college: batch.collegeId?.name || "Unknown College",
-        assignedTrack: batch.assignedTrack || "",
+        assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
+        assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+        assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
         expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
         students: students.length,
-        accuracy: avgScore,
-        avgScore,
-        avgStreakDays: avgStreak,
-        tracks: (() => {
-          const templateTracks = (trackTemplates || []).map((template) => {
-            let days = [];
-            let questionsAssigned = 0;
-            const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
-            if (template.trackType === "Daily Task") {
-              sortedDays.forEach((day) => {
-                const titles = (day.tasks || []).map((t) => t.questionId?.title).filter(Boolean);
-                if (titles.length > 0) {
-                  days.push(titles.join(", "));
-                  questionsAssigned += titles.length;
-                }
-              });
-            } else {
-              sortedDays.forEach((day) => {
-                if (day.questionId?.title) {
-                  days.push(day.questionId.title);
-                  questionsAssigned += 1;
-                }
-              });
-            }
-            return {
-              id: template._id,
-              name: template.name || `${template.trackType} Track`,
-              questionsAssigned,
-              days,
-            };
-          }).filter((t) => t.questionsAssigned > 0);
-
-          const merged = [...templateTracks];
-          const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
-          
-          if (tracks && tracks.length > 0) {
-            tracks.forEach((track) => {
-              if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
-                merged.push({
-                  id: track._id,
-                  name: `${track.trackType} Track`,
-                  questionsAssigned: track.orderedQuestionIds.length,
-                  days: (track.orderedQuestionIds || []).map((q) => q.title || "Untitled Question"),
-                });
-              }
-            });
-          }
-
-          if (merged.length > 0) return merged;
-
-          if (batch.assignedTrack) {
-            return [
-              {
-                id: `assigned-${batch._id}`,
-                name: String(batch.assignedTrack).trim(),
-                questionsAssigned: 0,
-                days: [],
-              },
-            ];
-          }
-          return [];
-        })(),
-        studentsTable: students.map((student) => {
-          const studentEmail = String(student.email || "").trim().toLowerCase();
-          const latestMcqSubmission = latestMcqSubmissionByEmail.get(studentEmail);
-          const studentSubs = submissions.filter(
-            (submission) => String(submission.studentId) === String(student._id)
-          );
-          const mcqStreak = calculateCurrentStreak([
-            ...(mcqSubmissionsByEmail.get(studentEmail) || []),
-            ...studentSubs,
-          ]);
-          const score =
-            studentSubs.length > 0
-              ? Number(
-                  (
-                    studentSubs.reduce((sum, submission) => sum + (submission.totalScore || 0), 0) /
-                    studentSubs.length
-                  ).toFixed(0)
-                )
-              : 0;
-          const trackMcqSubmissions = studentSubs.filter(s => s.categoryType === "MCQ");
-          const correctTrackMcqAnswers = trackMcqSubmissions.filter(sub => sub.status === "Passed").length;
-          
-          // Get the active track template assigned to this batch
-          const activeTrackTemplate = trackTemplates.find(t => String(t._id) === String(batch.assignedDailyTaskTrack));
-          const trackMcqQuestionIds = new Set();
-          if (activeTrackTemplate) {
-            (activeTrackTemplate.dayAssignments || []).forEach((day) => {
-              (day.tasks || []).forEach((task) => {
-                if (task.taskType === "MCQ" && task.questionId) {
-                  const qIdStr = task.questionId._id ? String(task.questionId._id) : String(task.questionId);
-                  trackMcqQuestionIds.add(qIdStr);
-                }
-              });
-            });
-          }
-          const totalTrackMcqQuestions = trackMcqQuestionIds.size || trackMcqSubmissions.length;
-          const trackMcqScorePercent = totalTrackMcqQuestions > 0
-            ? Math.round((correctTrackMcqAnswers / totalTrackMcqQuestions) * 100)
-            : score;
-
-          const totalMcqQuestions = latestMcqSubmission?.collegeMcqId?.questions?.length || latestMcqSubmission?.answers?.length || 0;
-          const correctMcqAnswers = latestMcqSubmission?.answers?.filter((answer) => answer.isCorrect).length ?? latestMcqSubmission?.score ?? 0;
-          const mcqScorePercent = totalMcqQuestions > 0
-            ? Math.round((correctMcqAnswers / totalMcqQuestions) * 100)
-            : score;
-
-          const hasTrackMcq = trackMcqSubmissions.length > 0;
-          const hasCollegeMcq = !!latestMcqSubmission;
-          const showMcqFormat = hasCollegeMcq || hasTrackMcq || (trackMcqQuestionIds.size > 0 && studentSubs.length === 0);
-
-          const finalAccuracy = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
-          const finalScore = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
-          const scoreDisplay = hasCollegeMcq 
-            ? `${correctMcqAnswers}/${totalMcqQuestions}` 
-            : (showMcqFormat ? `${correctTrackMcqAnswers}/${totalTrackMcqQuestions}` : `${score}%`);
-          const scoreType = showMcqFormat ? "mcq" : "percentage";
-
-          return {
-            id: student._id,
-            name: student.name,
-            email: student.email,
-            accuracy: finalAccuracy,
-            score: finalScore,
-            scoreDisplay,
-            scoreType,
-            streak: `${mcqStreak || student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
-          };
-        }),
+        totalStudents: students.length,
+        activeStudentsToday: activeCount,
+        inactiveStudentsToday: inactiveCount,
+        currentActiveTrack,
+        tracks: resolvedTracks,
+        studentsTable: computedStudentsTable,
       },
     });
   } catch (error) {
@@ -713,11 +1068,44 @@ export const updateBatchAdmin = async (req, res) => {
         ? null
         : Number(req.body.batchSize);
 
+    const existingBatch = await Batch.findById(batchId).lean();
+    if (!existingBatch) {
+      return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    const requestedTemplateId = req.body.assignedTrackTemplateId || null;
+    const previousTrackTemplateId = existingBatch.assignedTrackTemplate || null;
+    const trackTemplateChanged = String(requestedTemplateId || "") !== String(previousTrackTemplateId || "");
+    const trackTemplate = requestedTemplateId
+      ? await getTrackTemplateForAssignment(requestedTemplateId)
+      : null;
+    if (requestedTemplateId && !trackTemplate) {
+      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    }
+
+    const existingActiveAssignments = trackTemplateChanged
+      ? await StudentTrackAssignment.countDocuments({ batchId, status: "Active" })
+      : 0;
+    const requiresConfirmation = trackTemplateChanged && (
+      Boolean(previousTrackTemplateId) ||
+      Boolean(existingBatch.assignedTrack) ||
+      existingActiveAssignments > 0
+    );
+    if (requiresConfirmation && req.body.confirmTrackReplacement !== true) {
+      return res.status(409).json({
+        success: false,
+        code: "TRACK_REPLACEMENT_CONFIRMATION_REQUIRED",
+        message: "Confirm replacing the active track for every student in this batch.",
+        data: { activeAssignments: existingActiveAssignments },
+      });
+    }
+
     const update = {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
-      assignedTrack: req.body.assignedTrack?.trim() || "",
+      assignedTrack: trackTemplate?.category || req.body.assignedTrack?.trim() || "",
+      assignedTrackTemplate: trackTemplate?._id || null,
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
@@ -728,9 +1116,34 @@ export const updateBatchAdmin = async (req, res) => {
       update.collegeId = req.body.collegeId;
     }
 
-    const batch = await Batch.findByIdAndUpdate(batchId, { $set: update }, { new: true, runValidators: true });
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "Batch not found." });
+    const session = await mongoose.startSession();
+    let batch;
+    let reassignedStudents = 0;
+    try {
+      await session.withTransaction(async () => {
+        batch = await Batch.findByIdAndUpdate(
+          batchId,
+          { $set: update },
+          { new: true, runValidators: true, session }
+        );
+        if (trackTemplateChanged && trackTemplate) {
+          reassignedStudents = await applyTrackTemplateToBatchStudents({
+            batchId,
+            trackTemplateId: trackTemplate._id,
+            previousTrackTemplateId,
+            trackName: trackTemplate.name,
+            session,
+          });
+        } else if (trackTemplateChanged) {
+          await StudentTrackAssignment.updateMany(
+            { batchId, status: "Active" },
+            { $set: { status: "Draft", deactivatedAt: new Date() } },
+            { session }
+          );
+        }
+      });
+    } finally {
+      await session.endSession();
     }
 
     await ensureDefaultBatchTracks(batchId);
@@ -740,11 +1153,13 @@ export const updateBatchAdmin = async (req, res) => {
       entityType: "Batch",
       entityId: batch._id,
       action: "Updated batch",
-      detail: batch.name,
+      detail: trackTemplateChanged && trackTemplate
+        ? `${batch.name} - assigned ${trackTemplate.name} to ${reassignedStudents} students`
+        : batch.name,
       actor: req.user,
     });
 
-    return res.status(200).json({ success: true, data: batch });
+    return res.status(200).json({ success: true, data: batch, reassignedStudents });
   } catch (error) {
     console.error("updateBatchAdmin error:", error);
     return res.status(500).json({
@@ -784,6 +1199,7 @@ export const deleteBatchAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 
@@ -890,6 +1306,66 @@ export const listStudentsAdmin = async (req, res) => {
   } catch (error) {
     console.error("listStudentsAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch students." });
+  }
+};
+
+export const searchExistingStudentsAdmin = async (req, res) => {
+  try {
+    const search = String(req.query.q || "").trim();
+    if (search.length < 2) {
+      return res.status(200).json({ success: true, data: { items: [], page: 1, limit: 20, total: 0, hasMore: false } });
+    }
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(25, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
+    const query = {};
+    if (req.query.collegeId) {
+      if (!assertObjectId(req.query.collegeId, "collegeId", res)) return;
+      query.collegeId = req.query.collegeId;
+    }
+    if (req.query.excludeBatchId) {
+      if (!assertObjectId(req.query.excludeBatchId, "excludeBatchId", res)) return;
+      query.batchId = { $ne: new mongoose.Types.ObjectId(req.query.excludeBatchId) };
+    }
+    if (req.query.status && ["Active", "Inactive", "Suspended"].includes(req.query.status)) {
+      query.status = req.query.status;
+    }
+
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const searchPattern = new RegExp(escapedSearch, "i");
+    query.$or = [{ name: searchPattern }, { email: searchPattern }, { rollNo: searchPattern }];
+    const sort = req.query.sort === "name-desc" ? { name: -1, email: 1 } : { name: 1, email: 1 };
+
+    const [students, total] = await Promise.all([
+      Student.find(query)
+        .select("name email rollNo collegeId batchId primaryTrack programSelection status")
+        .populate("collegeId", "name")
+        .populate("batchId", "name")
+        .sort(sort)
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Student.countDocuments(query),
+    ]);
+
+    const items = students.map((student) => ({
+      id: student._id,
+      name: student.name,
+      email: student.email,
+      rollNo: student.rollNo || "",
+      collegeId: student.collegeId?._id || student.collegeId,
+      college: student.collegeId?.name || "Unknown College",
+      batchId: student.batchId?._id || student.batchId,
+      batch: student.batchId?.name || "Unknown Batch",
+      track: student.primaryTrack || "General Track",
+      programSelection: student.programSelection || "Placement Sprint",
+      status: student.status || "Active",
+    }));
+
+    return res.status(200).json({ success: true, data: { items, page, limit, total, hasMore: page * limit < total } });
+  } catch (error) {
+    console.error("searchExistingStudentsAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to search existing students." });
   }
 };
 
@@ -1103,6 +1579,7 @@ export const deleteStudentAdmin = async (req, res) => {
       Submission.deleteMany({ studentId }),
       studentEmail ? StudentCodingSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
       studentEmail ? StudentMcqSubmission.deleteMany({ studentEmail }) : Promise.resolve(),
+      StudentTrackAssignment.deleteMany({ studentId }),
       deleteStudentProjectProgress([studentId]),
     ]);
 
@@ -1164,6 +1641,7 @@ export const bulkDeleteBatchesAdmin = async (req, res) => {
         ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
         : Promise.resolve(),
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
     ]);
 

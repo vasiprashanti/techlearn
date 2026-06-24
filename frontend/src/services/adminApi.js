@@ -292,6 +292,10 @@ export const adminAPI = {
   bulkDeleteBatches: (batchIds) => request('/admin/batches/bulk-delete', { method: 'POST', body: JSON.stringify({ batchIds }) }),
 
   getStudents: () => request('/admin/students'),
+  searchExistingStudents: (params = {}) => {
+    const query = new URLSearchParams(params);
+    return request(`/admin/students/search?${query.toString()}`);
+  },
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),

@@ -33,6 +33,11 @@ const batchSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    assignedTrackTemplate: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TrackTemplate",
+      default: null,
+    },
     assignedDailyChallengeTrack: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TrackTemplate",

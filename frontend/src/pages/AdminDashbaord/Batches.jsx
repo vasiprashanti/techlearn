@@ -9,12 +9,6 @@ import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCac
 import { emptyBatches } from '../../data/adminEmptyStates';
 import { FiSearch, FiPlus, FiEdit2, FiTrash2, FiChevronDown, FiHome, FiBookOpen, FiMoreHorizontal } from 'react-icons/fi';
 
-const DEFAULT_TRACK_OPTIONS = [
-  { value: 'DSA', label: 'DSA' },
-  { value: 'Core', label: 'Core CS' },
-  { value: 'SQL', label: 'SQL' },
-];
-
 const getTodayIsoDate = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -53,6 +47,9 @@ const normalizeBatch = (batch) => ({
   name: batch.name || batch.id || 'Untitled Batch',
   college: batch.college || '',
   assignedTrack: batch.assignedTrack || '',
+  assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
+  startDateValue: batch.startDateValue || '',
+  expiryDateValue: batch.expiryDateValue || '',
   batchSize: typeof batch.batchSize === 'number' ? batch.batchSize : null,
   track: batch.track || batch.assignedTrack || '',
   status: batch.status || 'Draft',
@@ -253,6 +250,7 @@ const Batches = () => {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [batches, setBatches] = useState(() => readAdminSessionCache('batches', emptyBatches));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('batches-colleges', []));
+  const [trackTemplates, setTrackTemplates] = useState(() => readAdminSessionCache('batches-track-templates', []));
   const [isLoadingBatches, setIsLoadingBatches] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('batches', emptyBatches)));
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -278,6 +276,8 @@ const Batches = () => {
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [editingTrackTemplateId, setEditingTrackTemplateId] = useState(null);
+  const [pendingTrackReplacement, setPendingTrackReplacement] = useState(null);
   const searchInputRef = useRef(null);
 
   const handleSelectToggle = (id) => {
@@ -310,9 +310,10 @@ const Batches = () => {
   const batchFormInputClass = 'mt-1 w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges] = await Promise.all([
+    const [remoteBatches, remoteColleges, remoteTrackTemplates] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
+      adminAPI.getTrackTemplates().catch(() => []),
     ]);
 
     const normalizedBatches = preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch);
@@ -323,8 +324,17 @@ const Batches = () => {
 
     setBatches(normalizedBatches);
     setColleges(normalizedColleges);
+    const assignableTemplates = preferRemoteData(remoteTrackTemplates, [])
+      .filter((template) => template.status !== 'Archived')
+      .map((template) => ({
+        id: template.id || template._id,
+        name: template.name || 'Untitled template',
+        trackType: template.trackType || 'Track',
+      }));
+    setTrackTemplates(assignableTemplates);
     writeAdminSessionCache('batches', normalizedBatches);
     writeAdminSessionCache('batches-colleges', normalizedColleges);
+    writeAdminSessionCache('batches-track-templates', assignableTemplates);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -392,12 +402,14 @@ const Batches = () => {
 
   const openCreateBatch = () => {
     setEditingBatchId(null);
+    setEditingTrackTemplateId(null);
     setCreateError('');
     setCreateBatchForm({
       batchName: '',
       college: '',
       startDate: '',
       assignedTrack: '',
+      assignedTrackTemplateId: '',
       endDate: '',
       batchSize: '',
       status: 'Draft',
@@ -407,20 +419,22 @@ const Batches = () => {
 
   const openEditBatch = (batch) => {
     setEditingBatchId(batch.id);
+    setEditingTrackTemplateId(batch.assignedTrackTemplateId || null);
     setCreateError('');
     setCreateBatchForm({
       batchName: batch.name || '',
       college: batch.college || '',
-      startDate: '',
+      startDate: batch.startDateValue || '',
       assignedTrack: batch.assignedTrack || '',
-      endDate: '',
+      assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
+      endDate: batch.expiryDateValue || '',
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
     });
     setIsCreateFormOpen(true);
   };
 
-  const createBatch = async () => {
+  const createBatch = async (confirmTrackReplacement = false) => {
     if (!createBatchForm.batchName.trim()) {
       setCreateError('Batch name is required');
       return;
@@ -431,10 +445,6 @@ const Batches = () => {
     }
     if (!createBatchForm.startDate || !createBatchForm.endDate) {
       setCreateError('Start date and end date are required');
-      return;
-    }
-    if (createBatchForm.startDate < todayIsoDate) {
-      setCreateError('Start date must be today or a future date');
       return;
     }
     if (createBatchForm.startDate > createBatchForm.endDate) {
@@ -452,6 +462,16 @@ const Batches = () => {
       return;
     }
 
+    const selectedTemplateId = createBatchForm.assignedTrackTemplateId || null;
+    const isTrackReplacement = editingBatchId && selectedTemplateId !== editingTrackTemplateId;
+    if (isTrackReplacement && !confirmTrackReplacement) {
+      setPendingTrackReplacement({
+        batchName: createBatchForm.batchName,
+        newTemplate: trackTemplates.find((template) => template.id === selectedTemplateId)?.name || 'No track template',
+      });
+      return;
+    }
+
     setCreateError('');
     setIsSavingBatch(true);
 
@@ -461,7 +481,8 @@ const Batches = () => {
         name: createBatchForm.batchName.trim(),
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
-        assignedTrack: createBatchForm.assignedTrack,
+        assignedTrackTemplateId: selectedTemplateId,
+        confirmTrackReplacement,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
       };
@@ -475,6 +496,7 @@ const Batches = () => {
       await loadBatchPageData();
       setIsCreateFormOpen(false);
       setEditingBatchId(null);
+      setEditingTrackTemplateId(null);
     } catch (error) {
       setCreateError(error.message || (editingBatchId ? 'Failed to update batch.' : 'Failed to create batch.'));
     } finally {
@@ -563,7 +585,6 @@ const Batches = () => {
                               : prev.endDate,
                         }))
                       }
-                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -580,7 +601,7 @@ const Batches = () => {
                           endDate: nextDate,
                         }))
                       }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
@@ -590,16 +611,18 @@ const Batches = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assigned Track</label>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track Template</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
-                      value={createBatchForm.assignedTrack}
-                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrack: e.target.value }))}
+                      value={createBatchForm.assignedTrackTemplateId}
+                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrackTemplateId: e.target.value }))}
                       className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                     >
-                      <option className={dropdownOptionClass} value="">Optional track</option>
-                      {DEFAULT_TRACK_OPTIONS.map((track) => (
-                        <option className={dropdownOptionClass} key={track.value} value={track.value}>{track.label}</option>
+                      <option className={dropdownOptionClass} value="">No track template</option>
+                      {trackTemplates.map((template) => (
+                        <option className={dropdownOptionClass} key={template.id} value={template.id}>
+                          {template.name} ({template.trackType})
+                        </option>
                       ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
@@ -654,6 +677,37 @@ const Batches = () => {
                   {isSavingBatch ? 'Saving...' : editingBatchId ? 'Save Changes' : 'Create Batch'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {pendingTrackReplacement && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setPendingTrackReplacement(null)} />
+          <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-base font-semibold text-[#3C83F6] dark:text-white">Replace Active Track</h3>
+              <p className="mt-2 text-sm leading-6 text-black/55 dark:text-white/60">
+                The current active track for every student in {pendingTrackReplacement.batchName} will move to Draft. {pendingTrackReplacement.newTemplate} will become their active track. Existing assignment history will be kept.
+              </p>
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setPendingTrackReplacement(null)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setPendingTrackReplacement(null);
+                  createBatch(true);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0]"
+              >
+                Confirm Change
+              </button>
             </div>
           </div>
         </div>

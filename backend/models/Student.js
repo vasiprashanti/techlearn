@@ -82,4 +82,8 @@ const studentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+studentSchema.index({ collegeId: 1, status: 1, name: 1 });
+studentSchema.index({ name: 1 });
+studentSchema.index({ rollNo: 1 }, { sparse: true });
+
 export default mongoose.model("Student", studentSchema);

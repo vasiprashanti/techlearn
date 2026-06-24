@@ -36,11 +36,18 @@ const BatchDetails = () => {
   const [tableSearch, setTableSearch] = useState('');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [studentMode, setStudentMode] = useState('existing');
-  const [existingStudents, setExistingStudents] = useState([]);
+  const [existingStudentResults, setExistingStudentResults] = useState([]);
+  const [existingStudentQuery, setExistingStudentQuery] = useState('');
+  const [existingStudentCollegeId, setExistingStudentCollegeId] = useState('');
+  const [existingStudentStatus, setExistingStudentStatus] = useState('');
+  const [existingStudentSort, setExistingStudentSort] = useState('name-asc');
+  const [isSearchingExistingStudents, setIsSearchingExistingStudents] = useState(false);
+  const [existingStudentSearchTotal, setExistingStudentSearchTotal] = useState(0);
   const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [activeScoresPopup, setActiveScoresPopup] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -50,8 +57,7 @@ const BatchDetails = () => {
       adminAPI.getColleges().catch(() => []),
       adminAPI.getBatches().catch(() => []),
       adminAPI.getTrackTemplates().catch(() => []),
-      adminAPI.getStudents().catch(() => []),
-    ]).then(([remoteColleges, remoteBatches, remoteTracks, remoteStudents]) => {
+    ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
       const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
@@ -59,7 +65,6 @@ const BatchDetails = () => {
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
       setTracks(uniqueTracks);
-      setExistingStudents(preferRemoteData(remoteStudents, []));
     }).catch(() => {});
   }, []);
 
@@ -136,12 +141,62 @@ const BatchDetails = () => {
     });
     setStudentMode('existing');
     setSelectedExistingStudentId('');
+    setExistingStudentResults([]);
+    setExistingStudentQuery('');
+    setExistingStudentSearchTotal(0);
+    setExistingStudentStatus('');
+    setExistingStudentSort('name-asc');
+    setExistingStudentCollegeId(matchingCollege?.id || '');
     setIsAddFormOpen(true);
   };
 
+  useEffect(() => {
+    if (!isAddFormOpen || studentMode !== 'existing') return undefined;
+
+    const query = existingStudentQuery.trim();
+    if (query.length < 2) {
+      setExistingStudentResults([]);
+      setExistingStudentSearchTotal(0);
+      setIsSearchingExistingStudents(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsSearchingExistingStudents(true);
+      try {
+        const result = await adminAPI.searchExistingStudents({
+          q: query,
+          collegeId: existingStudentCollegeId,
+          excludeBatchId: batch.id || batchId,
+          status: existingStudentStatus,
+          sort: existingStudentSort,
+          limit: 20,
+        });
+        if (!cancelled) {
+          setExistingStudentResults(result?.items || []);
+          setExistingStudentSearchTotal(result?.total || 0);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setExistingStudentResults([]);
+          setExistingStudentSearchTotal(0);
+          setFormError(error.message || 'Unable to search existing students.');
+        }
+      } finally {
+        if (!cancelled) setIsSearchingExistingStudents(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [isAddFormOpen, studentMode, existingStudentQuery, existingStudentCollegeId, existingStudentStatus, existingStudentSort, batch.id, batchId]);
+
   const saveStudent = async () => {
     if (studentMode === 'existing') {
-      const selectedStudent = existingStudents.find((student) => String(student.id || student._id) === String(selectedExistingStudentId));
+      const selectedStudent = existingStudentResults.find((student) => String(student.id || student._id) === String(selectedExistingStudentId));
       if (!selectedStudent) return setFormError('Select an existing student.');
 
       setFormError('');
@@ -152,13 +207,12 @@ const BatchDetails = () => {
           email: selectedStudent.email,
           collegeId: studentForm.collegeId,
           batchId: studentForm.batchId,
-          primaryTrack: selectedStudent.track || studentForm.track || 'General Track',
+          primaryTrack: studentForm.track || selectedStudent.track || 'General Track',
           programSelection: selectedStudent.programSelection || 'Placement Sprint',
-          status: selectedStudent.status || 'Active',
+          status: studentForm.status || selectedStudent.status || 'Active',
         });
-        const [remoteBatch, remoteStudents] = await Promise.all([adminAPI.getBatch(batchId), adminAPI.getStudents()]);
+        const remoteBatch = await adminAPI.getBatch(batchId);
         setBatchDetail(preferRemoteData(remoteBatch, null));
-        setExistingStudents(preferRemoteData(remoteStudents, []));
         setIsAddFormOpen(false);
       } catch (error) {
         setFormError(error.message || 'Failed to add existing student to this batch');
@@ -209,7 +263,83 @@ const BatchDetails = () => {
     );
   }, [batch.studentsTable, tableSearch]);
 
-  const activeToday = Math.max(0, Math.floor(batch.students * 0.8));
+  const formatLastAttempt = (isoString) => {
+    if (!isoString) return '—';
+    const d = new Date(isoString);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const formatEmail = (email) => {
+    if (!email) return '—';
+    const [username, domain] = email.split('@');
+    if (!domain) return email;
+    if (username.length > 8) {
+      return `${username.substring(0, 8)}...@${domain}`;
+    }
+    return email;
+  };
+
+  const statusPillClass = (status) => {
+    if (status === 'Completed') return 'bg-[#16a34a]/10 text-[#16a34a] border border-[#16a34a]/20';
+    if (status === 'Not Started') return 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50';
+    return 'bg-[#ef4444]/10 text-[#ef4444] dark:bg-[#ef4444]/15 dark:text-[#ef4444] border border-[#ef4444]/20';
+  };
+
+  const renderDaySections = (dayItem) => {
+    if (typeof dayItem === 'string') {
+      return (
+        <div className="flex flex-wrap gap-1 mt-0.5">
+          {(dayItem || '').split(', ').map((qTitle, qIdx) => (
+            <span key={qIdx} className="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#12285a] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-200 border border-black/5 dark:border-white/5 shadow-sm break-words max-w-full">
+              {qTitle}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {dayItem.mcq && dayItem.mcq.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-[#3C83F6] dark:text-[#5f98ef] uppercase tracking-wider">Quiz / MCQ</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.mcq.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-slate-100 dark:bg-[#18326a] px-1.5 py-0.5 text-[9px] font-medium text-slate-700 dark:text-slate-200 shadow-sm border border-black/5 dark:border-white/5">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {dayItem.coding && dayItem.coding.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Coding</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.coding.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-emerald-50 dark:bg-[#0c3c25] px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-300 shadow-sm border border-emerald-500/10 dark:border-emerald-500/10">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {dayItem.sql && dayItem.sql.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">SQL</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.sql.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-amber-50 dark:bg-[#432d0f] px-1.5 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300 shadow-sm border border-amber-500/10 dark:border-amber-500/10">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -262,19 +392,24 @@ const BatchDetails = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiUsers className="w-4 h-4" /><span className="text-xs font-medium">Total Students</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.students}</p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.totalStudents ?? batch.students ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiActivity className="w-4 h-4" /><span className="text-xs font-medium">Active Students Today</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{activeToday}</p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.activeStudentsToday ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Average Score</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.avgScore}%</p>
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Inactive Students Today</span></p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.inactiveStudentsToday ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiClock className="w-4 h-4" /><span className="text-xs font-medium">Average Streak</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.avgStreakDays} days</p>
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">
+                  {(() => {
+                    const trackName = batch.currentActiveTrack || batch.assignedTrack || 'None';
+                    return trackName.length > 20 ? `${trackName.substring(0, 17)}...` : trackName;
+                  })()}
+                </p>
               </div>
             </div>
 
@@ -286,22 +421,19 @@ const BatchDetails = () => {
                     <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 space-y-2">
                       <h4 className="text-sm font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
                       <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
-                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                         {track.days.length === 0 ? (
                           <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
                         ) : (
-                          track.days.map((dayItem, index) => (
-                            <div key={`${track.name}-${index}`} className="flex flex-col gap-1 text-xs border-b border-black/[0.03] dark:border-white/[0.03] py-1.5 last:border-0">
-                              <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] shrink-0">Day {index + 1}</span>
-                              <div className="flex flex-wrap gap-1 mt-0.5">
-                                {(dayItem || '').split(', ').map((qTitle, qIdx) => (
-                                  <span key={qIdx} className="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#12285a] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-200 border border-black/5 dark:border-white/5 shadow-sm break-words max-w-full">
-                                    {qTitle}
-                                  </span>
-                                ))}
+                          track.days.map((dayItem, index) => {
+                            const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
+                            return (
+                              <div key={`${track.name}-${index}`} className="bg-slate-50/60 dark:bg-[#122247]/30 rounded-lg p-2 border border-black/5 dark:border-white/5 space-y-1.5">
+                                <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Day {dayNum}</span>
+                                {renderDaySections(dayItem)}
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -340,14 +472,16 @@ const BatchDetails = () => {
 
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px]">
+                  <table className="w-full min-w-[700px] table-auto">
                     <thead>
-                      <tr className="border-b border-black/5 dark:border-white/10">
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 w-14">#</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Student Name</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Email</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Score</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Streak</th>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Name</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Email</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's Score</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's XP</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Last Attempt Date/Time</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -355,31 +489,53 @@ const BatchDetails = () => {
                         const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                         return (
                           <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                            <td className="px-4 py-3 text-xs sm:text-sm font-semibold text-black/45 dark:text-white/50">
+                            <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">
                               {isPlaceholder ? '-' : index + 1}
                             </td>
-                            <td className="px-4 py-3 text-xs sm:text-sm font-medium text-black/85 dark:text-white/85">{student.name}</td>
-                            <td className="px-4 py-3 text-xs sm:text-sm text-black/55 dark:text-white/60">{student.email}</td>
-                            <td className="px-4 py-3">
-                              {isPlaceholder ? '-' : (
-                                <span className={`justify-self-start inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${scorePillClass(student.score)}`}>
-                                  {student.scoreDisplay || `${student.score}%`}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-xs sm:text-sm text-black/60 dark:text-white/65">
-                              {isPlaceholder ? '-' : (
-                                <>
-                                  <span className="font-medium text-black/85 dark:text-white/85">{String(student.streak).split('/')[0].trim()}</span> / {String(student.streak).split('/')[1]?.trim() || '-'}
-                                </>
-                              )}
-                            </td>
+                            {isPlaceholder ? (
+                              <td colSpan={6} className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                No enrolled students
+                              </td>
+                            ) : (
+                              <>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" title={student.name}>
+                                  {student.name}
+                                </td>
+                                <td className="px-3 py-2 text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                  {formatEmail(student.email)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {student.todayScore === 'View Scores' ? (
+                                    <button onClick={() => setActiveScoresPopup(student)} className="text-[10px] font-bold text-[#3c83f6] dark:text-[#7fb1ff] hover:underline px-2 py-0.5 rounded bg-[#3c83f6]/10 dark:bg-[#7fb1ff]/15">
+                                      View Scores
+                                    </button>
+                                  ) : student.todayScore && student.todayScore !== '—' ? (
+                                    <span className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-[#3c83f6]/10 text-[#3c83f6] dark:bg-[#7fb1ff]/15 dark:text-[#7fb1ff]">
+                                      {student.todayScore}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 dark:text-slate-500">—</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                  {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
+                                  {formatLastAttempt(student.lastAttemptAt)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
+                                    {student.status || 'Not Started'}
+                                  </span>
+                                </td>
+                              </>
+                            )}
                           </tr>
                         );
                       })}
                       {filteredStudents.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                          <td colSpan={7} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                             No students match your search query.
                           </td>
                         </tr>
@@ -407,16 +563,104 @@ const BatchDetails = () => {
                 <button onClick={() => setStudentMode('new')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'new' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>New student</button>
               </div>
               {studentMode === 'existing' ? (
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Student*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
-                    <select value={selectedExistingStudentId} onChange={(e) => setSelectedExistingStudentId(e.target.value)} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
-                      <option className={dropdownOptionClass} value="">Select existing student</option>
-                      {existingStudents.filter((student) => String(student.batchId || '') !== String(batch.id || batchId)).map((student) => <option className={dropdownOptionClass} key={student.id || student._id} value={student.id || student._id}>{student.name} - {student.email}</option>)}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                <div className="space-y-3">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Find existing student*</label>
+                    <div className="relative mt-1">
+                      <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/45" />
+                      <input
+                        value={existingStudentQuery}
+                        onChange={(e) => {
+                          setExistingStudentQuery(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        placeholder="Search name, email, or roll number"
+                        className={`pl-9 ${studentFormInputClass}`}
+                      />
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-black/45 dark:text-white/45">The student will be moved to this batch. Their existing profile and progress stay intact.</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="relative">
+                      <select
+                        value={existingStudentCollegeId}
+                        onChange={(e) => {
+                          setExistingStudentCollegeId(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="">All colleges</option>
+                        {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={existingStudentStatus}
+                        onChange={(e) => {
+                          setExistingStudentStatus(e.target.value);
+                          setSelectedExistingStudentId('');
+                        }}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="">All statuses</option>
+                        <option className={dropdownOptionClass} value="Active">Active</option>
+                        <option className={dropdownOptionClass} value="Inactive">Inactive</option>
+                        <option className={dropdownOptionClass} value="Suspended">Suspended</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={existingStudentSort}
+                        onChange={(e) => setExistingStudentSort(e.target.value)}
+                        className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className={dropdownOptionClass} value="name-asc">Name A-Z</option>
+                        <option className={dropdownOptionClass} value="name-desc">Name Z-A</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
+
+                  <div className="min-h-[128px] max-h-56 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#0f1f43]/70 divide-y divide-black/5 dark:divide-white/10">
+                    {existingStudentQuery.trim().length < 2 ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">Type at least two characters to search students.</p>
+                    ) : isSearchingExistingStudents ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">Searching students...</p>
+                    ) : existingStudentResults.length === 0 ? (
+                      <p className="px-3 py-8 text-center text-xs text-black/45 dark:text-white/45">No matching students outside this batch.</p>
+                    ) : (
+                      existingStudentResults.map((student) => {
+                        const studentId = student.id || student._id;
+                        const isSelected = String(studentId) === String(selectedExistingStudentId);
+                        return (
+                          <button
+                            type="button"
+                            key={studentId}
+                            onClick={() => {
+                              setSelectedExistingStudentId(studentId);
+                              setStudentForm((prev) => ({ ...prev, track: student.track || prev.track, status: student.status || prev.status }));
+                            }}
+                            className={`w-full px-3 py-2.5 text-left transition-colors ${isSelected ? 'bg-[#3C83F6]/10 dark:bg-[#7fb1ff]/15' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'}`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{student.name}</p>
+                                <p className="mt-0.5 text-xs text-black/50 dark:text-white/55 truncate">{student.email}{student.rollNo ? ` · ${student.rollNo}` : ''}</p>
+                              </div>
+                              <span className="shrink-0 max-w-[40%] truncate rounded-full bg-black/[0.05] dark:bg-white/[0.08] px-2 py-0.5 text-[10px] text-black/55 dark:text-white/60">{student.batch}</span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                  {existingStudentQuery.trim().length >= 2 && !isSearchingExistingStudents && existingStudentSearchTotal > existingStudentResults.length && (
+                    <p className="text-xs text-black/45 dark:text-white/45">Showing the first {existingStudentResults.length} of {existingStudentSearchTotal} matching students. Refine the search to narrow it down.</p>
+                  )}
+                  <p className="text-xs text-black/45 dark:text-white/45">The student will be moved to this batch. Their existing profile and progress stay intact.</p>
                 </div>
               ) : (
                 <>
@@ -489,6 +733,31 @@ const BatchDetails = () => {
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
                 <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeScoresPopup && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setActiveScoresPopup(null)} />
+          <div className="relative w-full max-w-xs rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-5 space-y-3.5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[80%]">Scores for {activeScoresPopup.name}</h3>
+              <button onClick={() => setActiveScoresPopup(null)} className="text-[10px] text-[#3C83F6] hover:underline font-semibold">Close</button>
+            </div>
+            <div className="space-y-2 text-[11px]">
+              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">Quiz / MCQ</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.mcq || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">Coding</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.coding || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">SQL</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.sql || '—'}</span>
               </div>
             </div>
           </div>

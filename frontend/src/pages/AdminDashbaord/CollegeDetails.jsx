@@ -181,10 +181,6 @@ const CollegeDetails = () => {
       setBatchFormError('Start date and end date are required');
       return;
     }
-    if (batchForm.startDate < todayIsoDate) {
-      setBatchFormError('Start date must be today or a future date');
-      return;
-    }
     if (batchForm.startDate > batchForm.endDate) {
       setBatchFormError('End date must be after start date');
       return;
@@ -302,7 +298,6 @@ const CollegeDetails = () => {
                               : prev.endDate,
                         }))
                       }
-                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -314,7 +309,7 @@ const CollegeDetails = () => {
                     <ModernDatePicker
                       value={batchForm.endDate}
                       onChange={(nextDate) => setBatchForm((prev) => ({ ...prev, endDate: nextDate }))}
-                      minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
+                      minDate={batchForm.startDate ? new Date(`${batchForm.startDate}T00:00:00`) : undefined}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />
