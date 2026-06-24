@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
-import ModernDatePicker from '../../components/AdminDashbaord/ModernDatePicker';
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
@@ -50,8 +49,6 @@ export default function TrackTemplate() {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
 
-  const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
@@ -71,8 +68,6 @@ export default function TrackTemplate() {
     trackType: 'Daily Challenge',
     category: '',
     description: '',
-    startDate: '',
-    endDate: '',
     batchId: '',
     totalDays: '30',
     iconKey: 'code',
@@ -115,13 +110,6 @@ export default function TrackTemplate() {
 
   const isDarkMode = theme === 'dark';
 
-  const formatDateInput = (value) => {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return date.toISOString().slice(0, 10);
-  };
-
   const loadTrackTemplatePageData = useCallback(async () => {
     const [remoteTracks, remoteCategories, remoteBatches] = await Promise.all([
       adminAPI.getTrackTemplates(),
@@ -133,8 +121,6 @@ export default function TrackTemplate() {
       ...track,
       id: track.id || track._id,
       icon: track.icon || iconMapForTrack(track.iconKey || track.category),
-      startDate: track.startDate || '',
-      endDate: track.endDate || '',
       batchId: track.batchId || '',
       assignedBatch: track.assignedBatch || '',
     }));
@@ -254,8 +240,6 @@ export default function TrackTemplate() {
       trackType: 'Daily Challenge',
       category: '',
       description: '',
-      startDate: '',
-      endDate: '',
       batchId: '',
       totalDays: '30',
       iconKey: 'code',
@@ -271,8 +255,6 @@ export default function TrackTemplate() {
       trackType: 'Daily Challenge',
       category: '',
       description: '',
-      startDate: '',
-      endDate: '',
       batchId: '',
       totalDays: '30',
       iconKey: 'code',
@@ -288,8 +270,6 @@ export default function TrackTemplate() {
       trackType: track.trackType || 'Daily Challenge',
       category: track.category || '',
       description: track.description || '',
-      startDate: formatDateInput(track.startDate),
-      endDate: formatDateInput(track.endDate),
       batchId: track.batchId || '',
       totalDays: String(track.totalDays || 1),
       iconKey: track.iconKey || 'code',
@@ -307,22 +287,6 @@ export default function TrackTemplate() {
       setTemplateFormError('Template name and category are required.');
       return;
     }
-    if (!createTemplateForm.startDate || !createTemplateForm.endDate) {
-      setTemplateFormError('Start date and end date are required.');
-      return;
-    }
-
-    const start = new Date(createTemplateForm.startDate);
-    const end = new Date(createTemplateForm.endDate);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      setTemplateFormError('Please provide valid start and end dates.');
-      return;
-    }
-    if (end < start) {
-      setTemplateFormError('End date must be on or after start date.');
-      return;
-    }
-
     const totalDays = Number(createTemplateForm.totalDays) > 0 ? Number(createTemplateForm.totalDays) : 1;
 
     const payload = {
@@ -330,8 +294,6 @@ export default function TrackTemplate() {
       trackType: createTemplateForm.trackType || 'Daily Challenge',
       category: effectiveCategory,
       description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
-      startDate: createTemplateForm.startDate,
-      endDate: createTemplateForm.endDate,
       batchId: createTemplateForm.batchId || null,
       totalDays,
       iconKey: createTemplateForm.iconKey,
@@ -592,77 +554,6 @@ export default function TrackTemplate() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Start date*</label>
-                  <div className="mt-1">
-                    <ModernDatePicker
-                      value={createTemplateForm.startDate}
-                      onChange={(nextDate) => {
-                        setCreateTemplateForm((prev) => {
-                          let updatedEndDate = prev.endDate;
-                          let updatedTotalDays = prev.totalDays;
-                          if (nextDate) {
-                            const start = new Date(nextDate);
-                            if (!isNaN(start.getTime())) {
-                              if (prev.totalDays && Number(prev.totalDays) > 0) {
-                                const end = new Date(start);
-                                end.setDate(start.getDate() + Number(prev.totalDays));
-                                updatedEndDate = end.toISOString().slice(0, 10);
-                              } else if (prev.endDate) {
-                                const end = new Date(prev.endDate);
-                                if (!isNaN(end.getTime())) {
-                                  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-                                  updatedTotalDays = String(Math.max(1, diff));
-                                }
-                              }
-                            }
-                          }
-                          return {
-                            ...prev,
-                            startDate: nextDate,
-                            endDate: updatedEndDate,
-                            totalDays: updatedTotalDays,
-                          };
-                        });
-                      }}
-                      placeholder="Select start date"
-                      ariaLabel="Track start date"
-                      minDate={todayDate}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">End date*</label>
-                  <div className="mt-1">
-                    <ModernDatePicker
-                      value={createTemplateForm.endDate}
-                      onChange={(nextDate) => {
-                        setCreateTemplateForm((prev) => {
-                          let updatedTotalDays = prev.totalDays;
-                          if (prev.startDate && nextDate) {
-                            const start = new Date(prev.startDate);
-                            const end = new Date(nextDate);
-                            if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-                              const diff = Math.round((end - start) / (1000 * 60 * 60 * 24));
-                              updatedTotalDays = String(Math.max(1, diff));
-                            }
-                          }
-                          return {
-                            ...prev,
-                            endDate: nextDate,
-                            totalDays: updatedTotalDays,
-                          };
-                        });
-                      }}
-                      placeholder="Select end date"
-                      ariaLabel="Track end date"
-                      minDate={createTemplateForm.startDate ? new Date(createTemplateForm.startDate) : todayDate}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Assigned batch (optional)</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                     <select
@@ -685,25 +576,7 @@ export default function TrackTemplate() {
                     type="number"
                     min="1"
                     value={createTemplateForm.totalDays}
-                    onChange={(e) => {
-                      const nextDays = e.target.value;
-                      setCreateTemplateForm((prev) => {
-                        let updatedEndDate = prev.endDate;
-                        if (prev.startDate && nextDays && Number(nextDays) > 0) {
-                          const start = new Date(prev.startDate);
-                          if (!isNaN(start.getTime())) {
-                            const end = new Date(start);
-                            end.setDate(start.getDate() + Number(nextDays));
-                            updatedEndDate = end.toISOString().slice(0, 10);
-                          }
-                        }
-                        return {
-                          ...prev,
-                          totalDays: nextDays,
-                          endDate: updatedEndDate,
-                        };
-                      });
-                    }}
+                    onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
                     className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
@@ -943,14 +816,6 @@ export default function TrackTemplate() {
                           <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
                             <p className="text-[11px] text-[#667b96] dark:text-slate-300">Questions</p>
                             <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.questionsAssigned}</p>
-                          </div>
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Start Date</p>
-                            <p className="mt-0.5 text-sm font-semibold text-[#0f172a] dark:text-white">{track.startDate ? formatDateInput(track.startDate) : 'Not set'}</p>
-                          </div>
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">End Date</p>
-                            <p className="mt-0.5 text-sm font-semibold text-[#0f172a] dark:text-white">{track.endDate ? formatDateInput(track.endDate) : 'Not set'}</p>
                           </div>
                         </div>
 

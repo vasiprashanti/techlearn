@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
 import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import CodingRound from "../models/CodingRound.js";
 import College from "../models/College.js";
@@ -219,7 +220,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   const trackTemplate = batch.assignedDailyChallengeTrack
     ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyChallengeTrack)
     : null;
-  const releaseStart = combineDateAndTime(trackTemplate?.startDate || batch.startDate, batch.releaseTime || "00:00");
+  const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Challenge"), batch.releaseTime || "00:00");
   const batchEnd = endOfDay(batch.expiryDate);
   const now = new Date();
 

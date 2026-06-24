@@ -95,14 +95,6 @@ const trackTemplateSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    startDate: {
-      type: Date,
-      default: null,
-    },
-    endDate: {
-      type: Date,
-      default: null,
-    },
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",

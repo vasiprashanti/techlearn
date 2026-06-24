@@ -38,14 +38,26 @@ const batchSchema = new mongoose.Schema(
       ref: "TrackTemplate",
       default: null,
     },
+    assignedTrackTemplateAt: {
+      type: Date,
+      default: null,
+    },
     assignedDailyChallengeTrack: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TrackTemplate",
       default: null,
     },
+    assignedDailyChallengeTrackAt: {
+      type: Date,
+      default: null,
+    },
     assignedDailyTaskTrack: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TrackTemplate",
+      default: null,
+    },
+    assignedDailyTaskTrackAt: {
+      type: Date,
       default: null,
     },
     batchSize: {

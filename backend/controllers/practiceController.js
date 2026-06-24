@@ -1,6 +1,7 @@
 import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
 import mongoose from "mongoose";
+import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
@@ -277,7 +278,7 @@ export const recordPracticeSubmission = async (req, res) => {
               const utcTime = Date.UTC(year, month, day, hours, minutes, 0, 0);
               return new Date(utcTime - 5.5 * 60 * 60 * 1000);
             };
-            const releaseStart = combineDateAndTime(trackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+            const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
             const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
             
             let attempt = await mongoose.model("DailyTaskAttempt").findOne({
