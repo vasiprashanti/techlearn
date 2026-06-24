@@ -7,6 +7,7 @@ import UserProgress from "../models/UserProgress.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
+import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -78,7 +79,7 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     // 3. Resolve active day number
-    const releaseStart = combineDateAndTime(trackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+    const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
     const batchEnd = endOfDay(batch.expiryDate);
     const now = new Date();
 
@@ -289,7 +290,7 @@ export const submitDailyTask = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const releaseStart = combineDateAndTime(trackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+    const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
     const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 
     let attempt = await DailyTaskAttempt.findOne({

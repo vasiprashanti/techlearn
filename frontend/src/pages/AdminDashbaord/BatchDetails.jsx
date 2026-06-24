@@ -8,11 +8,6 @@ import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, F
 
 const fallbackBatchMap = {};
 
-const scorePillClass = (score) =>
-  score >= 80
-    ? 'bg-[#16a34a] text-white'
-    : 'bg-[#dbe7ff] text-[#3c83f6]';
-
 const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 const studentFormInputClass = 'w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
@@ -34,6 +29,8 @@ const BatchDetails = () => {
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [tableSearch, setTableSearch] = useState('');
+  const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
+  const [studentSortOrder, setStudentSortOrder] = useState('name-asc');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [studentMode, setStudentMode] = useState('existing');
   const [existingStudentResults, setExistingStudentResults] = useState([]);
@@ -47,7 +44,6 @@ const BatchDetails = () => {
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
-  const [activeScoresPopup, setActiveScoresPopup] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -254,14 +250,28 @@ const BatchDetails = () => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     const studentsList = isPlaceholder ? [] : table;
-    
-    if (!tableSearch) return table;
-    const q = tableSearch.toLowerCase();
-    return studentsList.filter((s) => 
-      (s.name || '').toLowerCase().includes(q) || 
-      (s.email || '').toLowerCase().includes(q)
-    );
-  }, [batch.studentsTable, tableSearch]);
+
+    const q = tableSearch.trim().toLowerCase();
+    return studentsList
+      .filter((student) => {
+        const matchesSearch = !q ||
+          (student.name || '').toLowerCase().includes(q) ||
+          (student.email || '').toLowerCase().includes(q);
+        const matchesStatus = studentStatusFilter === 'All Status' || student.status === studentStatusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((left, right) => {
+        const comparison = (left.name || '').localeCompare(right.name || '', undefined, { sensitivity: 'base' });
+        return studentSortOrder === 'name-desc' ? -comparison : comparison;
+      });
+  }, [batch.studentsTable, tableSearch, studentStatusFilter, studentSortOrder]);
+
+  const formatScore = (student) => {
+    if (student.todayScore !== 'View Scores') return student.todayScore || '—';
+    return Object.values(student.todayScoresDetail || {})
+      .filter((score) => score && score !== '—')
+      .join(' · ') || '—';
+  };
 
   const formatLastAttempt = (isoString) => {
     if (!isoString) return '—';
@@ -460,6 +470,31 @@ const BatchDetails = () => {
                       className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
                     />
                   </div>
+                  <div className="relative w-full sm:w-40">
+                    <select
+                      value={studentStatusFilter}
+                      onChange={(e) => setStudentStatusFilter(e.target.value)}
+                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    >
+                      <option className={dropdownOptionClass} value="All Status">All Status</option>
+                      <option className={dropdownOptionClass} value="Not Started">Not Started</option>
+                      <option className={dropdownOptionClass} value="In Progress">In Progress</option>
+                      <option className={dropdownOptionClass} value="Completed">Completed</option>
+                      <option className={dropdownOptionClass} value="Not Attempted">Not Attempted</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                  <div className="relative w-full sm:w-40">
+                    <select
+                      value={studentSortOrder}
+                      onChange={(e) => setStudentSortOrder(e.target.value)}
+                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    >
+                      <option className={dropdownOptionClass} value="name-asc">Name: A to Z</option>
+                      <option className={dropdownOptionClass} value="name-desc">Name: Z to A</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
                   <button
                     onClick={openAddStudent}
                     className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"
@@ -505,17 +540,9 @@ const BatchDetails = () => {
                                   {formatEmail(student.email)}
                                 </td>
                                 <td className="px-3 py-2">
-                                  {student.todayScore === 'View Scores' ? (
-                                    <button onClick={() => setActiveScoresPopup(student)} className="text-[10px] font-bold text-[#3c83f6] dark:text-[#7fb1ff] hover:underline px-2 py-0.5 rounded bg-[#3c83f6]/10 dark:bg-[#7fb1ff]/15">
-                                      View Scores
-                                    </button>
-                                  ) : student.todayScore && student.todayScore !== '—' ? (
-                                    <span className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-[#3c83f6]/10 text-[#3c83f6] dark:bg-[#7fb1ff]/15 dark:text-[#7fb1ff]">
-                                      {student.todayScore}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400 dark:text-slate-500">—</span>
-                                  )}
+                                  <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff] whitespace-nowrap">
+                                    {formatScore(student)}
+                                  </span>
                                 </td>
                                 <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
                                   {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
@@ -733,31 +760,6 @@ const BatchDetails = () => {
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
                 <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {activeScoresPopup && (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setActiveScoresPopup(null)} />
-          <div className="relative w-full max-w-xs rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-5 space-y-3.5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
-              <h3 className="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[80%]">Scores for {activeScoresPopup.name}</h3>
-              <button onClick={() => setActiveScoresPopup(null)} className="text-[10px] text-[#3C83F6] hover:underline font-semibold">Close</button>
-            </div>
-            <div className="space-y-2 text-[11px]">
-              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
-                <span className="font-semibold text-slate-500 dark:text-slate-400">Quiz / MCQ</span>
-                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.mcq || '—'}</span>
-              </div>
-              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
-                <span className="font-semibold text-slate-500 dark:text-slate-400">Coding</span>
-                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.coding || '—'}</span>
-              </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="font-semibold text-slate-500 dark:text-slate-400">SQL</span>
-                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.sql || '—'}</span>
               </div>
             </div>
           </div>

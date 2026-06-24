@@ -50,13 +50,6 @@ const statusPillClass = (status) =>
     ? 'bg-[#16a34a] text-white'
     : 'bg-[#dbe7ff] text-[#3c83f6]';
 
-const formatDateLabel = (value) => {
-  if (!value) return 'Not set';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Not set';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
 export default function TrackTemplateDetails() {
   const navigate = useNavigate();
   const { templateId } = useParams();
@@ -533,9 +526,9 @@ export default function TrackTemplateDetails() {
                     {track.totalDays} days
                   </p>
                   <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300">
-                    {formatDateLabel(track.startDate)} - {formatDateLabel(track.endDate)}
-                    <span className="mx-2">·</span>
                     Batch: {track.assignedBatch || 'Not set'}
+                    <span className="mx-2">·</span>
+                    Schedule starts when assigned
                   </p>
                 </div>
               </div>

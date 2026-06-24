@@ -35,43 +35,12 @@ const normalizeTrackType = (value = "") => {
   return "Core";
 };
 
-const resolveTemplateSchedule = ({ startDate, endDate, totalDays, durationDays }) => {
-  const parsedStartDate = startDate ? new Date(startDate) : null;
-  const parsedEndDate = endDate ? new Date(endDate) : null;
-  const requestedDuration = Number(durationDays || totalDays || 0);
-
-  if (!parsedStartDate || Number.isNaN(parsedStartDate.getTime())) {
-    return { error: "startDate must be a valid date." };
+const resolveTemplateDuration = ({ totalDays, durationDays }) => {
+  const resolvedTotalDays = Number(durationDays || totalDays || 0);
+  if (!Number.isInteger(resolvedTotalDays) || resolvedTotalDays < 1) {
+    return { error: "totalDays must be at least 1." };
   }
-
-  if (parsedEndDate && Number.isNaN(parsedEndDate.getTime())) {
-    return { error: "endDate must be a valid date." };
-  }
-
-  if (parsedEndDate && parsedEndDate < parsedStartDate) {
-    return { error: "endDate must be on or after startDate." };
-  }
-
-  if (!parsedEndDate && requestedDuration <= 0) {
-    return { error: "Provide either endDate or durationDays/totalDays." };
-  }
-
-  const effectiveEndDate = parsedEndDate
-    ? parsedEndDate
-    : new Date(parsedStartDate.getTime() + (requestedDuration - 1) * 24 * 60 * 60 * 1000);
-
-  const effectiveTotalDays = Math.max(
-    1,
-    parsedEndDate
-      ? Math.floor((effectiveEndDate.getTime() - parsedStartDate.getTime()) / (24 * 60 * 60 * 1000)) + 1
-      : requestedDuration,
-  );
-
-  return {
-    startDate: parsedStartDate,
-    endDate: effectiveEndDate,
-    totalDays: effectiveTotalDays,
-  };
+  return { totalDays: resolvedTotalDays };
 };
 
 const syncTemplateToTrack = async (template) => {
@@ -107,14 +76,23 @@ const syncTemplateToTrack = async (template) => {
     { new: true, upsert: true }
   );
 
-  if (normalizedType === "Daily Challenge") {
-    await Batch.findByIdAndUpdate(template.batchId, {
-      $set: { assignedDailyChallengeTrack: template._id },
-    });
-  } else if (normalizedType === "Daily Task") {
-    await Batch.findByIdAndUpdate(template.batchId, {
-      $set: { assignedDailyTaskTrack: template._id },
-    });
+  if (normalizedType === "Daily Challenge" || normalizedType === "Daily Task") {
+    const trackField = normalizedType === "Daily Challenge"
+      ? "assignedDailyChallengeTrack"
+      : "assignedDailyTaskTrack";
+    const assignedAtField = normalizedType === "Daily Challenge"
+      ? "assignedDailyChallengeTrackAt"
+      : "assignedDailyTaskTrackAt";
+    const batch = await Batch.findById(template.batchId).select(`${trackField} ${assignedAtField}`).lean();
+    if (batch) {
+      const isNewAssignment = String(batch[trackField] || "") !== String(template._id);
+      await Batch.findByIdAndUpdate(template.batchId, {
+        $set: {
+          [trackField]: template._id,
+          ...(isNewAssignment || !batch[assignedAtField] ? { [assignedAtField]: new Date() } : {}),
+        },
+      });
+    }
   }
 };
 
@@ -620,8 +598,6 @@ export const listTrackTemplates = async (req, res) => {
         status: template.status,
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
-        startDate: template.startDate,
-        endDate: template.endDate,
         batchId: template.batchId?._id || template.batchId,
         assignedBatch: template.batchId?.name || "",
         trackType: effectiveType,
@@ -640,8 +616,8 @@ export const createTrackTemplate = async (req, res) => {
     const { name, description, status, iconKey, batchId } = req.body;
     const category = req.body.category || req.body.trackType;
 
-    if (!name?.trim() || !category?.trim() || !req.body.startDate) {
-      return res.status(400).json({ success: false, message: "Template name, category/trackType and startDate are required." });
+    if (!name?.trim() || !category?.trim()) {
+      return res.status(400).json({ success: false, message: "Template name and category/trackType are required." });
     }
 
     if (batchId) {
@@ -665,13 +641,13 @@ export const createTrackTemplate = async (req, res) => {
       }
     }
 
-    const schedule = resolveTemplateSchedule(req.body);
-    if (schedule.error) {
-      return res.status(400).json({ success: false, message: schedule.error });
+    const duration = resolveTemplateDuration(req.body);
+    if (duration.error) {
+      return res.status(400).json({ success: false, message: duration.error });
     }
 
     const dayAssignments = [];
-    for (let i = 1; i <= schedule.totalDays; i++) {
+    for (let i = 1; i <= duration.totalDays; i++) {
       dayAssignments.push({
         dayNumber: i,
         questionId: null,
@@ -682,12 +658,10 @@ export const createTrackTemplate = async (req, res) => {
     const template = await TrackTemplate.create({
       name: name.trim(),
       trackType: req.body.trackType || "Daily Challenge",
-      description: description?.trim() || `${schedule.totalDays}-day ${category} track template`,
+      description: description?.trim() || `${duration.totalDays}-day ${category} track template`,
       category: category.trim(),
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
       batchId: batchId || null,
-      totalDays: schedule.totalDays,
+      totalDays: duration.totalDays,
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
       dayAssignments,
@@ -773,8 +747,6 @@ export const getTrackTemplateDetail = async (req, res) => {
         status: template.status,
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
-        startDate: template.startDate,
-        endDate: template.endDate,
         batchId: template.batchId?._id || template.batchId,
         assignedBatch: template.batchId?.name || "",
         versionHistory: template.versionHistory || [],
@@ -834,8 +806,6 @@ export const duplicateTrackTemplate = async (req, res) => {
       trackType: source.trackType,
       description: source.description || "",
       category: source.category,
-      startDate: source.startDate,
-      endDate: source.endDate,
       batchId: null,
       totalDays: source.totalDays,
       status: "Draft",
@@ -919,35 +889,31 @@ export const updateTrackTemplate = async (req, res) => {
     }
     if (req.body.status) template.status = req.body.status;
 
-    if (req.body.startDate || req.body.endDate || req.body.totalDays || req.body.durationDays) {
-      const schedule = resolveTemplateSchedule({
-        startDate: req.body.startDate || template.startDate,
-        endDate: req.body.endDate || template.endDate,
+    if (req.body.totalDays || req.body.durationDays) {
+      const duration = resolveTemplateDuration({
         totalDays: req.body.totalDays || template.totalDays,
         durationDays: req.body.durationDays,
       });
-      if (schedule.error) {
-        return res.status(400).json({ success: false, message: schedule.error });
+      if (duration.error) {
+        return res.status(400).json({ success: false, message: duration.error });
       }
-      if (schedule.totalDays !== template.totalDays) {
+      if (duration.totalDays !== template.totalDays) {
         const currentDaysCount = template.dayAssignments.length;
-        if (schedule.totalDays > currentDaysCount) {
-          for (let i = currentDaysCount + 1; i <= schedule.totalDays; i++) {
+        if (duration.totalDays > currentDaysCount) {
+          for (let i = currentDaysCount + 1; i <= duration.totalDays; i++) {
             template.dayAssignments.push({
               dayNumber: i,
               questionId: null,
               tasks: [],
             });
           }
-        } else if (schedule.totalDays < currentDaysCount) {
+        } else if (duration.totalDays < currentDaysCount) {
           template.dayAssignments = template.dayAssignments.filter(
-            (assignment) => assignment.dayNumber <= schedule.totalDays
+            (assignment) => assignment.dayNumber <= duration.totalDays
           );
         }
       }
-      template.startDate = schedule.startDate;
-      template.endDate = schedule.endDate;
-      template.totalDays = schedule.totalDays;
+      template.totalDays = duration.totalDays;
     }
 
     const nextVersion = (template.versionHistory?.length || 0) + 1;

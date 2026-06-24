@@ -98,6 +98,31 @@ const getTrackTemplateForAssignment = async (templateId) => {
   return TrackTemplate.findOne({ _id: templateId, status: { $ne: "Archived" } }).lean();
 };
 
+const getBatchTemplateAssignmentFields = (trackTemplate, changed = true) => {
+  if (!trackTemplate) {
+    return {
+      assignedTrackTemplate: null,
+      assignedTrackTemplateAt: null,
+    };
+  }
+
+  const assignedAt = changed ? new Date() : undefined;
+  const fields = {
+    assignedTrackTemplate: trackTemplate._id,
+    ...(assignedAt ? { assignedTrackTemplateAt: assignedAt } : {}),
+  };
+
+  if (trackTemplate.trackType === "Daily Task") {
+    fields.assignedDailyTaskTrack = trackTemplate._id;
+    if (assignedAt) fields.assignedDailyTaskTrackAt = assignedAt;
+  }
+  if (trackTemplate.trackType === "Daily Challenge") {
+    fields.assignedDailyChallengeTrack = trackTemplate._id;
+    if (assignedAt) fields.assignedDailyChallengeTrackAt = assignedAt;
+  }
+  return fields;
+};
+
 const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
   const students = await Student.find({ batchId }).select("_id").session(session).lean();
   const studentIds = students.map((student) => student._id);
@@ -463,6 +488,7 @@ export const listBatches = async (req, res) => {
       assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
       assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
       assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
+      assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
       batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
       status: batch.status,
       start: formatDateLabel(batch.startDate),
@@ -511,7 +537,7 @@ export const createBatchAdmin = async (req, res) => {
               startDate,
               expiryDate,
               assignedTrack: trackTemplate?.category || assignedTrack?.trim() || "",
-              assignedTrackTemplate: trackTemplate?._id || null,
+              ...getBatchTemplateAssignmentFields(trackTemplate),
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
@@ -1038,6 +1064,7 @@ export const getBatchDetail = async (req, res) => {
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
+        assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
@@ -1105,7 +1132,10 @@ export const updateBatchAdmin = async (req, res) => {
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
       assignedTrack: trackTemplate?.category || req.body.assignedTrack?.trim() || "",
-      assignedTrackTemplate: trackTemplate?._id || null,
+      ...getBatchTemplateAssignmentFields(
+        trackTemplate,
+        trackTemplateChanged || (Boolean(trackTemplate) && !existingBatch.assignedTrackTemplateAt)
+      ),
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
