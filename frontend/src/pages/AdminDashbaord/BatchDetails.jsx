@@ -47,6 +47,7 @@ const BatchDetails = () => {
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [activeScoresPopup, setActiveScoresPopup] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -262,7 +263,83 @@ const BatchDetails = () => {
     );
   }, [batch.studentsTable, tableSearch]);
 
-  const activeToday = Math.max(0, Math.floor(batch.students * 0.8));
+  const formatLastAttempt = (isoString) => {
+    if (!isoString) return '—';
+    const d = new Date(isoString);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const formatEmail = (email) => {
+    if (!email) return '—';
+    const [username, domain] = email.split('@');
+    if (!domain) return email;
+    if (username.length > 8) {
+      return `${username.substring(0, 8)}...@${domain}`;
+    }
+    return email;
+  };
+
+  const statusPillClass = (status) => {
+    if (status === 'Completed') return 'bg-[#16a34a]/10 text-[#16a34a] border border-[#16a34a]/20';
+    if (status === 'Not Started') return 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50';
+    return 'bg-[#ef4444]/10 text-[#ef4444] dark:bg-[#ef4444]/15 dark:text-[#ef4444] border border-[#ef4444]/20';
+  };
+
+  const renderDaySections = (dayItem) => {
+    if (typeof dayItem === 'string') {
+      return (
+        <div className="flex flex-wrap gap-1 mt-0.5">
+          {(dayItem || '').split(', ').map((qTitle, qIdx) => (
+            <span key={qIdx} className="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#12285a] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-200 border border-black/5 dark:border-white/5 shadow-sm break-words max-w-full">
+              {qTitle}
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        {dayItem.mcq && dayItem.mcq.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-[#3C83F6] dark:text-[#5f98ef] uppercase tracking-wider">Quiz / MCQ</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.mcq.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-slate-100 dark:bg-[#18326a] px-1.5 py-0.5 text-[9px] font-medium text-slate-700 dark:text-slate-200 shadow-sm border border-black/5 dark:border-white/5">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {dayItem.coding && dayItem.coding.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Coding</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.coding.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-emerald-50 dark:bg-[#0c3c25] px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-300 shadow-sm border border-emerald-500/10 dark:border-emerald-500/10">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {dayItem.sql && dayItem.sql.length > 0 && (
+          <div className="space-y-1">
+            <span className="block text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">SQL</span>
+            <div className="flex flex-wrap gap-1">
+              {dayItem.sql.map((title, idx) => (
+                <span key={idx} className="inline-flex items-center rounded bg-amber-50 dark:bg-[#432d0f] px-1.5 py-0.5 text-[9px] font-medium text-amber-700 dark:text-amber-300 shadow-sm border border-amber-500/10 dark:border-amber-500/10">
+                  {title}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -315,19 +392,24 @@ const BatchDetails = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiUsers className="w-4 h-4" /><span className="text-xs font-medium">Total Students</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.students}</p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.totalStudents ?? batch.students ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiActivity className="w-4 h-4" /><span className="text-xs font-medium">Active Students Today</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{activeToday}</p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.activeStudentsToday ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Average Score</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.avgScore}%</p>
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Inactive Students Today</span></p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.inactiveStudentsToday ?? 0}</p>
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiClock className="w-4 h-4" /><span className="text-xs font-medium">Average Streak</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.avgStreakDays} days</p>
+                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
+                <p className="text-xl font-semibold text-black dark:text-white leading-none">
+                  {(() => {
+                    const trackName = batch.currentActiveTrack || batch.assignedTrack || 'None';
+                    return trackName.length > 20 ? `${trackName.substring(0, 17)}...` : trackName;
+                  })()}
+                </p>
               </div>
             </div>
 
@@ -339,22 +421,19 @@ const BatchDetails = () => {
                     <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 space-y-2">
                       <h4 className="text-sm font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
                       <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
-                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                         {track.days.length === 0 ? (
                           <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
                         ) : (
-                          track.days.map((dayItem, index) => (
-                            <div key={`${track.name}-${index}`} className="flex flex-col gap-1 text-xs border-b border-black/[0.03] dark:border-white/[0.03] py-1.5 last:border-0">
-                              <span className="font-semibold text-[#3C83F6] dark:text-[#3C83F6] shrink-0">Day {index + 1}</span>
-                              <div className="flex flex-wrap gap-1 mt-0.5">
-                                {(dayItem || '').split(', ').map((qTitle, qIdx) => (
-                                  <span key={qIdx} className="inline-flex items-center rounded-md bg-slate-50 dark:bg-[#12285a] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-200 border border-black/5 dark:border-white/5 shadow-sm break-words max-w-full">
-                                    {qTitle}
-                                  </span>
-                                ))}
+                          track.days.map((dayItem, index) => {
+                            const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
+                            return (
+                              <div key={`${track.name}-${index}`} className="bg-slate-50/60 dark:bg-[#122247]/30 rounded-lg p-2 border border-black/5 dark:border-white/5 space-y-1.5">
+                                <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Day {dayNum}</span>
+                                {renderDaySections(dayItem)}
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         )}
                       </div>
                     </div>
@@ -393,14 +472,16 @@ const BatchDetails = () => {
 
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px]">
+                  <table className="w-full min-w-[700px] table-auto">
                     <thead>
-                      <tr className="border-b border-black/5 dark:border-white/10">
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 w-14">#</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Student Name</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Email</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Score</th>
-                        <th className="text-left text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3">Streak</th>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Name</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Email</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's Score</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's XP</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Last Attempt Date/Time</th>
+                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -408,31 +489,53 @@ const BatchDetails = () => {
                         const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                         return (
                           <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                            <td className="px-4 py-3 text-xs sm:text-sm font-semibold text-black/45 dark:text-white/50">
+                            <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">
                               {isPlaceholder ? '-' : index + 1}
                             </td>
-                            <td className="px-4 py-3 text-xs sm:text-sm font-medium text-black/85 dark:text-white/85">{student.name}</td>
-                            <td className="px-4 py-3 text-xs sm:text-sm text-black/55 dark:text-white/60">{student.email}</td>
-                            <td className="px-4 py-3">
-                              {isPlaceholder ? '-' : (
-                                <span className={`justify-self-start inline-flex min-w-[42px] items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold leading-none ${scorePillClass(student.score)}`}>
-                                  {student.scoreDisplay || `${student.score}%`}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-xs sm:text-sm text-black/60 dark:text-white/65">
-                              {isPlaceholder ? '-' : (
-                                <>
-                                  <span className="font-medium text-black/85 dark:text-white/85">{String(student.streak).split('/')[0].trim()}</span> / {String(student.streak).split('/')[1]?.trim() || '-'}
-                                </>
-                              )}
-                            </td>
+                            {isPlaceholder ? (
+                              <td colSpan={6} className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                No enrolled students
+                              </td>
+                            ) : (
+                              <>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" title={student.name}>
+                                  {student.name}
+                                </td>
+                                <td className="px-3 py-2 text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                  {formatEmail(student.email)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {student.todayScore === 'View Scores' ? (
+                                    <button onClick={() => setActiveScoresPopup(student)} className="text-[10px] font-bold text-[#3c83f6] dark:text-[#7fb1ff] hover:underline px-2 py-0.5 rounded bg-[#3c83f6]/10 dark:bg-[#7fb1ff]/15">
+                                      View Scores
+                                    </button>
+                                  ) : student.todayScore && student.todayScore !== '—' ? (
+                                    <span className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-[#3c83f6]/10 text-[#3c83f6] dark:bg-[#7fb1ff]/15 dark:text-[#7fb1ff]">
+                                      {student.todayScore}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 dark:text-slate-500">—</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                  {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
+                                </td>
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
+                                  {formatLastAttempt(student.lastAttemptAt)}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
+                                    {student.status || 'Not Started'}
+                                  </span>
+                                </td>
+                              </>
+                            )}
                           </tr>
                         );
                       })}
                       {filteredStudents.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                          <td colSpan={7} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                             No students match your search query.
                           </td>
                         </tr>
@@ -630,6 +733,31 @@ const BatchDetails = () => {
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
                 <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {activeScoresPopup && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setActiveScoresPopup(null)} />
+          <div className="relative w-full max-w-xs rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl p-5 space-y-3.5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[80%]">Scores for {activeScoresPopup.name}</h3>
+              <button onClick={() => setActiveScoresPopup(null)} className="text-[10px] text-[#3C83F6] hover:underline font-semibold">Close</button>
+            </div>
+            <div className="space-y-2 text-[11px]">
+              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">Quiz / MCQ</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.mcq || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-black/[0.03] dark:border-white/[0.03]">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">Coding</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.coding || '—'}</span>
+              </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">SQL</span>
+                <span className="font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-[#122247] px-2 py-0.5 rounded">{activeScoresPopup.todayScoresDetail?.sql || '—'}</span>
               </div>
             </div>
           </div>

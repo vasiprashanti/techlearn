@@ -447,10 +447,6 @@ const Batches = () => {
       setCreateError('Start date and end date are required');
       return;
     }
-    if (createBatchForm.startDate < todayIsoDate) {
-      setCreateError('Start date must be today or a future date');
-      return;
-    }
     if (createBatchForm.startDate > createBatchForm.endDate) {
       setCreateError('End date must be after start date');
       return;
@@ -589,7 +585,6 @@ const Batches = () => {
                               : prev.endDate,
                         }))
                       }
-                      minDate={new Date(`${todayIsoDate}T00:00:00`)}
                       placeholder="Select start date"
                       ariaLabel="Start date"
                     />
@@ -606,7 +601,7 @@ const Batches = () => {
                           endDate: nextDate,
                         }))
                       }
-                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : new Date(`${todayIsoDate}T00:00:00`)}
+                      minDate={createBatchForm.startDate ? new Date(`${createBatchForm.startDate}T00:00:00`) : undefined}
                       placeholder="Select end date"
                       ariaLabel="End date"
                     />

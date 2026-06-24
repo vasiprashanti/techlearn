@@ -1,5 +1,8 @@
 import TrackTemplate from "../../models/TrackTemplate.js";
 import mongoose from "mongoose";
+import { calculateTaskXP, TASK_XP } from "../../services/xpService.js";
+import PracticeSubmission from "../../models/PracticeSubmission.js";
+import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import College from "../../models/College.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Student from "../../models/Student.js";
@@ -564,7 +567,23 @@ export const getBatchDetail = async (req, res) => {
     const students = await Student.find({ batchId }).lean();
     const studentIds = students.map((s) => s._id);
 
-    const [tracks, submissions, trackTemplates] = await Promise.all([
+    const studentEmails = students
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    const users = studentEmails.length
+      ? await User.find({ email: { $in: studentEmails } }).select("_id email").lean()
+      : [];
+
+    const userEmailToIdMap = new Map();
+    const userIds = [];
+    users.forEach(u => {
+      const email = String(u.email || "").trim().toLowerCase();
+      userEmailToIdMap.set(email, u._id);
+      userIds.push(u._id);
+    });
+
+    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
         studentIds.length
@@ -581,11 +600,14 @@ export const getBatchDetail = async (req, res) => {
         .populate("dayAssignments.questionId", "title")
         .populate("dayAssignments.tasks.questionId", "title")
         .lean(),
+      userIds.length
+        ? PracticeSubmission.find({ userId: { $in: userIds } }).lean()
+        : Promise.resolve([]),
+      userIds.length
+        ? DailyTaskAttempt.find({ userId: { $in: userIds }, batchId }).lean()
+        : Promise.resolve([]),
     ]);
 
-    const studentEmails = students
-      .map((student) => String(student.email || "").trim().toLowerCase())
-      .filter(Boolean);
     const mcqSubmissions = studentEmails.length
       ? await StudentMcqSubmission.find({ studentEmail: { $in: studentEmails } })
           .populate("collegeMcqId", "questions")
@@ -604,20 +626,407 @@ export const getBatchDetail = async (req, res) => {
       }
     });
 
-    const avgScore =
-      submissions.length > 0
-        ? Number(
-            (
-              submissions.reduce((sum, submission) => sum + (submission.totalScore || 0), 0) /
-              submissions.length
-            ).toFixed(0)
-          )
-        : 0;
+    const localCombineDateAndTime = (date, timeString = "00:00") => {
+      if (!date) return new Date();
+      const d = new Date(date);
+      const [hours, minutes] = String(timeString || "00:00").split(":");
+      d.setHours(parseInt(hours) || 0, parseInt(minutes) || 0, 0, 0);
+      return d;
+    };
 
-    const avgStreak =
-      students.length > 0
-        ? Number((students.reduce((sum, student) => sum + (student.streak || 0), 0) / students.length).toFixed(0))
-        : 0;
+    const now = new Date();
+    const utcOffset = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istTime = utcOffset + (3600000 * 5.5);
+    const istDate = new Date(istTime);
+    const year = istDate.getUTCFullYear();
+    const month = istDate.getUTCMonth();
+    const day = istDate.getUTCDate();
+
+    const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - 5.5 * 60 * 60 * 1000);
+    const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - 5.5 * 60 * 60 * 1000);
+
+    const activeTrackTemplate = trackTemplates.find(t => String(t._id) === String(batch.assignedDailyTaskTrack));
+    let totalMCQsInTemplateToday = 0;
+    let totalSQLInTemplateToday = 0;
+    let totalCodingInTemplateToday = 0;
+    const allottedTypesToday = [];
+    let dayNumber = 0;
+    if (activeTrackTemplate) {
+      const releaseStart = localCombineDateAndTime(activeTrackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+      dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      const dayAssignment = activeTrackTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+      if (dayAssignment) {
+        (dayAssignment.tasks || []).forEach((t) => {
+          const type = t.taskType;
+          if (type && !allottedTypesToday.includes(type)) {
+            allottedTypesToday.push(type);
+          }
+        });
+        if (dayAssignment.questionId && !allottedTypesToday.includes("Coding")) {
+          allottedTypesToday.push("Coding");
+        }
+        totalMCQsInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS").length;
+        totalSQLInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "SQL").length;
+        totalCodingInTemplateToday = (dayAssignment.tasks || []).filter(t => t.taskType === "Coding" || t.taskType === "Debugging").length;
+        if (dayAssignment.questionId) {
+          totalCodingInTemplateToday += 1;
+        }
+      }
+    }
+
+    const batchQuestionIds = new Set();
+    (trackTemplates || []).forEach((template) => {
+      (template.dayAssignments || []).forEach((day) => {
+        if (day.questionId) {
+          batchQuestionIds.add(String(day.questionId._id || day.questionId));
+        }
+        (day.tasks || []).forEach((task) => {
+          if (task.questionId) {
+            batchQuestionIds.add(String(task.questionId._id || task.questionId));
+          }
+        });
+      });
+    });
+    (tracks || []).forEach((track) => {
+      (track.orderedQuestionIds || []).forEach((q) => {
+        const qId = q._id || q;
+        if (qId) {
+          batchQuestionIds.add(String(qId));
+        }
+      });
+    });
+
+    const computedStudentsTable = students.map((student) => {
+      const studentEmail = String(student.email || "").trim().toLowerCase();
+      const studentUserId = student.userId || userEmailToIdMap.get(studentEmail);
+
+      const studentSubsAllTime = submissions.filter((submission) => {
+        const matchesStudent = String(submission.studentId) === String(student._id);
+        const matchesBatchDirectly = submission.batchId && String(submission.batchId) === String(batch._id);
+        const matchesBatchQuestion = submission.questionId && batchQuestionIds.has(String(submission.questionId._id || submission.questionId));
+        return matchesStudent && (matchesBatchDirectly || matchesBatchQuestion);
+      });
+      const studentMcqSubsAllTime = mcqSubmissions.filter(
+        (sub) => String(sub.studentEmail || "").trim().toLowerCase() === studentEmail
+      );
+      const studentPracticeSubsAllTime = practiceSubmissions.filter((sub) => {
+        const matchesStudent = studentUserId && String(sub.userId) === String(studentUserId);
+        const matchesBatchQuestion = sub.questionBankId && batchQuestionIds.has(String(sub.questionBankId));
+        return matchesStudent && matchesBatchQuestion;
+      });
+
+      const allCombinedSubs = [
+        ...studentSubsAllTime.map(s => ({ ...s, type: "Submission", date: new Date(s.submittedAt || s.createdAt) })),
+        ...studentMcqSubsAllTime.map(s => ({ ...s, type: "StudentMcqSubmission", date: new Date(s.submittedAt) })),
+        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt) }))
+      ].sort((a, b) => b.date - a.date);
+
+      const latestAttempt = allCombinedSubs[0];
+      const lastAttemptAt = latestAttempt ? latestAttempt.date.toISOString() : null;
+
+      const todayCombinedSubs = allCombinedSubs.filter(sub => sub.date >= todayStart && sub.date <= todayEnd);
+
+      let todayScore = "—";
+      let todayXp = 0;
+      let status = "Not Started";
+      let todayScoresDetail = { mcq: "—", coding: "—", sql: "—" };
+
+      const isBatchClosed = batch.status === "Expired" || batch.status === "Archived" || (batch.expiryDate && new Date(batch.expiryDate) < now);
+
+      const todayAttempt = dailyTaskAttempts.find(
+        (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === dayNumber
+      );
+
+      const hasRealAttemptToday = (todayAttempt && todayAttempt.tasksProgress.some(t => t.status !== "Not Started")) ||
+                                 (todayCombinedSubs.length > 0);
+
+      if (hasRealAttemptToday) {
+        status = (todayAttempt && todayAttempt.isFullyCompleted) ? "Completed" : "In Progress";
+
+        if (todayAttempt) {
+          const mcqTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
+          const correctMcq = mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const totalMcq = Math.max(mcqTasks.length, totalMCQsInTemplateToday || 0);
+          if (totalMcq > 0) {
+            const attemptedAnyMcq = mcqTasks.some(t => t.status === "Completed");
+            todayScoresDetail.mcq = attemptedAnyMcq ? `${correctMcq}/${totalMcq}` : `—/${totalMcq}`;
+          }
+
+          const sqlTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "SQL");
+          const correctSql = sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const totalSql = Math.max(sqlTasks.length, totalSQLInTemplateToday || 0);
+          if (totalSql > 0) {
+            const attemptedAnySql = sqlTasks.some(t => t.status === "Completed");
+            todayScoresDetail.sql = attemptedAnySql ? `${correctSql}/${totalSql}` : `—/${totalSql}`;
+          }
+
+          const codingTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "Coding" || t.taskType === "Debugging");
+          const completedCoding = codingTasks.filter(t => t.status === "Completed");
+          const totalCoding = Math.max(codingTasks.length, totalCodingInTemplateToday || 0);
+          if (totalCoding > 0) {
+            if (completedCoding.length > 0) {
+              const totalAccuracy = completedCoding.reduce((sum, t) => sum + (t.accuracy ?? (t.isCorrect ? 100 : 0)), 0);
+              const avgAccuracy = Math.round(totalAccuracy / completedCoding.length);
+              todayScoresDetail.coding = `${avgAccuracy}/100`;
+            } else {
+              todayScoresDetail.coding = `—/100`;
+            }
+          }
+
+          let xpFromAttempt = 0;
+          let completedCount = 0;
+          todayAttempt.tasksProgress.forEach(t => {
+            if (t.status === "Completed") {
+              completedCount++;
+              
+              const isMcqLike = t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS";
+              if (isMcqLike && t.isCorrect !== true) {
+                return;
+              }
+
+              const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed || 0 });
+              if (t.taskType === "Coding" || t.taskType === "SQL") {
+                const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+                const fraction = Math.max(0, Math.min(100, acc)) / 100;
+                xpFromAttempt += Math.round(baseXp * fraction);
+              } else {
+                xpFromAttempt += baseXp;
+              }
+            }
+          });
+          if (completedCount > 0 && completedCount === todayAttempt.tasksProgress.length) {
+            xpFromAttempt += (TASK_XP.ALL_COMPLETED_BONUS || 25);
+            xpFromAttempt += (TASK_XP.NO_SKIP_BONUS || 10);
+          }
+          todayXp = xpFromAttempt;
+        } else {
+          const todayMcqSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && s.categoryType === "MCQ") ||
+            (s.type === "PracticeSubmission" && (s.categoryType === "MCQ" || s.track === "Core CS" || s.track === "Aptitude"))
+          );
+          const correctMcqCount = todayMcqSubs.filter(s => s.status === "Passed" || s.isCorrect === true).length;
+          const totalMcqCount = Math.max(todayMcqSubs.length, totalMCQsInTemplateToday || 0);
+          if (totalMcqCount > 0) {
+            todayScoresDetail.mcq = `${correctMcqCount}/${totalMcqCount}`;
+          } else {
+            const todayCollegeMcqSubs = todayCombinedSubs.filter(s => s.type === "StudentMcqSubmission");
+            if (todayCollegeMcqSubs.length > 0) {
+              const latestCollege = todayCollegeMcqSubs[0];
+              const total = latestCollege.answers?.length || latestCollege.collegeMcqId?.questions?.length || 0;
+              const correct = latestCollege.answers?.filter(a => a.isCorrect).length ?? latestCollege.score ?? 0;
+              todayScoresDetail.mcq = total > 0 ? `${correct}/${total}` : "—";
+            }
+          }
+
+          const todaySqlSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && (s.track === "SQL" || s.questionId?.trackType === "SQL" || s.questionId?.categorySlug === "sql")) ||
+            (s.type === "PracticeSubmission" && s.track === "SQL")
+          );
+          if (todaySqlSubs.length > 0) {
+            const latestSql = todaySqlSubs[0];
+            if (latestSql.type === "PracticeSubmission") {
+              todayScoresDetail.sql = latestSql.isCorrect ? "1/1" : "0/1";
+            } else {
+              const passed = latestSql.finalSubmissionResults?.passedTestCases ?? (latestSql.status === "Passed" ? 1 : 0);
+              const total = latestSql.finalSubmissionResults?.totalTestCases ?? 1;
+              todayScoresDetail.sql = `${passed}/${total}`;
+            }
+          }
+
+          const todayCodingSubs = todayCombinedSubs.filter(s =>
+            (s.type === "Submission" && (s.categoryType === "Coding" || s.questionId?.categoryType === "Coding" || s.track === "DSA" || s.questionId?.trackType === "DSA") && !(s.track === "SQL" || s.questionId?.trackType === "SQL" || s.questionId?.categorySlug === "sql")) ||
+            (s.type === "PracticeSubmission" && s.track === "DSA")
+          );
+          if (todayCodingSubs.length > 0) {
+            const latestCoding = todayCodingSubs[0];
+            if (latestCoding.type === "PracticeSubmission") {
+              todayScoresDetail.coding = `${latestCoding.accuracy ?? (latestCoding.isCorrect ? 100 : 0)}/100`;
+            } else {
+              todayScoresDetail.coding = `${latestCoding.accuracyScore ?? latestCoding.totalScore ?? 0}/100`;
+            }
+          }
+
+          todayXp = todayCombinedSubs
+            .filter(s => s.type === "Submission")
+            .reduce((sum, s) => sum + (s.xpEarned || 0), 0);
+        }
+
+        const activeTypes = allottedTypesToday.length > 0 ? allottedTypesToday : ["MCQ", "Coding", "SQL"];
+        if (activeTypes.length === 1) {
+          const singleType = String(activeTypes[0]).toLowerCase();
+          if (singleType === "mcq" || singleType === "aptitude" || singleType === "core cs") {
+            todayScore = todayScoresDetail.mcq;
+          } else if (singleType === "sql") {
+            todayScore = todayScoresDetail.sql;
+          } else {
+            todayScore = todayScoresDetail.coding;
+          }
+        } else {
+          todayScore = "View Scores";
+        }
+      } else {
+        status = isBatchClosed ? "Not Attempted" : "Not Started";
+      }
+
+      return {
+        id: student._id,
+        name: student.name,
+        email: student.email,
+        todayScore,
+        todayScoresDetail,
+        todayXp,
+        lastAttemptAt,
+        status,
+      };
+    });
+
+    const activeCount = computedStudentsTable.filter(s => s.status === "Completed" || s.status === "In Progress").length;
+    const inactiveCount = students.length - activeCount;
+
+    const resolvedTracks = (() => {
+      const templateTracks = (trackTemplates || []).map((template) => {
+        let days = [];
+        let questionsAssigned = 0;
+        const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
+        
+        sortedDays.forEach((day) => {
+          const mcq = [];
+          const coding = [];
+          const sql = [];
+
+          if (template.trackType === "Daily Task") {
+            (day.tasks || []).forEach((t) => {
+              const title = t.questionId?.title;
+              if (!title) return;
+              questionsAssigned += 1;
+              
+              const type = String(t.taskType).toLowerCase();
+              if (type === "mcq" || type === "aptitude") {
+                mcq.push(title);
+              } else if (type === "sql") {
+                sql.push(title);
+              } else {
+                coding.push(title);
+              }
+            });
+          } else {
+            const title = day.questionId?.title;
+            if (title) {
+              questionsAssigned += 1;
+              const type = String(template.trackType).toLowerCase();
+              if (type === "sql") {
+                sql.push(title);
+              } else if (type === "mcq") {
+                mcq.push(title);
+              } else {
+                coding.push(title);
+              }
+            }
+          }
+
+          if (mcq.length > 0 || coding.length > 0 || sql.length > 0) {
+            days.push({
+              dayNumber: day.dayNumber,
+              mcq,
+              coding,
+              sql
+            });
+          }
+        });
+
+        return {
+          id: template._id,
+          name: template.name || `${template.trackType} Track`,
+          questionsAssigned,
+          days,
+        };
+      }).filter((t) => t.questionsAssigned > 0);
+
+      const merged = [...templateTracks];
+      const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
+      
+      if (tracks && tracks.length > 0) {
+        tracks.forEach((track) => {
+          if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
+            const mcq = [];
+            const coding = [];
+            const sql = [];
+
+            track.orderedQuestionIds.forEach((q) => {
+              const title = q.title;
+              if (!title) return;
+              const type = String(track.trackType).toLowerCase();
+              if (type === "sql" || String(q.trackType).toLowerCase() === "sql") {
+                sql.push(title);
+              } else if (type === "mcq" || String(q.categoryType).toLowerCase() === "mcq") {
+                mcq.push(title);
+              } else {
+                coding.push(title);
+              }
+            });
+
+            const days = [];
+            if (mcq.length > 0 || coding.length > 0 || sql.length > 0) {
+              days.push({
+                dayNumber: 1,
+                mcq,
+                coding,
+                sql
+              });
+            }
+
+            merged.push({
+              id: track._id,
+              name: `${track.trackType} Track`,
+              questionsAssigned: track.orderedQuestionIds.length,
+              days,
+            });
+          }
+        });
+      }
+
+      if (merged.length > 0) return merged;
+
+      if (batch.assignedTrack) {
+        return [
+          {
+            id: `assigned-${batch._id}`,
+            name: String(batch.assignedTrack).trim(),
+            questionsAssigned: 0,
+            days: [],
+          },
+        ];
+      }
+      return [];
+    })();
+
+    const activeTrackTemplatesToday = (trackTemplates || []).filter((template) => {
+      const releaseStart = localCombineDateAndTime(template.startDate || batch.startDate, batch.releaseTime || "00:00");
+      if (now < releaseStart || (batch.expiryDate && now > new Date(batch.expiryDate))) {
+        return false;
+      }
+      const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+      if (!dayAssignment) return false;
+      const hasTasks = dayAssignment.tasks && dayAssignment.tasks.length > 0;
+      const hasDirectQuestion = !!dayAssignment.questionId;
+      return hasTasks || hasDirectQuestion;
+    });
+
+    let currentActiveTrack = "None";
+    if (activeTrackTemplatesToday.length === 1) {
+      currentActiveTrack = activeTrackTemplatesToday[0].name || `${activeTrackTemplatesToday[0].trackType} Track`;
+    } else if (activeTrackTemplatesToday.length > 1) {
+      currentActiveTrack = "Multiple Tracks";
+    } else {
+      if (activeTrackTemplate) {
+        currentActiveTrack = activeTrackTemplate.name || "None";
+      } else if (batch.assignedTrack) {
+        currentActiveTrack = batch.assignedTrack;
+      } else if (resolvedTracks.length > 0) {
+        currentActiveTrack = resolvedTracks[0].name || "None";
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -635,136 +1044,12 @@ export const getBatchDetail = async (req, res) => {
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
         expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
         students: students.length,
-        accuracy: avgScore,
-        avgScore,
-        avgStreakDays: avgStreak,
-        tracks: (() => {
-          const templateTracks = (trackTemplates || []).map((template) => {
-            let days = [];
-            let questionsAssigned = 0;
-            const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
-            if (template.trackType === "Daily Task") {
-              sortedDays.forEach((day) => {
-                const titles = (day.tasks || []).map((t) => t.questionId?.title).filter(Boolean);
-                if (titles.length > 0) {
-                  days.push(titles.join(", "));
-                  questionsAssigned += titles.length;
-                }
-              });
-            } else {
-              sortedDays.forEach((day) => {
-                if (day.questionId?.title) {
-                  days.push(day.questionId.title);
-                  questionsAssigned += 1;
-                }
-              });
-            }
-            return {
-              id: template._id,
-              name: template.name || `${template.trackType} Track`,
-              questionsAssigned,
-              days,
-            };
-          }).filter((t) => t.questionsAssigned > 0);
-
-          const merged = [...templateTracks];
-          const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
-          
-          if (tracks && tracks.length > 0) {
-            tracks.forEach((track) => {
-              if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
-                merged.push({
-                  id: track._id,
-                  name: `${track.trackType} Track`,
-                  questionsAssigned: track.orderedQuestionIds.length,
-                  days: (track.orderedQuestionIds || []).map((q) => q.title || "Untitled Question"),
-                });
-              }
-            });
-          }
-
-          if (merged.length > 0) return merged;
-
-          if (batch.assignedTrack) {
-            return [
-              {
-                id: `assigned-${batch._id}`,
-                name: String(batch.assignedTrack).trim(),
-                questionsAssigned: 0,
-                days: [],
-              },
-            ];
-          }
-          return [];
-        })(),
-        studentsTable: students.map((student) => {
-          const studentEmail = String(student.email || "").trim().toLowerCase();
-          const latestMcqSubmission = latestMcqSubmissionByEmail.get(studentEmail);
-          const studentSubs = submissions.filter(
-            (submission) => String(submission.studentId) === String(student._id)
-          );
-          const mcqStreak = calculateCurrentStreak([
-            ...(mcqSubmissionsByEmail.get(studentEmail) || []),
-            ...studentSubs,
-          ]);
-          const score =
-            studentSubs.length > 0
-              ? Number(
-                  (
-                    studentSubs.reduce((sum, submission) => sum + (submission.totalScore || 0), 0) /
-                    studentSubs.length
-                  ).toFixed(0)
-                )
-              : 0;
-          const trackMcqSubmissions = studentSubs.filter(s => s.categoryType === "MCQ");
-          const correctTrackMcqAnswers = trackMcqSubmissions.filter(sub => sub.status === "Passed").length;
-          
-          // Get the active track template assigned to this batch
-          const activeTrackTemplate = trackTemplates.find(t => String(t._id) === String(batch.assignedDailyTaskTrack));
-          const trackMcqQuestionIds = new Set();
-          if (activeTrackTemplate) {
-            (activeTrackTemplate.dayAssignments || []).forEach((day) => {
-              (day.tasks || []).forEach((task) => {
-                if (task.taskType === "MCQ" && task.questionId) {
-                  const qIdStr = task.questionId._id ? String(task.questionId._id) : String(task.questionId);
-                  trackMcqQuestionIds.add(qIdStr);
-                }
-              });
-            });
-          }
-          const totalTrackMcqQuestions = trackMcqQuestionIds.size || trackMcqSubmissions.length;
-          const trackMcqScorePercent = totalTrackMcqQuestions > 0
-            ? Math.round((correctTrackMcqAnswers / totalTrackMcqQuestions) * 100)
-            : score;
-
-          const totalMcqQuestions = latestMcqSubmission?.collegeMcqId?.questions?.length || latestMcqSubmission?.answers?.length || 0;
-          const correctMcqAnswers = latestMcqSubmission?.answers?.filter((answer) => answer.isCorrect).length ?? latestMcqSubmission?.score ?? 0;
-          const mcqScorePercent = totalMcqQuestions > 0
-            ? Math.round((correctMcqAnswers / totalMcqQuestions) * 100)
-            : score;
-
-          const hasTrackMcq = trackMcqSubmissions.length > 0;
-          const hasCollegeMcq = !!latestMcqSubmission;
-          const showMcqFormat = hasCollegeMcq || hasTrackMcq || (trackMcqQuestionIds.size > 0 && studentSubs.length === 0);
-
-          const finalAccuracy = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
-          const finalScore = hasCollegeMcq ? mcqScorePercent : (showMcqFormat ? trackMcqScorePercent : score);
-          const scoreDisplay = hasCollegeMcq 
-            ? `${correctMcqAnswers}/${totalMcqQuestions}` 
-            : (showMcqFormat ? `${correctTrackMcqAnswers}/${totalTrackMcqQuestions}` : `${score}%`);
-          const scoreType = showMcqFormat ? "mcq" : "percentage";
-
-          return {
-            id: student._id,
-            name: student.name,
-            email: student.email,
-            accuracy: finalAccuracy,
-            score: finalScore,
-            scoreDisplay,
-            scoreType,
-            streak: `${mcqStreak || student.streak || 0} / ${Math.max(1, Math.ceil((Date.now() - new Date(batch.startDate).getTime()) / (24 * 60 * 60 * 1000)))}`,
-          };
-        }),
+        totalStudents: students.length,
+        activeStudentsToday: activeCount,
+        inactiveStudentsToday: inactiveCount,
+        currentActiveTrack,
+        tracks: resolvedTracks,
+        studentsTable: computedStudentsTable,
       },
     });
   } catch (error) {
