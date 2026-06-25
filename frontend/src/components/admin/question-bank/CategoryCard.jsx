@@ -129,7 +129,6 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
           </div>
           <div className="min-h-[64px] flex-1 min-w-0">
             <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white truncate">{category.title}</h3>
-            <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300 line-clamp-2">{category.subtitle}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
                 {category.categoryType || 'Coding'}

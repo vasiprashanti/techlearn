@@ -15,7 +15,6 @@ import {
   formatQuestionForAdmin,
   normalizeCategoryType,
 } from "../../utils/questionBank.js";
-import { validateTrackTemplateQuestionAssignment } from "../../utils/trackTemplateValidation.js";
 import {
   CATEGORY_SLUG_BY_TITLE,
   assertObjectId,
@@ -209,6 +208,11 @@ const removeQuestionAssignmentAcrossTemplates = async (questionId) => {
   await TrackTemplate.updateMany({}, { $pull: { dayAssignments: { questionId } } });
 };
 
+const normalizeCategoryStatus = (status, fallback = "Draft") => {
+  const normalized = String(status || fallback).trim();
+  return ["Active", "Draft", "Archived"].includes(normalized) ? normalized : fallback;
+};
+
 export const createQuestionCategory = async (req, res) => {
   try {
     const { title, subtitle, icon, status } = req.body;
@@ -235,10 +239,10 @@ export const createQuestionCategory = async (req, res) => {
     const category = await Category.create({
       slug,
       title: title.trim(),
-      description: subtitle?.trim() || "Custom question category",
+      description: "",
       icon: icon || "chart",
       categoryType,
-      status: status || "Draft",
+      status: normalizeCategoryStatus(status),
       createdBy: req.user?._id,
     });
 
@@ -262,6 +266,7 @@ export const createQuestionCategory = async (req, res) => {
         active: 0,
         icon: category.icon,
         categoryType: category.categoryType,
+        status: category.status,
       },
     });
   } catch (error) {
@@ -288,9 +293,9 @@ export const updateQuestionCategory = async (req, res) => {
     }
 
     const nextTitle = req.body.title?.trim() || category.title;
-    const nextSubtitle = req.body.subtitle?.trim() || category.description;
+    const nextSubtitle = "";
     const nextIcon = req.body.icon || category.icon;
-    const nextStatus = req.body.status || category.status;
+    const nextStatus = normalizeCategoryStatus(req.body.status, category.status);
 
     const nextSlug = slugifyCategory(nextTitle);
     if (!nextSlug) {
@@ -349,6 +354,7 @@ export const updateQuestionCategory = async (req, res) => {
         subtitle: category.description,
         icon: category.icon,
         categoryType: category.categoryType,
+        status: category.status,
       },
     });
   } catch (error) {
@@ -423,13 +429,26 @@ export const listQuestionsAdmin = async (req, res) => {
       query.$and = [...(query.$and || []), { $or: [{ title: expression }, { tags: expression }, { description: expression }] }];
     }
 
-    const sortOptions = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, prompt: { title: 1 }, difficulty: { difficulty: 1 } };
+    if (req.query.tag) {
+      query.tags = new RegExp(`^${String(req.query.tag).trim()}$`, "i");
+    }
+
+    const difficultyRank = { Easy: 1, Medium: 2, Hard: 3 };
+    const sortKey = req.query.sort || "newest";
+    const sortOptions = { newest: { createdAt: -1 }, oldest: { createdAt: 1 }, prompt: { description: 1, title: 1 } };
     const questions = await Question.find(query)
       .select("+content.hiddenTestCases +content.correctOption +content.referenceSolution")
       .populate("categoryId", "title slug categoryType")
-      .sort(sortOptions[req.query.sort] || sortOptions.newest)
+      .sort(sortOptions[sortKey] || sortOptions.newest)
       .lean();
-    const data = questions.map((question) => formatQuestionForAdmin(question, question.categoryId || category));
+    const sortedQuestions = ["easy-hard", "hard-easy"].includes(sortKey)
+      ? questions.sort((a, b) => {
+          const left = difficultyRank[a.difficulty] || 99;
+          const right = difficultyRank[b.difficulty] || 99;
+          return sortKey === "easy-hard" ? left - right : right - left;
+        })
+      : questions;
+    const data = sortedQuestions.map((question) => formatQuestionForAdmin(question, question.categoryId || category));
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -440,6 +459,41 @@ export const listQuestionsAdmin = async (req, res) => {
 
 export const createQuestionAdmin = async (req, res) => {
   try {
+    const incomingQuestions = Array.isArray(req.body.questions) ? req.body.questions : null;
+    if (incomingQuestions) {
+      const createdQuestions = [];
+      for (const questionBody of incomingQuestions) {
+        const categoryId = questionBody.categoryId || req.body.categoryId;
+        const categorySlug = questionBody.categorySlug || req.body.categorySlug;
+        let category = null;
+        if (categoryId) {
+          if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            return res.status(400).json({ success: false, message: "categoryId must be a valid ObjectId." });
+          }
+          category = await Category.findById(categoryId);
+        } else if (categorySlug) {
+          category = await Category.findOne({ slug: categorySlug });
+        }
+        if (!category) {
+          return res.status(400).json({ success: false, message: "Selected central Question Bank category does not exist." });
+        }
+
+        const payload = await buildCentralQuestionPayload({ category, body: { ...req.body, ...questionBody } });
+        const question = await Question.create(payload);
+        createdQuestions.push(formatQuestionForAdmin(question, category));
+      }
+
+      await writeAuditLog({
+        verb: "Created",
+        entityType: "Question",
+        action: "Bulk created questions",
+        detail: `${createdQuestions.length} questions`,
+        actor: req.user,
+      });
+
+      return res.status(201).json({ success: true, data: createdQuestions });
+    }
+
     const { title, categorySlug, categoryId, description, problemDescription } = req.body;
 
     if (!title?.trim() && !description && !problemDescription) {
@@ -474,6 +528,77 @@ export const createQuestionAdmin = async (req, res) => {
   } catch (error) {
     console.error("createQuestionAdmin error:", error);
     return res.status(500).json({ success: false, message: "Failed to create question.", error: error.message });
+  }
+};
+
+export const getQuestionCategoryUsage = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    if (!assertObjectId(categoryId, "categoryId", res)) return;
+
+    const category = await Category.findById(categoryId).lean();
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Question category not found." });
+    }
+
+    const questionFilter = {
+      isActive: { $ne: false },
+      $or: [{ categoryId: category._id }, { categorySlug: category.slug }, { categoryTitle: category.title }],
+    };
+
+    const [totalQuestions, activeQuestions, easyQuestions, mediumQuestions, hardQuestions, templates, batches] = await Promise.all([
+      Question.countDocuments(questionFilter),
+      Question.countDocuments({ ...questionFilter, status: "Active" }),
+      Question.countDocuments({ ...questionFilter, difficulty: "Easy" }),
+      Question.countDocuments({ ...questionFilter, difficulty: "Medium" }),
+      Question.countDocuments({ ...questionFilter, difficulty: "Hard" }),
+      TrackTemplate.find({
+        $or: [
+          { category: category.title },
+          { category: { $regex: new RegExp(`(^|,\\s*)${category.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s*,|$)`, "i") } },
+        ],
+      }).lean(),
+      Batch.find({ assignedTrackTemplate: { $ne: null } })
+        .populate("collegeId", "name")
+        .populate("assignedTrackTemplate", "name category status")
+        .lean(),
+    ]);
+
+    const templateIds = templates.map((template) => template._id);
+    const categoryBatches = batches.filter((batch) => templateIds.some((id) => String(id) === String(batch.assignedTrackTemplate?._id)));
+    const studentsReached = categoryBatches.reduce((sum, batch) => sum + Number(batch.batchSize || batch.students?.length || 0), 0);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totals: {
+          totalQuestions,
+          activeQuestions,
+          easyQuestions,
+          mediumQuestions,
+          hardQuestions,
+          usedInTrackTemplates: templates.length,
+          activeTracks: templates.filter((template) => template.status === "Active").length,
+          activeBatches: categoryBatches.length,
+          studentsReached,
+        },
+        trackTemplates: templates.map((template) => ({
+          id: template._id,
+          name: template.name,
+          status: template.status,
+          students: studentsReached,
+        })),
+        batches: categoryBatches.map((batch) => ({
+          id: batch._id,
+          name: batch.name,
+          college: batch.collegeId?.name || batch.college || "",
+          students: batch.batchSize || batch.students?.length || 0,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("getQuestionCategoryUsage error:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch category usage analytics." });
   }
 };
 
@@ -778,7 +903,9 @@ export const getTrackTemplateDetail = async (req, res) => {
           })),
         availableQuestions: availableQuestions.map((question) => ({
           id: question._id,
+          qid: question.qid,
           title: question.title,
+          description: question.description,
           tags: question.tags || [],
           difficulty: question.difficulty,
           track: getCategoryTitle(question),
@@ -992,8 +1119,12 @@ export const deleteTrackTemplate = async (req, res) => {
 export const assignTrackTemplateDay = async (req, res) => {
   try {
     const { templateId } = req.params;
-    const { dayNumber, questionId, taskType, xpValue, status, batchId } = req.body;
-    if (!assertObjectId(templateId, "templateId", res) || !assertObjectId(questionId, "questionId", res)) return;
+    const { dayNumber, questionId, questionIds, taskType, xpValue, status, batchId } = req.body;
+    const requestedQuestionIds = Array.isArray(questionIds) && questionIds.length ? questionIds : [questionId].filter(Boolean);
+    if (!assertObjectId(templateId, "templateId", res)) return;
+    if (!requestedQuestionIds.length || requestedQuestionIds.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+      return res.status(400).json({ success: false, message: "At least one valid questionId is required." });
+    }
 
     const template = await TrackTemplate.findById(templateId);
     if (!template) {
@@ -1007,64 +1138,58 @@ export const assignTrackTemplateDay = async (req, res) => {
         return res.status(400).json({ success: false, message: "taskType is required for Daily Tasks." });
       }
 
-      const existingDayIndex = template.dayAssignments.findIndex(
-        (assignment) => assignment.dayNumber === normalizedDayNumber
+      let dayAssignment = template.dayAssignments.find((assignment) => assignment.dayNumber === normalizedDayNumber);
+      if (!dayAssignment) {
+        template.dayAssignments.push({ dayNumber: normalizedDayNumber, tasks: [] });
+        dayAssignment = template.dayAssignments.find((assignment) => assignment.dayNumber === normalizedDayNumber);
+      }
+
+      const assignedQuestionIds = new Set(
+        template.dayAssignments.flatMap((assignment) => [
+          assignment.questionId ? String(assignment.questionId) : null,
+          ...(assignment.tasks || []).map((task) => String(task.questionId)),
+        ]).filter(Boolean)
       );
 
-      if (existingDayIndex >= 0) {
-        const dayAssignment = template.dayAssignments[existingDayIndex];
-        const existingTaskIndex = dayAssignment.tasks.findIndex(
-          (t) => String(t.questionId) === String(questionId) && t.taskType === taskType
-        );
-
-        if (existingTaskIndex === -1) {
-          dayAssignment.tasks.push({
-            taskType,
-            questionId,
-            batchId: batchId || template.batchId || null,
-            xpValue: Number(xpValue || 0),
-            status: status || "Published",
-          });
-        } else {
-          dayAssignment.tasks[existingTaskIndex].batchId = batchId || dayAssignment.tasks[existingTaskIndex].batchId || template.batchId || null;
-          dayAssignment.tasks[existingTaskIndex].xpValue = Number(xpValue || 0);
-          dayAssignment.tasks[existingTaskIndex].status = status || dayAssignment.tasks[existingTaskIndex].status || "Published";
-        }
-      } else {
-        template.dayAssignments.push({
-          dayNumber: normalizedDayNumber,
-          tasks: [{
-            taskType,
-            questionId,
-            batchId: batchId || template.batchId || null,
-            xpValue: Number(xpValue || 0),
-            status: status || "Published",
-          }],
+      requestedQuestionIds.forEach((id) => {
+        if (assignedQuestionIds.has(String(id))) return;
+        dayAssignment.tasks.push({
+          taskType,
+          questionId: id,
+          batchId: batchId || template.batchId || null,
+          xpValue: Number(xpValue || 0),
+          status: status || "Published",
         });
-      }
+      });
     } else {
-      const validation = await validateTrackTemplateQuestionAssignment({ templateId, dayNumber, questionId });
-      if (!validation.valid) {
-        await logTrackTemplateValidationFailure({
-          templateId,
-          action: "Assign track template day rejected",
-          detail: validation.message,
-          actor: req.user,
-          metadata: { dayNumber, questionId },
+      if (!Number.isFinite(normalizedDayNumber) || normalizedDayNumber < 1 || normalizedDayNumber > template.totalDays) {
+        return res.status(400).json({ success: false, message: "Day number must be within the template duration." });
+      }
+      if (normalizedDayNumber + requestedQuestionIds.length - 1 > template.totalDays) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected questions exceed the remaining days in this template.",
         });
-        return res.status(validation.status || 400).json({ success: false, message: validation.message });
       }
 
-      const { normalizedDayNumber: valDayNumber } = validation;
-
-      const existingIndex = template.dayAssignments.findIndex(
-        (assignment) => assignment.dayNumber === valDayNumber
+      const assignedQuestionIds = new Set(
+        template.dayAssignments.flatMap((assignment) => [
+          assignment.questionId ? String(assignment.questionId) : null,
+          ...(assignment.tasks || []).map((task) => String(task.questionId)),
+        ]).filter(Boolean)
       );
-      if (existingIndex >= 0) {
-        template.dayAssignments[existingIndex].questionId = questionId;
-      } else {
-        template.dayAssignments.push({ dayNumber: valDayNumber, questionId });
-      }
+
+      requestedQuestionIds.forEach((id, index) => {
+        if (assignedQuestionIds.has(String(id))) return;
+        const targetDayNumber = normalizedDayNumber + index;
+        const existingIndex = template.dayAssignments.findIndex((assignment) => assignment.dayNumber === targetDayNumber);
+        if (existingIndex >= 0) {
+          template.dayAssignments[existingIndex].questionId = id;
+        } else {
+          template.dayAssignments.push({ dayNumber: targetDayNumber, questionId: id });
+        }
+        assignedQuestionIds.add(String(id));
+      });
     }
 
     template.dayAssignments.sort((a, b) => a.dayNumber - b.dayNumber);
@@ -1072,7 +1197,7 @@ export const assignTrackTemplateDay = async (req, res) => {
     template.versionHistory = [
       {
         version: nextVersion,
-        label: `v${nextVersion} - Assigned question to day ${dayNumber}`,
+        label: `v${nextVersion} - Assigned ${requestedQuestionIds.length} question${requestedQuestionIds.length === 1 ? "" : "s"} to day ${dayNumber}`,
         changedBy: getActorName(req.user),
         changedAt: new Date(),
       },
@@ -1087,7 +1212,7 @@ export const assignTrackTemplateDay = async (req, res) => {
       detail: `Day ${normalizedDayNumber}`,
       actor: req.user,
       entityId: template._id,
-      metadata: { dayNumber: normalizedDayNumber, questionId },
+      metadata: { dayNumber: normalizedDayNumber, questionIds: requestedQuestionIds },
     });
     return res.status(200).json({ success: true, data: template });
   } catch (error) {

@@ -6,7 +6,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
-import { FiSearch, FiEye, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiCopy } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiCopy } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 
 // --- Mock Data ---
@@ -58,7 +58,6 @@ export default function TrackTemplate() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [tracks, setTracks] = useState(emptyTrackTemplates);
-  const [batches, setBatches] = useState([]);
   const [isCreateTemplateOpen, setIsCreateTemplateOpen] = useState(false);
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -68,7 +67,6 @@ export default function TrackTemplate() {
     trackType: 'Daily Challenge',
     category: '',
     description: '',
-    batchId: '',
     totalDays: '30',
     iconKey: 'code',
     status: 'Active',
@@ -111,30 +109,23 @@ export default function TrackTemplate() {
   const isDarkMode = theme === 'dark';
 
   const loadTrackTemplatePageData = useCallback(async () => {
-    const [remoteTracks, remoteCategories, remoteBatches] = await Promise.all([
+    const [remoteTracks, remoteCategories] = await Promise.all([
       adminAPI.getTrackTemplates(),
       adminAPI.getQuestionCategories(),
-      adminAPI.getBatches(),
     ]);
 
     const normalizedTracks = preferRemoteData(remoteTracks, emptyTrackTemplates).map((track) => ({
       ...track,
       id: track.id || track._id,
       icon: track.icon || iconMapForTrack(track.iconKey || track.category),
-      batchId: track.batchId || '',
       assignedBatch: track.assignedBatch || '',
     }));
     const normalizedCategories = preferRemoteData(remoteCategories, [])
       .map((category) => category.title)
       .filter(Boolean);
-    const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({
-      id: batch.id || batch._id,
-      name: batch.name || 'Untitled Batch',
-    }));
 
     setTracks(normalizedTracks);
     setQuestionCategories(normalizedCategories);
-    setBatches(normalizedBatches);
   }, []);
 
   useEffect(() => { setMounted(true); }, []);
@@ -151,7 +142,6 @@ export default function TrackTemplate() {
         if (!cancelled) {
           setTracks(emptyTrackTemplates);
           setQuestionCategories([]);
-          setBatches([]);
         }
       });
 
@@ -240,7 +230,6 @@ export default function TrackTemplate() {
       trackType: 'Daily Challenge',
       category: '',
       description: '',
-      batchId: '',
       totalDays: '30',
       iconKey: 'code',
       status: 'Active',
@@ -255,7 +244,6 @@ export default function TrackTemplate() {
       trackType: 'Daily Challenge',
       category: '',
       description: '',
-      batchId: '',
       totalDays: '30',
       iconKey: 'code',
       status: 'Active',
@@ -270,7 +258,6 @@ export default function TrackTemplate() {
       trackType: track.trackType || 'Daily Challenge',
       category: track.category || '',
       description: track.description || '',
-      batchId: track.batchId || '',
       totalDays: String(track.totalDays || 1),
       iconKey: track.iconKey || 'code',
       status: track.status || 'Active',
@@ -294,7 +281,6 @@ export default function TrackTemplate() {
       trackType: createTemplateForm.trackType || 'Daily Challenge',
       category: effectiveCategory,
       description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
-      batchId: createTemplateForm.batchId || null,
       totalDays,
       iconKey: createTemplateForm.iconKey,
       status: createTemplateForm.status,
@@ -554,23 +540,6 @@ export default function TrackTemplate() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Assigned batch (optional)</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={createTemplateForm.batchId}
-                      onChange={(e) => updateCreateTemplateField('batchId', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">No batch assignment</option>
-                      {batches.map((batch) => (
-                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={batch.id} value={batch.id}>{batch.name}</option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                  </div>
-                </div>
-
-                <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Total days</label>
                   <input
                     type="number"
@@ -829,7 +798,6 @@ export default function TrackTemplate() {
                           disabled={!templateId}
                           className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
                         >
-                          <FiEye className="w-[15px] h-[15px]" />
                           View Tasks
                         </button>
                         <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>

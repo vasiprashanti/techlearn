@@ -327,6 +327,7 @@ export const adminAPI = {
   getQuestionCategories: () => request('/admin/questions/categories'),
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
   updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  getQuestionCategoryUsage: (categoryId) => request(`/admin/questions/categories/${categoryId}/usage`),
   deleteQuestionCategory: (categoryId) => request(`/admin/questions/categories/${categoryId}`, { method: 'DELETE' }),
   bulkDeleteQuestionCategories: (categoryIds) => request('/admin/questions/categories/bulk-delete', { method: 'POST', body: JSON.stringify({ categoryIds }) }),
   getQuestions: (params = {}) => {
@@ -335,6 +336,7 @@ export const adminAPI = {
     return request(`/admin/questions${suffix}`);
   },
   createQuestion: (body) => request('/admin/questions', { method: 'POST', body: JSON.stringify(body) }),
+  bulkCreateQuestions: (body) => request('/admin/questions', { method: 'POST', body: JSON.stringify(body) }),
   updateQuestion: (questionId, body) => request(`/admin/questions/${questionId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteQuestion: (questionId) => request(`/admin/questions/${questionId}`, { method: 'DELETE' }),
 

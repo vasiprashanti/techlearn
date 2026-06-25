@@ -375,6 +375,18 @@ const submitQuizResults = async () => {
           </div>
 
           {/* Question */}
+          {Array.isArray(question.tags) && question.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {question.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-blue-500/15 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
           <h2 className="text-xl font-medium text-gray-900 dark:text-white">
             {question.question}
           </h2>

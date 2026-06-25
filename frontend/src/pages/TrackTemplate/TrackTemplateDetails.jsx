@@ -13,6 +13,7 @@ import {
   FiCpu,
   FiX,
   FiChevronDown,
+  FiChevronRight,
 } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
@@ -70,6 +71,7 @@ export default function TrackTemplateDetails() {
   const [addDayForm, setAddDayForm] = useState({
     dayNumber: '1',
     questionId: '',
+    questionIds: [],
     taskType: 'Coding',
     batchId: '',
     xpValue: '',
@@ -77,6 +79,7 @@ export default function TrackTemplateDetails() {
   });
 
   const [allCategories, setAllCategories] = useState([]);
+  const [expandedDays, setExpandedDays] = useState({});
 
   useEffect(() => {
     setMounted(true);
@@ -139,6 +142,17 @@ export default function TrackTemplateDetails() {
 
   const categorySlug = track ? categorySlugMap[track.category] : null;
 
+  const assignedQuestionIdSet = useMemo(() => {
+    const ids = new Set();
+    (trackDetail?.dayAssignments || []).forEach((day) => {
+      if (day.questionId) ids.add(String(day.questionId));
+      (day.tasks || []).forEach((task) => {
+        if (task.questionId) ids.add(String(task.questionId));
+      });
+    });
+    return ids;
+  }, [trackDetail?.dayAssignments]);
+
   const filteredQuestions = useMemo(() => {
     if (!addDayForm.taskType) return availableQuestions;
 
@@ -147,6 +161,7 @@ export default function TrackTemplateDetails() {
     const isTaskTypeMcq = ['mcq', 'aptitude', 'core cs'].includes(taskTypeLower);
 
     return availableQuestions.filter((question) => {
+      if (assignedQuestionIdSet.has(String(question.id || question._id))) return false;
       const qCatName = question.track ? question.track.toLowerCase() : '';
       const dbCat = allCategories.find(
         (c) => c.title && c.title.toLowerCase() === qCatName
@@ -167,7 +182,7 @@ export default function TrackTemplateDetails() {
 
       return true;
     });
-  }, [availableQuestions, addDayForm.taskType, allCategories]);
+  }, [availableQuestions, addDayForm.taskType, allCategories, assignedQuestionIdSet]);
 
   const dayWiseQuestions = filteredQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
@@ -180,12 +195,23 @@ export default function TrackTemplateDetails() {
     setAddDayForm({
       dayNumber: nextDay,
       questionId: '',
+      questionIds: [],
       taskType: defaultTaskType,
       batchId: trackDetail?.batchId || '',
       xpValue: '',
       status: 'Published',
     });
   }, [availableQuestions, trackDetail, defaultTaskType]);
+
+  useEffect(() => {
+    const days = trackDetail?.dayAssignments || [];
+    if (!days.length) return;
+    const currentDay =
+      days.find((day) => day.tasks?.length || day.questionId)?.dayNumber ||
+      days[0]?.dayNumber ||
+      1;
+    setExpandedDays((prev) => (Object.keys(prev).length ? prev : { [currentDay]: true }));
+  }, [trackDetail?.dayAssignments]);
 
   useEffect(() => {
     let cancelled = false;
@@ -270,6 +296,7 @@ export default function TrackTemplateDetails() {
     setAddDayForm({
       dayNumber: String(dayNumber),
       questionId: '',
+      questionIds: [],
       taskType: defaultTaskType,
       batchId: track?.batchId || '',
       xpValue: '',
@@ -283,6 +310,7 @@ export default function TrackTemplateDetails() {
     setAddDayForm({
       dayNumber: '',
       questionId: '',
+      questionIds: [],
       taskType: defaultTaskType,
       batchId: '',
       xpValue: '',
@@ -291,11 +319,11 @@ export default function TrackTemplateDetails() {
   };
 
   const assignQuestionToDay = async () => {
-    if (!addDayForm.questionId) return;
+    if (!addDayForm.questionIds.length) return;
     try {
       const payload = {
         dayNumber: Number(addDayForm.dayNumber),
-        questionId: addDayForm.questionId,
+        questionIds: addDayForm.questionIds,
         ...(track.trackType === 'Daily Task' ? {
           taskType: addDayForm.taskType,
           batchId: addDayForm.batchId || track.batchId,
@@ -311,6 +339,19 @@ export default function TrackTemplateDetails() {
     } catch (err) {
       console.error("Failed to assign question to day:", err);
     }
+  };
+
+  const toggleQuestionSelection = (questionId) => {
+    setAddDayForm((prev) => ({
+      ...prev,
+      questionIds: prev.questionIds.includes(questionId)
+        ? prev.questionIds.filter((id) => id !== questionId)
+        : [...prev.questionIds, questionId],
+    }));
+  };
+
+  const toggleDay = (dayNumber) => {
+    setExpandedDays((prev) => ({ ...prev, [dayNumber]: !prev[dayNumber] }));
   };
 
   const removeAssignedQuestion = async (dayNumber) => {
@@ -359,7 +400,7 @@ export default function TrackTemplateDetails() {
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddDayModal} />
 
-          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-4 md:p-5">
+          <div className="relative w-full max-w-5xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-4 md:p-5">
             <button
               onClick={closeAddDayModal}
               className="absolute right-3.5 top-3.5 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white"
@@ -390,7 +431,7 @@ export default function TrackTemplateDetails() {
                     <div className="relative mt-1.5">
                       <select
                         value={addDayForm.taskType}
-                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value, questionId: '' }))}
+                        onChange={(e) => setAddDayForm((prev) => ({ ...prev, taskType: e.target.value, questionId: '', questionIds: [] }))}
                         className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
                       >
                         {(!hasMcq || hasCoding || (!hasMcq && !hasCoding)) && (
@@ -457,22 +498,32 @@ export default function TrackTemplateDetails() {
 
               <div>
                 <label className="block text-sm font-medium text-[#1a2335] dark:text-white">
-                  Question (from {track.category})
+                  Questions from {track.category}
                 </label>
-                <div className="relative mt-1.5">
-                  <select
-                    value={addDayForm.questionId}
-                    onChange={(e) => setAddDayForm((prev) => ({ ...prev, questionId: e.target.value }))}
-                    className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 pr-10 text-sm text-[#1a2335] dark:text-white"
-                  >
-                    <option value="">Select a question</option>
-                    {dayWiseQuestions.map((question) => (
-                      <option key={question.id} value={question.id}>
-                        {(question.tags || []).join(', ') || 'No tag'} - {question.title}
-                      </option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/55 dark:text-white/60" />
+                <div className="mt-1.5 max-h-[46vh] overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] p-2 space-y-2">
+                  {dayWiseQuestions.length ? dayWiseQuestions.map((question, index) => {
+                    const qid = question.qid || `QID-${String(index + 1).padStart(6, '0')}`;
+                    const text = question.description || question.title || 'Untitled question';
+                    const questionId = question.id || question._id;
+                    return (
+                      <label key={questionId} className="flex items-start gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={addDayForm.questionIds.includes(questionId)}
+                          onChange={() => toggleQuestionSelection(questionId)}
+                          className="mt-0.5 h-4 w-4 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6]"
+                        />
+                        <span className="text-sm text-[#1a2335] dark:text-white">
+                          <span className="mr-2 font-semibold text-[#3c83f6] dark:text-blue-300">{index + 1}.</span>
+                          <span className="font-semibold">{qid}</span>
+                          <span className="mx-2 text-black/35 dark:text-white/35">-</span>
+                          {text}
+                        </span>
+                      </label>
+                    );
+                  }) : (
+                    <p className="p-4 text-sm text-slate-500 dark:text-slate-300">No available questions. Already assigned questions are hidden from this list.</p>
+                  )}
                 </div>
               </div>
 
@@ -485,9 +536,10 @@ export default function TrackTemplateDetails() {
                 </button>
                 <button
                   onClick={assignQuestionToDay}
-                  className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold"
+                  disabled={!addDayForm.questionIds.length}
+                  className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold"
                 >
-                  Assign Question
+                  Assign {addDayForm.questionIds.length || ''} Question{addDayForm.questionIds.length === 1 ? '' : 's'}
                 </button>
               </div>
             </div>
@@ -526,8 +578,6 @@ export default function TrackTemplateDetails() {
                     {track.totalDays} days
                   </p>
                   <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300">
-                    Batch: {track.assignedBatch || 'Not set'}
-                    <span className="mx-2">·</span>
                     Schedule starts when assigned
                   </p>
                 </div>
@@ -540,7 +590,7 @@ export default function TrackTemplateDetails() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
                 <p className="text-sm text-[#5f7491] dark:text-slate-300">Total Days</p>
                 <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{track.totalDays}</p>
@@ -548,10 +598,6 @@ export default function TrackTemplateDetails() {
               <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
                 <p className="text-sm text-[#5f7491] dark:text-slate-300">Questions Assigned</p>
                 <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{trackDetail?.questionsAssigned ?? track.questionsAssigned ?? 0}</p>
-              </div>
-              <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
-                <p className="text-sm text-[#5f7491] dark:text-slate-300">Assigned Batch</p>
-                <p className="mt-1 text-2xl font-bold text-[#0b1b38] dark:text-white truncate">{track.assignedBatch || 'Not set'}</p>
               </div>
             </div>
 
@@ -564,9 +610,10 @@ export default function TrackTemplateDetails() {
                 (trackDetail?.dayAssignments || []).map((day) => (
                   <article key={`day-${day.dayNumber}`} className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-1 bg-[#dfe8f6] dark:bg-[#1c3f76] text-[#3c83f6] dark:text-blue-300 text-xs font-semibold">
-                        Day {day.dayNumber}
-                      </span>
+                      <button onClick={() => toggleDay(day.dayNumber)} className="inline-flex items-center gap-2 text-sm font-semibold text-[#0b1b38] dark:text-white">
+                        {expandedDays[day.dayNumber] ? <FiChevronDown className="w-4 h-4" /> : <FiChevronRight className="w-4 h-4" />}
+                        Day {day.dayNumber} ({day.tasks?.length || 0} Questions)
+                      </button>
                       <button
                         onClick={() => openAddTaskModal(day.dayNumber)}
                         className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
@@ -575,7 +622,7 @@ export default function TrackTemplateDetails() {
                         Add Task
                       </button>
                     </div>
-                    <div className="space-y-2 pl-3">
+                    {expandedDays[day.dayNumber] && <div className="space-y-2 pl-3">
                       {day.tasks && day.tasks.length > 0 ? (
                         day.tasks.map((t, idx) => (
                           <div key={`${t.questionId}-${idx}`} className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2 text-xs">
@@ -605,27 +652,18 @@ export default function TrackTemplateDetails() {
                       ) : (
                         <p className="text-xs text-slate-400 dark:text-slate-500 italic">No tasks assigned yet.</p>
                       )}
-                    </div>
+                    </div>}
                   </article>
                 ))
               ) : (
                 (trackDetail?.dayAssignments || []).map((day) => (
-                  <article key={`day-${day.dayNumber}`} className="group rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-3 flex items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="inline-flex items-center rounded-full px-2.5 py-1 bg-[#dfe8f6] dark:bg-[#1c3f76] text-[#3c83f6] dark:text-blue-300 text-xs font-semibold">
-                        Day {day.dayNumber}
-                      </span>
-                      {day.questionId ? (
-                        <div className="min-w-0">
-                          <h4 className="text-base font-semibold text-[#0b1b38] dark:text-white truncate">{day.questionTitle}</h4>
-                          <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">{day.track} · {day.difficulty}</p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">No question assigned yet.</p>
-                      )}
-                    </div>
+                  <article key={`day-${day.dayNumber}`} className="group rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-3">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <button onClick={() => toggleDay(day.dayNumber)} className="inline-flex items-center gap-2 text-sm font-semibold text-[#0b1b38] dark:text-white">
+                        {expandedDays[day.dayNumber] ? <FiChevronDown className="w-4 h-4" /> : <FiChevronRight className="w-4 h-4" />}
+                        Day {day.dayNumber} ({day.questionId ? 1 : 0} Questions)
+                      </button>
 
-                    <div className="flex items-center gap-2.5">
                       {day.questionId ? (
                         <>
                           <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(day.difficulty)}`}>
@@ -649,6 +687,18 @@ export default function TrackTemplateDetails() {
                         </button>
                       )}
                     </div>
+                    {expandedDays[day.dayNumber] && (
+                      <div className="mt-3 pl-6">
+                        {day.questionId ? (
+                          <div className="min-w-0">
+                            <h4 className="text-base font-semibold text-[#0b1b38] dark:text-white truncate">{day.questionTitle}</h4>
+                            <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">{day.track} · {day.difficulty}</p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 dark:text-slate-500 italic">No question assigned yet.</p>
+                        )}
+                      </div>
+                    )}
                   </article>
                 ))
               )}

@@ -42,6 +42,7 @@ import {
   deleteResourceAdmin,
   deleteTrackTemplate,
   getCertificatesPage,
+  getQuestionCategoryUsage,
   getQuestionDetailAdmin,
   getTrackTemplateDetail,
   issueCertificateAdmin,
@@ -113,6 +114,7 @@ router.get("/questions/categories", listQuestionCategories);
 router.post("/questions/categories", createQuestionCategory);
 router.put("/questions/categories/:categoryId", updateQuestionCategory);
 router.delete("/questions/categories/:categoryId", deleteQuestionCategory);
+router.get("/questions/categories/:categoryId/usage", getQuestionCategoryUsage);
 router.post("/questions/categories/bulk-delete", bulkDeleteQuestionCategoriesAdmin);
 router.get("/questions", listQuestionsAdmin);
 router.post("/questions", createQuestionAdmin);

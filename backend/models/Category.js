@@ -31,7 +31,7 @@ const categorySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Active', 'Inactive', 'Draft'],
+      enum: ['Active', 'Draft', 'Archived'],
       default: 'Draft',
     },
     createdBy: {

@@ -111,6 +111,9 @@ export const QuestionBankCategoryDetailPage = () => {
   );
 
   const [isQuestionFormOpen, setIsQuestionFormOpen] = useState(false);
+  const [questionFormMode, setQuestionFormMode] = useState('single');
+  const [bulkForms, setBulkForms] = useState([]);
+  const [bulkCount, setBulkCount] = useState('3');
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [questionForm, setQuestionForm] = useState(createQuestionForm());
   const [expandedFormSections, setExpandedFormSections] = useState({
@@ -123,6 +126,7 @@ export const QuestionBankCategoryDetailPage = () => {
   const [formError, setFormError] = useState('');
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
+  const [usageAnalytics, setUsageAnalytics] = useState(null);
 
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -131,6 +135,22 @@ export const QuestionBankCategoryDetailPage = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!category?.id && !category?._id) return;
+    let cancelled = false;
+    questionBankApi
+      .getCategoryUsage(category.id || category._id)
+      .then((data) => {
+        if (!cancelled) setUsageAnalytics(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setUsageAnalytics(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [category?.id, category?._id]);
 
   // Fetch track templates
   useEffect(() => {
@@ -170,8 +190,19 @@ export const QuestionBankCategoryDetailPage = () => {
 
   const handleAddQuestionClick = () => {
     setEditingQuestionId(null);
+    setQuestionFormMode('single');
     setFormError('');
     setQuestionForm(createQuestionForm(trackOptions[0] || ''));
+    setExpandedFormSections({ visible: false, hidden: false, reference: false });
+    setIsQuestionFormOpen(true);
+  };
+
+  const handleBulkAddQuestionClick = () => {
+    setEditingQuestionId(null);
+    setQuestionFormMode('bulk');
+    setFormError('');
+    const count = Math.max(1, Math.min(25, Number(bulkCount) || 3));
+    setBulkForms(Array.from({ length: count }, () => createQuestionForm(trackOptions[0] || '')));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
     setIsQuestionFormOpen(true);
   };
@@ -186,10 +217,24 @@ export const QuestionBankCategoryDetailPage = () => {
 
   const handleCloseQuestionModal = () => {
     setIsQuestionFormOpen(false);
+    setQuestionFormMode('single');
     setEditingQuestionId(null);
     setFormError('');
     setQuestionForm(createQuestionForm(trackOptions[0] || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
+  };
+
+  const generateBulkForms = () => {
+    const count = Math.max(1, Math.min(25, Number(bulkCount) || 1));
+    setBulkForms((prev) => {
+      const next = [...prev];
+      while (next.length < count) next.push(createQuestionForm(trackOptions[0] || ''));
+      return next.slice(0, count);
+    });
+  };
+
+  const updateBulkFormField = (index, field, value) => {
+    setBulkForms((prev) => prev.map((form, formIndex) => (formIndex === index ? { ...form, [field]: value } : form)));
   };
 
   const toggleFormSection = (sectionKey) => {
@@ -238,6 +283,66 @@ export const QuestionBankCategoryDetailPage = () => {
   };
 
   const handleSaveQuestion = async () => {
+    if (questionFormMode === 'bulk') {
+      const invalidIndex = bulkForms.findIndex((form) => {
+        if (!form.title.trim()) return true;
+        if ((isCodingCategory || isNotesCategory) && !form.problemDescription.trim()) return true;
+        if (
+          isCodingCategory &&
+          (!form.visibleTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()) ||
+            !form.hiddenTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()))
+        ) return true;
+        if (isMcqCategory && form.options.filter((option) => option.text.trim()).length < 2) return true;
+        if (isNotesCategory && !form.markdownBody.trim() && !form.markdownFileUrl.trim()) return true;
+        return false;
+      });
+
+      if (invalidIndex >= 0) {
+        setFormError(`Question ${invalidIndex + 1} has missing required fields.`);
+        return;
+      }
+
+      const questionsPayload = bulkForms.map((form) => ({
+        title: form.title.trim(),
+        difficulty: form.difficulty,
+        categoryId: category?.id || category?._id,
+        categorySlug: category?.slug || categoryId,
+        categoryTitle: category?.title || '',
+        trackType: form.trackType || category?.title || 'General',
+        tags: form.tags,
+        description: form.problemDescription.trim(),
+        inputFormat: isCodingCategory ? form.inputFormat.trim() : '',
+        outputFormat: isCodingCategory ? form.outputFormat.trim() : '',
+        visibleTestCases: isCodingCategory ? form.visibleTestCases : [],
+        hiddenTestCases: isCodingCategory ? form.hiddenTestCases : [],
+        timeLimit: form.timeLimit,
+        memoryLimit: form.memoryLimit,
+        referenceLanguage: form.referenceLanguage,
+        solutionCode: isCodingCategory ? form.solutionCode : '',
+        editorial: form.editorial,
+        options: isMcqCategory ? form.options : [],
+        correctOption: isMcqCategory ? form.correctOption : '',
+        explanation: isMcqCategory ? form.explanation : '',
+        markdownBody: isNotesCategory ? form.markdownBody : '',
+        markdownFileUrl: isNotesCategory ? form.markdownFileUrl : '',
+        solutionNotes: isNotesCategory ? form.solutionNotes : '',
+        status: 'Active',
+      }));
+
+      setFormError('');
+      setIsSavingQuestion(true);
+      try {
+        await questionBankApi.bulkCreateQuestions({ categoryId: category?.id || category?._id, questions: questionsPayload });
+        await refetchQuestions();
+        handleCloseQuestionModal();
+      } catch (error) {
+        setFormError(error.message || 'Failed to save questions.');
+      } finally {
+        setIsSavingQuestion(false);
+      }
+      return;
+    }
+
     if (!questionForm.title.trim()) {
       setFormError('Question prompt is required.');
       return;
@@ -460,7 +565,7 @@ export const QuestionBankCategoryDetailPage = () => {
 
           <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl transition-all">
             <div className="sticky top-0 z-20 px-6 py-4 border-b border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 backdrop-blur flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">{editingQuestionId ? 'Edit Question' : 'Add Question'}</h2>
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">{questionFormMode === 'bulk' ? 'Bulk Add Questions' : editingQuestionId ? 'Edit Question' : 'Add Question'}</h2>
               <button
                 onClick={handleCloseQuestionModal}
                 className="text-sm text-black/40 dark:text-white/40"
@@ -470,6 +575,139 @@ export const QuestionBankCategoryDetailPage = () => {
             </div>
 
             <div className="p-5 space-y-2">
+              {questionFormMode === 'bulk' ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-3 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 p-3">
+                    <div className="flex-1">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Number of questions</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="25"
+                        value={bulkCount}
+                        onChange={(e) => setBulkCount(e.target.value)}
+                        className={questionFormInputClass}
+                      />
+                    </div>
+                    <button type="button" onClick={generateBulkForms} className="h-10 px-4 rounded-xl bg-[#3C83F6] text-white text-sm font-semibold">
+                      Generate Forms
+                    </button>
+                  </div>
+                  {bulkForms.map((form, index) => (
+                    <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-4">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <div className="md:col-span-2">
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Tag*</label>
+                          <input value={form.title} onChange={(e) => updateBulkFormField(index, 'title', e.target.value)} placeholder="JFS / SERVLET / JDBC" className={questionFormInputClass} />
+                        </div>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
+                          <select value={form.difficulty} onChange={(e) => updateBulkFormField(index, 'difficulty', e.target.value)} className={questionFormInputClass}>
+                            <option className={dropdownOptionClass}>Easy</option>
+                            <option className={dropdownOptionClass}>Medium</option>
+                            <option className={dropdownOptionClass}>Hard</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic Tags</label>
+                          <input
+                            value={form.tagInput}
+                            onChange={(e) => updateBulkFormField(index, 'tagInput', e.target.value)}
+                            onBlur={() => {
+                              const tags = form.tagInput.split(',').map((tag) => tag.trim()).filter(Boolean);
+                              updateBulkFormField(index, 'tags', tags);
+                            }}
+                            placeholder="JFS, SERVLET"
+                            className={questionFormInputClass}
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">{isMcqCategory ? 'Question Prompt*' : isNotesCategory ? 'Notes Description*' : 'Problem Description*'}</label>
+                          <textarea value={form.problemDescription} onChange={(e) => updateBulkFormField(index, 'problemDescription', e.target.value)} rows={3} className={questionFormInputClass} />
+                        </div>
+                        {isMcqCategory && (
+                          <>
+                            {form.options.map((option, optionIndex) => (
+                              <input
+                                key={option.label}
+                                value={option.text}
+                                onChange={(e) => {
+                                  const options = form.options.map((opt, i) => (i === optionIndex ? { ...opt, text: e.target.value } : opt));
+                                  updateBulkFormField(index, 'options', options);
+                                }}
+                                placeholder={`Option ${option.label}`}
+                                className={questionFormInputClass}
+                              />
+                            ))}
+                            <select value={form.correctOption} onChange={(e) => updateBulkFormField(index, 'correctOption', e.target.value)} className={questionFormInputClass}>
+                              {['A', 'B', 'C', 'D'].map((label) => <option key={label} className={dropdownOptionClass}>{label}</option>)}
+                            </select>
+                          </>
+                        )}
+                        {isCodingCategory && (
+                          <>
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <textarea
+                                value={form.visibleTestCases?.[0]?.input || ''}
+                                onChange={(e) => {
+                                  const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), input: e.target.value }];
+                                  updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
+                                }}
+                                rows={2}
+                                placeholder="Visible test input"
+                                className={questionFormInputClass}
+                              />
+                              <textarea
+                                value={form.visibleTestCases?.[0]?.output || ''}
+                                onChange={(e) => {
+                                  const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), output: e.target.value }];
+                                  updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
+                                }}
+                                rows={2}
+                                placeholder="Visible test output"
+                                className={questionFormInputClass}
+                              />
+                              <textarea
+                                value={form.hiddenTestCases?.[0]?.input || ''}
+                                onChange={(e) => {
+                                  const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), input: e.target.value }];
+                                  updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
+                                }}
+                                rows={2}
+                                placeholder="Hidden test input"
+                                className={questionFormInputClass}
+                              />
+                              <textarea
+                                value={form.hiddenTestCases?.[0]?.output || ''}
+                                onChange={(e) => {
+                                  const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), output: e.target.value }];
+                                  updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
+                                }}
+                                rows={2}
+                                placeholder="Hidden test output"
+                                className={questionFormInputClass}
+                              />
+                            </div>
+                          </>
+                        )}
+                        {isNotesCategory && (
+                          <div className="md:col-span-2">
+                            <label className="admin-micro-label text-black/45 dark:text-white/45">Markdown Body*</label>
+                            <textarea
+                              value={form.markdownBody}
+                              onChange={(e) => updateBulkFormField(index, 'markdownBody', e.target.value)}
+                              rows={4}
+                              placeholder="Paste markdown content for this note"
+                              className={questionFormInputClass}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {isMcqCategory ? (
                   <>
@@ -477,16 +715,19 @@ export const QuestionBankCategoryDetailPage = () => {
                     {dynamicHostField}
                     {explanationField}
                     {titleField}
+                    {tagsField}
                   </>
                 ) : (
                   <>
                     {titleField}
                     {difficultyField}
+                    {tagsField}
                     {descriptionField}
                     {dynamicHostField}
                   </>
                 )}
               </div>
+              )}
 
               {formError && (
                 <p className="text-sm text-red-500 font-semibold">{formError}</p>
@@ -508,7 +749,7 @@ export const QuestionBankCategoryDetailPage = () => {
                 disabled={isSavingQuestion}
                 className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
               >
-                {isSavingQuestion ? 'Saving...' : editingQuestionId ? 'Save Changes' : 'Create Question'}
+                {isSavingQuestion ? 'Saving...' : questionFormMode === 'bulk' ? 'Submit All Questions' : editingQuestionId ? 'Save Changes' : 'Create Question'}
               </button>
             </div>
           </div>
@@ -708,6 +949,8 @@ export const QuestionBankCategoryDetailPage = () => {
             onEditQuestion={handleEditQuestionClick}
             onDeleteQuestion={setDeleteTarget}
             onViewQuestion={setViewQuestion}
+            onBulkAddQuestions={handleBulkAddQuestionClick}
+            usageAnalytics={usageAnalytics}
           />
         </div>
       </main>

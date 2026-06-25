@@ -91,7 +91,6 @@ export const QuestionBankAdminPage = () => {
       if (editingCategory) {
         const editableFields = {
           title: formPayload.title,
-          subtitle: formPayload.subtitle,
           status: formPayload.status,
         };
         await questionBankApi.updateCategory(editingCategory.id || editingCategory._id, editableFields);
@@ -126,6 +125,8 @@ export const QuestionBankAdminPage = () => {
   };
 
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
+  const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
+  const draftCategoriesCount = categories.filter((cat) => cat.status === 'Draft').length;
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -226,7 +227,7 @@ export const QuestionBankAdminPage = () => {
           </div>
 
           {/* Metrics Statistics section */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full">
             <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
               <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
                 <FiCode className="w-5 h-5" />
@@ -244,6 +245,26 @@ export const QuestionBankAdminPage = () => {
               <div>
                 <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{categories.length}</p>
                 <p className="mt-1 text-sm text-black/60 dark:text-white/60">Total Categories</p>
+              </div>
+            </article>
+
+            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FiGrid className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{activeCategoriesCount}</p>
+                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Active Categories</p>
+              </div>
+            </article>
+
+            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
+                <FiGrid className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{draftCategoriesCount}</p>
+                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Draft Categories</p>
               </div>
             </article>
           </section>
