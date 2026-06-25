@@ -17,6 +17,8 @@ const statusPillClass = (status) => {
 
 export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
   const getPrompt = (question) => question.description || question.problemDescription || question.title || 'No prompt provided';
+  const getQid = (question, index) => question.qid || `QID-${String(index + 1).padStart(6, '0')}`;
+  const getTags = (question) => Array.isArray(question.tags) ? question.tags.filter(Boolean) : [];
 
   return (
     <div className="space-y-4">
@@ -31,6 +33,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">{getQid(question, index)}</span>
                   <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase ${difficultyPillClass(question.difficulty)}`}>
                     {question.difficulty || 'Easy'}
                   </span>
@@ -38,6 +41,13 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                 <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-3 leading-relaxed">
                   {getPrompt(question)}
                 </h4>
+                {getTags(question).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {getTags(question).slice(0, 3).map((tag) => (
+                      <span key={tag} className="rounded-full bg-[#dbeafe] dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#1d4ed8] dark:text-[#bceaff]">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -75,14 +85,16 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       </div>
 
       {/* Desktop Table Layout */}
-      <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white dark:bg-[#0a1737] backdrop-blur-xl shadow-sm">
+      <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white/65 dark:bg-[#0a1737]/85 backdrop-blur-xl shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-black/10 dark:border-white/10 bg-[#edf3fb] dark:bg-white/[0.01]">
+                <tr className="border-b border-black/10 dark:border-white/10 bg-white/45 dark:bg-white/[0.04]">
                   <th className="w-16 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">QID</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prompt</th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tags</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Difficulty</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actions</th>
                 </tr>
@@ -96,8 +108,20 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     <td className="px-5 py-4 text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
                       {index + 1}
                     </td>
+                    <td className="px-5 py-4 text-xs font-semibold text-[#3C83F6] dark:text-[#bceaff] whitespace-nowrap">
+                      {getQid(question, index)}
+                    </td>
                     <td className="px-5 py-4 text-sm font-semibold text-slate-900 dark:text-white max-w-[360px]">
                       <p className="line-clamp-2" title={getPrompt(question)}>{getPrompt(question)}</p>
+                    </td>
+                    <td className="px-5 py-4 max-w-[220px]">
+                      <div className="flex flex-wrap gap-1.5">
+                        {getTags(question).length > 0 ? getTags(question).slice(0, 3).map((tag) => (
+                          <span key={tag} className="rounded-full bg-[#dbeafe] dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#1d4ed8] dark:text-[#bceaff]">{tag}</span>
+                        )) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500">No tags</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
@@ -134,7 +158,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
 
                 {questions.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-slate-500 dark:text-slate-400">
                       No questions found.
                     </td>
                   </tr>

@@ -107,6 +107,13 @@ const questionSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    qid: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     description: {
       type: String,
       default: '',
@@ -189,7 +196,25 @@ questionSchema.index({ trackType: 1 });
 questionSchema.index({ categoryId: 1, isActive: 1 });
 questionSchema.index({ status: 1, difficulty: 1, createdAt: -1 });
 questionSchema.index({ tags: 1, status: 1 });
-questionSchema.index({ title: "text", tags: "text" });
+questionSchema.index({ title: "text", description: "text", tags: "text" });
+questionSchema.index({ description: 1, tags: 1, status: 1 });
+
+questionSchema.pre('validate', async function (next) {
+  if (this.qid) return next();
+
+  try {
+    const latestQuestion = await this.constructor
+      .findOne({ qid: /^QID-\d+$/ })
+      .sort({ qid: -1 })
+      .select('qid')
+      .lean();
+    const latestNumber = Number(String(latestQuestion?.qid || '').replace('QID-', '')) || 0;
+    this.qid = `QID-${String(latestNumber + 1).padStart(6, '0')}`;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+});
 
 questionSchema.pre('save', function (next) {
   // Only enforce the new question-bank validation when the new fields are being used.
