@@ -697,7 +697,7 @@ const BatchDetails = () => {
                             <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
                             <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[150px]">Student Name</th>
                             {Array.from({ length: 30 }).map((_, index) => (
-                              <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-16">
+                              <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-16 whitespace-nowrap">
                                 Day {index + 1}
                               </th>
                             ))}
