@@ -37,27 +37,33 @@ const searchRoutes = [
 const statusBadge = (status) => {
   if (status === 'Active') return 'bg-[#16a34a] text-white';
   if (status === 'Draft') return 'bg-[#dbe7ff] text-[#3c83f6]';
-  if (status === 'Expired') return 'bg-[#fee2e2] text-[#b91c1c]';
+  if (status === 'Completed' || status === 'Expired') return 'bg-[#efe6d2] text-[#d17d00] dark:bg-[#4f4228] dark:text-[#fcd34d]';
+  if (status === 'Archived') return 'bg-[#e5e7eb] text-[#475569] dark:bg-white/10 dark:text-slate-300';
   return 'bg-[#e5e7eb] text-[#475569]';
 };
 
-const normalizeBatch = (batch) => ({
-  ...batch,
-  id: batch.id || batch._id || batch.name,
-  name: batch.name || batch.id || 'Untitled Batch',
-  college: batch.college || '',
-  assignedTrack: batch.assignedTrack || '',
-  assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
-  startDateValue: batch.startDateValue || '',
-  expiryDateValue: batch.expiryDateValue || '',
-  batchSize: typeof batch.batchSize === 'number' ? batch.batchSize : null,
-  track: batch.track || batch.assignedTrack || '',
-  status: batch.status || 'Draft',
-  start: batch.start || 'TBD',
-  end: batch.end || 'TBD',
-  students: Number(batch.students || 0),
-});
-
+const normalizeBatch = (batch) => {
+  const activeTrack = batch.currentActiveTrack || batch.track || batch.assignedTrack;
+  const trackName = (!activeTrack || activeTrack === 'None') ? 'No Track' : activeTrack;
+  return {
+    ...batch,
+    id: batch.id || batch._id || batch.name,
+    name: batch.name || batch.id || 'Untitled Batch',
+    college: batch.college || '',
+    assignedTrack: batch.assignedTrack || '',
+    assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
+    assignedTrackTemplateCategory: batch.assignedTrackTemplateCategory || '',
+    startDateValue: batch.startDateValue || '',
+    expiryDateValue: batch.expiryDateValue || '',
+    batchSize: typeof batch.batchSize === 'number' ? batch.batchSize : null,
+    track: trackName,
+    status: batch.status || 'Draft',
+    start: batch.start || 'TBD',
+    end: batch.end || 'TBD',
+    students: Number(batch.students || 0),
+    createdAt: batch.createdAt || null,
+  };
+};
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
   if (!isOpen) return null;
   return (
@@ -72,7 +78,7 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
             placeholder="Search pages, tracks, or settings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-lg text-[#3C83F6] dark:text-white placeholder:text-black/30 dark:placeholder:text-white/30"
+            className="flex-1 bg-transparent border-none outline-none text-lg text-[#3C83F6] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
           />
           <div className="flex items-center gap-1 text-[10px] font-medium text-black/40 dark:text-white/40 border border-black/10 dark:border-white/10 px-1.5 py-0.5 rounded ml-4 shrink-0 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" onClick={onClose}>
             <span>ESC</span>
@@ -81,7 +87,7 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
         <div className="max-h-[60vh] overflow-y-auto p-2">
           {filteredRoutes.length === 0 ? (
             <div className="px-6 py-12 text-center text-sm text-black/40 dark:text-white/40">
-              No results found for "{searchQuery}"
+              No results found for "${searchQuery}"
             </div>
           ) : (
             filteredRoutes.map((route) => (
@@ -105,6 +111,7 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
     </div>
   );
 };
+
 const getBatchTheme = (status) => {
   switch (status) {
     case 'Active':
@@ -119,12 +126,18 @@ const getBatchTheme = (status) => {
         iconBg: 'bg-[#e6ebf5] dark:bg-[#2f4466]',
         iconColor: 'text-[#3c83f6] dark:text-blue-300',
       };
+    case 'Completed':
     case 'Expired':
-    case 'Archived':
       return {
         topTint: 'bg-[#efe6d2] dark:bg-[#4f4228]',
         iconBg: 'bg-[#f8f0df] dark:bg-[#625133]',
-        iconColor: 'text-[#d17d00] dark:text-amber-300',
+        iconColor: 'text-[#d17d00] dark:text-[#fcd34d]',
+      };
+    case 'Archived':
+      return {
+        topTint: 'bg-slate-100 dark:bg-slate-800/50',
+        iconBg: 'bg-slate-200 dark:bg-slate-700',
+        iconColor: 'text-slate-500 dark:text-slate-400',
       };
     default:
       return {
@@ -151,16 +164,19 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
 
   return (
     <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
-      <div className="absolute left-3.5 top-3.5 z-20">
+      
+      {/* Checkbox - Smaller size, aligned to top-left */}
+      <div className="absolute left-3 top-2.5 z-20">
         <input
           type="checkbox"
           checked={selected}
           onChange={() => onSelectToggle(batch.id)}
-          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+          className="w-3 h-3 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
         />
       </div>
 
-      <div className={`absolute right-3 top-3 z-20 batch-actions-${batch.id}`}>
+      {/* Action Menu (More details) */}
+      <div className={`absolute right-3 top-3.5 z-20 batch-actions-${batch.id}`}>
         <button
           type="button"
           className="w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
@@ -189,7 +205,7 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
                 setMenuOpen(false);
                 onDelete(batch);
               }}
-              className="w-full text-left px-3.5 py-2.5 text-sm transition-colors text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+              className="w-full text-left px-3.5 py-2.5 text-sm transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
             >
               Delete
             </button>
@@ -197,40 +213,35 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
         )}
       </div>
 
-      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10`}>
+      {/* Top Panel (similar to Question Bank category card) */}
+      <div className={`px-4 pt-8 pb-4 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10.5`}>
         <div className="flex items-start gap-2.5">
           <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
             <FiBookOpen className={`w-5 h-5 ${theme.iconColor}`} />
           </div>
           <div className="min-h-[64px] flex-1 min-w-0">
-            <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white truncate">{batch.name}</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate">{batch.name}</h3>
             <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300 line-clamp-2">{batch.college || 'Unassigned College'}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-                {batch.track || 'No Track'}
-              </span>
-              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-                {batch.status || 'Draft'}
-              </span>
-            </div>
           </div>
         </div>
       </div>
 
-      <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent">
-        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
-          <span>Start Date</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{batch.start}</span>
+      {/* Bottom Panel */}
+      <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2">
+        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-350">
+          <span>Active Track</span>
+          <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[140px]">{batch.track || 'No Track'}</span>
         </div>
-        <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
-          <span>End Date</span>
-          <span className="font-semibold text-slate-900 dark:text-white">{batch.end}</span>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
+        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-355 mt-1">
           <span>Students</span>
           <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{batch.students || 0}</span>
         </div>
+        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-355 mt-1">
+          <span>Status</span>
+          <span className="font-semibold text-slate-900 dark:text-white">{batch.status || 'Draft'}</span>
+        </div>
 
+        {/* View Batch Button */}
         <button
           onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
           className="mt-4 w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs md:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
@@ -273,6 +284,9 @@ const Batches = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [collegeFilter, setCollegeFilter] = useState('All Colleges');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
+  const [createdMonthFilter, setCreatedMonthFilter] = useState('All Months');
+  const [showAllBatches, setShowAllBatches] = useState(false);
   const [selectedBatchIds, setSelectedBatchIds] = useState([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -380,23 +394,40 @@ const Batches = () => {
     route.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getCreatedMonthLabel = (createdAtDate) => {
+    if (!createdAtDate) return "";
+    const date = new Date(createdAtDate);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+  };
+
   const collegeOptions = Array.from(new Set(colleges.map((college) => college.name).filter(Boolean)));
   const filteredBatches = batches.filter((batch) => {
     const searchText = batchSearchTerm.trim().toLowerCase();
     const matchCollege = collegeFilter === 'All Colleges' || batch.college === collegeFilter;
-    const matchStatus = statusFilter === 'All Status' || batch.status === statusFilter;
+    const matchStatus = showAllBatches
+      ? (statusFilter === 'All Status' || batch.status === statusFilter)
+      : batch.status === 'Active';
+    const matchCategory =
+      categoryFilter === 'All Categories' ||
+      String(batch.assignedTrackTemplateCategory || '').toLowerCase() === categoryFilter.toLowerCase() ||
+      String(batch.track || '').toLowerCase().includes(categoryFilter.toLowerCase());
+    const matchCreatedMonth =
+      createdMonthFilter === 'All Months' ||
+      getCreatedMonthLabel(batch.createdAt) === createdMonthFilter;
     const matchSearch =
       searchText.length === 0 ||
       String(batch.id || '').toLowerCase().includes(searchText) ||
       String(batch.name || '').toLowerCase().includes(searchText) ||
       String(batch.college || '').toLowerCase().includes(searchText) ||
       String(batch.track || '').toLowerCase().includes(searchText);
-    return matchCollege && matchStatus && matchSearch;
+    return matchCollege && matchStatus && matchCategory && matchCreatedMonth && matchSearch;
   });
 
   const counts = {
     Active: batches.filter((batch) => batch.status === 'Active').length,
     Draft: batches.filter((batch) => batch.status === 'Draft').length,
+    Completed: batches.filter((batch) => batch.status === 'Completed' || batch.status === 'Expired').length,
     Archived: batches.filter((batch) => batch.status === 'Archived').length,
   };
 
@@ -653,7 +684,7 @@ const Batches = () => {
                   >
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
                     <option className={dropdownOptionClass} value="Active">Active</option>
-                    <option className={dropdownOptionClass} value="Expired">Expired</option>
+                    <option className={dropdownOptionClass} value="Completed">Completed</option>
                     <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
@@ -796,86 +827,159 @@ const Batches = () => {
               </section>
             ) : (
             <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[auto_minmax(0,1fr)_160px_150px_auto] gap-2 items-center">
-              <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
-                <input
-                  type="checkbox"
-                  checked={filteredBatches.length > 0 && filteredBatches.every(b => selectedBatchIds.includes(b.id))}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      const newSelections = new Set([...selectedBatchIds, ...filteredBatches.map(b => b.id)]);
-                      setSelectedBatchIds(Array.from(newSelections));
-                    } else {
-                      setSelectedBatchIds(selectedBatchIds.filter(id => !filteredBatches.some(b => b.id === id)));
-                    }
-                  }}
-                  className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
-                />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
-              </div>
-
-              <div className="relative min-w-0 sm:col-span-2 xl:col-span-1">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
-                <input
-                  value={batchSearchTerm}
-                  onChange={(e) => setBatchSearchTerm(e.target.value)}
-                  placeholder="Search batches..."
-                  className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-9 pr-3 text-xs sm:text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                />
-              </div>
-
-              <div className="relative min-w-0">
-                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={collegeFilter}
-                    onChange={(e) => setCollegeFilter(e.target.value)}
-                    className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
-                  >
-                    {['All Colleges', ...collegeOptions].map((college) => (
-                      <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <div className="relative min-w-0">
-                <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
-                  >
-                    <option className={dropdownOptionClass} value="All Status">All Status</option>
-                    <option className={dropdownOptionClass} value="Draft">Draft</option>
-                    <option className={dropdownOptionClass} value="Active">Active</option>
-                    <option className={dropdownOptionClass} value="Expired">Expired</option>
-                    <option className={dropdownOptionClass} value="Archived">Archived</option>
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <button
-                onClick={openCreateBatch}
-                className="h-9 px-4 rounded-xl bg-[#3C83F6] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap"
-              >
-                <FiPlus className="w-3.5 h-3.5" />
-                Create Batch
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 sm:gap-3.5">
+                        {/* Counts dashboard */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3.5">
               {[
-                { label: 'Active', count: counts.Active, color: 'text-emerald-500' },
-                { label: 'Draft', count: counts.Draft, color: 'text-indigo-500 dark:text-indigo-400' },
-                { label: 'Archived', count: counts.Archived, color: 'text-black/35 dark:text-white/40' },
+                { label: 'Active', count: counts.Active, color: 'text-[#3C83F6] dark:text-blue-400' },
+                { label: 'Draft', count: counts.Draft, color: 'text-[#3C83F6] dark:text-blue-400' },
+                { label: 'Completed', count: counts.Completed, color: 'text-[#3C83F6] dark:text-blue-400' },
+                { label: 'Archived', count: counts.Archived, color: 'text-[#3C83F6] dark:text-blue-400' },
               ].map(({ label, count, color }) => (
                 <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl px-2 sm:px-5 py-2.5 sm:py-4 flex flex-col items-center sm:items-start text-center sm:text-left">
                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">{label}</p>
                   <p className={`text-lg sm:text-2xl font-semibold tracking-tight mt-0.5 sm:mt-1 ${color}`}>{count}</p>
                 </div>
               ))}
+            </div>
+
+            {/* Filter controls row */}
+            <div className="flex flex-col gap-4">
+              {/* Row 1: Search, select all, toggle view, create batch */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 flex-1 w-full">
+                  {/* Select All */}
+                  <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={filteredBatches.length > 0 && filteredBatches.every(b => selectedBatchIds.includes(b.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          const newSelections = new Set([...selectedBatchIds, ...filteredBatches.map(b => b.id)]);
+                          setSelectedBatchIds(Array.from(newSelections));
+                        } else {
+                          setSelectedBatchIds(selectedBatchIds.filter(id => !filteredBatches.some(b => b.id === id)));
+                        }
+                      }}
+                      className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                    />
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+                  </div>
+
+                  {/* Search */}
+                  <div className="relative flex-1 min-w-0">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                    <input
+                      value={batchSearchTerm}
+                      onChange={(e) => setBatchSearchTerm(e.target.value)}
+                      placeholder="Search batches..."
+                      className="w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-9 pr-3 text-xs sm:text-sm text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto shrink-0">
+                  {/* All Batches Toggle Switch */}
+                  <label className="inline-flex items-center gap-2 cursor-pointer bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl px-2.5 py-1.5 h-9 select-none flex-1 sm:flex-none justify-center">
+                    <input
+                      type="checkbox"
+                      checked={showAllBatches}
+                      onChange={(e) => {
+                        setShowAllBatches(e.target.checked);
+                        if (!e.target.checked) {
+                          setStatusFilter('All Status');
+                        }
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="relative w-7 h-4 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all dark:border-gray-600 peer-checked:bg-[#3C83F6]"></div>
+                    <span className="text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">All Batches</span>
+                  </label>
+
+                  {/* Create Batch */}
+                  <button
+                    onClick={openCreateBatch}
+                    className="h-9 px-4 rounded-xl bg-[#3C83F6] text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-[#2f73e0] transition-colors whitespace-nowrap flex-1 sm:flex-none"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Create Batch
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 2: Secondary Dropdown Filters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {/* College Filter */}
+                <div className="relative min-w-0">
+                  <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={collegeFilter}
+                      onChange={(e) => setCollegeFilter(e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="All Colleges">All Colleges</option>
+                      {collegeOptions.map((college) => (
+                        <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                {/* Status Filter (conditional/enabled if showAllBatches is active) */}
+                <div className="relative min-w-0">
+                  <div className={`relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] transition-all ${!showAllBatches ? 'opacity-50 cursor-not-allowed pointer-events-none' : 'hover:bg-white dark:hover:bg-[#162a52] focus-within:ring-2 focus-within:ring-[#3C83F6]/35'}`}>
+                    <select
+                      value={showAllBatches ? statusFilter : 'Active'}
+                      disabled={!showAllBatches}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none disabled:cursor-not-allowed"
+                    >
+                      <option className={dropdownOptionClass} value="All Status">All Status</option>
+                      <option className={dropdownOptionClass} value="Active">Active</option>
+                      <option className={dropdownOptionClass} value="Draft">Draft</option>
+                      <option className={dropdownOptionClass} value="Completed">Completed</option>
+                      <option className={dropdownOptionClass} value="Archived">Archived</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                {/* Category Filter */}
+                <div className="relative min-w-0">
+                  <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="All Categories">All Categories</option>
+                      <option className={dropdownOptionClass} value="MCQ">MCQ</option>
+                      <option className={dropdownOptionClass} value="Coding">Coding</option>
+                      <option className={dropdownOptionClass} value="SQL">SQL</option>
+                      <option className={dropdownOptionClass} value="DSA">DSA</option>
+                      <option className={dropdownOptionClass} value="Full Stack">Full Stack</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+
+                {/* Created Month Filter */}
+                <div className="relative min-w-0">
+                  <div className="relative w-full rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createdMonthFilter}
+                      onChange={(e) => setCreatedMonthFilter(e.target.value)}
+                      className="appearance-none w-full h-9 rounded-xl bg-transparent px-3 pr-8 text-xs sm:text-sm font-semibold tracking-tight text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="All Months">All Months</option>
+                      <option className={dropdownOptionClass} value="June 2026">June 2026</option>
+                      <option className={dropdownOptionClass} value="July 2026">July 2026</option>
+                      <option className={dropdownOptionClass} value="August 2026">August 2026</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

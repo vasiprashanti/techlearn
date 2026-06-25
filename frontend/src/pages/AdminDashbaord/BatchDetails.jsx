@@ -23,6 +23,15 @@ const BatchDetails = () => {
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [batchDetail, setBatchDetail] = useState(null);
+  const [activeTab, setActiveTab] = useState('students');
+  const [expandedTracks, setExpandedTracks] = useState({});
+
+  const toggleTrack = (trackName) => {
+    setExpandedTracks((prev) => ({
+      ...prev,
+      [trackName]: !prev[trackName],
+    }));
+  };
 
   // States for student management and search
   const [colleges, setColleges] = useState([]);
@@ -97,21 +106,27 @@ const BatchDetails = () => {
   useEffect(() => {
     let cancelled = false;
 
-    adminAPI
-      .getBatch(batchId)
-      .then((remoteBatch) => {
-        if (!cancelled) {
-          setBatchDetail(preferRemoteData(remoteBatch, null));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setBatchDetail(null);
-        }
-      });
+    const fetchBatch = () => {
+      adminAPI
+        .getBatch(batchId)
+        .then((remoteBatch) => {
+          if (!cancelled) {
+            setBatchDetail(preferRemoteData(remoteBatch, null));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setBatchDetail(null);
+          }
+        });
+    };
+
+    fetchBatch();
+    const interval = setInterval(fetchBatch, 10000);
 
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [batchId]);
 
@@ -261,8 +276,42 @@ const BatchDetails = () => {
         return matchesSearch && matchesStatus;
       })
       .sort((left, right) => {
-        const comparison = (left.name || '').localeCompare(right.name || '', undefined, { sensitivity: 'base' });
-        return studentSortOrder === 'name-desc' ? -comparison : comparison;
+        if (studentSortOrder === 'name-asc') {
+          return (left.name || '').localeCompare(right.name || '', undefined, { sensitivity: 'base' });
+        }
+        if (studentSortOrder === 'name-desc') {
+          return (right.name || '').localeCompare(left.name || '', undefined, { sensitivity: 'base' });
+        }
+        if (studentSortOrder === 'score-desc') {
+          const getVal = (s) => {
+            if (!s.todayScore || s.todayScore === '—') return -1;
+            const [num, den] = s.todayScore.split('/').map(Number);
+            return den ? num / den : num || 0;
+          };
+          return getVal(right) - getVal(left);
+        }
+        if (studentSortOrder === 'score-asc') {
+          const getVal = (s) => {
+            if (!s.todayScore || s.todayScore === '—') return 9999;
+            const [num, den] = s.todayScore.split('/').map(Number);
+            return den ? num / den : num || 0;
+          };
+          return getVal(left) - getVal(right);
+        }
+        if (studentSortOrder === 'xp-desc') {
+          return (right.totalXp || 0) - (left.totalXp || 0);
+        }
+        if (studentSortOrder === 'xp-asc') {
+          return (left.totalXp || 0) - (right.totalXp || 0);
+        }
+        if (studentSortOrder === 'rank-asc') {
+          const getRank = (s) => {
+            if (!s.leaderboardRank || s.leaderboardRank === '—') return 999999;
+            return Number(s.leaderboardRank) || 999999;
+          };
+          return getRank(left) - getRank(right);
+        }
+        return 0;
       });
   }, [batch.studentsTable, tableSearch, studentStatusFilter, studentSortOrder]);
 
@@ -292,8 +341,10 @@ const BatchDetails = () => {
 
   const statusPillClass = (status) => {
     if (status === 'Completed') return 'bg-[#16a34a]/10 text-[#16a34a] border border-[#16a34a]/20';
+    if (status === 'In Progress') return 'bg-[#3c83f6]/10 text-[#3c83f6] border border-[#3c83f6]/20';
     if (status === 'Not Started') return 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50';
-    return 'bg-[#ef4444]/10 text-[#ef4444] dark:bg-[#ef4444]/15 dark:text-[#ef4444] border border-[#ef4444]/20';
+    if (status === 'Absent') return 'bg-[#ef4444]/10 text-[#ef4444] dark:bg-[#ef4444]/15 dark:text-[#ef4444] border border-[#ef4444]/20';
+    return 'bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/50';
   };
 
   const renderDaySections = (dayItem) => {
@@ -423,154 +474,287 @@ const BatchDetails = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <h3 className="admin-section-heading">Attached Tracks</h3>
               {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {batch.tracks.map((track) => (
-                    <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 space-y-2">
-                      <h4 className="text-sm font-bold text-black/85 dark:text-white/85 inline-flex items-center gap-2"><FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-[#3C83F6]" />{track.name}</h4>
-                      <p className="text-xs text-black/45 dark:text-white/50">{track.questionsAssigned} questions assigned</p>
-                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                        {track.days.length === 0 ? (
-                          <p className="text-sm text-black/45 dark:text-white/50">No day assignments yet.</p>
-                        ) : (
-                          track.days.map((dayItem, index) => {
-                            const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
-                            return (
-                              <div key={`${track.name}-${index}`} className="bg-slate-50/60 dark:bg-[#122247]/30 rounded-lg p-2 border border-black/5 dark:border-white/5 space-y-1.5">
-                                <span className="font-bold text-xs text-slate-800 dark:text-slate-200">Day {dayNum}</span>
-                                {renderDaySections(dayItem)}
-                              </div>
-                            );
-                          })
+                <div className="space-y-2">
+                  {batch.tracks.map((track) => {
+                    const isExpanded = !!expandedTracks[track.name];
+                    return (
+                      <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-shadow">
+                        <button
+                          onClick={() => toggleTrack(track.name)}
+                          className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-xs select-none">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{track.name}</span>
+                            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">({track.questionsAssigned} questions assigned)</span>
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-1 border-t border-black/5 dark:border-white/5 bg-slate-50/[0.15] dark:bg-[#0c1836]/10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
+                              {track.days.length === 0 ? (
+                                <p className="col-span-full text-xs text-black/45 dark:text-white/50 py-2">No day assignments yet.</p>
+                              ) : (
+                                track.days.map((dayItem, index) => {
+                                  const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
+                                  return (
+                                    <div key={`${track.name}-${index}`} className="bg-white dark:bg-[#122247]/30 rounded-xl p-3 border border-black/5 dark:border-white/10 space-y-1.5 shadow-sm h-32 overflow-y-auto pr-1 flex flex-col scrollbar-thin">
+                                      <span className="font-bold text-xs text-slate-700 dark:text-slate-300">Day {dayNum}</span>
+                                      {renderDaySections(dayItem)}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
                   No tracks are attached to this batch yet.
                 </div>
               )}
             </div>
 
             <div className="space-y-4">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-1">
-                <h3 className="admin-section-heading">Students</h3>
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
-                  <div className="relative w-full sm:w-60 md:w-80">
-                    <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
-                    <input
-                      type="text"
-                      placeholder="Search students..."
-                      value={tableSearch}
-                      onChange={(e) => setTableSearch(e.target.value)}
-                      className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
-                    />
-                  </div>
-                  <div className="relative w-full sm:w-40">
-                    <select
-                      value={studentStatusFilter}
-                      onChange={(e) => setStudentStatusFilter(e.target.value)}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                    >
-                      <option className={dropdownOptionClass} value="All Status">All Status</option>
-                      <option className={dropdownOptionClass} value="Not Started">Not Started</option>
-                      <option className={dropdownOptionClass} value="In Progress">In Progress</option>
-                      <option className={dropdownOptionClass} value="Completed">Completed</option>
-                      <option className={dropdownOptionClass} value="Not Attempted">Not Attempted</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
-                  </div>
-                  <div className="relative w-full sm:w-40">
-                    <select
-                      value={studentSortOrder}
-                      onChange={(e) => setStudentSortOrder(e.target.value)}
-                      className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                    >
-                      <option className={dropdownOptionClass} value="name-asc">Name: A to Z</option>
-                      <option className={dropdownOptionClass} value="name-desc">Name: Z to A</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
-                  </div>
-                  <button
-                    onClick={openAddStudent}
-                    className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"
-                  >
-                    <FiPlus className="w-3.5 h-3.5" />
-                    Add Student
-                  </button>
-                </div>
+              <div className="flex border-b border-black/10 dark:border-white/10 mt-2">
+                <button
+                  onClick={() => setActiveTab('students')}
+                  className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'students' ? 'border-[#3C83F6] text-[#3C83F6] dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                >
+                  Students Table
+                </button>
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${activeTab === 'reports' ? 'border-[#3C83F6] text-[#3C83F6] dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'}`}
+                >
+                  Day Wise Reports
+                </button>
               </div>
 
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[700px] table-auto">
-                    <thead>
-                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Name</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Student Email</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's Score</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Today's XP</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Last Attempt Date/Time</th>
-                        <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredStudents.map((student, index) => {
-                        const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
-                        return (
-                          <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                            <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">
-                              {isPlaceholder ? '-' : index + 1}
-                            </td>
-                            {isPlaceholder ? (
-                              <td colSpan={6} className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
-                                No enrolled students
-                              </td>
-                            ) : (
-                              <>
-                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]" title={student.name}>
-                                  {student.name}
-                                </td>
-                                <td className="px-3 py-2 text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                  {formatEmail(student.email)}
-                                </td>
-                                <td className="px-3 py-2">
-                                  <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff] whitespace-nowrap">
-                                    {formatScore(student)}
-                                  </span>
-                                </td>
-                                <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                  {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
-                                </td>
-                                <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400">
-                                  {formatLastAttempt(student.lastAttemptAt)}
-                                </td>
-                                <td className="px-3 py-2">
-                                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
-                                    {student.status || 'Not Started'}
-                                  </span>
-                                </td>
-                              </>
-                            )}
+              {activeTab === 'students' ? (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between lg:justify-start lg:gap-12 gap-3 mt-1">
+                    <h3 className="admin-section-heading whitespace-nowrap shrink-0">Students List</h3>
+                    <div className="flex flex-row items-center justify-between md:justify-end gap-2.5 w-full md:w-auto lg:flex-1 shrink-0">
+                      <div className="relative w-36 sm:w-44 md:w-48 lg:w-auto lg:flex-1">
+                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                        <input
+                           type="text"
+                           placeholder="Search students..."
+                           value={tableSearch}
+                           onChange={(e) => setTableSearch(e.target.value)}
+                           className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
+                        />
+                      </div>
+                      <div className="relative w-28 sm:w-32">
+                        <select
+                           value={studentStatusFilter}
+                           onChange={(e) => setStudentStatusFilter(e.target.value)}
+                           className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                        >
+                          <option className={dropdownOptionClass} value="All Status">All Status</option>
+                          <option className={dropdownOptionClass} value="Not Started">Not Started</option>
+                          <option className={dropdownOptionClass} value="In Progress">In Progress</option>
+                          <option className={dropdownOptionClass} value="Completed">Completed</option>
+                          <option className={dropdownOptionClass} value="Not Attempted">Not Attempted</option>
+                          <option className={dropdownOptionClass} value="Absent">Absent</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                      </div>
+                      <div className="relative w-32 sm:w-36 md:w-40">
+                        <select
+                           value={studentSortOrder}
+                           onChange={(e) => setStudentSortOrder(e.target.value)}
+                           className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                        >
+                          <option className={dropdownOptionClass} value="name-asc">Name: A to Z</option>
+                          <option className={dropdownOptionClass} value="name-desc">Name: Z to A</option>
+                          <option className={dropdownOptionClass} value="score-desc">Highest Score</option>
+                          <option className={dropdownOptionClass} value="score-asc">Lowest Score</option>
+                          <option className={dropdownOptionClass} value="xp-desc">Highest XP</option>
+                          <option className={dropdownOptionClass} value="xp-asc">Lowest XP</option>
+                          <option className={dropdownOptionClass} value="rank-asc">Leaderboard Rank</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                      </div>
+                      <button
+                        onClick={openAddStudent}
+                        className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"
+                      >
+                        <FiPlus className="w-3.5 h-3.5" />
+                        Add Student
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[1200px] table-auto">
+                        <thead>
+                          <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 w-12 whitespace-nowrap">#</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Student Name</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Student Email</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Today's Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Today's XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Total XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Leaderboard Rank</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Last Attempt Date/Time</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Status</th>
                           </tr>
-                        );
-                      })}
-                      {filteredStudents.length === 0 && (
-                        <tr>
-                          <td colSpan={7} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
-                            No students match your search query.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                        </thead>
+                        <tbody>
+                          {filteredStudents.map((student, index) => {
+                            const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
+                            return (
+                              <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                                <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                                  {isPlaceholder ? '-' : index + 1}
+                                </td>
+                                {isPlaceholder ? (
+                                  <td colSpan={8} className="px-4 py-3 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                    No enrolled students
+                                  </td>
+                                ) : (
+                                  <>
+                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap" title={student.name}>
+                                      {student.name}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                      {formatEmail(student.email)}
+                                    </td>
+                                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff]">
+                                        {formatScore(student)}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                      {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                      {student.totalXp || 0} XP
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                      {student.leaderboardRank && student.leaderboardRank !== '—' && student.leaderboardRank !== '-' ? `#${student.leaderboardRank}` : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                      {formatLastAttempt(student.lastAttemptAt)}
+                                    </td>
+                                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
+                                        {student.status || 'Not Started'}
+                                      </span>
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            );
+                          })}
+                          {filteredStudents.length === 0 && (
+                            <tr>
+                              <td colSpan={9} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                                No students match your search query.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-1">
+                    <h3 className="admin-section-heading">Day Wise Reports Matrix</h3>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+                      <div className="relative w-full sm:w-60 md:w-80">
+                        <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
+                        <input
+                          type="text"
+                          placeholder="Search students..."
+                          value={tableSearch}
+                          onChange={(e) => setTableSearch(e.target.value)}
+                          className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[800px] table-auto">
+                        <thead>
+                          <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                            <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
+                            <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[150px]">Student Name</th>
+                            {Array.from({ length: 30 }).map((_, index) => (
+                              <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-16 whitespace-nowrap">
+                                Day {index + 1}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredStudents.map((student, index) => {
+                            const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
+                            return (
+                              <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                                <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">
+                                  {isPlaceholder ? '-' : index + 1}
+                                </td>
+                                {isPlaceholder ? (
+                                  <td colSpan={31} className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                    No enrolled students
+                                  </td>
+                                ) : (
+                                  <>
+                                    <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]" title={student.name}>
+                                      {student.name}
+                                    </td>
+                                    {Array.from({ length: 30 }).map((_, dIndex) => {
+                                      const dayNum = dIndex + 1;
+                                      const score = student.dayWiseHistory?.[dayNum] || 'NA';
+                                      
+                                      let scoreClass = "text-slate-500 dark:text-slate-400";
+                                      if (score === 'NIL') scoreClass = "text-amber-500 dark:text-amber-400 font-semibold";
+                                      else if (score === 'NA') scoreClass = "text-slate-300 dark:text-slate-600";
+                                      else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
+
+                                      return (
+                                        <td key={dIndex} className="px-3 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap">
+                                          <span className={scoreClass}>
+                                            {score}
+                                          </span>
+                                        </td>
+                                      );
+                                    })}
+                                  </>
+                                )}
+                              </tr>
+                            );
+                          })}
+                          {filteredStudents.length === 0 && (
+                            <tr>
+                              <td colSpan={32} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                                No students match your search query.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </section>
         </div>

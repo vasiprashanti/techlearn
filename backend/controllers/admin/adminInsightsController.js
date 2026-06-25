@@ -180,7 +180,7 @@ export const getAnalyticsPage = async (req, res) => {
     const [upcomingBatches, completedBatches, resourcesViewed, usedInTracksCount, avgTrackLength, difficultyCounts] =
       await Promise.all([
         Batch.countDocuments({ status: BATCH_STATUS.DRAFT }),
-        Batch.countDocuments({ status: BATCH_STATUS.EXPIRED }),
+        Batch.countDocuments({ status: BATCH_STATUS.COMPLETED }),
         Resource.aggregate([{ $group: { _id: null, totalViews: { $sum: "$views" } } }]),
         TrackTemplate.countDocuments({ "dayAssignments.0": { $exists: true } }),
         TrackTemplate.aggregate([{ $group: { _id: null, avg: { $avg: "$totalDays" } } }]),

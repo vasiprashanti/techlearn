@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 export const BATCH_STATUS = {
   DRAFT: "Draft",
   ACTIVE: "Active",
-  EXPIRED: "Expired",
+  COMPLETED: "Completed",
   ARCHIVED: "Archived",
 };
 
