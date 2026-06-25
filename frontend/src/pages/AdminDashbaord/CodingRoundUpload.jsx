@@ -946,13 +946,14 @@ setExpanded(new Array(round.problems.length).fill(true));
                         <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">Loading scores...</p>
                       ) : reports[round._id] &&
                         reports[round._id].length > 0 ? (
-                        <table className="w-full border mt-2 text-sm text-left border-black/10 dark:border-white/10">
+                        <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm mt-2">
+                        <table className="w-full text-sm text-left">
                           <thead>
-                            <tr className="bg-white/45 dark:bg-[#0b214d]/65">
-                              <th className="p-2 border">Rank</th>
-                              <th className="p-2 border">Email</th>
-                              <th className="p-2 border">Score</th>
-                              <th className="p-2 border">Submitted At</th>
+                            <tr className="border-b border-black/10 dark:border-white/10 bg-slate-100/50 dark:bg-slate-900/30">
+                              <th className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">Rank</th>
+                              <th className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">Email</th>
+                              <th className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">Score</th>
+                              <th className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">Submitted At</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -961,16 +962,16 @@ setExpanded(new Array(round.problems.length).fill(true));
                               .map((user, idx) => (
                                 <tr
                                   key={idx}
-                                  className="hover:bg-white/32 dark:hover:bg-[#0f2c60]/44"
+                                  className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
                                 >
-                                  <td className="p-2 border">{idx + 1}</td>
-                                  <td className="p-2 border">
+                                  <td className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">{idx + 1}</td>
+                                  <td className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">
                                     {user.studentEmail}
                                   </td>
-                                  <td className="p-2 border">
+                                  <td className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">
                                     {user.studentScore}
                                   </td>
-                                  <td className="p-2 border">
+                                  <td className="p-2.5 border-b border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-350">
                                     {new Date(user.submittedAt).toLocaleString(
                                       "en-IN",
                                       {

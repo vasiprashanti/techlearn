@@ -492,11 +492,11 @@ export default function QuestionCatalogPage({
             </div>
           </div>
 
-          <div className="dashboard-surface relative z-0 mt-5 overflow-hidden">
+          <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl relative z-0 mt-5 overflow-hidden shadow-sm">
             <div className="question-catalog-scroll max-h-[62vh] overflow-y-auto overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="bg-white/45 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[#5f7592] dark:bg-[#0b214d]/65 dark:text-[#9bc5e8]">
+                  <tr className="bg-slate-100/50 dark:bg-slate-900/30 text-left text-xs font-semibold uppercase tracking-[0.08em] text-[#5f7592] dark:text-[#9bc5e8] border-b border-black/10 dark:border-white/10">
                     <th className="w-14 px-4 py-4">#</th>
                     <th className="px-4 py-4">Title</th>
                     <th className="w-36 px-4 py-4">Difficulty</th>
@@ -508,7 +508,7 @@ export default function QuestionCatalogPage({
                     <tr
                       key={question.id}
                       onClick={() => handleRowOpen(question)}
-                      className="cursor-pointer border-t border-white/10 text-sm text-[#1a365d] transition hover:bg-white/32 dark:border-[#1e3f73]/38 dark:text-[#d7efff] dark:hover:bg-[#0f2c60]/44"
+                      className="cursor-pointer border-b border-black/10 dark:border-white/10 last:border-b-0 text-sm text-[#1a365d] transition hover:bg-black/[0.02] dark:hover:bg-white/[0.04] dark:border-white/10 dark:text-[#d7efff] transition-colors"
                     >
                       <td className="px-4 py-4 text-[#6d86a4] dark:text-[#88b8df]">{index + 1}</td>
                       <td className="px-4 py-4">
@@ -546,7 +546,7 @@ export default function QuestionCatalogPage({
               </table>
             </div>
 
-            <div className="border-t border-white/10 bg-white/32 px-4 py-3 text-sm text-[#4c6f9a] dark:border-[#1e3f73]/38 dark:bg-[#0b214d]/58 dark:text-[#7fb8e2]">
+            <div className="border-t border-black/10 dark:border-white/10 bg-white/20 dark:bg-white/5 px-4 py-3 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
               Showing {filteredQuestions.length} of {displayQuestions.length} questions
             </div>
           </div>

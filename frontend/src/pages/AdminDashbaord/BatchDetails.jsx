@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +40,8 @@ const BatchDetails = () => {
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
   const [studentSortOrder, setStudentSortOrder] = useState('name-asc');
+  const [reportStatusFilter, setReportStatusFilter] = useState('All');
+  const [reportSortOrder, setReportSortOrder] = useState('default');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [studentMode, setStudentMode] = useState('existing');
   const [existingStudentResults, setExistingStudentResults] = useState([]);
@@ -314,6 +316,128 @@ const BatchDetails = () => {
         return 0;
       });
   }, [batch.studentsTable, tableSearch, studentStatusFilter, studentSortOrder]);
+
+  const maxTrackDays = batch.maxTrackDays || 30;
+
+  const getFormattedDayHeader = useCallback((dayNum) => {
+    if (!batch.startDateValue) return `Day ${dayNum}`;
+    const startDate = new Date(batch.startDateValue);
+    const targetDate = new Date(startDate.getTime() + (dayNum - 1) * 24 * 60 * 60 * 1000);
+    const options = { day: 'numeric', month: 'short' };
+    return `Day ${dayNum} - ${targetDate.toLocaleDateString('en-US', options)}`;
+  }, [batch.startDateValue]);
+
+  const getAttemptedCountForDay = useCallback((dayNum) => {
+    const table = batch.studentsTable || [];
+    const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
+    if (isPlaceholder) return 0;
+    return table.filter(student => {
+      const score = student.dayWiseHistory?.[dayNum];
+      return score && score !== 'NIL' && score !== 'NA' && score !== '—';
+    }).length;
+  }, [batch.studentsTable]);
+
+  const getAverageScoreForDay = useCallback((dayNum) => {
+    const table = batch.studentsTable || [];
+    const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
+    if (isPlaceholder) return '—';
+    const scores = [];
+    let maxDen = 0;
+    table.forEach(student => {
+      const score = student.dayWiseHistory?.[dayNum];
+      if (score && score !== 'NIL' && score !== 'NA' && score !== '—') {
+        const parts = score.split('/');
+        if (parts.length === 2) {
+          scores.push(parseFloat(parts[0]));
+          const den = parseInt(parts[1], 10);
+          if (den > maxDen) maxDen = den;
+        }
+      }
+    });
+    if (scores.length === 0) return '—';
+    const sum = scores.reduce((s, v) => s + v, 0);
+    const avg = (sum / scores.length).toFixed(1);
+    return `${avg}/${maxDen}`;
+  }, [batch.studentsTable]);
+
+  const filteredReportStudents = useMemo(() => {
+    const table = batch.studentsTable || [];
+    const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
+    const studentsList = isPlaceholder ? [] : table;
+
+    let list = [...studentsList];
+    
+    // 1. Search Filter
+    const q = tableSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter(student => 
+        (student.name || '').toLowerCase().includes(q) ||
+        (student.email || '').toLowerCase().includes(q)
+      );
+    }
+    
+    // 2. Status Filter
+    const today = batchDetail?.dayNumber || 1;
+    if (reportStatusFilter === 'Attempted Today') {
+      list = list.filter(student => {
+        const score = student.dayWiseHistory?.[today];
+        return score && score !== 'NIL' && score !== 'NA' && score !== '—';
+      });
+    } else if (reportStatusFilter === 'Not Attempted Today') {
+      list = list.filter(student => {
+        const score = student.dayWiseHistory?.[today];
+        return !score || score === 'NIL' || score === 'NA' || score === '—';
+      });
+    } else if (reportStatusFilter === 'Completed') {
+      list = list.filter(student => student.status === 'Completed');
+    } else if (reportStatusFilter === 'In Progress') {
+      list = list.filter(student => student.status === 'In Progress');
+    } else if (reportStatusFilter === 'Not Started') {
+      list = list.filter(student => student.status === 'Not Started' || student.status === 'Absent');
+    }
+    
+    // 3. Sorting
+    if (reportSortOrder !== 'default') {
+      list.sort((a, b) => {
+        let scoreA = 0;
+        let countA = 0;
+        Object.keys(a.dayWiseHistory || {}).forEach(k => {
+          const val = a.dayWiseHistory[k];
+          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
+            const parts = val.split('/');
+            if (parts.length === 2) {
+              scoreA += parseFloat(parts[0]) / parseFloat(parts[1]);
+              countA++;
+            }
+          }
+        });
+        
+        let scoreB = 0;
+        let countB = 0;
+        Object.keys(b.dayWiseHistory || {}).forEach(k => {
+          const val = b.dayWiseHistory[k];
+          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
+            const parts = val.split('/');
+            if (parts.length === 2) {
+              scoreB += parseFloat(parts[0]) / parseFloat(parts[1]);
+              countB++;
+            }
+          }
+        });
+        
+        const avgA = countA > 0 ? scoreA / countA : 0;
+        const avgB = countB > 0 ? scoreB / countB : 0;
+        
+        if (reportSortOrder === 'low-to-high') {
+          return avgA - avgB;
+        } else {
+          return avgB - avgA;
+        }
+      });
+    }
+    
+    return list;
+  }, [batch.studentsTable, tableSearch, reportStatusFilter, reportSortOrder, batchDetail]);
 
   const formatScore = (student) => {
     if (student.todayScore !== 'View Scores') return student.todayScore || '—';
@@ -673,10 +797,10 @@ const BatchDetails = () => {
                 </>
               ) : (
                 <>
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-1">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between lg:justify-start lg:gap-12 gap-3 mt-1">
                     <h3 className="admin-section-heading">Day Wise Reports Matrix</h3>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
-                      <div className="relative w-full sm:w-60 md:w-80">
+                    <div className="flex flex-row items-center justify-between md:justify-end gap-2.5 w-full md:w-auto lg:flex-1 shrink-0">
+                      <div className="relative w-36 sm:w-44 md:w-48 lg:w-56">
                         <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                         <input
                           type="text"
@@ -686,71 +810,157 @@ const BatchDetails = () => {
                           className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
                         />
                       </div>
+                      <div className="relative w-28 sm:w-32">
+                        <select
+                          value={reportStatusFilter}
+                          onChange={(e) => setReportStatusFilter(e.target.value)}
+                          className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                        >
+                          <option className={dropdownOptionClass} value="All">All Status</option>
+                          <option className={dropdownOptionClass} value="Attempted Today">Attempted Today</option>
+                          <option className={dropdownOptionClass} value="Not Attempted Today">Not Attempted Today</option>
+                          <option className={dropdownOptionClass} value="Completed">Completed</option>
+                          <option className={dropdownOptionClass} value="In Progress">In Progress</option>
+                          <option className={dropdownOptionClass} value="Not Started">Not Started</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                      </div>
+                      <div className="relative w-32 sm:w-36 md:w-40">
+                        <select
+                          value={reportSortOrder}
+                          onChange={(e) => setReportSortOrder(e.target.value)}
+                          className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                        >
+                          <option className={dropdownOptionClass} value="default">Default Sort</option>
+                          <option className={dropdownOptionClass} value="low-to-high">Score: Low to High</option>
+                          <option className={dropdownOptionClass} value="high-to-low">Score: High to Low</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[800px] table-auto">
-                        <thead>
-                          <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                            <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-10">#</th>
-                            <th className="text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[150px]">Student Name</th>
-                            {Array.from({ length: 30 }).map((_, index) => (
-                              <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-16 whitespace-nowrap">
-                                Day {index + 1}
+                  <div className="space-y-6">
+                    {/* 1. Day-wise Summary Table */}
+                    <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                      <div className="px-4 py-3 border-b border-black/5 dark:border-white/5 bg-slate-50/20 dark:bg-slate-900/10">
+                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Day-wise Summary</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                          <thead>
+                            <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-4 py-2.5 min-w-[190px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">
+                                Metric
                               </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredStudents.map((student, index) => {
-                            const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
-                            return (
-                              <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                <td className="px-3 py-2 text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">
-                                  {isPlaceholder ? '-' : index + 1}
-                                </td>
-                                {isPlaceholder ? (
-                                  <td colSpan={31} className="px-3 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
-                                    No enrolled students
-                                  </td>
-                                ) : (
-                                  <>
-                                    <td className="px-3 py-2 text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]" title={student.name}>
-                                      {student.name}
-                                    </td>
-                                    {Array.from({ length: 30 }).map((_, dIndex) => {
-                                      const dayNum = dIndex + 1;
-                                      const score = student.dayWiseHistory?.[dayNum] || 'NA';
-                                      
-                                      let scoreClass = "text-slate-500 dark:text-slate-400";
-                                      if (score === 'NIL') scoreClass = "text-amber-500 dark:text-amber-400 font-semibold";
-                                      else if (score === 'NA') scoreClass = "text-slate-300 dark:text-slate-600";
-                                      else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
-
-                                      return (
-                                        <td key={dIndex} className="px-3 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap">
-                                          <span className={scoreClass}>
-                                            {score}
-                                          </span>
-                                        </td>
-                                      );
-                                    })}
-                                  </>
-                                )}
-                              </tr>
-                            );
-                          })}
-                          {filteredStudents.length === 0 && (
-                            <tr>
-                              <td colSpan={32} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
-                                No students match your search query.
-                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => (
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-16 whitespace-nowrap">
+                                  {getFormattedDayHeader(index + 1)}
+                                </th>
+                              ))}
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-4 py-2.5 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                                Attempted Students
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const count = getAttemptedCountForDay(dayNum);
+                                return (
+                                  <td key={index} className="px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    {count}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-4 py-2.5 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                                Average Score
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const avg = getAverageScoreForDay(dayNum);
+                                return (
+                                  <td key={index} className="px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    {avg}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* 2. Student-wise Report Table */}
+                    <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm">
+                      <div className="px-4 py-3 border-b border-black/5 dark:border-white/5 bg-slate-50/20 dark:bg-slate-900/10">
+                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Student-wise Report</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                          <thead>
+                            <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-10 whitespace-nowrap">#</th>
+                              <th className="sticky left-10 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 min-w-[150px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">Student Name</th>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => (
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-16 whitespace-nowrap">
+                                  {getFormattedDayHeader(index + 1)}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredReportStudents.map((student, index) => {
+                              const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
+                              return (
+                                <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                                    {isPlaceholder ? '-' : index + 1}
+                                  </td>
+                                  {isPlaceholder ? (
+                                    <td colSpan={maxTrackDays + 1} className="px-3 py-2.5 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                      No enrolled students
+                                    </td>
+                                  ) : (
+                                    <>
+                                      <td className="sticky left-10 bg-white dark:bg-[#0f1f43] z-10 px-3 py-2.5 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[150px]" title={student.name}>
+                                        {student.name}
+                                      </td>
+                                      {Array.from({ length: maxTrackDays }).map((_, dIndex) => {
+                                        const dayNum = dIndex + 1;
+                                        const score = student.dayWiseHistory?.[dayNum] || 'NA';
+                                        
+                                        let scoreClass = "text-slate-500 dark:text-slate-400";
+                                        if (score === 'NIL') scoreClass = "text-amber-500 dark:text-amber-400 font-semibold";
+                                        else if (score === 'NA') scoreClass = "text-slate-300 dark:text-slate-600";
+                                        else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
+
+                                        return (
+                                          <td key={dIndex} className="px-3 py-2.5 text-center text-[11px] sm:text-xs whitespace-nowrap">
+                                            <span className={scoreClass}>
+                                              {score}
+                                            </span>
+                                          </td>
+                                        );
+                                      })}
+                                    </>
+                                  )}
+                                </tr>
+                              );
+                            })}
+                            {filteredReportStudents.length === 0 && (
+                              <tr>
+                                <td colSpan={maxTrackDays + 2} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                                  No students match your search query.
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </>

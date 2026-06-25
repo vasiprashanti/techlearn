@@ -372,7 +372,7 @@ export default function SubmissionMonitor() {
               )}
             </div>
 
-            <div className="hidden lg:block bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
+            <div className="hidden lg:block bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-scroll">
               <table className="w-full min-w-[1120px] table-auto">
                 <colgroup>
@@ -386,7 +386,7 @@ export default function SubmissionMonitor() {
                   <col className="w-[9%]"  />
                 </colgroup>
                 <thead>
-                  <tr className="bg-[#f0f5fb] dark:bg-white/[0.04] border-b border-black/8 dark:border-white/10">
+                  <tr className="bg-slate-100/50 dark:bg-slate-900/30 border-b border-black/10 dark:border-white/10">
                     {['Student', 'Batch', 'Question', 'Language', 'Status', 'XP', 'Exec Time', 'When'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-[#6a8097] dark:text-white/55">{h}</th>
                     ))}
@@ -397,7 +397,7 @@ export default function SubmissionMonitor() {
                     const sc = getSubmissionStatusConfig(s.status);
                     const StatusIcon = sc.Icon;
                     return (
-                      <tr onClick={() => setSelectedSubmission(s)} key={s.id} className="group hover:bg-black/[0.015] dark:hover:bg-white/[0.03] transition-colors cursor-pointer">
+                      <tr onClick={() => setSelectedSubmission(s)} key={s.id} className="group hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer border-b border-black/10 dark:border-white/10 last:border-b-0">
                         <td className="px-4 py-3">
                           <span className="text-base font-semibold text-[#1d3149] dark:text-white/90 truncate leading-none block">{s.student}</span>
                         </td>

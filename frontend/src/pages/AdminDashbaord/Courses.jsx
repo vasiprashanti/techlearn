@@ -376,10 +376,10 @@ export default function Courses() {
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
             ) : (
-              <div className="overflow-x-auto overflow-y-hidden question-catalog-scroll mt-4">
+              <div className="overflow-x-auto overflow-y-hidden bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl shadow-sm mt-4">
                 <table className="w-full min-w-[900px] table-fixed">
                   <thead>
-                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
+                    <tr className="border-b border-black/10 dark:border-white/10 bg-slate-100/50 dark:bg-slate-900/30">
                       <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[280px]">Course Title</th>
                       <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[450px]">Description</th>
                       <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[160px]">Level</th>
@@ -396,7 +396,7 @@ export default function Courses() {
                         course.level.toLowerCase().includes(query)
                       );
                     }).map((course) => (
-                      <tr key={course._id} className="hover:bg-white/30 dark:hover:bg-white/[0.02] transition-colors">
+                      <tr key={course._id} className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                         <td className="px-6 py-4 text-sm font-semibold text-black dark:text-white truncate" title={course.title}>
                           {course.title}
                         </td>

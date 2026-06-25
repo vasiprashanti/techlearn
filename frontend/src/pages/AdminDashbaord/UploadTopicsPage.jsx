@@ -433,10 +433,10 @@ export default function UploadTopicsPage() {
                 </div>
 
                 {/* Desktop Table View */}
-                <div className="hidden lg:block rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5">
+                <div className="hidden lg:block bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-black/5 dark:bg-white/5 border-b border-black/10 dark:border-white/10">
+                      <tr className="bg-slate-100/50 dark:bg-slate-900/30 border-b border-black/10 dark:border-white/10">
                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[300px]">Topic Title</th>
                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[180px]">Upload Notes</th>
                         <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[240px]">File Status</th>
@@ -446,7 +446,7 @@ export default function UploadTopicsPage() {
                     <tbody className="divide-y divide-black/10 dark:divide-white/10">
                       {topics.map((topic, i) => (
                         <React.Fragment key={i}>
-                          <tr className="hover:bg-white/30 dark:hover:bg-white/[0.02]">
+                          <tr className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                             <td className="px-4 py-3">
                               <input
                                 value={topic.title}

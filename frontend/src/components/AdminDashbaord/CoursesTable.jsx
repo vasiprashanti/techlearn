@@ -57,14 +57,14 @@ function CollapsibleText({ text, limit = 50, onExpandChange }) {
 
 export default function CoursesTable({ courses, onView, onEdit, onDelete }) {
   return (
-    <div className="bg-white/50 dark:bg-gray-800/70 rounded-xl shadow-md overflow-hidden">
+    <div className="bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl shadow-sm overflow-hidden">
       <div
         className="overflow-x-auto lg:overflow-visible"
         style={{ paddingRight: "1.5rem", paddingBottom: "1rem" }}
       >
         <table className="min-w-[900px] whitespace-nowrap text-left">
           <thead>
-            <tr>
+            <tr className="border-b border-black/10 dark:border-white/10 bg-slate-100/50 dark:bg-slate-900/30">
               <th className="px-6 py-3 font-semibold text-light-text/100 dark:text-dark-text/70">Title</th>
               <th className="px-6 py-3 font-semibold text-light-text/100 dark:text-dark-text/70">Description</th>
               <th className="px-6 py-3 font-semibold text-light-text/100 dark:text-dark-text/70">Topics</th>
@@ -82,7 +82,7 @@ export default function CoursesTable({ courses, onView, onEdit, onDelete }) {
             {courses.map((course, idx) => (
               <tr
                 key={idx}
-                className="border-b last:border-0 hover:bg-gray-100/10 transition"
+                className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
               >
                 <td className="px-6 py-4 text-light-text/70 dark:text-dark-text/70">{course.title}</td>
                 <td className="px-6 py-4 text-light-text/70 dark:text-dark-text/70">
