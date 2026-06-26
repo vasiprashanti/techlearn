@@ -530,9 +530,6 @@ const Colleges = () => {
                           <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={college.name}>{college.name}</h3>
                           <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{college.code || college.id}</p>
                         </div>
-                        <div className="h-8.5 w-8.5 rounded-xl flex items-center justify-center text-xs font-semibold bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] shrink-0 shadow-sm border border-[#3C83F6]/20 dark:border-[#bceaff]/30">
-                          {college.name.charAt(0)}
-                        </div>
                       </div>
                     </div>
 
