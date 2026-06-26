@@ -104,6 +104,10 @@ const getBatchTemplateAssignmentFields = (trackTemplate, changed = true) => {
     return {
       assignedTrackTemplate: null,
       assignedTrackTemplateAt: null,
+      assignedDailyChallengeTrack: null,
+      assignedDailyChallengeTrackAt: null,
+      assignedDailyTaskTrack: null,
+      assignedDailyTaskTrackAt: null,
     };
   }
 
@@ -124,6 +128,41 @@ const getBatchTemplateAssignmentFields = (trackTemplate, changed = true) => {
   return fields;
 };
 
+const getBatchTemplateAssignmentFieldsFromTemplates = (trackTemplates = [], changed = true) => {
+  const templates = trackTemplates.filter(Boolean);
+  if (templates.length === 0) {
+    return getBatchTemplateAssignmentFields(null, changed);
+  }
+
+  const assignedAt = changed ? new Date() : undefined;
+  const primaryTemplate = templates.find((template) => template.trackType === "Daily Challenge") || templates[0];
+  const dailyTaskTemplate = templates.find((template) => template.trackType === "Daily Task");
+  const dailyChallengeTemplate = templates.find((template) => template.trackType === "Daily Challenge");
+
+  return {
+    assignedTrackTemplate: primaryTemplate._id,
+    ...(assignedAt ? { assignedTrackTemplateAt: assignedAt } : {}),
+    assignedDailyTaskTrack: dailyTaskTemplate?._id || null,
+    ...(assignedAt ? { assignedDailyTaskTrackAt: dailyTaskTemplate ? assignedAt : null } : {}),
+    assignedDailyChallengeTrack: dailyChallengeTemplate?._id || null,
+    ...(assignedAt ? { assignedDailyChallengeTrackAt: dailyChallengeTemplate ? assignedAt : null } : {}),
+  };
+};
+
+const getTrackTemplatesForAssignment = async (templateIds = []) => {
+  const uniqueTemplateIds = Array.from(new Set(templateIds.filter(Boolean).map(String)));
+  if (uniqueTemplateIds.length === 0) return [];
+  if (uniqueTemplateIds.some((templateId) => !mongoose.Types.ObjectId.isValid(templateId))) return null;
+
+  const templates = await TrackTemplate.find({
+    _id: { $in: uniqueTemplateIds },
+    status: "Active",
+  }).lean();
+
+  if (templates.length !== uniqueTemplateIds.length) return null;
+  const templateById = new Map(templates.map((template) => [String(template._id), template]));
+  return uniqueTemplateIds.map((templateId) => templateById.get(templateId)).filter(Boolean);
+};
 const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
   const students = await Student.find({ batchId }).select("_id").session(session).lean();
   const studentIds = students.map((student) => student._id);
@@ -532,6 +571,11 @@ export const listBatches = async (req, res) => {
         college: batch.collegeId?.name || "Unknown College",
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+        assignedTrackTemplateIds: [
+          batch.assignedDailyTaskTrack?._id,
+          batch.assignedDailyChallengeTrack?._id,
+          batch.assignedTrackTemplate?._id,
+        ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         assignedTrackTemplateCategory: batch.assignedTrackTemplate?.category || "",
@@ -558,7 +602,7 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, batchSize } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -567,12 +611,14 @@ export const createBatchAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
     }
     if (!assertObjectId(collegeId, "collegeId", res)) return;
-    const trackTemplate = assignedTrackTemplateId
-      ? await getTrackTemplateForAssignment(assignedTrackTemplateId)
-      : null;
-    if (assignedTrackTemplateId && !trackTemplate) {
-      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    const requestedTemplateIds = Array.isArray(assignedTrackTemplateIds)
+      ? assignedTrackTemplateIds
+      : (assignedTrackTemplateId ? [assignedTrackTemplateId] : []);
+    const trackTemplates = await getTrackTemplatesForAssignment(requestedTemplateIds);
+    if (!trackTemplates) {
+      return res.status(400).json({ success: false, message: "Select active track templates only." });
     }
+    const trackTemplate = trackTemplates.find((template) => template.trackType === "Daily Challenge") || trackTemplates[0] || null;
 
     const session = await mongoose.startSession();
     let batch;
@@ -585,8 +631,8 @@ export const createBatchAdmin = async (req, res) => {
               name: name.trim(),
               startDate,
               expiryDate,
-              assignedTrack: trackTemplate?.category || assignedTrack?.trim() || "",
-              ...getBatchTemplateAssignmentFields(trackTemplate),
+              assignedTrack: trackTemplates.map((template) => template.name).join(", ") || assignedTrack?.trim() || "",
+              ...getBatchTemplateAssignmentFieldsFromTemplates(trackTemplates),
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
@@ -1296,6 +1342,11 @@ export const getBatchDetail = async (req, res) => {
         college: batch.collegeId?.name || "Unknown College",
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
+        assignedTrackTemplateIds: [
+          batch.assignedDailyTaskTrack?._id,
+          batch.assignedDailyChallengeTrack?._id,
+          batch.assignedTrackTemplate?._id,
+        ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
@@ -1335,15 +1386,23 @@ export const updateBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    const requestedTemplateId = req.body.assignedTrackTemplateId || null;
+    const requestedTemplateIds = Array.isArray(req.body.assignedTrackTemplateIds)
+      ? req.body.assignedTrackTemplateIds.map(String)
+      : (req.body.assignedTrackTemplateId ? [String(req.body.assignedTrackTemplateId)] : []);
+    const existingTemplateIds = [
+      existingBatch.assignedDailyTaskTrack,
+      existingBatch.assignedDailyChallengeTrack,
+      existingBatch.assignedTrackTemplate,
+    ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index);
+    const requestedTemplateKey = [...requestedTemplateIds].sort().join('|');
+    const existingTemplateKey = [...existingTemplateIds].sort().join('|');
     const previousTrackTemplateId = existingBatch.assignedTrackTemplate || null;
-    const trackTemplateChanged = String(requestedTemplateId || "") !== String(previousTrackTemplateId || "");
-    const trackTemplate = requestedTemplateId
-      ? await getTrackTemplateForAssignment(requestedTemplateId)
-      : null;
-    if (requestedTemplateId && !trackTemplate) {
-      return res.status(400).json({ success: false, message: "Select an active or draft track template." });
+    const trackTemplateChanged = requestedTemplateKey !== existingTemplateKey;
+    const trackTemplates = await getTrackTemplatesForAssignment(requestedTemplateIds);
+    if (!trackTemplates) {
+      return res.status(400).json({ success: false, message: "Select active track templates only." });
     }
+    const trackTemplate = trackTemplates.find((template) => template.trackType === "Daily Challenge") || trackTemplates[0] || null;
 
     const existingActiveAssignments = trackTemplateChanged
       ? await StudentTrackAssignment.countDocuments({ batchId, status: "Active" })
@@ -1366,10 +1425,10 @@ export const updateBatchAdmin = async (req, res) => {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
-      assignedTrack: trackTemplate?.category || req.body.assignedTrack?.trim() || "",
-      ...getBatchTemplateAssignmentFields(
-        trackTemplate,
-        trackTemplateChanged || (Boolean(trackTemplate) && !existingBatch.assignedTrackTemplateAt)
+      assignedTrack: trackTemplates.map((template) => template.name).join(", ") || req.body.assignedTrack?.trim() || "",
+      ...getBatchTemplateAssignmentFieldsFromTemplates(
+        trackTemplates,
+        trackTemplateChanged || (trackTemplates.length > 0 && !existingBatch.assignedTrackTemplateAt)
       ),
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",

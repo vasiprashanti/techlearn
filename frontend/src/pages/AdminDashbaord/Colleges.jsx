@@ -628,10 +628,10 @@ const Colleges = () => {
                         <span>Avg Score</span>
                         <span className={`font-semibold text-slate-800 dark:text-slate-200 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>{college.avgScore}%</span>
                       </div>
-                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
-                        <span>Activity Rate</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
-                          {college.activeStudents} / {college.totalStudents} ({activityRate}%)
+                      <div className="flex items-center justify-between gap-1.5 text-[10px] md:text-[11px] text-slate-550 dark:text-slate-400">
+                        <span className="whitespace-nowrap shrink-0">Activity Rate</span>
+                        <span className="font-semibold text-[10px] text-slate-800 dark:text-slate-200 tabular-nums whitespace-nowrap shrink-0 text-right">
+                          {college.activeStudents}/{college.totalStudents} ({activityRate}%)
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">

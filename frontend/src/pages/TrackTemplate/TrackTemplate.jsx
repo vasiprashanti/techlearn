@@ -6,7 +6,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
-import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiCopy, FiMoreHorizontal } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiMoreHorizontal } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 
 // --- Mock Data ---
@@ -35,15 +35,6 @@ const iconMapForTrack = (iconKeyOrCategory) => {
   return FiCode;
 };
 
-const iconChoices = [
-  { key: 'chart', label: 'Chart', Icon: FiBarChart2 },
-  { key: 'code', label: 'Code', Icon: FiCode },
-  { key: 'globe', label: 'Globe', Icon: FiGlobe },
-  { key: 'terminal', label: 'Terminal', Icon: FiTerminal },
-  { key: 'database', label: 'Database', Icon: FiDatabase },
-  { key: 'brain', label: 'Brain', Icon: PiBrainLight },
-];
-
 export default function TrackTemplate() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -68,7 +59,6 @@ export default function TrackTemplate() {
     category: '',
     description: '',
     totalDays: '30',
-    iconKey: 'code',
     status: 'Active',
   });
   const [selectedTrack, setSelectedTrack] = useState(null);
@@ -242,7 +232,6 @@ export default function TrackTemplate() {
       category: '',
       description: '',
       totalDays: '30',
-      iconKey: 'code',
       status: 'Active',
     });
   };
@@ -256,7 +245,6 @@ export default function TrackTemplate() {
       category: '',
       description: '',
       totalDays: '30',
-      iconKey: 'code',
       status: 'Active',
     });
     setIsCreateTemplateOpen(true);
@@ -270,7 +258,6 @@ export default function TrackTemplate() {
       category: track.category || '',
       description: track.description || '',
       totalDays: String(track.totalDays || 1),
-      iconKey: track.iconKey || 'code',
       status: track.status || 'Active',
     });
     setTemplateFormError('');
@@ -293,7 +280,6 @@ export default function TrackTemplate() {
       category: effectiveCategory,
       description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
       totalDays,
-      iconKey: createTemplateForm.iconKey,
       status: createTemplateForm.status,
     };
 
@@ -560,9 +546,7 @@ export default function TrackTemplate() {
                     className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Status</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
@@ -573,22 +557,6 @@ export default function TrackTemplate() {
                     >
                       <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Active">active</option>
                       <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Draft">draft</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">Icon</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={createTemplateForm.iconKey}
-                      onChange={(e) => updateCreateTemplateField('iconKey', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                    >
-                      {iconChoices.map(({ key, label }) => (
-                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" key={key} value={key}>{label}</option>
-                      ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>

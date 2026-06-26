@@ -31,6 +31,17 @@ export default function Courses() {
   const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [courseSortField, setCourseSortField] = useState("title");
+  const [courseSortDirection, setCourseSortDirection] = useState("asc");
+
+  const toggleCourseSort = (field) => {
+    if (courseSortField === field) {
+      setCourseSortDirection(courseSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setCourseSortField(field);
+      setCourseSortDirection("asc");
+    }
+  };
   const isDarkMode = theme === "dark";
 
   useEffect(() => {
@@ -379,12 +390,24 @@ export default function Courses() {
               <div className="overflow-auto max-h-[78vh] rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] backdrop-blur-xl">
                 <table className="w-full min-w-[900px] table-fixed">
                   <thead className="border-b-2 border-black/12 dark:border-white/12">
-                    <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[260px]">Course Title</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">Description</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32">Level</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-28">Topics</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-28">Actions</th>
+                    <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur select-none">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-12">#</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[180px] cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('title')}>
+                        Course Title{courseSortField === 'title' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-24">Actions</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[240px] cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('description')}>
+                        Description{courseSortField === 'description' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('level')}>
+                        Level{courseSortField === 'level' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('topics')}>
+                        Total Topics{courseSortField === 'topics' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-44 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('enrolledStudents')}>
+                        Total Students Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="border-t border-black/20 dark:border-white/10">
@@ -395,42 +418,71 @@ export default function Courses() {
                         course.description.toLowerCase().includes(query) ||
                         course.level.toLowerCase().includes(query)
                       );
-                    }).map((course) => (
-                      <tr key={course._id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white truncate" title={course.title}>
-                          {course.title}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
-                          {course.description || "No description provided."}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
-                            {course.level || "Beginner"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
-                          {course.topics}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleEdit(course)}
-                              className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
-                              title="Edit Topics"
-                            >
-                              <FiEdit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(course)}
-                              className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
-                              title="Delete Course"
-                            >
-                              <FiTrash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    }).sort((a, b) => {
+                      let aVal = courseSortField === 'topics' ? a.topics : a[courseSortField];
+                      let bVal = courseSortField === 'topics' ? b.topics : b[courseSortField];
+                      
+                      if (courseSortField === 'enrolledStudents') {
+                        aVal = a.enrolledStudents || 0;
+                        bVal = b.enrolledStudents || 0;
+                      }
+
+                      if (typeof aVal === 'string') {
+                        return courseSortDirection === 'asc'
+                          ? aVal.localeCompare(bVal, undefined, { sensitivity: 'base' })
+                          : bVal.localeCompare(aVal, undefined, { sensitivity: 'base' });
+                      } else {
+                        return courseSortDirection === 'asc'
+                          ? (aVal || 0) - (bVal || 0)
+                          : (bVal || 0) - (aVal || 0);
+                      }
+                    }).map((course, index) => {
+                      const truncatedDesc = course.description 
+                        ? (course.description.length > 20 ? course.description.substring(0, 20) + "..." : course.description) 
+                        : "No description provided.";
+                      return (
+                        <tr key={course._id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
+                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white truncate" title={course.title}>
+                            {course.title}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleEdit(course)}
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
+                                title="Edit Topics"
+                              >
+                                <FiEdit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(course)}
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
+                                title="Delete Course"
+                              >
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
+                            {truncatedDesc}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                              {course.level || "Beginner"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                            {course.topics}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                            {course.enrolledStudents || 0}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

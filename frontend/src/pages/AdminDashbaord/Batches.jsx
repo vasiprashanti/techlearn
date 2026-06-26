@@ -52,6 +52,9 @@ const normalizeBatch = (batch) => {
     college: batch.college || '',
     assignedTrack: batch.assignedTrack || '',
     assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
+    assignedTrackTemplateIds: Array.isArray(batch.assignedTrackTemplateIds)
+      ? batch.assignedTrackTemplateIds.map(String)
+      : (batch.assignedTrackTemplateId ? [String(batch.assignedTrackTemplateId)] : []),
     assignedTrackTemplateCategory: batch.assignedTrackTemplateCategory || '',
     startDateValue: batch.startDateValue || '',
     expiryDateValue: batch.expiryDateValue || '',
@@ -247,6 +250,7 @@ const Batches = () => {
     college: '',
     startDate: '',
     assignedTrack: '',
+    assignedTrackTemplateIds: [],
     endDate: '',
     batchSize: '',
     status: 'Draft',
@@ -309,7 +313,7 @@ const Batches = () => {
     setBatches(normalizedBatches);
     setColleges(normalizedColleges);
     const assignableTemplates = preferRemoteData(remoteTrackTemplates, [])
-      .filter((template) => template.status !== 'Archived')
+      .filter((template) => template.status === 'Active')
       .map((template) => ({
         id: template.id || template._id,
         name: template.name || 'Untitled template',
@@ -392,6 +396,10 @@ const Batches = () => {
       String(batch.college || '').toLowerCase().includes(searchText) ||
       String(batch.track || '').toLowerCase().includes(searchText);
     return matchCollege && matchStatus && matchCategory && matchCreatedMonth && matchSearch;
+  }).sort((a, b) => {
+    if (!a.createdAt) return 1;
+    if (!b.createdAt) return -1;
+    return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
   const counts = {
@@ -411,6 +419,8 @@ const Batches = () => {
       startDate: '',
       assignedTrack: '',
       assignedTrackTemplateId: '',
+      assignedTrackTemplateIds: [],
+      originalAssignedTrackTemplateIds: [],
       endDate: '',
       batchSize: '',
       status: 'Draft',
@@ -419,6 +429,10 @@ const Batches = () => {
   };
 
   const openEditBatch = (batch) => {
+    const assignedTrackTemplateIds = Array.isArray(batch.assignedTrackTemplateIds)
+      ? batch.assignedTrackTemplateIds.map(String)
+      : (batch.assignedTrackTemplateId ? [String(batch.assignedTrackTemplateId)] : []);
+
     setEditingBatchId(batch.id);
     setEditingTrackTemplateId(batch.assignedTrackTemplateId || null);
     setCreateError('');
@@ -427,7 +441,9 @@ const Batches = () => {
       college: batch.college || '',
       startDate: batch.startDateValue || '',
       assignedTrack: batch.assignedTrack || '',
-      assignedTrackTemplateId: batch.assignedTrackTemplateId || '',
+      assignedTrackTemplateId: assignedTrackTemplateIds[0] || '',
+      assignedTrackTemplateIds,
+      originalAssignedTrackTemplateIds: assignedTrackTemplateIds,
       endDate: batch.expiryDateValue || '',
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
@@ -463,12 +479,26 @@ const Batches = () => {
       return;
     }
 
-    const selectedTemplateId = createBatchForm.assignedTrackTemplateId || null;
-    const isTrackReplacement = editingBatchId && selectedTemplateId !== editingTrackTemplateId;
+    const selectedTemplateIds = Array.isArray(createBatchForm.assignedTrackTemplateIds)
+      ? createBatchForm.assignedTrackTemplateIds.map(String)
+      : [];
+    const selectedTemplateId = selectedTemplateIds[0] || null;
+    const originalTemplateIds = Array.isArray(createBatchForm.originalAssignedTrackTemplateIds)
+      ? createBatchForm.originalAssignedTrackTemplateIds.map(String)
+      : [];
+    const selectedTemplateKey = [...selectedTemplateIds].sort().join('|');
+    const originalTemplateKey = [...originalTemplateIds].sort().join('|');
+    const isTrackReplacement = editingBatchId && selectedTemplateKey !== originalTemplateKey;
+
     if (isTrackReplacement && !confirmTrackReplacement) {
       setPendingTrackReplacement({
         batchName: createBatchForm.batchName,
-        newTemplate: trackTemplates.find((template) => template.id === selectedTemplateId)?.name || 'No track template',
+        newTemplate: selectedTemplateIds.length > 0
+          ? trackTemplates
+              .filter((template) => selectedTemplateIds.includes(String(template.id)))
+              .map((template) => template.name)
+              .join(', ')
+          : 'No track template',
       });
       return;
     }
@@ -483,6 +513,7 @@ const Batches = () => {
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
         assignedTrackTemplateId: selectedTemplateId,
+        assignedTrackTemplateIds: selectedTemplateIds,
         confirmTrackReplacement,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
@@ -612,21 +643,39 @@ const Batches = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track Template</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={createBatchForm.assignedTrackTemplateId}
-                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, assignedTrackTemplateId: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className={dropdownOptionClass} value="">No track template</option>
-                      {trackTemplates.map((template) => (
-                        <option className={dropdownOptionClass} key={template.id} value={template.id}>
-                          {template.name} ({template.trackType})
-                        </option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Track Templates</label>
+                  <div className="mt-1 max-h-32 overflow-y-auto rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] p-2 space-y-1.5">
+                    <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(createBatchForm.assignedTrackTemplateIds || []).length === 0}
+                        onChange={() => setCreateBatchForm((prev) => ({ ...prev, assignedTrackTemplateIds: [], assignedTrackTemplateId: '' }))}
+                        className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                      />
+                      No track template
+                    </label>
+                    {trackTemplates.map((template) => {
+                      const templateId = String(template.id);
+                      const selectedIds = createBatchForm.assignedTrackTemplateIds || [];
+                      const isChecked = selectedIds.includes(templateId);
+                      return (
+                        <label key={templateId} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(event) => setCreateBatchForm((prev) => {
+                              const currentIds = prev.assignedTrackTemplateIds || [];
+                              const nextIds = event.target.checked
+                                ? [...currentIds, templateId]
+                                : currentIds.filter((id) => id !== templateId);
+                              return { ...prev, assignedTrackTemplateIds: nextIds, assignedTrackTemplateId: nextIds[0] || '' };
+                            })}
+                            className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                          />
+                          <span className="min-w-0 truncate">{template.name} ({template.trackType})</span>
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
 
