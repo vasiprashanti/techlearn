@@ -85,34 +85,34 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       </div>
 
       {/* Desktop Table Layout */}
-      <div className="hidden lg:block bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
+      <div className="hidden lg:block bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-auto max-h-[78vh]">
         <table className="w-full min-w-[1000px] table-fixed">
-          <thead className="border-b-2 border-black/12 dark:border-white/12">
-            <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-14">#</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32">QID</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">Prompt</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-56">Tags</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32">Difficulty</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32">Actions</th>
+          <thead>
+            <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
+              <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">#</th>
+              <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">QID</th>
+              <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">Prompt</th>
+              <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-56 whitespace-nowrap">Tags</th>
+              <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">Difficulty</th>
+              <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">Actions</th>
             </tr>
           </thead>
-          <tbody className="border-t border-black/20 dark:border-white/10">
+          <tbody className="border-t border-black/5 dark:border-white/10">
             {questions.map((question, index) => (
               <tr
                 key={question.id || question._id}
-                className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]"
+                className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
               >
-                <td className="px-4 py-3 text-sm font-semibold text-black/55 dark:text-white/60">
+                <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                   {index + 1}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-[#3C83F6] dark:text-[#bceaff] whitespace-nowrap">
+                <td className="px-4 py-2.5 text-sm font-semibold text-[#3C83F6] dark:text-[#bceaff] whitespace-nowrap">
                   {getQid(question, index)}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white truncate" title={getPrompt(question)}>
+                <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-800 dark:text-white/85 truncate" title={getPrompt(question)}>
                   {getPrompt(question)}
                 </td>
-                <td className="px-4 py-3 text-xs">
+                <td className="px-4 py-2.5 text-xs">
                   <div className="flex flex-wrap gap-1.5">
                     {getTags(question).length > 0 ? getTags(question).slice(0, 3).map((tag) => (
                       <span key={tag} className="rounded-full bg-[#dbeafe] dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#1d4ed8] dark:text-[#bceaff]">{tag}</span>
@@ -121,30 +121,30 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="px-4 py-2.5 text-sm">
                   <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2.5 py-1 text-[10px] font-semibold leading-none ${difficultyPillClass(question.difficulty)}`}>
                     {question.difficulty || 'Easy'}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-100">
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                     <button
                       onClick={() => onView && onView(question)}
-                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10"
+                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 transition-colors"
                       aria-label="View question"
                     >
                       <FiEye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onEdit && onEdit(question)}
-                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10"
+                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 transition-colors"
                       aria-label="Edit question"
                     >
                       <FiEdit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDelete && onDelete(question)}
-                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10"
+                      className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
                       aria-label="Delete question"
                     >
                       <FiTrash2 className="w-4 h-4" />
@@ -164,6 +164,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
           </tbody>
         </table>
       </div>
+
     </div>
   );
 };

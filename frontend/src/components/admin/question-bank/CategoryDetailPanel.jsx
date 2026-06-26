@@ -155,114 +155,86 @@ export const CategoryDetailPanel = ({
       </div>
 
       {activeTab === 'questions' ? (
-      <section className="bg-white/70 dark:bg-[#0f1f43]/90 backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-col gap-4">
-          {/* Top Row: Search and Action Buttons */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="relative w-full lg:max-w-md">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-555 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search by prompt, topic, tag, or track..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 rounded-xl pl-10 pr-3.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-              />
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <button
-                onClick={onAddQuestion}
-                className="w-full sm:w-auto flex items-center justify-center gap-1.5 h-10 px-5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"
-              >
-                <FiPlus className="w-4 h-4" />
-                Add Question
-              </button>
-              <button
-                onClick={onBulkAddQuestions}
-                className="w-full sm:w-auto flex items-center justify-center gap-1.5 h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"
-              >
-                Bulk Add Questions
-              </button>
-            </div>
+      <section className="space-y-3">
+
+        {/* ── Toolbar ── */}
+        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5">
+
+          {/* Search */}
+          <div className="relative flex-1 min-w-0 lg:max-w-xs">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search questions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-9 border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 rounded-lg pl-9 pr-3 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+            />
           </div>
 
-          {/* Bottom Row: Filters */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Difficulty Filter Dropdown */}
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
-              <select
-                value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
-                className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none"
-              >
-                <option className={dropdownOptionClass}>All levels</option>
-                <option className={dropdownOptionClass}>Easy</option>
-                <option className={dropdownOptionClass}>Medium</option>
-                <option className={dropdownOptionClass}>Hard</option>
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            </div>
+          {/* Filters */}
+          <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
+            {[
+              { value: difficultyFilter, onChange: setDifficultyFilter, options: ['All levels', 'Easy', 'Medium', 'Hard'] },
+              { value: statusFilter,    onChange: setStatusFilter,    options: ['All statuses', 'Active', 'Draft', 'Archived'] },
+              { value: tagFilter,       onChange: setTagFilter,       options: ['All tags', ...uniqueTags] },
+              { value: sortBy,          onChange: setSortBy,          options: [
+                  { value: 'newest', label: 'Newest first' },
+                  { value: 'oldest', label: 'Oldest first' },
+                  { value: 'easy-hard', label: 'Easy → Hard' },
+                  { value: 'hard-easy', label: 'Hard → Easy' },
+                ],
+              },
+            ].map(({ value, onChange, options }, i) => (
+              <div key={i} className="relative">
+                <select
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  className="appearance-none h-9 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  {options.map((opt) =>
+                    typeof opt === 'string'
+                      ? <option key={opt} className={dropdownOptionClass}>{opt}</option>
+                      : <option key={opt.value} value={opt.value} className={dropdownOptionClass}>{opt.label}</option>
+                  )}
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+              </div>
+            ))}
+          </div>
 
-            {/* Status Filter */}
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none"
-              >
-                <option className={dropdownOptionClass}>All statuses</option>
-                <option className={dropdownOptionClass}>Active</option>
-                <option className={dropdownOptionClass}>Draft</option>
-                <option className={dropdownOptionClass}>Archived</option>
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            </div>
-
-            {/* Tag Filter */}
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
-              <select
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-                className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none"
-              >
-                <option className={dropdownOptionClass}>All tags</option>
-                {uniqueTags.map((tag) => <option key={tag} className={dropdownOptionClass}>{tag}</option>)}
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            </div>
-
-            {/* Sort Filter */}
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[150px] flex-1 sm:flex-initial">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3.5 pr-10 text-sm font-semibold text-slate-700 dark:text-slate-200 outline-none"
-              >
-                <option className={dropdownOptionClass} value="newest">Recently Added</option>
-                <option className={dropdownOptionClass} value="oldest">Oldest First</option>
-                <option className={dropdownOptionClass} value="easy-hard">Easy → Hard</option>
-                <option className={dropdownOptionClass} value="hard-easy">Hard → Easy</option>
-              </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-            </div>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 lg:ml-auto shrink-0">
+            <button
+              onClick={onAddQuestion}
+              className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#3C83F6] text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap transition-colors"
+            >
+              <FiPlus className="w-3.5 h-3.5" />
+              Add Question
+            </button>
+            <button
+              onClick={onBulkAddQuestions}
+              className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap transition-colors"
+            >
+              Bulk Add
+            </button>
           </div>
         </div>
 
-        {/* Embedded Question Table */}
-        <div className="pt-2">
-          <QuestionTable
-            questions={sortedQuestions}
-            onView={onViewQuestion}
-            onEdit={onEditQuestion}
-            onDelete={onDeleteQuestion}
-          />
-        </div>
+        {/* ── Table ── */}
+        <QuestionTable
+          questions={sortedQuestions}
+          onView={onViewQuestion}
+          onEdit={onEditQuestion}
+          onDelete={onDeleteQuestion}
+        />
 
-        {/* List size caption */}
+        {/* Caption */}
         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
           Showing {sortedQuestions.length} of {questions.length} questions
         </p>
       </section>
+
       ) : (
         <section className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">

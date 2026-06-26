@@ -344,10 +344,11 @@ export default function Courses() {
             <h1 className="admin-page-title">Courses</h1>
           </div>
 
-          <section className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-black/10 dark:border-white/10 text-left">
+          <section className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                   <FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
                 </div>
                 <div>
@@ -355,21 +356,21 @@ export default function Courses() {
                   <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">Create course tracks and upload/manage topics inside them.</p>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-3 self-end sm:self-auto w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-64">
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <div className="relative w-48 sm:w-56">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search courses..."
-                    className="w-full h-9 pl-9 pr-4 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-black/20 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                   />
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 </div>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="dashboard-primary-btn w-full sm:w-auto h-9 px-4 text-xs shrink-0"
+                  className="dashboard-primary-btn h-9 px-4 text-xs shrink-0"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
                   Add Course
@@ -387,30 +388,30 @@ export default function Courses() {
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
             ) : (
-              <div className="overflow-auto max-h-[78vh] rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] backdrop-blur-xl">
+              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
                 <table className="w-full min-w-[900px] table-fixed">
-                  <thead className="border-b-2 border-black/12 dark:border-white/12">
-                    <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur select-none">
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-12">#</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[180px] cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('title')}>
+                  <thead>
+                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
+                      <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-12 whitespace-nowrap">#</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[180px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('title')}>
                         Course Title{courseSortField === 'title' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-24">Actions</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[240px] cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('description')}>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-24 whitespace-nowrap">Actions</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[240px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('description')}>
                         Description{courseSortField === 'description' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('level')}>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('level')}>
                         Level{courseSortField === 'level' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('topics')}>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('topics')}>
                         Total Topics{courseSortField === 'topics' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-44 cursor-pointer hover:text-blue-500 transition-colors" onClick={() => toggleCourseSort('enrolledStudents')}>
-                        Total Students Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-44 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('enrolledStudents')}>
+                        Total Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="border-t border-black/20 dark:border-white/10">
+                  <tbody className="border-t border-black/5 dark:border-white/10">
                     {courses.filter((course) => {
                       const query = searchQuery.toLowerCase();
                       return (
@@ -441,14 +442,14 @@ export default function Courses() {
                         ? (course.description.length > 20 ? course.description.substring(0, 20) + "..." : course.description) 
                         : "No description provided.";
                       return (
-                        <tr key={course._id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
-                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                        <tr key={course._id} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                          <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                             {index + 1}
                           </td>
-                          <td className="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white truncate" title={course.title}>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={course.title}>
                             {course.title}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1.5">
                               <button
                                 onClick={() => handleEdit(course)}
@@ -466,18 +467,18 @@ export default function Courses() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
                             {truncatedDesc}
                           </td>
-                          <td className="px-4 py-3 text-xs">
-                            <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
+                          <td className="px-4 py-2.5">
+                            <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-[10px] font-semibold text-[#0f2b54] dark:text-blue-200">
                               {course.level || "Beginner"}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
                             {course.topics}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
                             {course.enrolledStudents || 0}
                           </td>
                         </tr>
