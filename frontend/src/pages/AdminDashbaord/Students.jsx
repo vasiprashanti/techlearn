@@ -203,10 +203,49 @@ const Students = () => {
     route.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     route.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const [studentSortField, setStudentSortField] = useState("name");
+  const [studentSortDirection, setStudentSortDirection] = useState("asc");
+
+  const toggleStudentSort = (field) => {
+    if (studentSortField === field) {
+      setStudentSortDirection(studentSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setStudentSortField(field);
+      setStudentSortDirection("asc");
+    }
+  };
+
   const filteredStudents = students.filter((student) => {
     const matchesSearch = !tableSearch || student.name.toLowerCase().includes(tableSearch.toLowerCase()) || student.email.toLowerCase().includes(tableSearch.toLowerCase()) || student.batch.toLowerCase().includes(tableSearch.toLowerCase());
     return matchesSearch;
   });
+
+  const sortedStudents = useMemo(() => {
+    return [...filteredStudents].sort((a, b) => {
+      let aVal = a[studentSortField];
+      let bVal = b[studentSortField];
+
+      if (studentSortField === 'accuracy') {
+        aVal = parseFloat(a.accuracy) || 0;
+        bVal = parseFloat(b.accuracy) || 0;
+      } else if (studentSortField === 'streak') {
+        aVal = parseInt(a.streak, 10) || 0;
+        bVal = parseInt(b.streak, 10) || 0;
+      }
+
+      if (typeof aVal === 'string') {
+        return studentSortDirection === 'asc'
+          ? aVal.localeCompare(bVal, undefined, { sensitivity: 'base' })
+          : bVal.localeCompare(aVal, undefined, { sensitivity: 'base' });
+      } else {
+        return studentSortDirection === 'asc'
+          ? (aVal || 0) - (bVal || 0)
+          : (bVal || 0) - (aVal || 0);
+      }
+    });
+  }, [filteredStudents, studentSortField, studentSortDirection]);
+
   const filteredBatchOptions = useMemo(() => {
     if (!studentForm.collegeId) return batches;
     const selectedCollege = colleges.find((college) => college.id === studentForm.collegeId);
@@ -648,7 +687,7 @@ const Students = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-3 lg:hidden">
-              {filteredStudents.map((student) => (
+              {sortedStudents.map((student) => (
                 <article key={student.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -671,22 +710,43 @@ const Students = () => {
                   </div>
                 </article>
               ))}
-              {filteredStudents.length === 0 && <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</div>}
+              {sortedStudents.length === 0 && <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</div>}
             </div>
 
             <div className="hidden lg:block bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
               <table className="w-full min-w-[1180px] table-fixed">
                 <thead className="border-b-2 border-black/12 dark:border-white/12">
-                  <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
-                    {['#', 'Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => (
-                      <th key={col} className={`px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 ${col === '#' ? 'w-14' : ''}`}>
-                        {col}
-                      </th>
-                    ))}
+                  <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur select-none">
+                    {['#', 'Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => {
+                      const isSortable = ['Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status'].includes(col);
+                      const fieldMap = {
+                        'Name': 'name',
+                        'Email': 'email',
+                        'College': 'college',
+                        'Batch': 'batch',
+                        'Track': 'track',
+                        'Accuracy': 'accuracy',
+                        'Streak': 'streak',
+                        'Status': 'status'
+                      };
+                      const sortField = fieldMap[col];
+                      return (
+                        <th 
+                          key={col} 
+                          onClick={() => isSortable && toggleStudentSort(sortField)}
+                          className={`px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 ${col === '#' ? 'w-14' : ''} ${isSortable ? 'cursor-pointer hover:text-blue-500 transition-colors' : ''}`}
+                        >
+                          {col}
+                          {isSortable && studentSortField === sortField && (
+                            studentSortDirection === 'asc' ? ' ▲' : ' ▼'
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
-                  {filteredStudents.map((student, index) => (
+                  {sortedStudents.map((student, index) => (
                     <tr key={student.id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
                       <td className="px-4 py-3 text-sm font-semibold text-black/55 dark:text-white/60">{index + 1}</td>
                       <td className="px-4 py-3 text-sm font-semibold truncate">{student.name}</td>
@@ -706,13 +766,13 @@ const Students = () => {
                       </td>
                     </tr>
                   ))}
-                  {filteredStudents.length === 0 && <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
+                  {sortedStudents.length === 0 && <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
                 </tbody>
               </table>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-base font-medium text-black/45 dark:text-white/45">Showing {filteredStudents.length} of {students.length} students</p>
+              <p className="text-base font-medium text-black/45 dark:text-white/45">Showing {sortedStudents.length} of {students.length} students</p>
             </div>
             </>
             )}

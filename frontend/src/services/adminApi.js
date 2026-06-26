@@ -293,6 +293,7 @@ export const adminAPI = {
   createCollege: (body) => request('/admin/colleges', { method: 'POST', body: JSON.stringify(body) }),
   updateCollege: (collegeId, body) => request(`/admin/colleges/${collegeId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteCollege: (collegeId) => request(`/admin/colleges/${collegeId}`, { method: 'DELETE' }),
+  bulkDeleteColleges: (collegeIds) => request('/admin/colleges/bulk-delete', { method: 'POST', body: JSON.stringify({ collegeIds }) }),
 
   getBatches: () => request('/admin/batches'),
   getBatch: (batchId) => request(`/admin/batches/${batchId}`),

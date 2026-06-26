@@ -6,7 +6,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar"; // ✅ CORR
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyColleges } from '../../data/adminEmptyStates';
-import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiHome, FiCheckCircle, FiChevronDown, FiMoreHorizontal, FiArrowUpRight, FiTrash2 } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: "dashboard", title: "Dashboard", category: "Overview" },
@@ -76,6 +76,9 @@ const Colleges = () => {
   const [isDeletingCollege, setIsDeletingCollege] = useState(false);
   const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [openActionMenuId, setOpenActionMenuId] = useState(null);
+  const [selectedCollegeIds, setSelectedCollegeIds] = useState([]);
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
@@ -258,6 +261,32 @@ const Colleges = () => {
     }
   };
 
+  const handleSelectToggle = (id) => {
+    setSelectedCollegeIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCollegeIds([]);
+  };
+
+  const handleBulkDeleteColleges = async () => {
+    setDeleteError('');
+    setIsBulkDeleting(true);
+    try {
+      await adminAPI.bulkDeleteColleges(selectedCollegeIds);
+      const refreshed = await adminAPI.getColleges();
+      setColleges(preferRemoteData(refreshed, colleges.filter((c) => !selectedCollegeIds.includes(c.id))));
+      setSelectedCollegeIds([]);
+      setIsBulkDeleteConfirmOpen(false);
+    } catch (error) {
+      setDeleteError(error?.message || 'Failed to bulk delete colleges.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   return (
     <>
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
@@ -390,6 +419,36 @@ const Colleges = () => {
         </div>
       )}
 
+      {isBulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[125] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsBulkDeleteConfirmOpen(false)} />
+          <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-base font-semibold text-black/80 dark:text-white">Delete Selected Colleges</h3>
+              <p className="text-sm text-black/50 dark:text-white/50 mt-1">
+                Are you sure you want to delete {selectedCollegeIds.length} selected colleges? This action cannot be undone.
+              </p>
+              {deleteError && <p className="text-xs text-red-500 mt-2">{deleteError}</p>}
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                onClick={() => setIsBulkDeleteConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDeleteColleges}
+                disabled={isBulkDeleting}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 transition-colors"
+              >
+                {isBulkDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
@@ -421,6 +480,22 @@ const Colleges = () => {
                 {/* Controls Row: Search (left, wide), Dropdown (middle), Add (right) */}
                 <div className="w-full flex flex-col sm:flex-row sm:items-center gap-2.5">
                   <div className="flex flex-col sm:flex-row w-full gap-2.5">
+                    <div className="flex items-center gap-2 shrink-0 border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 px-4 py-1.5 rounded-xl h-10 sm:h-9">
+                      <input
+                        type="checkbox"
+                        checked={selectedCollegeIds.length === filteredColleges.length && filteredColleges.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedCollegeIds(filteredColleges.map(c => c.id));
+                          } else {
+                            setSelectedCollegeIds([]);
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                      />
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+                    </div>
+
                     <div className="relative w-full sm:flex-1 min-w-0">
                       <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40" />
                       <input
@@ -479,33 +554,47 @@ const Colleges = () => {
             </section>
 
             {/* College Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
+                const isSelected = selectedCollegeIds.includes(college.id);
+                const theme = { topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]' };
+
                 return (
-                  <article key={college.id} className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
-                    
+                  <article key={college.id} className={`relative rounded-xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left`}>
+
+                    {/* Checkbox */}
+                    <div className="absolute left-3 top-2.5 z-20">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleSelectToggle(college.id)}
+                        className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                      />
+                    </div>
+
                     {/* Action Menu (More details) */}
-                    <div className="absolute right-4 top-3.5 z-20 college-actions-container">
+                    <div className="absolute right-2 top-2 z-20">
                       <button
                         type="button"
-                        className="college-actions-trigger w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                        className="college-actions-trigger w-6 h-6 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
                         onClick={(event) => {
                           event.stopPropagation();
                           setOpenActionMenuId((current) => (current === college.id ? null : college.id));
                         }}
+                        aria-label="Open college actions"
                       >
-                        <FiMoreHorizontal className="w-4.5 h-4.5" />
+                        <FiMoreHorizontal className="w-3.5 h-3.5" />
                       </button>
 
                       {openActionMenuId === college.id && (
-                        <div className="college-actions-menu absolute right-0 top-9 w-38 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
+                        <div className="college-actions-menu absolute right-0 top-7 w-36 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
                           <button
                             onClick={() => {
                               setOpenActionMenuId(null);
                               openEdit(college);
                             }}
-                            className="w-full text-left px-3.5 py-2 text-xs font-medium transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
                           >
                             Edit
                           </button>
@@ -515,7 +604,7 @@ const Colleges = () => {
                               setDeleteError('');
                               setPendingDeleteCollege(college);
                             }}
-                            className="w-full text-left px-3.5 py-2 text-xs font-medium transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
                           >
                             Delete
                           </button>
@@ -523,50 +612,76 @@ const Colleges = () => {
                       )}
                     </div>
 
-                    {/* Top Panel */}
-                    <div className="px-4 pt-4 pb-3 flex items-center min-h-[76px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30 pl-4 pr-12">
+                    {/* Top Panel (min-h-[72px] with top tint) */}
+                    <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-11 pr-9 flex items-center`}>
                       <div className="flex items-center justify-between gap-2.5 text-left w-full">
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={college.name}>{college.name}</h3>
-                          <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{college.code || college.id}</p>
+                          <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate" title={college.name}>{college.name}</h3>
+                          <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-355 truncate">{college.code || college.id}</p>
                         </div>
                       </div>
                     </div>
 
                     {/* Bottom Panel */}
-                    <div className="px-4 pt-3.5 pb-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2.5 text-left">
-                      <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
+                    <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
                         <span>Avg Score</span>
-                        <span className={`font-semibold tracking-tight ${college.avgScore >= 80 ? 'text-slate-800 dark:text-slate-200' : college.avgScore > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-slate-550'}`}>
-                          {college.avgScore}%
+                        <span className={`font-semibold text-slate-800 dark:text-slate-200 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>{college.avgScore}%</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-1.5 text-[10px] md:text-[11px] text-slate-550 dark:text-slate-400">
+                        <span className="whitespace-nowrap shrink-0">Activity Rate</span>
+                        <span className="font-semibold text-[10px] text-slate-800 dark:text-slate-200 tabular-nums whitespace-nowrap shrink-0 text-right">
+                          {college.activeStudents}/{college.totalStudents} ({activityRate}%)
                         </span>
                       </div>
-                      <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
-                        <span>Activity Rate</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
-                          {college.activeStudents} / {college.totalStudents} ({activityRate}%)
-                        </span>
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <span>Status</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{college.status || 'Active'}</span>
                       </div>
 
-                      {/* View College Button */}
                       <button
                         onClick={() => navigate(`/colleges/${college.id}`, { state: { college } })}
-                        className="mt-2.5 w-full h-[38px] rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs sm:text-[13px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+                        className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        View College <FiArrowUpRight className="w-3.5 h-3.5" />
+                        View College
+                        <FiArrowUpRight className="w-4 h-4" />
                       </button>
                     </div>
                   </article>
                 );
               })}
             </div>
-          </>
-          )}
-        </div>
-      </main>
-    </div>
-  </>
-);
+
+            {/* Floating Bulk Action Bar */}
+            {selectedCollegeIds.length > 0 && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3.5 rounded-full border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43]/85 backdrop-blur-md shadow-2xl animate-in slide-in-from-bottom duration-300">
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                  {selectedCollegeIds.length} {selectedCollegeIds.length === 1 ? 'college' : 'colleges'} selected
+                </span>
+                <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                <button
+                  onClick={handleClearSelection}
+                  className="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                  className="px-4 py-1.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <FiTrash2 className="w-3.5 h-3.5" />
+                  Delete Selected
+                </button>
+              </div>
+            )}
+
+            </>
+            )}
+          </div>
+        </main>
+      </div>
+    </>
+  );
 };
 
 export default Colleges;

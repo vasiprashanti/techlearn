@@ -234,24 +234,38 @@ export default function Reports() {
             </div>
 
             {/* Recent Exports */}
-            <section className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3.5">
-              <h2 className="text-xl leading-none font-semibold text-[#1b2b42] dark:text-white">Recent Exports</h2>
-              <div className="mt-3 max-h-[360px] overflow-y-auto overflow-x-hidden rounded-xl border-0 sm:border border-black/10 dark:border-white/10 space-y-2 sm:space-y-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
+            <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm flex flex-col">
+              <div className="flex items-center gap-3 pb-3 mb-1 border-b border-black/10 dark:border-white/10">
+                <div className="h-10 w-10 rounded-xl bg-[#e4ecf7] dark:bg-white/10 text-[#4283ea] dark:text-white flex items-center justify-center shrink-0">
+                  <FiClock className="w-4 h-4" />
+                </div>
+                <h2 className="text-base font-semibold text-[#1a2a41] dark:text-white">Recent Exports</h2>
+              </div>
+
+              <div className="max-h-[360px] overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full">
+                <div className="hidden sm:grid sm:grid-cols-[minmax(0,1fr)_88px_100px] gap-3 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-[#67809a] dark:text-white/50 border-b border-black/10 dark:border-white/10">
+                  <span>Report</span>
+                  <span>Format</span>
+                  <span className="text-right">Date</span>
+                </div>
+
                 {recentExportEntries.map((exp, i) => {
                   const fs = formatStyle[exp.format] || formatStyle.CSV;
                   return (
-                    <div key={exp.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-2.5 rounded-xl sm:rounded-none border border-black/10 dark:border-white/10 sm:border-0 bg-white dark:bg-[#102448] sm:dark:bg-transparent hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExportEntries.length - 1 ? 'sm:border-b sm:border-black/10 sm:dark:border-white/10' : ''}`}>
-                      <div className="flex min-w-0 items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#5f7590] dark:text-white/70">
-                          <FiClock className="w-3 h-3" />
+                    <div
+                      key={exp.id}
+                      className={`grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_88px_100px] sm:items-center gap-2 sm:gap-3 px-3 py-3 hover:bg-[#f5f8fc] dark:hover:bg-white/[0.03] transition-colors ${i < recentExportEntries.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#e4ecf7] dark:bg-white/10 flex items-center justify-center text-[#4283ea] dark:text-white/70 shrink-0">
+                          <FiDownload className="w-3.5 h-3.5" />
                         </div>
-                        <p className="truncate text-base sm:text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
+                        <p className="truncate text-sm font-semibold text-[#22344b] dark:text-white/90">{exp.title}</p>
                       </div>
 
-                      <div className="w-full sm:w-auto shrink-0 flex items-center justify-between sm:justify-start gap-2.5 pl-8 sm:pl-0">
-                        <span className={`inline-flex items-center justify-center min-w-[52px] h-6 px-2 rounded-full text-[10px] font-semibold ${fs.bg} ${fs.text}`}>{exp.format}</span>
-                        <span className="text-xs sm:text-[11px] font-medium text-[#7087a0] dark:text-white/60">{exp.date}</span>
-                      </div>
+                      <span className={`inline-flex w-fit items-center justify-center min-w-[52px] h-6 px-2 rounded-full text-[10px] font-semibold ${fs.bg} ${fs.text}`}>{exp.format}</span>
+
+                      <span className="text-xs font-medium text-[#7087a0] dark:text-white/60 sm:text-right">{exp.date}</span>
                     </div>
                   );
                 })}

@@ -746,9 +746,6 @@ export default function EditProject() {
                                 <FiCopy className="h-3 w-3" />
                                 {duplicatingDayId === day._id ? "Duplicating..." : "Duplicate"}
                               </button>
-                              <span className="text-[10px] font-bold text-blue-500 hover:text-blue-600 transition-all">
-                                {isExpanded ? "Collapse ▲" : "Configure ▼"}
-                              </span>
                             </div>
                           </div>
 

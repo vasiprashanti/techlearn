@@ -364,7 +364,10 @@ const AdminTopicsList = () => {
     }
   };
 
-  const categoryFormInputClass = "w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
+  const cardFormInputClass = "mt-1 w-full px-3 py-2.5 text-sm rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
+  const categoryFormInputClass = "mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
+  const dropdownOptionClass = "bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white";
+  const configCardClass = "rounded-xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] overflow-hidden";
 
   if (loading && topics.length === 0 && !exerciseFile) {
     return (
@@ -681,215 +684,223 @@ const AdminTopicsList = () => {
             </button>
           </div>
 
-          <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4 md:p-6 space-y-6">
-            
-            {/* Quick configurations block */}
-            <div className="grid grid-cols-1 gap-6 pb-6 border-b border-black/5 dark:border-white/5">
-              
-              {/* Edit Course Details Panel */}
-              <div className="bg-[#f5fbff] dark:bg-[#122b52] border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-sm">
-                <div>
-                  <h3 className="admin-section-heading mb-2 text-[#0b1b38] dark:text-white font-semibold">Edit Course Details</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-300 mb-4">Modify the core track details of this curriculum.</p>
+          <section className="space-y-6">
+
+            {/* Course configuration cards */}
+            <div className="space-y-4 pb-6 border-b border-black/5 dark:border-white/10">
+
+              {/* Edit Course Details */}
+              <div className={configCardClass}>
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-black/5 dark:border-white/10">
+                  <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
+                    <FiSave className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Edit Course Details</h3>
+                    <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300">Modify the core track details of this curriculum.</p>
+                  </div>
                 </div>
-                <form onSubmit={handleCourseDetailsUpdate} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <form onSubmit={handleCourseDetailsUpdate} className="p-5 space-y-4">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Course Title*</label>
+                    <input
+                      type="text"
+                      value={courseTitle}
+                      onChange={(e) => setCourseTitle(e.target.value)}
+                      className={cardFormInputClass}
+                      placeholder="e.g. Python Programming, DSA with Java"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Description</label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                      className={`${cardFormInputClass} resize-none`}
+                      placeholder="Summarize course goals and curriculum syllabus..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <label className="admin-micro-label text-black/50 dark:text-white/50">Course Title</label>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
                       <input
-                        type="text"
-                        value={courseTitle}
-                        onChange={(e) => setCourseTitle(e.target.value)}
-                        className={categoryFormInputClass}
-                        placeholder="Enter course title"
+                        type="number"
+                        min="1"
+                        value={numTopics}
+                        onChange={(e) => setNumTopics(Number(e.target.value))}
+                        className={cardFormInputClass}
                         required
                       />
                     </div>
                     <div>
-                      <label className="admin-micro-label text-black/50 dark:text-white/50">Difficulty Level</label>
-                      <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-sm transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
+                      <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
                         <select
                           value={level}
                           onChange={(e) => setLevel(e.target.value)}
-                          className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
                         >
-                          <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Beginner">Beginner</option>
-                          <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Intermediate">Intermediate</option>
-                          <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Advanced">Advanced</option>
+                          <option className={dropdownOptionClass} value="Beginner">Beginner</option>
+                          <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
+                          <option className={dropdownOptionClass} value="Advanced">Advanced</option>
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="admin-micro-label text-black/50 dark:text-white/50">Description</label>
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={2}
-                        className={`${categoryFormInputClass} resize-none`}
-                        placeholder="Enter course description"
-                      />
-                    </div>
-                    <div>
-                      <label className="admin-micro-label text-black/50 dark:text-white/50">Topics Count</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={numTopics}
-                        onChange={(e) => setNumTopics(Number(e.target.value))}
-                        className={categoryFormInputClass}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
+                  <div className="flex justify-end pt-2 border-t border-black/5 dark:border-white/10">
                     <button
                       type="submit"
-                      className="bg-[#3C83F6] hover:bg-blue-600 text-white rounded-xl px-5 py-2.5 text-sm font-semibold shadow transition flex items-center gap-1.5"
+                      className="dashboard-primary-btn h-9 px-4 text-xs inline-flex items-center gap-1.5 mt-3"
                     >
-                      <FiSave className="w-4 h-4" />
+                      <FiSave className="w-3.5 h-3.5" />
                       Save Course Details
                     </button>
                   </div>
                 </form>
               </div>
 
-              {/* Edit Exercises Panel */}
-              <div className="bg-[#f5fbff] dark:bg-[#122b52] border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <h3 className="admin-section-heading mb-2 text-[#0b1b38] dark:text-white font-semibold">Upload Exercise File</h3>
-                  <p className="text-xs text-slate-400 dark:text-slate-300 mb-4">Configure or replace the exercise challenge sheet (.md file).</p>
+              {/* Upload Exercise File */}
+              <div className={configCardClass}>
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-black/5 dark:border-white/10">
+                  <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
+                    <FiFileText className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Upload Exercise File</h3>
+                    <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300">Configure or replace the exercise challenge sheet (.md file).</p>
+                  </div>
                 </div>
-                <div className="flex flex-col justify-end">
-                  <form onSubmit={handleFileUpload} className="flex items-center justify-between gap-4">
-                    <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-1.5 text-sm">
-                      <HiOutlineUpload className="inline text-lg" />
-                      <input
-                        type="file"
-                        accept=".md"
-                        className="hidden"
-                        onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
-                      />
-                      Choose File
-                    </label>
-                    <button
-                      type="submit"
-                      className="bg-[#3C83F6] hover:bg-blue-600 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow transition disabled:opacity-50"
-                      disabled={uploading || !exerciseFile}
-                    >
-                      {uploading ? "Uploading..." : "Submit"}
-                    </button>
-                  </form>
+
+                <form onSubmit={handleFileUpload} className="p-5 space-y-3">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Exercise Sheet (.md)</label>
+                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-3">
+                      <label className="cursor-pointer shrink-0 border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-2 rounded-lg text-xs font-semibold text-[#3C83F6] dark:text-[#8fd9ff] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition inline-flex items-center gap-1.5">
+                        <HiOutlineUpload className="text-sm" />
+                        <input
+                          type="file"
+                          accept=".md"
+                          className="hidden"
+                          onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
+                        />
+                        Choose File
+                      </label>
+                      <span className="flex-1 text-xs text-slate-500 dark:text-slate-400 truncate min-w-0">
+                        {exerciseFile ? exerciseFile.name : "No file chosen"}
+                      </span>
+                      <button
+                        type="submit"
+                        className="dashboard-primary-btn h-9 px-4 text-xs shrink-0 disabled:opacity-50 sm:ml-auto"
+                        disabled={uploading || !exerciseFile}
+                      >
+                        {uploading ? "Uploading..." : "Submit"}
+                      </button>
+                    </div>
+                  </div>
+
                   {exerciseStatus && (
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-300 truncate" title={exerciseStatus}>
+                    <p className="text-xs text-slate-500 dark:text-slate-300 truncate px-1" title={exerciseStatus}>
                       {exerciseStatus}
                     </p>
                   )}
-                </div>
+                </form>
               </div>
 
             </div>
 
-            {/* Grid of topic cards (slots) */}
-            <div>
-              <div className="pb-4 flex items-center justify-between">
-                <h3 className="text-base font-semibold text-[#0b1b38] dark:text-white">
+            {/* Curriculum topics table */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">
                   Curriculum Topics ({topics.length})
                 </h3>
               </div>
 
               {slots.length === 0 ? (
-                <div className="text-center py-12 text-slate-400 italic text-sm">
+                <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
                   No curriculum topics configured yet.
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  {slots.map(({ slotIndex, topic }) => {
-                    if (topic) {
-                      return (
-                        <div 
-                          key={topic.topicId} 
-                          className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between transition hover:border-[#3C83F6]/50 gap-4"
-                        >
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#8fd9ff] flex items-center justify-center font-bold text-sm shrink-0">
-                              {slotIndex}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-semibold text-black dark:text-white line-clamp-1" title={topic.topicName}>
-                                {topic.topicName}
-                              </h4>
-                              <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5 truncate" title={topic.topicSlug}>
-                                Slug: {topic.topicSlug}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-black/5 dark:border-white/5">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-300">
-                              <FiFileText className="w-3.5 h-3.5 text-[#3C83F6]" />
-                              <span>Notes configured</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => handleEditClick(topic)}
-                                className="h-9 w-9 rounded-xl inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] transition text-slate-500 dark:text-slate-400"
-                                title="Edit Topic Content"
-                              >
-                                <FiEdit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(topic)}
-                                className="h-9 w-9 rounded-xl inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] transition text-slate-500 dark:text-slate-400"
-                                title="Delete Topic"
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div 
-                          key={`empty-${slotIndex}`} 
-                          className="border border-dashed border-black/20 dark:border-white/20 hover:border-[#3C83F6]/50 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between transition gap-4"
-                        >
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center font-bold text-sm shrink-0">
-                              {slotIndex}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-semibold text-slate-400 dark:text-slate-500">
-                                No topic configured
-                              </h4>
-                              <p className="text-xs text-slate-400/70 dark:text-slate-500/70 mt-0.5">
-                                Click configure to add notes and quiz worksheets.
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => {
-                              setSelectedSlotIndex(slotIndex);
-                              setAddTopicForm({ topicName: "", notesFile: null, mcqFile: null });
-                              setAddError("");
-                              setAddSuccess("");
-                              setShowAddModal(true);
-                            }}
-                            className="inline-flex items-center justify-center gap-1.5 py-2.5 px-5 bg-[#3C83F6]/10 hover:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-[#8fd9ff] rounded-xl text-xs font-semibold transition sm:w-auto w-full"
-                          >
-                            <FiPlus className="w-3.5 h-3.5" />
-                            Configure Topic
-                          </button>
-                        </div>
-                      );
-                    }
-                  })}
+                <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
+                  <table className="w-full min-w-[900px] table-fixed">
+                    <thead>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
+                        <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-16 whitespace-nowrap">#</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[300px] whitespace-nowrap">Topic Name</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">Slug</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[200px] whitespace-nowrap">Status</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[150px] whitespace-nowrap">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="border-t border-black/5 dark:border-white/10">
+                      {slots.map(({ slotIndex, topic }) => {
+                        if (topic) {
+                          return (
+                            <tr key={topic.topicId} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                              <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">{slotIndex}</td>
+                              <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold truncate text-slate-800 dark:text-white/85" title={topic.topicName}>{topic.topicName}</td>
+                              <td className="px-4 py-2.5 text-[11px] sm:text-xs truncate text-slate-500 dark:text-white/60" title={topic.topicSlug}>{topic.topicSlug}</td>
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-slate-400 dark:text-slate-350">
+                                  <FiFileText className="w-3.5 h-3.5 text-[#3C83F6]" />
+                                  <span>Notes configured</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleEditClick(topic)}
+                                    className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
+                                    title="Edit Topic Content"
+                                  >
+                                    <FiEdit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(topic)}
+                                    className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
+                                    title="Delete Topic"
+                                  >
+                                    <FiTrash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        } else {
+                          return (
+                            <tr key={`empty-${slotIndex}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                              <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">{slotIndex}</td>
+                              <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-400 dark:text-slate-500 italic" colSpan={3}>
+                                No topic configured. Click configure to add notes and quiz worksheets.
+                              </td>
+                              <td className="px-4 py-2.5">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSlotIndex(slotIndex);
+                                    setAddTopicForm({ topicName: "", notesFile: null, mcqFile: null });
+                                    setAddError("");
+                                    setAddSuccess("");
+                                    setShowAddModal(true);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3.5 bg-[#3C83F6]/10 hover:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-[#8fd9ff] rounded-lg text-xs font-semibold transition"
+                                >
+                                  <FiPlus className="w-3 h-3" />
+                                  Configure
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        }
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

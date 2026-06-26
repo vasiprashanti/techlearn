@@ -54,6 +54,17 @@ export default function Courses() {
   const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [courseSortField, setCourseSortField] = useState("title");
+  const [courseSortDirection, setCourseSortDirection] = useState("asc");
+
+  const toggleCourseSort = (field) => {
+    if (courseSortField === field) {
+      setCourseSortDirection(courseSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setCourseSortField(field);
+      setCourseSortDirection("asc");
+    }
+  };
   const isDarkMode = theme === "dark";
 
   useEffect(() => {
@@ -356,10 +367,11 @@ export default function Courses() {
             <h1 className="admin-page-title">Courses</h1>
           </div>
 
-          <section className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-black/10 dark:border-white/10 text-left">
+          <section className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                   <FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
                 </div>
                 <div>
@@ -367,21 +379,21 @@ export default function Courses() {
                   <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">Create course tracks and upload/manage topics inside them.</p>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-3 self-end sm:self-auto w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-64">
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                <div className="relative w-48 sm:w-56">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search courses..."
-                    className="w-full h-9 pl-9 pr-4 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-black/20 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                   />
-                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 </div>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="dashboard-primary-btn w-full sm:w-auto h-9 px-4 text-xs shrink-0"
+                  className="dashboard-primary-btn h-9 px-4 text-xs shrink-0"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
                   Add Course
@@ -398,64 +410,106 @@ export default function Courses() {
               <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40 mt-4">
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">
-                {courses.filter((course) => {
-                  const query = searchQuery.toLowerCase();
-                  return (
-                    course.title.toLowerCase().includes(query) ||
-                    course.description.toLowerCase().includes(query) ||
-                    course.level.toLowerCase().includes(query)
-                  );
-                }).map((course) => {
-                  const theme = getCourseTheme(course.level);
-                  return (
-                    <article key={course._id} className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
-                      {/* Top Panel */}
-                      <div className={`px-4 pt-4 pb-3 flex items-center min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-4 pr-4`}>
-                        <div className="flex items-center justify-between gap-2.5 text-left w-full">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={course.title}>{course.title}</h3>
-                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{course.level || 'Beginner'}</p>
-                          </div>
-                          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 bg-white/50 dark:bg-black/20 ${theme.iconBg}`}>
-                            <FiBookOpen className={`w-4.5 h-4.5 ${theme.iconColor}`} />
-                          </div>
-                        </div>
-                      </div>
+            ) :              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
+                <table className="w-full min-w-[900px] table-fixed">
+                  <thead>
+                    <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
+                      <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-12 whitespace-nowrap">#</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[180px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('title')}>
+                        Course Title{courseSortField === 'title' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-24 whitespace-nowrap">Actions</th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[240px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('description')}>
+                        Description{courseSortField === 'description' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('level')}>
+                        Level{courseSortField === 'level' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('topics')}>
+                        Total Topics{courseSortField === 'topics' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-44 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('enrolledStudents')}>
+                        Total Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="border-t border-black/5 dark:border-white/10">
+                    {courses.filter((course) => {
+                      const query = searchQuery.toLowerCase();
+                      return (
+                        course.title.toLowerCase().includes(query) ||
+                        course.description.toLowerCase().includes(query) ||
+                        course.level.toLowerCase().includes(query)
+                      );
+                    }).sort((a, b) => {
+                      let aVal = courseSortField === 'topics' ? a.topics : a[courseSortField];
+                      let bVal = courseSortField === 'topics' ? b.topics : b[courseSortField];
+                      
+                      if (courseSortField === 'enrolledStudents') {
+                        aVal = a.enrolledStudents || 0;
+                        bVal = b.enrolledStudents || 0;
+                      }
 
-                      {/* Bottom Panel */}
-                      <div className="px-4 pt-3.5 pb-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2.5 text-left">
-                        <p className="text-xs leading-normal text-slate-500 dark:text-slate-400 line-clamp-2 h-9 leading-snug mb-1">{course.description || 'No description provided.'}</p>
-                        
-                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-550 dark:text-slate-400">
-                          <span>Topics</span>
-                          <span className="font-semibold text-slate-805 dark:text-slate-205 tabular-nums">{course.topics}</span>
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-2 mt-2.5">
-                          <button
-                            onClick={() => handleEdit(course)}
-                            className="flex-1 h-[38px] rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs sm:text-[13px] font-semibold transition-colors flex items-center justify-center gap-1.5"
-                          >
-                            <FiEdit2 className="w-3.5 h-3.5" />
-                            Edit Topics
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(course)}
-                            className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm flex items-center justify-center"
-                            title="Delete Course"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                      if (typeof aVal === 'string') {
+                        return courseSortDirection === 'asc'
+                          ? aVal.localeCompare(bVal, undefined, { sensitivity: 'base' })
+                          : bVal.localeCompare(aVal, undefined, { sensitivity: 'base' });
+                      } else {
+                        return courseSortDirection === 'asc'
+                          ? (aVal || 0) - (bVal || 0)
+                          : (bVal || 0) - (aVal || 0);
+                      }
+                    }).map((course, index) => {
+                      const truncatedDesc = course.description 
+                        ? (course.description.length > 20 ? course.description.substring(0, 20) + "..." : course.description) 
+                        : "No description provided.";
+                      return (
+                        <tr key={course._id} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                          <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={course.title}>
+                            {course.title}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleEdit(course)}
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
+                                title="Edit Topics"
+                              >
+                                <FiEdit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteClick(course)}
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-550 hover:bg-rose-550/10 text-slate-500 dark:text-slate-400"
+                                title="Delete Course"
+                              >
+                                <FiTrash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
+                            {truncatedDesc}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-[10px] font-semibold text-[#0f2b54] dark:text-blue-200">
+                              {course.level || "Beginner"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
+                            {course.topics}
+                          </td>
+                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
+                            {course.enrolledStudents || 0}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
+            }
           </section>
         </div>
       </main>

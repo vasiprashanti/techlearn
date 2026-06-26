@@ -45,6 +45,7 @@ export default function Resources() {
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roadmapSearchQuery, setRoadmapSearchQuery] = useState('');
 
   const [roadmapEntries, setRoadmapEntries] = useState([]);
   const [batchOptions, setBatchOptions] = useState([]);
@@ -442,66 +443,128 @@ export default function Resources() {
               <h1 className="admin-page-title">Roadmaps</h1>
             </div>
 
-            <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <section className="space-y-4">
+              {/* Toolbar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
                     <FiMap className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
                   </div>
                   <div>
-                    <h2 className="text-base md:text-lg font-semibold text-[#0b1b38] dark:text-white">Batch Roadmaps</h2>
-                    <p className="text-xs md:text-sm text-[#5f7592] dark:text-slate-300">Create one roadmap and assign it to multiple batches.</p>
+                    <h2 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Batch Roadmaps</h2>
+                    <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">Create one roadmap and assign it to multiple batches.</p>
                   </div>
                 </div>
-                <button onClick={openAddRoadmapModal} className="dashboard-primary-btn w-full sm:w-auto h-10 px-4 text-xs">
-                  <FiPlus className="w-3.5 h-3.5" />
-                  Create Roadmap
-                </button>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                  <div className="relative w-48 sm:w-56">
+                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={roadmapSearchQuery}
+                      onChange={(e) => setRoadmapSearchQuery(e.target.value)}
+                      placeholder="Search roadmaps..."
+                      className="w-full h-9 pl-9 pr-3 text-xs rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    />
+                  </div>
+                  <button onClick={openAddRoadmapModal} className="dashboard-primary-btn h-9 px-4 text-xs shrink-0">
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Create Roadmap
+                  </button>
+                </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {roadmapEntries.map((roadmap) => (
-                  <article key={roadmap.id || roadmap._id} className="rounded-xl border border-black/10 dark:border-white/10 bg-[#f5fbff] dark:bg-[#122b52] px-4 py-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-sm md:text-base font-semibold text-[#0b1b38] dark:text-white break-words">{roadmap.title}</h3>
-                        <p className="mt-1 text-xs text-[#5f7592] dark:text-slate-300 break-words">{roadmap.description || 'No description'}</p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
-                        {roadmap.status}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-xs text-[#5f7592] dark:text-slate-300">
-                      Assigned to {(roadmap.assignedBatches || []).length} batch{(roadmap.assignedBatches || []).length === 1 ? '' : 'es'}
-                    </p>
-                    {(roadmap.assignedBatches || []).length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {roadmap.assignedBatches.map((batch) => (
-                          <span key={batch.id} className="rounded-full border border-black/10 dark:border-white/10 px-2 py-0.5 text-[11px] text-[#0f2b54] dark:text-slate-200">
-                            {batch.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <button onClick={() => setViewingRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${roadmap.title}`}>
-                        <FiEye className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => openEditRoadmapModal(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${roadmap.title}`}>
-                        <FiEdit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => deleteRoadmap(roadmap)} className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${roadmap.title}`}>
-                        <FiTrash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-                {roadmapEntries.length === 0 && (
-                  <div className="lg:col-span-2 rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
-                    No roadmaps created yet. Users will keep seeing the default roadmap until a batch roadmap is assigned.
-                  </div>
-                )}
-              </div>
+              {roadmapEntries.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40">
+                  No roadmaps created yet. Users will keep seeing the default roadmap until a batch roadmap is assigned.
+                </div>
+              ) : (
+                <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
+                  <table className="w-full min-w-[900px] table-fixed">
+                    <thead>
+                      <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
+                        <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-12 whitespace-nowrap">#</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[200px] whitespace-nowrap">Roadmap Title</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Actions</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[240px] whitespace-nowrap">Description</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-28 whitespace-nowrap">Status</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-36 whitespace-nowrap">Batches</th>
+                        <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">Assigned To</th>
+                      </tr>
+                    </thead>
+                    <tbody className="border-t border-black/5 dark:border-white/10">
+                      {roadmapEntries.filter((roadmap) => {
+                        const query = roadmapSearchQuery.toLowerCase();
+                        const batchNames = (roadmap.assignedBatches || []).map((b) => b.name).join(' ').toLowerCase();
+                        return (
+                          (roadmap.title || '').toLowerCase().includes(query) ||
+                          (roadmap.description || '').toLowerCase().includes(query) ||
+                          (roadmap.status || '').toLowerCase().includes(query) ||
+                          batchNames.includes(query)
+                        );
+                      }).map((roadmap, index) => {
+                        const truncatedDesc = roadmap.description
+                          ? (roadmap.description.length > 40 ? `${roadmap.description.substring(0, 40)}...` : roadmap.description)
+                          : 'No description';
+                        const batchCount = (roadmap.assignedBatches || []).length;
+                        const batchLabel = batchCount === 0
+                          ? 'None'
+                          : (roadmap.assignedBatches || []).map((b) => b.name).join(', ');
+
+                        return (
+                          <tr key={roadmap.id || roadmap._id} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                            <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                              {index + 1}
+                            </td>
+                            <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={roadmap.title}>
+                              {roadmap.title}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setViewingRoadmap(roadmap)}
+                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
+                                  aria-label={`View ${roadmap.title}`}
+                                >
+                                  <FiEye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => openEditRoadmapModal(roadmap)}
+                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
+                                  aria-label={`Edit ${roadmap.title}`}
+                                >
+                                  <FiEdit2 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => deleteRoadmap(roadmap)}
+                                  className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
+                                  aria-label={`Delete ${roadmap.title}`}
+                                >
+                                  <FiTrash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={roadmap.description}>
+                              {truncatedDesc}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-[10px] font-semibold text-[#0f2b54] dark:text-blue-200">
+                                {roadmap.status || 'Active'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60 whitespace-nowrap">
+                              {batchCount} batch{batchCount === 1 ? '' : 'es'}
+                            </td>
+                            <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={batchLabel}>
+                              {batchLabel}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </section>
           </div>
         </main>

@@ -499,7 +499,7 @@ const CollegeDetails = () => {
                     </div>
 
                     {college.batches.length === 0 ? (
-                      <div className="px-5 py-7 text-black/45 dark:text-white/45 text-sm">No batches mapped to this college yet.</div>
+                      <div className="px-5 py-7 text-center text-black/45 dark:text-white/45 text-sm">No batches mapped to this college yet.</div>
                     ) : (
                       college.batches.map((batch) => (
                         <div key={batch.id} className="grid grid-cols-[minmax(0,1.3fr)_100px_110px_100px_190px] gap-3 px-5 py-4 text-base text-black/80 dark:text-white border-b border-black/5 dark:border-white/10 last:border-b-0">
