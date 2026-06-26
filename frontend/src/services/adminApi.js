@@ -62,8 +62,18 @@ const withCurrentAuth = (options = {}) => {
 const adminFetch = async (url, options = {}) => {
   let response = await fetch(url, withCurrentAuth(options));
 
-  if (response.status === 401 && await renewFirebaseSession()) {
-    response = await fetch(url, withCurrentAuth(options));
+  if (response.status === 401) {
+    if (await renewFirebaseSession()) {
+      response = await fetch(url, withCurrentAuth(options));
+    }
+
+    if (response.status === 401) {
+      // Clear invalid credentials and force re-authentication
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('isAdmin');
+      window.location.href = '/';
+    }
   }
 
   return response;
@@ -406,19 +416,6 @@ export const adminAPI = {
 
   getSubmissions: () => request('/admin/submissions'),
   getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
-
-  getCertificates: () => request('/admin/certificates'),
-  issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
-  revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
-  restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
-  saveFinalTest: (testId, body) => request(testId ? `/admin/certificates/final-tests/${testId}` : '/admin/certificates/final-tests', {
-    method: testId ? 'PUT' : 'POST',
-    body: JSON.stringify(body),
-  }),
-
-  getSubmissions: () => request('/admin/submissions'),
-  getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
-
   getNotifications: () => request('/admin/notifications'),
   createNotification: (body) => request('/admin/notifications', { method: 'POST', body: JSON.stringify(body) }),
   deleteNotification: (notificationId) => request(`/admin/notifications/${notificationId}`, { method: 'DELETE' }),
