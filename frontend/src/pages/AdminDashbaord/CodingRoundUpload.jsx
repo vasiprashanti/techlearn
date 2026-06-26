@@ -983,6 +983,7 @@ setExpanded(new Array(round.problems.length).fill(true));
                               ))}
                           </tbody>
                         </table>
+                        </div>
                       ) : (
                         <p className="text-[#4c6f9a] dark:text-[#7fb8e2]">No scores available</p>
                       )}

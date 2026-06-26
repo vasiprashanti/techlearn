@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { FiSearch, FiPlus, FiChevronDown, FiArrowLeft, FiLayers, FiBarChart2 } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiChevronDown, FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import QuestionTable from './QuestionTable';
 
@@ -134,22 +134,21 @@ export const CategoryDetailPanel = ({
         </div>
       </section>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-white/5 p-1.5">
+      <div className="flex items-center gap-8 border-b border-black/10 dark:border-white/10 pb-px overflow-x-auto">
         {[
-          { key: 'questions', label: 'Questions', Icon: FiLayers },
-          { key: 'analytics', label: 'Usage Analytics', Icon: FiBarChart2 },
-        ].map(({ key, label, Icon }) => (
+          { key: 'questions', label: 'Questions' },
+          { key: 'analytics', label: 'Usage Analytics' },
+        ].map(({ key, label }) => (
           <button
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
-            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors ${
+            className={`shrink-0 py-2 px-1 text-sm font-semibold transition-colors border-b-2 relative -bottom-[1px] ${
               activeTab === key
-                ? 'bg-[#3C83F6] text-white shadow-sm'
-                : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/10'
+                ? 'border-[#3C83F6] text-[#3C83F6] dark:border-blue-400 dark:text-blue-300'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
-            <Icon className="w-4 h-4" />
             {label}
           </button>
         ))}
@@ -164,7 +163,7 @@ export const CategoryDetailPanel = ({
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search by prompt, tag, or track..."
+                placeholder="Search by prompt, topic, tag, or track..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full h-10 border-0 bg-transparent pl-10 pr-3.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 focus:outline-none"

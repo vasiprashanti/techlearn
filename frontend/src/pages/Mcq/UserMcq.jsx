@@ -249,7 +249,7 @@ const submitQuizResults = async () => {
         options: q.options,
         correct: q.correct || 0, // Assuming correct answer index
         difficulty: q.difficulty,
-        tags: q.tags
+        topic: q.topic || q.title || q.tag || q.track || q.categoryTitle || (Array.isArray(q.tags) ? q.tags[0] : "")
       })),
       passingScore: 60, // Default passing score
       college: quizData.college
@@ -375,16 +375,11 @@ const submitQuizResults = async () => {
           </div>
 
           {/* Question */}
-          {Array.isArray(question.tags) && question.tags.length > 0 && (
+          {question.topic && (
             <div className="flex flex-wrap gap-2">
-              {question.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-blue-500/15 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200"
-                >
-                  {tag}
-                </span>
-              ))}
+              <span className="rounded-full border border-blue-500/15 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">
+                {question.topic}
+              </span>
             </div>
           )}
           <h2 className="text-xl font-medium text-gray-900 dark:text-white">

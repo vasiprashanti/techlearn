@@ -456,50 +456,50 @@ const Colleges = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-                    <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
-                    <FiHome className="w-5 h-5" />
+                <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3.5 min-h-[88px] flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+                    <div className="w-9 h-9 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
+                    <FiHome className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-3xl sm:text-3xl font-light tracking-tight leading-none text-black dark:text-white">{colleges.length}</p>
-                    <p className="mt-1 text-sm text-black/60 dark:text-white/60">Total Colleges</p>
+                    <p className="text-2xl font-semibold tracking-tight leading-none text-black dark:text-white">{colleges.length}</p>
+                    <p className="mt-1 text-xs text-black/60 dark:text-white/60">Total Colleges</p>
                   </div>
                 </article>
 
-                <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                    <FiCheckCircle className="w-5 h-5" />
+                <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-4 py-3.5 min-h-[88px] flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <FiCheckCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{activeCount}</p>
-                    <p className="mt-1 text-sm text-black/60 dark:text-white/60">Active Colleges</p>
+                    <p className="text-2xl font-semibold tracking-tight leading-none text-black dark:text-white">{activeCount}</p>
+                    <p className="mt-1 text-xs text-black/60 dark:text-white/60">Active Colleges</p>
                   </div>
                 </article>
               </div>
             </section>
 
             {/* College Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
                 return (
-                  <div key={college.id} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-5 sm:p-4 rounded-2xl flex flex-col gap-4 sm:gap-3.5 h-full hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-sm">
+                  <div key={college.id} className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-3.5 rounded-xl flex flex-col gap-3 h-full hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
 
-                    <div className="flex items-start justify-between min-h-[40px] sm:min-h-[36px]">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] flex items-center justify-center text-base font-semibold border border-[#3C83F6]/20 dark:border-[#bceaff]/30 shadow-sm">
+                    <div className="flex items-start justify-between min-h-[34px]">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] flex items-center justify-center text-sm font-semibold border border-[#3C83F6]/20 dark:border-[#bceaff]/30 shadow-sm">
                           {college.name.charAt(0)}
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-[1.05rem] sm:text-base font-semibold text-black/90 dark:text-white break-words sm:truncate sm:max-w-[190px]">{college.name}</h3>
-                          <p className="text-sm text-black/50 dark:text-white/50 mt-0.5 truncate">{college.code || college.id}</p>
+                          <h3 className="text-sm md:text-[15px] font-semibold text-black/90 dark:text-white break-words sm:truncate sm:max-w-[190px] leading-tight">{college.name}</h3>
+                          <p className="text-[11px] text-black/50 dark:text-white/50 mt-0.5 truncate">{college.code || college.id}</p>
                         </div>
                       </div>
 
                       <div className="relative shrink-0 self-start">
                         <button
                           type="button"
-                          className="college-actions-trigger w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                          className="college-actions-trigger w-7 h-7 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
                           onClick={(event) => {
                             event.stopPropagation();
                             setOpenActionMenuId((current) => (current === college.id ? null : college.id));
@@ -535,18 +535,18 @@ const Colleges = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <div className="bg-white dark:bg-[#0f1f43] rounded-xl p-3 border border-black/10 dark:border-white/15 min-h-[74px] flex flex-col justify-center">
-                        <p className="text-xs text-black/55 dark:text-white/55">Avg Score</p>
-                        <p className={`text-2xl font-semibold tracking-tight mt-0.5 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
+                      <div className="bg-white/70 dark:bg-white/5 rounded-xl p-2.5 border border-black/10 dark:border-white/15 min-h-[56px] flex flex-col justify-center">
+                        <p className="text-[11px] text-black/55 dark:text-white/55">Avg Score</p>
+                        <p className={`text-lg font-semibold tracking-tight mt-0.5 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
                           {college.avgScore}%
                         </p>
                       </div>
 
-                      <div className="bg-white dark:bg-[#0f1f43] rounded-xl p-3 border border-black/10 dark:border-white/15 min-h-[74px] flex flex-col justify-center">
-                        <p className="text-xs text-black/55 dark:text-white/55">Activity Rate</p>
-                        <p className="text-xl font-semibold tracking-tight mt-0.5 text-black dark:text-white">
+                      <div className="bg-white/70 dark:bg-white/5 rounded-xl p-2.5 border border-black/10 dark:border-white/15 min-h-[56px] flex flex-col justify-center">
+                        <p className="text-[11px] text-black/55 dark:text-white/55">Activity Rate</p>
+                        <p className="text-base font-semibold tracking-tight mt-0.5 text-black dark:text-white">
                           {college.activeStudents} / {college.totalStudents}
-                          <span className="text-sm font-medium text-black/50 dark:text-white/50 ml-1">({activityRate}%)</span>
+                          <span className="text-xs font-medium text-black/50 dark:text-white/50 ml-1">({activityRate}%)</span>
                         </p>
                       </div>
                     </div>
@@ -554,7 +554,7 @@ const Colleges = () => {
                     <div className="mt-auto">
                       <button
                         onClick={() => navigate(`/colleges/${college.id}`, { state: { college } })}
-                        className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-sm font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
+                        className="w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
                       >
                         View College
                         <FiArrowUpRight className="w-4 h-4" />

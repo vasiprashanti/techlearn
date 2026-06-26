@@ -260,6 +260,7 @@ export const formatQuestionForAdmin = (question, category = null) => {
     id: question._id,
     qid: question.qid || `QID-${String(question._id || "").slice(-6).toUpperCase().padStart(6, "0")}`,
     title: question.title,
+    topic: question.title,
     difficulty: question.difficulty || "Easy",
     track: question.trackType || category?.title || question.categoryTitle || "General",
     created: question.createdAt?.toISOString?.().slice(0, 10) || "",

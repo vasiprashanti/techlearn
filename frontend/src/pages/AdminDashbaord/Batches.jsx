@@ -163,7 +163,7 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
   }, [batch.id]);
 
   return (
-    <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+    <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
       
       {/* Checkbox - Smaller size, aligned to top-left */}
       <div className="absolute left-3 top-2.5 z-20">
@@ -176,10 +176,10 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
       </div>
 
       {/* Action Menu (More details) */}
-      <div className={`absolute right-3 top-3.5 z-20 batch-actions-${batch.id}`}>
+      <div className={`absolute right-2.5 top-2.5 z-20 batch-actions-${batch.id}`}>
         <button
           type="button"
-          className="w-8 h-8 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+          className="w-7 h-7 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
           onClick={(event) => {
             event.stopPropagation();
             setMenuOpen(!menuOpen);
@@ -214,29 +214,29 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
       </div>
 
       {/* Top Panel (similar to Question Bank category card) */}
-      <div className={`px-4 pt-8 pb-4 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10.5`}>
-        <div className="flex items-start gap-2.5">
-          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
-            <FiBookOpen className={`w-5 h-5 ${theme.iconColor}`} />
+      <div className={`px-3.5 pt-5 pb-2.5 min-h-[88px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-9`}>
+        <div className="flex items-start gap-2.5 text-left">
+          <div className={`h-8 w-8 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
+            <FiBookOpen className={`w-4 h-4 ${theme.iconColor}`} />
           </div>
-          <div className="min-h-[64px] flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white truncate">{batch.name}</h3>
-            <p className="mt-1 text-[11px] md:text-xs leading-tight text-slate-500 dark:text-slate-300 line-clamp-2">{batch.college || 'Unassigned College'}</p>
+          <div className="min-h-[52px] flex-1 min-w-0">
+            <h3 className="text-sm md:text-[15px] leading-tight font-semibold text-slate-900 dark:text-white truncate">{batch.name}</h3>
+            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-300 line-clamp-2">{batch.college || 'Unassigned College'}</p>
           </div>
         </div>
       </div>
 
       {/* Bottom Panel */}
-      <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2">
-        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-350">
+      <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-1.5 text-left">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-600 dark:text-slate-350">
           <span>Active Track</span>
           <span className="font-semibold text-slate-900 dark:text-white truncate max-w-[140px]">{batch.track || 'No Track'}</span>
         </div>
-        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-355 mt-1">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-600 dark:text-slate-355">
           <span>Students</span>
           <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{batch.students || 0}</span>
         </div>
-        <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-355 mt-1">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-600 dark:text-slate-355">
           <span>Status</span>
           <span className="font-semibold text-slate-900 dark:text-white">{batch.status || 'Draft'}</span>
         </div>
@@ -244,7 +244,7 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
         {/* View Batch Button */}
         <button
           onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
-          className="mt-4 w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs md:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+          className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
         >
           View Batch
         </button>
@@ -835,7 +835,7 @@ const Batches = () => {
                 { label: 'Completed', count: counts.Completed, color: 'text-[#3C83F6] dark:text-blue-400' },
                 { label: 'Archived', count: counts.Archived, color: 'text-[#3C83F6] dark:text-blue-400' },
               ].map(({ label, count, color }) => (
-                <div key={label} className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-xl px-2 sm:px-5 py-2.5 sm:py-4 flex flex-col items-center sm:items-start text-center sm:text-left">
+                <div key={label} className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex flex-col items-start text-left shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
                   <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">{label}</p>
                   <p className={`text-lg sm:text-2xl font-semibold tracking-tight mt-0.5 sm:mt-1 ${color}`}>{count}</p>
                 </div>
