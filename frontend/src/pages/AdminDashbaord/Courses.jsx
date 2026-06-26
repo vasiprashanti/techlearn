@@ -509,7 +509,7 @@ export default function Courses() {
                   </tbody>
                 </table>
               </div>
-            )}
+            }
           </section>
         </div>
       </main>

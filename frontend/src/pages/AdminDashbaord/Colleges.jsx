@@ -553,7 +553,8 @@ const Colleges = () => {
               </div>
             </section>
 
-            {/* College Cards *            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {/* College Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
                 const isSelected = selectedCollegeIds.includes(college.id);
