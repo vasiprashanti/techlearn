@@ -5,6 +5,29 @@ import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
 import { FiChevronDown, FiPlus, FiTrash2, FiEdit2, FiBookOpen, FiSearch } from "react-icons/fi";
 
+const getCourseTheme = (level) => {
+  const lvl = (level || '').toLowerCase();
+  if (lvl.includes('advanced')) {
+    return {
+      topTint: 'bg-purple-100/35 dark:bg-purple-950/20',
+      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
+      iconColor: 'text-purple-600 dark:text-purple-300',
+    };
+  } else if (lvl.includes('intermediate')) {
+    return {
+      topTint: 'bg-amber-100/35 dark:bg-amber-950/20',
+      iconBg: 'bg-amber-100 dark:bg-amber-900/50',
+      iconColor: 'text-amber-600 dark:text-amber-300',
+    };
+  } else {
+    return {
+      topTint: 'bg-[#d2e9e5]/40 dark:bg-[#204744]/30',
+      iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]',
+      iconColor: 'text-[#129775] dark:text-emerald-300',
+    };
+  }
+};
+
 export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -387,8 +410,7 @@ export default function Courses() {
               <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40 mt-4">
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
-            ) : (
-              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
+            ) :              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
                 <table className="w-full min-w-[900px] table-fixed">
                   <thead>
                     <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
@@ -460,7 +482,7 @@ export default function Courses() {
                               </button>
                               <button
                                 onClick={() => handleDeleteClick(course)}
-                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
+                                className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-550 hover:bg-rose-550/10 text-slate-500 dark:text-slate-400"
                                 title="Delete Course"
                               >
                                 <FiTrash2 className="w-3.5 h-3.5" />

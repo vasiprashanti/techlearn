@@ -817,7 +817,7 @@ export const getTrackTemplateDetail = async (req, res) => {
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId)
-      .populate("batchId", "name")
+      .populate("batchId", "name assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
       .populate("dayAssignments.questionId")
       .populate("dayAssignments.tasks.questionId")
       .populate("dayAssignments.tasks.batchId", "name")
@@ -874,6 +874,10 @@ export const getTrackTemplateDetail = async (req, res) => {
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
         batchId: template.batchId?._id || template.batchId,
         assignedBatch: template.batchId?.name || "",
+        assignedAt:
+          template.trackType === "Daily Task"
+            ? template.batchId?.assignedDailyTaskTrackAt || template.batchId?.assignedTrackTemplateAt || null
+            : template.batchId?.assignedDailyChallengeTrackAt || template.batchId?.assignedTrackTemplateAt || null,
         versionHistory: template.versionHistory || [],
         trackType: effectiveType,
         dayAssignments: (template.dayAssignments || []).map((assignment) => ({
@@ -1119,7 +1123,7 @@ export const deleteTrackTemplate = async (req, res) => {
 export const assignTrackTemplateDay = async (req, res) => {
   try {
     const { templateId } = req.params;
-    const { dayNumber, questionId, questionIds, taskType, xpValue, status, batchId } = req.body;
+    const { dayNumber, questionId, questionIds, taskType, status, batchId } = req.body;
     const requestedQuestionIds = Array.isArray(questionIds) && questionIds.length ? questionIds : [questionId].filter(Boolean);
     if (!assertObjectId(templateId, "templateId", res)) return;
     if (!requestedQuestionIds.length || requestedQuestionIds.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
@@ -1132,6 +1136,15 @@ export const assignTrackTemplateDay = async (req, res) => {
     }
 
     const normalizedDayNumber = Number(dayNumber);
+    const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
+      .select("_id xpValue xp_value xp points")
+      .lean();
+    const questionXpById = new Map(
+      questionDocs.map((question) => [
+        String(question._id),
+        Number(question.xpValue ?? question.xp_value ?? question.xp ?? question.points ?? 10) || 10,
+      ])
+    );
 
     if (template.trackType === "Daily Task") {
       if (!taskType) {
@@ -1157,7 +1170,7 @@ export const assignTrackTemplateDay = async (req, res) => {
           taskType,
           questionId: id,
           batchId: batchId || template.batchId || null,
-          xpValue: Number(xpValue || 0),
+          xpValue: questionXpById.get(String(id)) || 10,
           status: status || "Published",
         });
       });

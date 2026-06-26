@@ -27,9 +27,9 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
         {questions.map((question, index) => (
           <article
             key={question.id || question._id}
-            className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-5 flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group"
+            className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left"
           >
-            <div className="flex justify-between items-start gap-4">
+            <div className="px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</span>
@@ -38,41 +38,48 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                     {question.difficulty || 'Easy'}
                   </span>
                 </div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-3 leading-relaxed">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug">
                   {getPrompt(question)}
                 </h4>
-                {getTags(question).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+              </div>
+            </div>
+
+            <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent">
+              <div className="min-h-[22px]">
+                {getTags(question).length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
                     {getTags(question).slice(0, 3).map((tag) => (
                       <span key={tag} className="rounded-full bg-[#dbeafe] dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#1d4ed8] dark:text-[#bceaff]">{tag}</span>
                     ))}
                   </div>
+                ) : (
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">No tags</span>
                 )}
               </div>
-            </div>
 
-            <div className="mt-4 pt-3 border-t border-black/5 dark:border-white/5 flex items-center justify-end gap-3 text-slate-700 dark:text-slate-350">
-              <button
-                onClick={() => onView && onView(question)}
-                className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
-                aria-label="View question"
-              >
-                <FiEye className="w-4.5 h-4.5" />
-              </button>
-              <button
-                onClick={() => onEdit && onEdit(question)}
-                className="p-2 rounded-lg hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors"
-                aria-label="Edit question"
-              >
-                <FiEdit2 className="w-4.5 h-4.5" />
-              </button>
-              <button
-                onClick={() => onDelete && onDelete(question)}
-                className="p-2 rounded-lg hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                aria-label="Delete question"
-              >
-                <FiTrash2 className="w-4.5 h-4.5" />
-              </button>
+              <div className="mt-2.5 flex items-center justify-end gap-2 text-slate-700 dark:text-slate-350">
+                <button
+                  onClick={() => onView && onView(question)}
+                  className="h-8 w-8 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors flex items-center justify-center"
+                  aria-label="View question"
+                >
+                  <FiEye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onEdit && onEdit(question)}
+                  className="h-8 w-8 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 hover:text-[#3c83f6] hover:bg-[#3c83f6]/10 transition-colors flex items-center justify-center"
+                  aria-label="Edit question"
+                >
+                  <FiEdit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => onDelete && onDelete(question)}
+                  className="h-8 w-8 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 hover:text-rose-500 hover:bg-rose-500/10 transition-colors flex items-center justify-center"
+                  aria-label="Delete question"
+                >
+                  <FiTrash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </article>
         ))}

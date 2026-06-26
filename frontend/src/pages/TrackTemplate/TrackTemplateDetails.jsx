@@ -12,6 +12,7 @@ import {
   FiTerminal,
   FiCpu,
   FiX,
+  FiTrash2,
   FiChevronDown,
   FiChevronRight,
 } from 'react-icons/fi';
@@ -74,12 +75,14 @@ export default function TrackTemplateDetails() {
     questionIds: [],
     taskType: 'Coding',
     batchId: '',
-    xpValue: '',
     status: 'Published',
   });
 
   const [allCategories, setAllCategories] = useState([]);
   const [expandedDays, setExpandedDays] = useState({});
+  const [selectedAssignments, setSelectedAssignments] = useState([]);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -187,6 +190,62 @@ export default function TrackTemplateDetails() {
   const dayWiseQuestions = filteredQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
   const isDarkMode = theme === 'dark';
+  const currentDayNumber = useMemo(() => {
+    const assignedAt = trackDetail?.assignedAt ? new Date(trackDetail.assignedAt) : null;
+    if (!assignedAt || Number.isNaN(assignedAt.getTime())) return 1;
+    const today = new Date();
+    assignedAt.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const elapsedDays = Math.floor((today - assignedAt) / 86400000) + 1;
+    return Math.min(Math.max(elapsedDays, 1), Number(trackDetail?.totalDays || track?.totalDays || 1));
+  }, [trackDetail?.assignedAt, trackDetail?.totalDays, track?.totalDays]);
+
+  const assignmentKey = (dayNumber, questionId) => `${dayNumber}:${questionId || 'day'}`;
+  const parseAssignmentKey = (key) => {
+    const [dayNumber, questionId] = String(key).split(':');
+    return { dayNumber: Number(dayNumber), questionId: questionId === 'day' ? null : questionId };
+  };
+
+  const selectableAssignments = useMemo(() => {
+    return (trackDetail?.dayAssignments || []).flatMap((day) => {
+      if (track?.trackType === 'Daily Task') {
+        return (day.tasks || []).map((task) => ({
+          key: assignmentKey(day.dayNumber, task.questionId),
+          dayNumber: day.dayNumber,
+          questionId: task.questionId,
+        }));
+      }
+      return day.questionId
+        ? [{ key: assignmentKey(day.dayNumber, day.questionId), dayNumber: day.dayNumber, questionId: null }]
+        : [];
+    });
+  }, [trackDetail?.dayAssignments, track?.trackType]);
+
+  const selectableAssignmentKeys = useMemo(
+    () => selectableAssignments.map((assignment) => assignment.key),
+    [selectableAssignments]
+  );
+
+  const allAssignmentsSelected =
+    selectableAssignmentKeys.length > 0 &&
+    selectableAssignmentKeys.every((key) => selectedAssignments.includes(key));
+
+  const toggleAssignmentSelection = (key) => {
+    setSelectedAssignments((prev) =>
+      prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]
+    );
+  };
+
+  const toggleAllAssignments = () => {
+    setSelectedAssignments((prev) =>
+      selectableAssignmentKeys.every((key) => prev.includes(key)) ? [] : selectableAssignmentKeys
+    );
+  };
+
+  const reloadTrackTemplate = async () => {
+    const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
+    setTrackDetail(preferRemoteData(remoteTemplate, null));
+  };
 
   useEffect(() => {
     const remoteAssigned = trackDetail?.assignedQuestions;
@@ -198,7 +257,6 @@ export default function TrackTemplateDetails() {
       questionIds: [],
       taskType: defaultTaskType,
       batchId: trackDetail?.batchId || '',
-      xpValue: '',
       status: 'Published',
     });
   }, [availableQuestions, trackDetail, defaultTaskType]);
@@ -206,12 +264,8 @@ export default function TrackTemplateDetails() {
   useEffect(() => {
     const days = trackDetail?.dayAssignments || [];
     if (!days.length) return;
-    const currentDay =
-      days.find((day) => day.tasks?.length || day.questionId)?.dayNumber ||
-      days[0]?.dayNumber ||
-      1;
-    setExpandedDays((prev) => (Object.keys(prev).length ? prev : { [currentDay]: true }));
-  }, [trackDetail?.dayAssignments]);
+    setExpandedDays({ [currentDayNumber]: true });
+  }, [trackDetail?.id, trackDetail?.dayAssignments, currentDayNumber]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,7 +353,6 @@ export default function TrackTemplateDetails() {
       questionIds: [],
       taskType: defaultTaskType,
       batchId: track?.batchId || '',
-      xpValue: '',
       status: 'Published',
     });
     setIsAddDayModalOpen(true);
@@ -313,7 +366,6 @@ export default function TrackTemplateDetails() {
       questionIds: [],
       taskType: defaultTaskType,
       batchId: '',
-      xpValue: '',
       status: 'Published',
     });
   };
@@ -327,14 +379,11 @@ export default function TrackTemplateDetails() {
         ...(track.trackType === 'Daily Task' ? {
           taskType: addDayForm.taskType,
           batchId: addDayForm.batchId || track.batchId,
-          xpValue: Number(addDayForm.xpValue || 0),
           status: addDayForm.status,
         } : {}),
       };
       await adminAPI.assignTrackTemplateDay(templateId, payload);
-      // Reload template detail
-      const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
-      setTrackDetail(preferRemoteData(remoteTemplate, null));
+      await reloadTrackTemplate();
       closeAddDayModal();
     } catch (err) {
       console.error("Failed to assign question to day:", err);
@@ -357,8 +406,7 @@ export default function TrackTemplateDetails() {
   const removeAssignedQuestion = async (dayNumber) => {
     try {
       await adminAPI.removeTrackTemplateDay(templateId, dayNumber);
-      const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
-      setTrackDetail(preferRemoteData(remoteTemplate, null));
+      await reloadTrackTemplate();
     } catch (err) {
       console.error("Failed to remove assigned question:", err);
     }
@@ -367,10 +415,27 @@ export default function TrackTemplateDetails() {
   const removeTaskFromDay = async (dayNumber, questionId) => {
     try {
       await adminAPI.removeTrackTemplateDay(templateId, dayNumber, questionId);
-      const remoteTemplate = await adminAPI.getTrackTemplate(templateId);
-      setTrackDetail(preferRemoteData(remoteTemplate, null));
+      await reloadTrackTemplate();
     } catch (err) {
       console.error("Failed to remove task from day:", err);
+    }
+  };
+
+  const handleBulkDeleteAssignments = async () => {
+    if (!selectedAssignments.length) return;
+    setIsBulkDeleting(true);
+    try {
+      for (const key of selectedAssignments) {
+        const { dayNumber, questionId } = parseAssignmentKey(key);
+        await adminAPI.removeTrackTemplateDay(templateId, dayNumber, questionId);
+      }
+      await reloadTrackTemplate();
+      setSelectedAssignments([]);
+      setBulkDeleteConfirm(false);
+    } catch (err) {
+      console.error("Failed to bulk remove assigned questions:", err);
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -469,17 +534,6 @@ export default function TrackTemplateDetails() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#1a2335] dark:text-white">XP Value</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={addDayForm.xpValue}
-                      onChange={(e) => setAddDayForm((prev) => ({ ...prev, xpValue: e.target.value }))}
-                      placeholder="0"
-                      className="mt-1.5 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3.5 text-sm text-[#1a2335] dark:text-white outline-none"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Publish Status</label>
                     <div className="relative mt-1.5">
                       <select
@@ -547,6 +601,34 @@ export default function TrackTemplateDetails() {
         </div>
       )}
 
+      {bulkDeleteConfirm && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setBulkDeleteConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 p-6 shadow-2xl">
+            <h3 className="text-base font-semibold text-red-600 dark:text-red-400">Bulk Delete Questions</h3>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Are you sure you want to remove {selectedAssignments.length} selected question{selectedAssignments.length === 1 ? '' : 's'} from this track template?
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setBulkDeleteConfirm(false)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/15 text-sm font-medium text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDeleteAssignments}
+                disabled={isBulkDeleting}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-75 text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+                {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
       <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
 
@@ -601,8 +683,28 @@ export default function TrackTemplateDetails() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-xl font-bold text-[#0b1b38] dark:text-white">Day-wise Questions</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex h-8 items-center gap-2 rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={allAssignmentsSelected}
+                    disabled={!selectableAssignmentKeys.length}
+                    onChange={toggleAllAssignments}
+                    className="h-3.5 w-3.5 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6] disabled:opacity-40"
+                  />
+                  Select All
+                </label>
+                <button
+                  onClick={() => setBulkDeleteConfirm(true)}
+                  disabled={!selectedAssignments.length}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-red-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <FiTrash2 className="h-3.5 w-3.5" />
+                  Bulk Delete {selectedAssignments.length ? `(${selectedAssignments.length})` : ''}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -624,9 +726,19 @@ export default function TrackTemplateDetails() {
                     </div>
                     {expandedDays[day.dayNumber] && <div className="space-y-2 pl-3">
                       {day.tasks && day.tasks.length > 0 ? (
-                        day.tasks.map((t, idx) => (
-                          <div key={`${t.questionId}-${idx}`} className="flex items-center justify-between border-t border-black/5 dark:border-white/5 pt-2 text-xs">
-                            <span className="text-[#0b1b38] dark:text-white font-medium">
+                        day.tasks.map((t, idx) => {
+                          const key = assignmentKey(day.dayNumber, t.questionId);
+                          return (
+                          <div key={`${t.questionId}-${idx}`} className="flex items-start justify-between gap-3 border-t border-black/5 dark:border-white/5 pt-2 text-xs">
+                            <label className="flex min-w-0 flex-1 items-start gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedAssignments.includes(key)}
+                                onChange={() => toggleAssignmentSelection(key)}
+                                className="mt-0.5 h-3.5 w-3.5 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6]"
+                              />
+                              <span className="min-w-0 text-[#0b1b38] dark:text-white font-medium">
+                              <span className="mr-2 font-semibold text-slate-400 dark:text-slate-500">{idx + 1}.</span>
                               <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[{t.taskType}]</span>
                               {t.questionTitle}
                               <span className="ml-2 rounded-full bg-[#dfe8f6] px-2 py-0.5 text-[10px] font-bold text-[#3c83f6] dark:bg-white/10 dark:text-blue-300">
@@ -640,15 +752,11 @@ export default function TrackTemplateDetails() {
                                   {t.batchName}
                                 </span>
                               ) : null}
-                            </span>
-                            <button
-                              onClick={() => removeTaskFromDay(day.dayNumber, t.questionId)}
-                              className="text-red-500 hover:text-red-700 font-semibold"
-                            >
-                              Remove
-                            </button>
+                              </span>
+                            </label>
                           </div>
-                        ))
+                          );
+                        })
                       ) : (
                         <p className="text-xs text-slate-400 dark:text-slate-500 italic">No tasks assigned yet.</p>
                       )}
@@ -666,16 +774,15 @@ export default function TrackTemplateDetails() {
 
                       {day.questionId ? (
                         <>
+                          <input
+                            type="checkbox"
+                            checked={selectedAssignments.includes(assignmentKey(day.dayNumber, day.questionId))}
+                            onChange={() => toggleAssignmentSelection(assignmentKey(day.dayNumber, day.questionId))}
+                            className="h-3.5 w-3.5 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6]"
+                          />
                           <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${difficultyPillClass(day.difficulty)}`}>
                             {day.difficulty}
                           </span>
-                          <button
-                            onClick={() => removeAssignedQuestion(day.dayNumber)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            aria-label={`Remove question on day ${day.dayNumber}`}
-                          >
-                            <FiX className="w-4 h-4" />
-                          </button>
                         </>
                       ) : (
                         <button
@@ -692,7 +799,10 @@ export default function TrackTemplateDetails() {
                         {day.questionId ? (
                           <div className="min-w-0">
                             <h4 className="text-base font-semibold text-[#0b1b38] dark:text-white truncate">{day.questionTitle}</h4>
-                            <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">{day.track} · {day.difficulty}</p>
+                            <p className="mt-0.5 text-xs text-[#5f7591] dark:text-slate-300 truncate">
+                              <span className="mr-1 font-semibold text-slate-400 dark:text-slate-500">1.</span>
+                              {day.track} · {day.difficulty}
+                            </p>
                           </div>
                         ) : (
                           <p className="text-xs text-slate-400 dark:text-slate-500 italic">No question assigned yet.</p>

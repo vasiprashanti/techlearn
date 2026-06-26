@@ -228,43 +228,43 @@ export const QuestionBankAdminPage = () => {
 
           {/* Metrics Statistics section */}
           <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full">
-            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
-                <FiCode className="w-5 h-5" />
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <div className="w-9 h-9 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
+                <FiCode className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{totalQuestionsCount}</p>
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Total Questions</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Total Questions</p>
+                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{totalQuestionsCount}</p>
               </div>
             </article>
 
-            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <FiGrid className="w-5 h-5" />
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FiGrid className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{categories.length}</p>
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Total Categories</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Total Categories</p>
+                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{categories.length}</p>
               </div>
             </article>
 
-            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                <FiGrid className="w-5 h-5" />
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <FiGrid className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{activeCategoriesCount}</p>
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Active Categories</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Active Categories</p>
+                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{activeCategoriesCount}</p>
               </div>
             </article>
 
-            <article className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl px-5 py-4 min-h-[112px] sm:min-h-[104px] flex items-center gap-3.5 shadow-sm">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
-                <FiGrid className="w-5 h-5" />
+            <article className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-xl px-3.5 sm:px-4 py-3 flex items-center gap-3 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
+                <FiGrid className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-3xl font-light tracking-tight leading-none text-black dark:text-white">{draftCategoriesCount}</p>
-                <p className="mt-1 text-sm text-black/60 dark:text-white/60">Draft Categories</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-black/40 dark:text-white/40">Draft Categories</p>
+                <p className="mt-0.5 text-lg sm:text-2xl font-semibold tracking-tight leading-none text-[#3C83F6] dark:text-[#bceaff]">{draftCategoriesCount}</p>
               </div>
             </article>
           </section>

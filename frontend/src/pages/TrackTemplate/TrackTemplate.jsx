@@ -720,10 +720,15 @@ export default function TrackTemplate() {
                   const templateId = track.id || track._id;
                   const Icon = track.icon;
                   const isSelected = selectedTrackIds.includes(templateId);
-                  const trackTheme = { topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]' };
+                  const trackTheme = {
+                    topTint: 'bg-[#d8e6ef]/30 dark:bg-[#24384e]/30',
+                    iconBg: 'bg-[#e7f0f6] dark:bg-[#30495f]',
+                    iconColor: 'text-[#3c83f6] dark:text-blue-300'
+                  };
                   return (
-                    <div key={templateId || track.name} className={`relative rounded-xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
-                      <div className="absolute left-3 top-2.5 z-20">
+                    <article key={templateId || track.name} className={`relative rounded-2xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left`}>
+                      {/* Checkbox - Aligned to top-left */}
+                      <div className="absolute left-4 top-4 z-20">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -732,94 +737,68 @@ export default function TrackTemplate() {
                         />
                       </div>
 
-                      {/* Action Menu (3 dots) */}
-                      <div className={`absolute right-2 top-2 z-20`}>
-                        <button
-                          type="button"
-                          className="track-actions-trigger w-6 h-6 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenActionMenuId(openActionMenuId === templateId ? null : templateId);
-                          }}
-                          aria-label="Open track actions"
-                        >
-                          <FiMoreHorizontal className="w-3.5 h-3.5" />
-                        </button>
-
-                        {openActionMenuId === templateId && (
-                          <div className="track-actions-menu absolute right-0 top-7 w-36 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                openEditTemplateModal(track);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
-                              disabled={!templateId}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                duplicateTemplate(templateId);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
-                              disabled={!templateId}
-                            >
-                              Duplicate
-                            </button>
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                setDeleteTarget(track);
-                              }}
-                              className="w-full text-left px-3 py-2 text-xs transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
-                              disabled={!templateId}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Top Panel (highlighted/green sections of the cards) */}
-                      {/* pl-11 to account for checkbox on the left */}
-                      <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-11 pr-9 flex items-center`}>
+                      {/* Top Panel */}
+                      <div className={`px-4 pt-4 pb-3 flex items-center min-h-[76px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-12 pr-4`}>
                         <div className="flex items-center justify-between gap-2.5 text-left w-full">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate">{track.name}</h3>
-                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-350 truncate">{track.category || 'Daily Challenge'}</p>
+                            <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={track.name}>{track.name}</h3>
+                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{track.category}</p>
+                          </div>
+                          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${trackTheme.iconBg}`}>
+                            <Icon className={`w-4.5 h-4.5 ${trackTheme.iconColor}`} />
                           </div>
                         </div>
                       </div>
 
                       {/* Bottom Panel */}
-                      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                      <div className="px-4 pt-3.5 pb-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2.5 text-left">
+                        <p className="text-xs leading-normal text-slate-500 dark:text-slate-400 line-clamp-2 h-9 mb-1">{track.description || 'No description available.'}</p>
+                        
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Total Days</span>
                           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.totalDays}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Questions</span>
                           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.questionsAssigned}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Status</span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{track.status}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
+                            track.status === 'Active'
+                              ? 'bg-[#d2e9e5] text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300 font-semibold'
+                              : track.status === 'Draft'
+                                ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300 font-semibold'
+                                : 'bg-slate-100 text-slate-650 dark:bg-slate-800/40 dark:text-slate-300 font-semibold'
+                          }`}>
+                            {track.status}
+                          </span>
                         </div>
 
-                        <button
-                          onClick={() => {
-                            if (!templateId) return;
-                            navigate(`/track-templates/${templateId}`);
-                          }}
-                          disabled={!templateId}
-                          className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-[#06224d] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                        >
-                          View Tasks
-                        </button>
+                        {/* Actions row */}
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <button
+                            onClick={() => {
+                              if (!templateId) return;
+                              navigate(`/track-templates/${templateId}`);
+                            }}
+                            disabled={!templateId}
+                            className="flex-1 h-[38px] inline-flex items-center justify-center gap-2 rounded-xl px-4 text-xs sm:text-[13px] font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
+                          >
+                            View Tasks
+                          </button>
+                          <button onClick={() => openEditTemplateModal(track)} className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-[#3c83f6]/5 dark:hover:bg-[#bceaff]/5 transition-colors flex items-center justify-center" disabled={!templateId}>
+                            <FiEdit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-[#3c83f6]/5 dark:hover:bg-[#bceaff]/5 transition-colors flex items-center justify-center" disabled={!templateId}>
+                            <FiCopy className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteTarget(track)} className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm flex items-center justify-center" disabled={!templateId}>
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>

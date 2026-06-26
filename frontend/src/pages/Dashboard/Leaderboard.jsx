@@ -242,7 +242,7 @@ const Leaderboard = () => {
                     <div className="flex items-center gap-4 px-4 md:px-5 py-2.5 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 text-[9px] md:text-[10px] uppercase tracking-widest text-black/50 dark:text-white/50 font-bold font-sans">
                       <div className="w-12 shrink-0 text-center md:text-left">Rank</div>
                       <div className="flex-1">Student</div>
-                      <div className="w-24 shrink-0 text-right md:text-left">Score</div>
+                      <div className="w-24 shrink-0 text-right md:text-left">Total XP</div>
                       <div className="w-28 shrink-0 text-right hidden md:block">Signal</div>
                     </div>
 
