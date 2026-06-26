@@ -26,10 +26,10 @@ const BatchDetails = () => {
   const [activeTab, setActiveTab] = useState('students');
   const [expandedTracks, setExpandedTracks] = useState({});
 
-  const toggleTrack = (trackName) => {
+  const toggleTrack = (trackId) => {
     setExpandedTracks((prev) => ({
       ...prev,
-      [trackName]: !prev[trackName],
+      [trackId]: !prev[trackId],
     }));
   };
 
@@ -39,7 +39,7 @@ const BatchDetails = () => {
   const [tracks, setTracks] = useState([]);
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
-  const [studentSortOrder, setStudentSortOrder] = useState('name-asc');
+  const [studentSortOrder, setStudentSortOrder] = useState('rank-asc');
   const [reportStatusFilter, setReportStatusFilter] = useState('All');
   const [reportSortOrder, setReportSortOrder] = useState('default');
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -528,6 +528,15 @@ const BatchDetails = () => {
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
+      <style>{`
+        .no-scrollbar-custom::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar-custom {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
       <div
         className={`fixed inset-0 -z-10 transition-colors duration-1000 ${
           isDarkMode
@@ -601,33 +610,34 @@ const BatchDetails = () => {
             <div className="space-y-3">
               <h3 className="admin-section-heading">Attached Tracks</h3>
               {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
-                <div className="space-y-2">
-                  {batch.tracks.map((track) => {
-                    const isExpanded = !!expandedTracks[track.name];
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-start">
+                  {batch.tracks.map((track, trackIdx) => {
+                    const trackId = track.id || track._id || `track-${trackIdx}`;
+                    const isExpanded = !!expandedTracks[trackId];
                     return (
-                      <div key={track.name} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-shadow">
+                      <div key={trackId} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-all duration-300 col-span-1">
                         <button
-                          onClick={() => toggleTrack(track.name)}
-                          className="w-full flex items-center justify-between px-4 py-3 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
+                          onClick={() => toggleTrack(trackId)}
+                          className="w-full flex items-center justify-between px-3 py-2 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-xs select-none">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-[10px] select-none">
                               {isExpanded ? '▼' : '▶'}
                             </span>
-                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{track.name}</span>
-                            <span className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-medium">({track.questionsAssigned} questions assigned)</span>
+                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">{track.name}</span>
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">({track.questionsAssigned} questions)</span>
                           </div>
                         </button>
                         {isExpanded && (
-                          <div className="px-4 pb-4 pt-1 border-t border-black/5 dark:border-white/5 bg-slate-50/[0.15] dark:bg-[#0c1836]/10">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
+                          <div className="px-3 pb-3 pt-1 border-t border-black/5 dark:border-white/5 bg-slate-50/[0.15] dark:bg-[#0c1836]/10">
+                            <div className="flex flex-col gap-2 mt-2 max-h-64 overflow-y-auto pr-1 no-scrollbar-custom">
                               {track.days.length === 0 ? (
-                                <p className="col-span-full text-xs text-black/45 dark:text-white/50 py-2">No day assignments yet.</p>
+                                <p className="text-xs text-black/45 dark:text-white/50 py-2">No day assignments yet.</p>
                               ) : (
                                 track.days.map((dayItem, index) => {
                                   const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
                                   return (
-                                    <div key={`${track.name}-${index}`} className="bg-white dark:bg-[#122247]/30 rounded-xl p-3 border border-black/5 dark:border-white/10 space-y-1.5 shadow-sm h-32 overflow-y-auto pr-1 flex flex-col scrollbar-thin">
+                                    <div key={`${trackId}-${index}`} className="bg-white dark:bg-[#122247]/30 rounded-xl p-2.5 border border-black/5 dark:border-white/10 space-y-1.5 shadow-sm min-h-[100px] max-h-32 overflow-y-auto pr-1 flex flex-col scrollbar-thin shrink-0">
                                       <span className="font-bold text-xs text-slate-700 dark:text-slate-300">Day {dayNum}</span>
                                       {renderDaySections(dayItem)}
                                     </div>
@@ -685,8 +695,9 @@ const BatchDetails = () => {
                            onChange={(e) => setStudentStatusFilter(e.target.value)}
                            className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                         >
-                          <option className={dropdownOptionClass} value="All Status">All Status</option>
-                          <option className={dropdownOptionClass} value="Not Started">Not Started</option>
+                           <option className={dropdownOptionClass} value="All Status">All Status</option>
+                           <option className={dropdownOptionClass} value="Active">Active</option>
+                           <option className={dropdownOptionClass} value="Not Started">Not Started</option>
                           <option className={dropdownOptionClass} value="In Progress">In Progress</option>
                           <option className={dropdownOptionClass} value="Completed">Completed</option>
                           <option className={dropdownOptionClass} value="Not Attempted">Not Attempted</option>
@@ -725,15 +736,15 @@ const BatchDetails = () => {
                       <table className="w-full min-w-[1200px] table-auto">
                         <thead>
                           <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 w-12 whitespace-nowrap">#</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Student Name</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Student Email</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Today's Score</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Today's XP</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Total XP</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Leaderboard Rank</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Last Attempt Date/Time</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-4 py-3 whitespace-nowrap">Status</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-32 whitespace-nowrap">Student Name</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Total XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Last Attempt Date/Time</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -741,39 +752,39 @@ const BatchDetails = () => {
                             const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                             return (
                               <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                                <td className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={8} className="px-4 py-3 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={8} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
                                   <>
-                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap" title={student.name}>
+                                    <td className="px-2 py-2 text-center text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap max-w-[120px] truncate" title={student.name}>
                                       {student.name}
                                     </td>
-                                    <td className="px-4 py-3 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                       {formatEmail(student.email)}
                                     </td>
-                                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
                                       <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff]">
                                         {formatScore(student)}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                       {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
                                     </td>
-                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                       {student.totalXp || 0} XP
                                     </td>
-                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                       {student.leaderboardRank && student.leaderboardRank !== '—' && student.leaderboardRank !== '-' ? `#${student.leaderboardRank}` : '—'}
                                     </td>
-                                    <td className="px-4 py-3 text-center text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                       {formatLastAttempt(student.lastAttemptAt)}
                                     </td>
-                                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
                                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
                                         {student.status || 'Not Started'}
                                       </span>
@@ -850,11 +861,11 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[800px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-4 py-2.5 min-w-[190px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 min-w-[150px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
-                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-16 whitespace-nowrap">
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-12 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
                                 </th>
                               ))}
@@ -862,28 +873,28 @@ const BatchDetails = () => {
                           </thead>
                           <tbody>
                             <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-4 py-2.5 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
                                 Attempted Students
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
                                 const count = getAttemptedCountForDay(dayNum);
                                 return (
-                                  <td key={index} className="px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                     {count}
                                   </td>
                                 );
                               })}
                             </tr>
                             <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-4 py-2.5 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
                                 Average Score
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
                                 const avg = getAverageScoreForDay(dayNum);
                                 return (
-                                  <td key={index} className="px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                     {avg}
                                   </td>
                                 );
@@ -903,10 +914,10 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[800px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-10 whitespace-nowrap">#</th>
-                              <th className="sticky left-10 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 min-w-[150px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">Student Name</th>
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
+                              <th className="sticky left-8 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 min-w-[120px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">Student Name</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
-                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2.5 w-16 whitespace-nowrap">
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-12 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
                                 </th>
                               ))}
@@ -917,16 +928,16 @@ const BatchDetails = () => {
                               const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                               return (
                                 <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-3 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                                     {isPlaceholder ? '-' : index + 1}
                                   </td>
                                   {isPlaceholder ? (
-                                    <td colSpan={maxTrackDays + 1} className="px-3 py-2.5 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                    <td colSpan={maxTrackDays + 1} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
                                       No enrolled students
                                     </td>
                                   ) : (
                                     <>
-                                      <td className="sticky left-10 bg-white dark:bg-[#0f1f43] z-10 px-3 py-2.5 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[150px]" title={student.name}>
+                                      <td className="sticky left-8 bg-white dark:bg-[#0f1f43] z-10 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[120px]" title={student.name}>
                                         {student.name}
                                       </td>
                                       {Array.from({ length: maxTrackDays }).map((_, dIndex) => {
@@ -939,7 +950,7 @@ const BatchDetails = () => {
                                         else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
 
                                         return (
-                                          <td key={dIndex} className="px-3 py-2.5 text-center text-[11px] sm:text-xs whitespace-nowrap">
+                                          <td key={dIndex} className="px-2 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap">
                                             <span className={scoreClass}>
                                               {score}
                                             </span>
