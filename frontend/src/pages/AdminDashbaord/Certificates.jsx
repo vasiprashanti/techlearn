@@ -253,14 +253,14 @@ export default function Certificates() {
               <h1 className="admin-page-title">Certificates</h1>
             </div>
 
-            <div className="flex items-center gap-8 border-b border-black/10 dark:border-white/10 pb-px overflow-x-auto">
+            <div className="flex border-b border-black/10 dark:border-white/10 mt-2 overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`shrink-0 py-2 px-1 text-sm font-semibold transition-colors border-b-2 relative -bottom-[1px] ${
+                  className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
                     activeTab === tab
-                      ? 'border-[#3C83F6] text-[#3C83F6] dark:border-blue-400 dark:text-blue-300'
+                      ? 'border-[#3C83F6] text-[#3C83F6] dark:text-blue-400'
                       : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
