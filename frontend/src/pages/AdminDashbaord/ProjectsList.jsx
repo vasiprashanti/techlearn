@@ -629,7 +629,7 @@ export default function ProjectsList() {
             </div>
           </div>
 
-          {/* Search and Sort Row */}
+          {/* Search, Status, and Sort Row */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <div className="relative flex-1 w-full">
               <input
@@ -642,8 +642,22 @@ export default function ProjectsList() {
               <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
 
-            {/* Custom styled sort select */}
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-44 shrink-0">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="appearance-none w-full pl-4 pr-10 py-3 text-xs font-semibold rounded-xl border-0 bg-white dark:bg-[#0f1f43] text-slate-800 dark:text-white cursor-pointer shadow-sm outline-none"
+              >
+                {STATUS_FILTERS.map((status) => (
+                  <option key={status} className={dropdownOptionClass} value={status}>
+                    {status === "All" ? "All Status" : status}
+                  </option>
+                ))}
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            </div>
+
+            <div className="relative w-full sm:w-64 shrink-0">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -683,23 +697,6 @@ export default function ProjectsList() {
                 }`}
               >
                 {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Status Filter Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none whitespace-nowrap">
-            {STATUS_FILTERS.map((status) => (
-              <button
-                key={status}
-                onClick={() => setSelectedStatus(status)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium tracking-wide transition-all ${
-                  selectedStatus === status
-                    ? "bg-[#001b54] text-white shadow-sm"
-                    : "bg-white/60 hover:bg-white/90 text-slate-600 dark:bg-[#0f1f43]/45 dark:text-slate-300"
-                }`}
-              >
-                {status === "All" ? "All Status" : status}
               </button>
             ))}
           </div>

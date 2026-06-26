@@ -307,41 +307,50 @@ export default function Certificates() {
             )}
 
             {activeTab === 'Final Tests' && (
-              <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4">
-                <h3 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">Test Questions</h3>
+              <section className="rounded-2xl overflow-hidden border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-5">
+                <h3 className="text-xl font-semibold text-[#0f1f3d] dark:text-white px-1">Test Questions</h3>
 
-                <div className="mt-3 space-y-2.5">
-                  {testQuestions.map((item) => (
-                    <article key={item.id} className="rounded-xl bg-[#e9eff5] dark:bg-[#17345f] px-4 py-3 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-base font-medium text-[#0f1f3d] dark:text-white">{item.question}</p>
-                        <p className="mt-0.5 text-sm text-[#5f7592] dark:text-slate-300">Answer: {item.answer}</p>
-                      </div>
-                      <button onClick={() => removeTestQuestion(item.id)} className="text-[#0f1f3d] dark:text-white/90 hover:text-red-500" aria-label="Delete test question">
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </article>
-                  ))}
+                <div className="mt-4 rounded-xl overflow-hidden border border-black/10 dark:border-white/10">
+                  {testQuestions.length === 0 ? (
+                    <div className="px-5 py-8 text-center text-sm text-[#5f7592] dark:text-slate-300">
+                      No test questions added yet.
+                    </div>
+                  ) : (
+                    testQuestions.map((item, i) => (
+                      <article
+                        key={item.id}
+                        className={`px-5 py-3.5 flex items-center justify-between gap-3 ${i < testQuestions.length - 1 ? 'border-b border-black/10 dark:border-white/10' : ''}`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-base font-medium text-[#0f1f3d] dark:text-white">{item.question}</p>
+                          <p className="mt-0.5 text-sm text-[#5f7592] dark:text-slate-300">Answer: {item.answer}</p>
+                        </div>
+                        <button onClick={() => removeTestQuestion(item.id)} className="shrink-0 text-[#0f1f3d] dark:text-white/90 hover:text-red-500" aria-label="Delete test question">
+                          <FiTrash2 className="w-4 h-4" />
+                        </button>
+                      </article>
+                    ))
+                  )}
                 </div>
 
-                <div className="mt-4 h-px bg-black/10 dark:bg-white/10" />
+                <div className="mt-5 h-px bg-black/10 dark:bg-white/10" />
 
                 <div className="mt-4 space-y-2.5">
                   <input
                     value={newQuestion}
                     onChange={(e) => setNewQuestion(e.target.value)}
                     placeholder="Question text"
-                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
                   />
                   <input
                     value={newAnswer}
                     onChange={(e) => setNewAnswer(e.target.value)}
                     placeholder="Correct answer"
-                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
+                    className="w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-300"
                   />
                   <button
                     onClick={addTestQuestion}
-                    className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#17345f] text-[#0f1f3d] dark:text-white text-sm font-semibold inline-flex items-center gap-2"
+                    className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#e4ecf7] dark:bg-[#17345f] text-[#0f1f3d] dark:text-white text-sm font-semibold inline-flex items-center gap-2 hover:brightness-95 transition-all"
                   >
                     <FiPlus className="w-4 h-4" />
                     Add Question
@@ -358,7 +367,7 @@ export default function Certificates() {
                     max="100"
                     value={passingPercentage}
                     onChange={(e) => setPassingPercentage(e.target.value)}
-                    className="w-28 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#e9eff5] dark:bg-[#122b52] px-3 text-base text-[#0f1f3d] dark:text-white"
+                    className="w-28 h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3 text-base text-[#0f1f3d] dark:text-white"
                   />
                 </div>
 
