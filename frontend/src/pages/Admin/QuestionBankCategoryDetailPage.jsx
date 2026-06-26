@@ -424,11 +424,11 @@ export const QuestionBankCategoryDetailPage = () => {
 
   const titleField = (
     <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Tag*</label>
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
       <input
         value={questionForm.title}
         onChange={(e) => updateFormField('title', e.target.value)}
-        placeholder="Enter question tag"
+        placeholder="Enter one-word topic"
         className={questionFormInputClass}
       />
     </div>
@@ -493,7 +493,7 @@ export const QuestionBankCategoryDetailPage = () => {
         <input
           value={questionForm.tagInput}
           onChange={(e) => updateFormField('tagInput', e.target.value)}
-          placeholder="Add tag label..."
+          placeholder="Add keyword tag..."
           className={questionFormInputClass}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
         />
@@ -598,7 +598,7 @@ export const QuestionBankCategoryDetailPage = () => {
                       <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
                       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                         <div className="md:col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Tag*</label>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
                           <input value={form.title} onChange={(e) => updateBulkFormField(index, 'title', e.target.value)} placeholder="JFS / SERVLET / JDBC" className={questionFormInputClass} />
                         </div>
                         <div>
@@ -610,7 +610,7 @@ export const QuestionBankCategoryDetailPage = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic Tags</label>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
                           <input
                             value={form.tagInput}
                             onChange={(e) => updateBulkFormField(index, 'tagInput', e.target.value)}

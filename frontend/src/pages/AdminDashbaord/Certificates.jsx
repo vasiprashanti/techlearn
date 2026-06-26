@@ -253,15 +253,15 @@ export default function Certificates() {
               <h1 className="admin-page-title">Certificates</h1>
             </div>
 
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/45 dark:bg-[#0f274f]/70 border border-black/10 dark:border-white/10 w-fit">
+            <div className="flex items-center gap-8 border-b border-black/10 dark:border-white/10 pb-px overflow-x-auto">
               {tabs.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-lg text-xs md:text-sm font-medium transition-all ${
+                  className={`shrink-0 py-2 px-1 text-sm font-semibold transition-colors border-b-2 relative -bottom-[1px] ${
                     activeTab === tab
-                      ? 'bg-transparent border-2 border-[#3C83F6] text-[#0f1f3d] dark:text-white'
-                      : 'text-[#5f7592] dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                      ? 'border-[#3C83F6] text-[#3C83F6] dark:border-blue-400 dark:text-blue-300'
+                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   {tab}

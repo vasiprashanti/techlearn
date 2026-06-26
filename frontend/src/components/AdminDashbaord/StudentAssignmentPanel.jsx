@@ -399,10 +399,10 @@ export default function StudentAssignmentPanel({ projectId }) {
               No students currently assigned to this project. Use the panel above to assign students.
             </div>
           ) : (
-            <div className="overflow-x-auto w-full">
+            <div className="overflow-x-auto w-full bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl shadow-sm">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-black/10 dark:border-white/10 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <tr className="bg-slate-100/50 dark:bg-slate-900/30 border-b border-black/10 dark:border-white/10 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                     <th className="py-3 px-4 text-left">Student Name</th>
                     <th className="py-3 px-4 text-left">Batch</th>
                     <th className="py-3 px-4 text-center">Current Day</th>
@@ -414,7 +414,7 @@ export default function StudentAssignmentPanel({ projectId }) {
                 </thead>
                 <tbody>
                   {filteredAssignments.map((assignment) => (
-                    <tr key={assignment._id} className="border-b border-black/5 dark:border-white/5 hover:bg-slate-50/50 dark:hover:bg-black/5 transition-colors">
+                    <tr key={assignment._id} className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
                       <td className="py-4 px-4 text-left">
                         <p className="font-bold text-slate-800 dark:text-slate-100">{assignment.name}</p>
                         <p className="text-[10px] text-slate-400 font-medium">{assignment.email}</p>

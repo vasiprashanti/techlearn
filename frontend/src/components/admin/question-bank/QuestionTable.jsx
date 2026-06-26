@@ -85,12 +85,12 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
       </div>
 
       {/* Desktop Table Layout */}
-      <div className="hidden lg:block rounded-2xl border border-black/10 dark:border-white/15 overflow-hidden bg-white/65 dark:bg-[#0a1737]/85 backdrop-blur-xl shadow-sm">
+      <div className="hidden lg:block bg-white/60 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
         <div className="relative">
           <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
             <table className="w-full min-w-[640px]">
               <thead>
-                <tr className="border-b border-black/10 dark:border-white/10 bg-white/45 dark:bg-white/[0.04]">
+                <tr className="border-b border-black/10 dark:border-white/10 bg-slate-100/50 dark:bg-slate-900/30">
                   <th className="w-16 px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">#</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">QID</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prompt</th>
@@ -103,7 +103,7 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                 {questions.map((question, index) => (
                   <tr
                     key={question.id || question._id}
-                    className="hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors"
+                    className="border-b border-black/10 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
                   >
                     <td className="px-5 py-4 text-xs font-semibold tabular-nums text-slate-400 dark:text-slate-500">
                       {index + 1}

@@ -333,15 +333,15 @@ export default function Courses() {
             <h1 className="admin-page-title">Courses</h1>
           </div>
 
-          <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4 md:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-5 border-b border-black/5 dark:border-white/5">
+          <section className="rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl p-4 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-4 border-b border-black/10 dark:border-white/10 text-left">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center">
                   <FiBookOpen className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
                 </div>
                 <div>
-                  <h2 className="text-base md:text-lg font-semibold text-[#0b1b38] dark:text-white">Active Tracks & Curriculum</h2>
-                  <p className="text-xs md:text-sm text-[#5f7592] dark:text-slate-300 truncate">Create course tracks and upload/manage topics inside them.</p>
+                  <h2 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Active Tracks & Curriculum</h2>
+                  <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300 truncate">Create course tracks and upload/manage topics inside them.</p>
                 </div>
               </div>
               
@@ -352,13 +352,13 @@ export default function Courses() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search courses..."
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                    className="w-full h-9 pl-9 pr-4 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-black/20 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
                   />
                   <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                 </div>
                 <button
                   onClick={() => setShowForm(true)}
-                  className="dashboard-primary-btn w-full sm:w-auto h-10 px-4 text-xs shrink-0"
+                  className="dashboard-primary-btn w-full sm:w-auto h-9 px-4 text-xs shrink-0"
                 >
                   <FiPlus className="w-3.5 h-3.5" />
                   Add Course
@@ -376,15 +376,15 @@ export default function Courses() {
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
             ) : (
-              <div className="overflow-x-auto overflow-y-hidden question-catalog-scroll mt-4">
+              <div className="overflow-x-auto overflow-y-hidden question-catalog-scroll mt-4 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-white/5">
                 <table className="w-full min-w-[900px] table-fixed">
                   <thead>
                     <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
-                      <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[280px]">Course Title</th>
-                      <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[450px]">Description</th>
-                      <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[160px]">Level</th>
-                      <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[140px]">Topics</th>
-                      <th className="px-6 py-3.5 text-left text-xs font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[140px]">Actions</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[260px]">Course Title</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[420px]">Description</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[140px]">Level</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Topics</th>
+                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-black/10 dark:divide-white/10">
@@ -397,21 +397,21 @@ export default function Courses() {
                       );
                     }).map((course) => (
                       <tr key={course._id} className="hover:bg-white/30 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="px-6 py-4 text-sm font-semibold text-black dark:text-white truncate" title={course.title}>
+                        <td className="px-4 py-3 text-sm font-semibold text-black dark:text-white truncate" title={course.title}>
                           {course.title}
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-500 truncate" title={course.description}>
+                        <td className="px-4 py-3 text-xs text-slate-500 truncate" title={course.description}>
                           {course.description || "No description provided."}
                         </td>
-                        <td className="px-6 py-4 text-sm">
+                        <td className="px-4 py-3 text-xs">
                           <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
                             {course.level || "Beginner"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-slate-400 font-medium">
+                        <td className="px-4 py-3 text-xs text-slate-500 font-medium">
                           {course.topics}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => handleEdit(course)}

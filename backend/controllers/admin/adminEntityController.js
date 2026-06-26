@@ -799,6 +799,32 @@ export const getBatchDetail = async (req, res) => {
       });
     });
 
+    const dayToAssignedIds = new Map();
+    let maxTrackDays = 0;
+    (trackTemplates || []).forEach(template => {
+      (template.dayAssignments || []).forEach(d => {
+        const dayNum = d.dayNumber;
+        if (dayNum > maxTrackDays) {
+          maxTrackDays = dayNum;
+        }
+        let daySet = dayToAssignedIds.get(dayNum);
+        if (!daySet) {
+          daySet = new Set();
+          dayToAssignedIds.set(dayNum, daySet);
+        }
+        if (d.questionId) {
+          daySet.add(String(d.questionId._id || d.questionId));
+        }
+        if (d.tasks) {
+          d.tasks.forEach(t => {
+            if (t.questionId) {
+              daySet.add(String(t.questionId._id || t.questionId));
+            }
+          });
+        }
+      });
+    });
+
     const computedStudentsTable = students.map((student) => {
       const studentEmail = String(student.email || "").trim().toLowerCase();
       const studentUserId = student.userId || userEmailToIdMap.get(studentEmail);
@@ -1036,10 +1062,18 @@ export const getBatchDetail = async (req, res) => {
           total += codingTasks.length;
         }
 
-        const releaseStart = localCombineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
-        const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
-        const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-        const daySubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd);
+        const assignedIdsForDay = dayToAssignedIds.get(day) || new Set();
+        let daySubs = allCombinedSubs.filter(sub => {
+          const subId = String(sub.questionId?._id || sub.questionId || sub.collegeMcqId?._id || sub.collegeMcqId || sub.questionBankId || sub._id);
+          return assignedIdsForDay.has(subId);
+        });
+
+        if (daySubs.length === 0) {
+          const releaseStart = localCombineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
+          const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+          daySubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd);
+        }
 
         let subCorrect = 0;
         let subTotal = 0;
@@ -1274,7 +1308,9 @@ export const getBatchDetail = async (req, res) => {
         activeStudentsToday: activeCount,
         inactiveStudentsToday: inactiveCount,
         currentActiveTrack,
+        dayNumber: dayNumber || 1,
         tracks: resolvedTracks,
+        maxTrackDays: maxTrackDays || 30,
         studentsTable: computedStudentsTable,
       },
     });
