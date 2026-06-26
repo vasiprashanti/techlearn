@@ -103,14 +103,11 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
 
       {/* Top Panel (highlighted/green sections of the cards) */}
       {/* pl-11 to account for checkbox on the left */}
-      <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-11 pr-9 flex items-center`}>
+      <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-11 pr-4 flex items-center`}>
         <div className="flex items-center justify-between gap-2.5 text-left w-full">
           <div className="flex-1 min-w-0">
             <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate">{category.title}</h3>
             <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-355 truncate">{category.categoryType || 'Coding'}</p>
-          </div>
-          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 bg-white/50 dark:bg-black/20 ${theme.iconBg}`}>
-            <Icon className={`w-4.5 h-4.5 ${theme.iconColor}`} />
           </div>
         </div>
       </div>
