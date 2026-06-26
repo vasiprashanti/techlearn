@@ -412,39 +412,39 @@ export default function Courses() {
                   return (
                     <article key={course._id} className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
                       {/* Top Panel */}
-                      <div className={`px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-3.5 pr-3.5 flex items-center`}>
+                      <div className={`px-4 pt-4 pb-3 flex items-center min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-4 pr-4`}>
                         <div className="flex items-center justify-between gap-2.5 text-left w-full">
                           <div className="flex-1 min-w-0">
                             <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={course.title}>{course.title}</h3>
-                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-355 truncate">{course.level || 'Beginner'}</p>
+                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{course.level || 'Beginner'}</p>
                           </div>
-                          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
+                          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 bg-white/50 dark:bg-black/20 ${theme.iconBg}`}>
                             <FiBookOpen className={`w-4.5 h-4.5 ${theme.iconColor}`} />
                           </div>
                         </div>
                       </div>
 
                       {/* Bottom Panel */}
-                      <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
-                        <p className="text-[11px] text-[#5d6f86] dark:text-slate-350 line-clamp-2 h-9 leading-snug">{course.description || 'No description provided.'}</p>
+                      <div className="px-4 pt-3.5 pb-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2.5 text-left">
+                        <p className="text-xs leading-normal text-slate-500 dark:text-slate-400 line-clamp-2 h-9 leading-snug mb-1">{course.description || 'No description provided.'}</p>
                         
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400 mt-1">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-550 dark:text-slate-400">
                           <span>Topics</span>
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{course.topics}</span>
+                          <span className="font-semibold text-slate-805 dark:text-slate-205 tabular-nums">{course.topics}</span>
                         </div>
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 mt-2.5">
                           <button
                             onClick={() => handleEdit(course)}
-                            className="flex-1 h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 h-[38px] rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs sm:text-[13px] font-semibold transition-colors flex items-center justify-center gap-1.5"
                           >
-                            <FiEdit2 className="w-3 h-3" />
+                            <FiEdit2 className="w-3.5 h-3.5" />
                             Edit Topics
                           </button>
                           <button
                             onClick={() => handleDeleteClick(course)}
-                            className="h-9 w-9 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm inline-flex items-center justify-center"
+                            className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm flex items-center justify-center"
                             title="Delete Course"
                           >
                             <FiTrash2 className="w-4 h-4" />

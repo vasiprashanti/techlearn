@@ -749,21 +749,21 @@ export default function TrackTemplate() {
                   return (
                     <article key={templateId || track.name} className={`relative rounded-2xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left`}>
                       {/* Checkbox - Aligned to top-left */}
-                      <div className="absolute left-4 top-3.5 z-20">
+                      <div className="absolute left-4 top-4 z-20">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectToggle(templateId)}
-                          className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
                         />
                       </div>
 
                       {/* Top Panel */}
-                      <div className={`px-4 pt-4 pb-3.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-12 pr-3 flex items-center`}>
+                      <div className={`px-4 pt-4 pb-3 flex items-center min-h-[76px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-12 pr-4`}>
                         <div className="flex items-center justify-between gap-2.5 text-left w-full">
                           <div className="flex-1 min-w-0">
-                            <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate">{track.name}</h3>
-                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-350 truncate">{track.category}</p>
+                            <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={track.name}>{track.name}</h3>
+                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{track.category}</p>
                           </div>
                           <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${trackTheme.iconBg}`}>
                             <Icon className={`w-4.5 h-4.5 ${trackTheme.iconColor}`} />
@@ -772,18 +772,18 @@ export default function TrackTemplate() {
                       </div>
 
                       {/* Bottom Panel */}
-                      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
-                        <p className="text-[11px] text-[#5d6f86] dark:text-slate-350 line-clamp-2 h-9 leading-snug">{track.description || 'No description available.'}</p>
+                      <div className="px-4 pt-3.5 pb-4 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2.5 text-left">
+                        <p className="text-xs leading-normal text-slate-500 dark:text-slate-400 line-clamp-2 h-9 mb-1">{track.description || 'No description available.'}</p>
                         
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400 mt-1">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Total Days</span>
                           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.totalDays}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Questions</span>
                           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.questionsAssigned}</span>
                         </div>
-                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
+                        <div className="flex items-center justify-between gap-3 text-xs md:text-[13px] text-slate-555 dark:text-slate-400">
                           <span>Status</span>
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
                             track.status === 'Active'
@@ -804,17 +804,17 @@ export default function TrackTemplate() {
                               navigate(`/track-templates/${templateId}`);
                             }}
                             disabled={!templateId}
-                            className="flex-1 h-9 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
+                            className="flex-1 h-[38px] inline-flex items-center justify-center gap-2 rounded-xl px-4 text-xs sm:text-[13px] font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
                           >
                             View Tasks
                           </button>
-                          <button onClick={() => openEditTemplateModal(track)} className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 transition-colors" disabled={!templateId}>
+                          <button onClick={() => openEditTemplateModal(track)} className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-[#3c83f6]/5 dark:hover:bg-[#bceaff]/5 transition-colors flex items-center justify-center" disabled={!templateId}>
                             <FiEdit2 className="w-4 h-4" />
                           </button>
-                          <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 transition-colors" disabled={!templateId}>
+                          <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-[#3c83f6]/5 dark:hover:bg-[#bceaff]/5 transition-colors flex items-center justify-center" disabled={!templateId}>
                             <FiCopy className="w-4 h-4" />
                           </button>
-                          <button onClick={() => setDeleteTarget(track)} className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm" disabled={!templateId}>
+                          <button onClick={() => setDeleteTarget(track)} className="h-[38px] w-[38px] shrink-0 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm flex items-center justify-center" disabled={!templateId}>
                             <FiTrash2 className="w-4 h-4" />
                           </button>
                         </div>
