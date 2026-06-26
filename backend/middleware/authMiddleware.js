@@ -21,7 +21,7 @@ export const protect = async (req, res, next) => {
       // // Debug: log token presence (do NOT log full token in production)
       // console.log("authMiddleware - token present:", !!token);
 
-      if (token === "mock-admin-token") {
+      if (token === "mock-admin-token" && process.env.NODE_ENV !== "production") {
         let adminUser = await User.findOne({ email: "admintls@123" });
         if (!adminUser) {
           adminUser = await User.create({
@@ -97,7 +97,7 @@ export const optionalProtect = async (req, res, next) => {
       req.headers.authorization.startsWith("Bearer")
     ) {
       const token = req.headers.authorization.split(" ")[1];
-      if (token === "mock-admin-token") {
+      if (token === "mock-admin-token" && process.env.NODE_ENV !== "production") {
         let adminUser = await User.findOne({ email: "admintls@123" });
         if (!adminUser) {
           adminUser = await User.create({
