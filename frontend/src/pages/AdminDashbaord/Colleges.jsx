@@ -524,7 +524,7 @@ const Colleges = () => {
                     </div>
 
                     {/* Top Panel */}
-                    <div className="px-4 pt-4 pb-3.5 min-h-[76px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30 pl-4 pr-10 flex items-center">
+                    <div className="px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30 pl-3.5 pr-10 flex items-center">
                       <div className="flex items-center justify-between gap-2.5 text-left w-full">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate">{college.name}</h3>
@@ -537,7 +537,7 @@ const Colleges = () => {
                     </div>
 
                     {/* Bottom Panel */}
-                    <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                    <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
                       <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
                         <span>Avg Score</span>
                         <span className={`font-semibold tracking-tight ${college.avgScore >= 80 ? 'text-slate-800 dark:text-slate-200' : college.avgScore > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-slate-550'}`}>

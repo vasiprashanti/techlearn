@@ -67,7 +67,7 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
   }, []);
 
   return (
-    <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white dark:bg-[#0f1f43] backdrop-blur-xl shadow-sm h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+    <article className={`relative rounded-2xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left`}>
       <div className="absolute left-3.5 top-3.5 z-20">
         <input
           type="checkbox"
@@ -122,18 +122,18 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
         )}
       </div>
 
-      <div className={`px-4 pt-6 pb-3 min-h-[112px] border-b border-black/5 dark:border-white/15 ${theme.topTint} pl-10`}>
+      <div className={`px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-9 pr-10`}>
         <div className="flex items-start gap-2.5">
-          <div className={`h-10 w-10 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm ${theme.iconBg}`}>
-            <Icon className={`w-5 h-5 ${theme.iconColor}`} />
+          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm ${theme.iconBg}`}>
+            <Icon className={`w-4 h-4 ${theme.iconColor}`} />
           </div>
-          <div className="min-h-[64px] flex-1 min-w-0">
-            <h3 className="text-base md:text-lg leading-tight font-semibold text-slate-900 dark:text-white truncate">{category.title}</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm md:text-base leading-tight font-bold text-slate-900 dark:text-white truncate">{category.title}</h3>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-200">
                 {category.categoryType || 'Coding'}
               </span>
-              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:text-slate-200">
+              <span className="inline-flex rounded-full border border-black/10 dark:border-white/10 bg-white/65 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-slate-700 dark:text-slate-200">
                 {category.status || 'Draft'}
               </span>
             </div>
@@ -141,7 +141,7 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
         </div>
       </div>
 
-      <div className="px-4 py-4 mt-auto bg-white/70 dark:bg-transparent">
+      <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent">
         <div className="flex items-center justify-between text-xs md:text-sm text-slate-600 dark:text-slate-300">
           <span>Total Questions</span>
           <span className="font-semibold text-slate-900 dark:text-white tabular-nums">{category.total || 0}</span>
@@ -157,7 +157,7 @@ export const CategoryCard = ({ category, onEdit, onDelete, onView, selected, onS
 
         <button
           onClick={() => onView(category)}
-          className="mt-4 w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs md:text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
+          className="mt-2.5 w-full h-9 rounded-xl bg-[#001b4a] hover:bg-[#062a66] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-[12px] font-semibold transition-colors flex items-center justify-center gap-1.5"
         >
           View Questions
         </button>

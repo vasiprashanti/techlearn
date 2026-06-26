@@ -412,7 +412,7 @@ export default function Courses() {
                   return (
                     <article key={course._id} className="relative rounded-2xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
                       {/* Top Panel */}
-                      <div className={`px-4 pt-4 pb-3.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-4 pr-4 flex items-center`}>
+                      <div className={`px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-3.5 pr-3.5 flex items-center`}>
                         <div className="flex items-center justify-between gap-2.5 text-left w-full">
                           <div className="flex-1 min-w-0">
                             <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={course.title}>{course.title}</h3>
@@ -425,7 +425,7 @@ export default function Courses() {
                       </div>
 
                       {/* Bottom Panel */}
-                      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                      <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
                         <p className="text-[11px] text-[#5d6f86] dark:text-slate-350 line-clamp-2 h-9 leading-snug">{course.description || 'No description provided.'}</p>
                         
                         <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400 mt-1">

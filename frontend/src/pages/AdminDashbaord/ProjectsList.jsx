@@ -772,7 +772,7 @@ export default function ProjectsList() {
                     </div>
 
                     {/* Top Panel */}
-                    <div className={`px-4 pt-4 pb-3.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-12 pr-3 flex items-center`}>
+                    <div className={`px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-12 pr-3 flex items-center`}>
                       <div className="flex items-center justify-between gap-2.5 text-left w-full">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate" title={project.title}>{project.title}</h3>
@@ -785,7 +785,7 @@ export default function ProjectsList() {
                     </div>
 
                     {/* Bottom Panel */}
-                    <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                    <div className="px-3.5 py-3 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
                       <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
                         <span>Duration</span>
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{project.duration_days} days</span>
