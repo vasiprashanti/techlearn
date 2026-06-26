@@ -238,7 +238,7 @@ const Analytics = () => {
                 </div>
 
                 {/* Daily Active — hero stat */}
-                <div className="mb-6 p-5 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 text-center sm:text-left">
+                <div className="mb-6 p-5 bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 text-center sm:text-left">
                   <span className="admin-micro-label text-black/40 dark:text-white/40">Daily Active Students</span>
                   <div className="flex items-end justify-center sm:justify-start gap-2 mt-2">
                     <span className="text-4xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
@@ -258,20 +258,20 @@ const Analytics = () => {
 
                 <div className="p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-[#f9fcff] dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Weekly Active</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsState.studentEngagement.weeklyActive}
                     </span>
                     </div>
-                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-[#f9fcff] dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Inactive 3+ days</span>
                     <span className="text-2xl font-light tracking-tighter text-amber-500 mt-2">
                       {analyticsState.studentEngagement.inactive}
                     </span>
                     <span className="text-[9px] text-amber-500/70 mt-0.5">Needs attention</span>
                     </div>
-                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-3">
+                    <div className="flex flex-col items-center sm:items-start text-center sm:text-left w-full rounded-xl border border-black/10 dark:border-white/15 bg-[#f9fcff] dark:bg-[#0f1f43] px-3 py-3">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Avg Streak</span>
                     <span className="text-2xl font-light tracking-tighter text-[#3C83F6] dark:text-white mt-2">
                       {analyticsState.studentEngagement.avgStreak}
@@ -320,7 +320,7 @@ const Analytics = () => {
                   </div>
 
                   {/* Avg Solve Time */}
-                  <div className="p-5 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 flex items-center justify-between">
+                  <div className="p-5 bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 flex items-center justify-between">
                     <span className="admin-micro-label text-black/40 dark:text-white/40">Average Solve Time</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-light tracking-tighter text-[#3C83F6] dark:text-white">
@@ -348,19 +348,19 @@ const Analytics = () => {
 
                 {/* Status pills */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                  <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
+                  <div className="text-center p-4 bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-emerald-500">
                       {analyticsState.batchPerformance.active}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Active</p>
                   </div>
-                  <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
+                  <div className="text-center p-4 bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-amber-500">
                       {analyticsState.batchPerformance.upcoming}
                     </span>
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mt-1">Upcoming</p>
                   </div>
-                  <div className="text-center p-4 bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
+                  <div className="text-center p-4 bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15">
                     <span className="text-3xl font-light tracking-tighter text-black/50 dark:text-white/50">
                       {analyticsState.batchPerformance.completed}
                     </span>
@@ -395,7 +395,7 @@ const Analytics = () => {
             </div>
 
             {/* Content Insights */}
-            <section className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-6 rounded-xl">
+            <section className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-8 rounded-xl flex flex-col">
               <div className="flex items-center justify-between mb-5 shrink-0">
                 <h3 className="admin-section-heading">Content Insights</h3>
                 <button
@@ -408,7 +408,7 @@ const Analytics = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-[0.95fr_1.05fr] gap-4 items-stretch">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <article className="bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiCode className="w-5 h-5" />
                     </div>
@@ -418,7 +418,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiGitBranch className="w-5 h-5" />
                     </div>
@@ -428,7 +428,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiFileText className="w-5 h-5" />
                     </div>
@@ -438,7 +438,7 @@ const Analytics = () => {
                     </div>
                   </article>
 
-                  <article className="bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
+                  <article className="bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-4 flex items-center gap-3 min-h-[124px]">
                     <div className="w-11 h-11 rounded-full bg-[#3C83F6]/10 dark:bg-white/10 text-[#3C83F6] dark:text-white flex items-center justify-center shrink-0">
                       <FiBarChart2 className="w-5 h-5" />
                     </div>
@@ -449,7 +449,7 @@ const Analytics = () => {
                   </article>
                 </div>
 
-                <article className="bg-white dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between min-h-[264px]">
+                <article className="bg-[#f9fcff] dark:bg-[#0f1f43] rounded-xl border border-black/10 dark:border-white/15 p-5 flex flex-col justify-between min-h-[264px]">
                   <h4 className="text-xl font-medium text-black/85 dark:text-white/90 mb-5">Difficulty Distribution</h4>
                   <div className="space-y-4">
                     {contentInsights.difficulty.map((item) => {

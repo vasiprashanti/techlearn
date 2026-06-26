@@ -5,7 +5,7 @@ import QuestionBankState from '../../AdminDashbaord/QuestionBankState';
 export const CategoryListPanel = ({ categories = [], selectedCategoryIds = [], onSelectToggle, onEditCategory, onDeleteCategory, onViewCategory, onAddCategory }) => {
   return (
     <section className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {categories.map((category) => (
           <CategoryCard
             key={category.id || category._id}
@@ -19,7 +19,7 @@ export const CategoryListPanel = ({ categories = [], selectedCategoryIds = [], o
         ))}
 
         {categories.length === 0 && (
-          <div className="xl:col-span-3">
+          <div className="col-span-1 md:col-span-2 lg:col-span-3 xl:col-span-4">
             <QuestionBankState
               title="No categories yet"
               message="Create a category to start organizing questions by Coding, MCQ, or Notes."

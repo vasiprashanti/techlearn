@@ -3,7 +3,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
-import { FiChevronDown, FiPlus, FiTrash2, FiSearch, FiFolder, FiArchive, FiUsers, FiClock, FiExternalLink, FiCopy, FiUpload, FiX, FiSave, FiActivity, FiTrendingUp } from "react-icons/fi";
+import { FiChevronDown, FiPlus, FiTrash2, FiSearch, FiFolder, FiArchive, FiUsers, FiClock, FiExternalLink, FiCopy, FiUpload, FiX, FiSave, FiActivity, FiTrendingUp, FiMoreHorizontal } from "react-icons/fi";
 
 const CATEGORIES = [
   "Java Full Stack",
@@ -67,6 +67,18 @@ export default function ProjectsList() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isDarkMode = theme === "dark";
+
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      if (!event.target.closest(`.project-actions-trigger`) && !event.target.closest(`.project-actions-menu`)) {
+        setOpenActionMenuId(null);
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -729,92 +741,110 @@ export default function ProjectsList() {
               No projects match your filter queries.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredAndSortedProjects.map((project) => {
                 const isSelected = selectedProjectIds.includes(project._id);
+                const theme = { topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]' };
+                
                 return (
-                <div key={project._id} className={`bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border rounded-xl p-3.5 shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] hover:bg-white dark:hover:bg-[#162a52] transition-all flex flex-col justify-between group text-left ${isSelected ? "border-blue-500/60 ring-1 ring-blue-500/25" : "border-black/10 dark:border-white/15"}`}>
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleProjectSelection(project._id)}
-                          className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer"
-                          aria-label={`Select ${project.title}`}
-                        />
-                        <div className="min-w-0">
-                        <h2 className="text-sm md:text-[15px] font-semibold text-[#0c1833] dark:text-white line-clamp-1 truncate leading-snug" title={project.title}>
-                          {project.title}
-                        </h2>
-                        <span className="text-[11px] font-medium text-slate-500 dark:text-slate-300">
-                          {project.category}
-                        </span>
+                  <article key={project._id} className={`relative rounded-xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+                    
+                    {/* Checkbox */}
+                    <div className="absolute left-3 top-2.5 z-20">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleProjectSelection(project._id)}
+                        className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                        aria-label={`Select ${project.title}`}
+                      />
+                    </div>
+
+                    {/* Action Menu (3 dots) */}
+                    <div className={`absolute right-2 top-2 z-20`}>
+                      <button
+                        type="button"
+                        className="project-actions-trigger w-6 h-6 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenActionMenuId(openActionMenuId === project._id ? null : project._id);
+                        }}
+                        aria-label="Open project actions"
+                      >
+                        <FiMoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+
+                      {openActionMenuId === project._id && (
+                        <div className="project-actions-menu absolute right-0 top-7 w-36 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
+                          <button
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              handleArchiveClick(project);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                          >
+                            {project.status === "Archived" ? "Unarchive" : "Archive"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              handleDuplicateClick(project);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                          >
+                            Duplicate
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              handleDeleteClick(project);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Top Panel (pl-11 pr-9 check/icon spaces, min-h-[72px] with top tint) */}
+                    <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-11 pr-9 flex items-center`}>
+                      <div className="flex items-center justify-between gap-2.5 text-left w-full">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate" title={project.title}>{project.title}</h3>
+                          <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-355 truncate">{project.category}</p>
                         </div>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] ${getStatusColor(project.status === "Published" ? "Active" : project.status)}`}>
-                        {project.status === "Published" ? "Active" : project.status}
-                      </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 py-3 border-t border-black/10 dark:border-white/10">
-                      <div>
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Duration</p>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{project.duration_days} days</p>
+                    {/* Bottom Panel */}
+                    <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <span>Duration</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 truncate">{project.duration_days} days</span>
                       </div>
-                      <div>
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Students</p>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">{project.assignedStudentsCount || 0}</p>
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <span>Students</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{project.assignedStudentsCount || 0}</span>
                       </div>
-                      <div className="col-span-2 mt-1">
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Created</p>
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-0.5">
-                          {new Date(project.createdAt).toLocaleDateString('en-GB')}
-                        </p>
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <span>Created</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{new Date(project.createdAt).toLocaleDateString('en-GB')}</span>
                       </div>
+                      <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                        <span>Status</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{project.status === "Published" ? "Active" : project.status}</span>
+                      </div>
+
+                      <button
+                        onClick={() => navigate(`/admin/projects/edit/${project._id}`)}
+                        className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        View Project
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 mt-3">
-                    <button
-                      onClick={() => navigate(`/admin/projects/edit/${project._id}`)}
-                      className="flex-1 bg-[#001b54] text-white hover:bg-[#0a2764] h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all"
-                    >
-                      <FiExternalLink className="w-3.5 h-3.5" />
-                      View
-                    </button>
-                    
-                    <button
-                      onClick={() => handleArchiveClick(project)}
-                      className={`h-8 w-8 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] inline-flex items-center justify-center transition-all shadow-sm ${
-                        project.status === "Archived"
-                          ? "text-orange-500 hover:text-orange-600 hover:bg-orange-500/10 border-orange-500/20"
-                          : "text-slate-400 hover:text-orange-500 hover:bg-orange-500/5"
-                      }`}
-                      title={project.status === "Archived" ? "Unarchive Project" : "Archive Project"}
-                    >
-                      <FiArchive className="w-3.5 h-3.5" />
-                    </button>
-                    
-                    <button
-                      onClick={() => handleDuplicateClick(project)}
-                      className="h-8 w-8 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] inline-flex items-center justify-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 transition-all shadow-sm"
-                      title="Duplicate Project"
-                    >
-                      <FiCopy className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteClick(project)}
-                      className="h-8 w-8 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] inline-flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm"
-                      title="Delete Project"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )})}
+                  </article>
+                )})}
             </div>
           )}
 

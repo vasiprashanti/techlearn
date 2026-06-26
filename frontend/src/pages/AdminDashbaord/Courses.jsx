@@ -376,18 +376,18 @@ export default function Courses() {
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
             ) : (
-              <div className="overflow-x-auto overflow-y-hidden question-catalog-scroll mt-4 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-white/5">
+              <div className="overflow-auto max-h-[78vh] rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] backdrop-blur-xl">
                 <table className="w-full min-w-[900px] table-fixed">
-                  <thead>
-                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[260px]">Course Title</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[420px]">Description</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[140px]">Level</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Topics</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Actions</th>
+                  <thead className="border-b-2 border-black/12 dark:border-white/12">
+                    <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[260px]">Course Title</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">Description</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-32">Level</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-28">Topics</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-28">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-black/10 dark:divide-white/10">
+                  <tbody className="border-t border-black/20 dark:border-white/10">
                     {courses.filter((course) => {
                       const query = searchQuery.toLowerCase();
                       return (
@@ -396,11 +396,11 @@ export default function Courses() {
                         course.level.toLowerCase().includes(query)
                       );
                     }).map((course) => (
-                      <tr key={course._id} className="hover:bg-white/30 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-3 text-sm font-semibold text-black dark:text-white truncate" title={course.title}>
+                      <tr key={course._id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-900 dark:text-white truncate" title={course.title}>
                           {course.title}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 truncate" title={course.description}>
+                        <td className="px-4 py-3 text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
                           {course.description || "No description provided."}
                         </td>
                         <td className="px-4 py-3 text-xs">
@@ -408,21 +408,21 @@ export default function Courses() {
                             {course.level || "Beginner"}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 font-medium">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-500 dark:text-white/60">
                           {course.topics}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             <button
                               onClick={() => handleEdit(course)}
-                              className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 transition"
+                              className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
                               title="Edit Topics"
                             >
                               <FiEdit2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(course)}
-                              className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 transition"
+                              className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400"
                               title="Delete Course"
                             >
                               <FiTrash2 className="w-3.5 h-3.5" />

@@ -113,39 +113,11 @@ const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInput
 };
 
 const getBatchTheme = (status) => {
-  switch (status) {
-    case 'Active':
-      return {
-        topTint: 'bg-[#d2e9e5] dark:bg-[#204744]',
-        iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]',
-        iconColor: 'text-[#129775] dark:text-emerald-300',
-      };
-    case 'Draft':
-      return {
-        topTint: 'bg-[#d9ddee] dark:bg-[#223454]',
-        iconBg: 'bg-[#e6ebf5] dark:bg-[#2f4466]',
-        iconColor: 'text-[#3c83f6] dark:text-blue-300',
-      };
-    case 'Completed':
-    case 'Expired':
-      return {
-        topTint: 'bg-[#efe6d2] dark:bg-[#4f4228]',
-        iconBg: 'bg-[#f8f0df] dark:bg-[#625133]',
-        iconColor: 'text-[#d17d00] dark:text-[#fcd34d]',
-      };
-    case 'Archived':
-      return {
-        topTint: 'bg-slate-100 dark:bg-slate-800/50',
-        iconBg: 'bg-slate-200 dark:bg-slate-700',
-        iconColor: 'text-slate-500 dark:text-slate-400',
-      };
-    default:
-      return {
-        topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]',
-        iconBg: 'bg-[#e7f0f6] dark:bg-[#30495f]',
-        iconColor: 'text-[#3c83f6] dark:text-blue-300',
-      };
-  }
+  return {
+    topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]',
+    iconBg: 'bg-[#e7f0f6] dark:bg-[#30495f]',
+    iconColor: 'text-[#3c83f6] dark:text-blue-300',
+  };
 };
 
 const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle }) => {
@@ -215,29 +187,26 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
 
       {/* Top Panel (highlighted/green sections of the cards) */}
       {/* pl-10 to account for checkbox on the left */}
-      <div className={`px-3 pt-3 pb-2.5 min-h-[58px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-10 pr-9 flex items-center`}>
+      <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-11 pr-9 flex items-center`}>
         <div className="flex items-center justify-between gap-2.5 text-left w-full">
           <div className="flex-1 min-w-0">
             <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate">{batch.name}</h3>
-            <p className="mt-0.5 text-[9px] md:text-[10px] leading-tight text-slate-500 dark:text-slate-350 truncate">{batch.college || 'Unassigned College'}</p>
-          </div>
-          <div className={`h-7 w-7 rounded-lg flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
-            <FiBookOpen className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-350 truncate">{batch.college || 'Unassigned College'}</p>
           </div>
         </div>
       </div>
 
       {/* Bottom Panel */}
-      <div className="px-3 py-2.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-1.5 text-left">
-        <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-550 dark:text-slate-400">
+      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
           <span>Active Track</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{batch.track || 'No Track'}</span>
         </div>
-        <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-550 dark:text-slate-400">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
           <span>Students</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{batch.students || 0}</span>
         </div>
-        <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-550 dark:text-slate-400">
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
           <span>Status</span>
           <span className="font-semibold text-slate-800 dark:text-slate-200">{batch.status || 'Draft'}</span>
         </div>
@@ -245,7 +214,7 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
         {/* View Batch Button */}
         <button
           onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
-          className="mt-2 w-full h-8 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+          className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
         >
           View Batch
         </button>

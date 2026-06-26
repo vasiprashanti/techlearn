@@ -807,89 +807,79 @@ const AdminTopicsList = () => {
                   No curriculum topics configured yet.
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  {slots.map(({ slotIndex, topic }) => {
-                    if (topic) {
-                      return (
-                        <div 
-                          key={topic.topicId} 
-                          className="bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/10 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between transition hover:border-[#3C83F6]/50 gap-4"
-                        >
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:text-[#8fd9ff] flex items-center justify-center font-bold text-sm shrink-0">
-                              {slotIndex}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-semibold text-black dark:text-white line-clamp-1" title={topic.topicName}>
-                                {topic.topicName}
-                              </h4>
-                              <p className="text-xs text-slate-400 dark:text-slate-300 mt-0.5 truncate" title={topic.topicSlug}>
-                                Slug: {topic.topicSlug}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-black/5 dark:border-white/5">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-300">
-                              <FiFileText className="w-3.5 h-3.5 text-[#3C83F6]" />
-                              <span>Notes configured</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => handleEditClick(topic)}
-                                className="h-9 w-9 rounded-xl inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] transition text-slate-500 dark:text-slate-400"
-                                title="Edit Topic Content"
-                              >
-                                <FiEdit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(topic)}
-                                className="h-9 w-9 rounded-xl inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] transition text-slate-500 dark:text-slate-400"
-                                title="Delete Topic"
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div 
-                          key={`empty-${slotIndex}`} 
-                          className="border border-dashed border-black/20 dark:border-white/20 hover:border-[#3C83F6]/50 bg-black/[0.01] dark:bg-white/[0.01] rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between transition gap-4"
-                        >
-                          <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center font-bold text-sm shrink-0">
-                              {slotIndex}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-semibold text-slate-400 dark:text-slate-500">
-                                No topic configured
-                              </h4>
-                              <p className="text-xs text-slate-400/70 dark:text-slate-500/70 mt-0.5">
-                                Click configure to add notes and quiz worksheets.
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <button
-                            onClick={() => {
-                              setSelectedSlotIndex(slotIndex);
-                              setAddTopicForm({ topicName: "", notesFile: null, mcqFile: null });
-                              setAddError("");
-                              setAddSuccess("");
-                              setShowAddModal(true);
-                            }}
-                            className="inline-flex items-center justify-center gap-1.5 py-2.5 px-5 bg-[#3C83F6]/10 hover:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-[#8fd9ff] rounded-xl text-xs font-semibold transition sm:w-auto w-full"
-                          >
-                            <FiPlus className="w-3.5 h-3.5" />
-                            Configure Topic
-                          </button>
-                        </div>
-                      );
-                    }
-                  })}
+                <div className="overflow-auto max-h-[78vh] rounded-2xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] backdrop-blur-xl">
+                  <table className="w-full min-w-[900px] table-fixed">
+                    <thead className="border-b-2 border-black/12 dark:border-white/12">
+                      <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur">
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-16">#</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[300px]">Topic Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60">Slug</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[200px]">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 w-[150px]">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="border-t border-black/20 dark:border-white/10">
+                      {slots.map(({ slotIndex, topic }) => {
+                        if (topic) {
+                          return (
+                            <tr key={topic.topicId} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
+                              <td className="px-4 py-3 text-sm font-semibold text-black/55 dark:text-white/60">{slotIndex}</td>
+                              <td className="px-4 py-3 text-sm font-semibold truncate text-slate-900 dark:text-white" title={topic.topicName}>{topic.topicName}</td>
+                              <td className="px-4 py-3 text-xs truncate text-slate-500 dark:text-white/60" title={topic.topicSlug}>{topic.topicSlug}</td>
+                              <td className="px-4 py-3 text-xs">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-350">
+                                  <FiFileText className="w-3.5 h-3.5 text-[#3C83F6]" />
+                                  <span>Notes configured</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleEditClick(topic)}
+                                    className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+                                    title="Edit Topic Content"
+                                  >
+                                    <FiEdit2 className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(topic)}
+                                    className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 text-slate-500 dark:text-slate-400 border border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+                                    title="Delete Topic"
+                                  >
+                                    <FiTrash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        } else {
+                          return (
+                            <tr key={`empty-${slotIndex}`} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
+                              <td className="px-4 py-3 text-sm font-semibold text-slate-400 dark:text-slate-500">{slotIndex}</td>
+                              <td className="px-4 py-3 text-sm font-medium text-slate-400 dark:text-slate-500 italic" colSpan={3}>
+                                No topic configured. Click configure to add notes and quiz worksheets.
+                              </td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSlotIndex(slotIndex);
+                                    setAddTopicForm({ topicName: "", notesFile: null, mcqFile: null });
+                                    setAddError("");
+                                    setAddSuccess("");
+                                    setShowAddModal(true);
+                                  }}
+                                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3.5 bg-[#3C83F6]/10 hover:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-[#8fd9ff] rounded-lg text-xs font-semibold transition"
+                                >
+                                  <FiPlus className="w-3 h-3" />
+                                  Configure
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        }
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>

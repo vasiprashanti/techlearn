@@ -6,7 +6,7 @@ import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/Loader/Loader3D';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyTrackTemplates } from '../../data/adminEmptyStates';
-import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiCopy } from 'react-icons/fi';
+import { FiSearch, FiEdit2, FiTrash2, FiPlus, FiCode, FiDatabase, FiCpu, FiArrowUp, FiArrowDown, FiClock, FiChevronDown, FiGlobe, FiTerminal, FiBarChart2, FiCopy, FiMoreHorizontal } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 
 // --- Mock Data ---
@@ -80,6 +80,17 @@ export default function TrackTemplate() {
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const searchInputRef = useRef(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleGlobalClick = (event) => {
+      if (!event.target.closest('.track-actions-trigger') && !event.target.closest('.track-actions-menu')) {
+        setOpenActionMenuId(null);
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   const handleSelectToggle = (id) => {
     setSelectedTrackIds((prev) =>
@@ -736,81 +747,110 @@ export default function TrackTemplate() {
                 No templates match your search
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {filteredTracks.map((track) => {
                   const templateId = track.id || track._id;
                   const Icon = track.icon;
                   const isSelected = selectedTrackIds.includes(templateId);
-                  const statusBadgeClass =
-                    track.status === 'Active'
-                      ? 'bg-emerald-600 text-white'
-                      : track.status === 'Draft'
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-slate-600 text-white';
+                  const trackTheme = { topTint: 'bg-[#d8e6ef] dark:bg-[#24384e]' };
                   return (
-                    <div key={templateId || track.name} className={`relative rounded-2xl border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white dark:bg-[#0e2148] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-250 overflow-hidden`}>
-                      <div className="absolute left-3.5 top-3.5 z-20">
+                    <div key={templateId || track.name} className={`relative rounded-xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+                      <div className="absolute left-3 top-2.5 z-20">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectToggle(templateId)}
-                          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                          className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
                         />
                       </div>
 
-                      <div className="p-5 pl-11">
-                        <div className="flex items-start justify-between gap-3.5">
-                          <div className="w-12 h-12 rounded-2xl bg-[#e3edfb] dark:bg-[#1f365c] text-[#2f73e0] dark:text-[#9dc4ff] flex items-center justify-center shrink-0 border border-black/5 dark:border-white/10 shadow-sm">
-                            <Icon className="w-5 h-5" />
+                      {/* Action Menu (3 dots) */}
+                      <div className={`absolute right-2 top-2 z-20`}>
+                        <button
+                          type="button"
+                          className="track-actions-trigger w-6 h-6 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setOpenActionMenuId(openActionMenuId === templateId ? null : templateId);
+                          }}
+                          aria-label="Open track actions"
+                        >
+                          <FiMoreHorizontal className="w-3.5 h-3.5" />
+                        </button>
+
+                        {openActionMenuId === templateId && (
+                          <div className="track-actions-menu absolute right-0 top-7 w-36 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                openEditTemplateModal(track);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                              disabled={!templateId}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                duplicateTemplate(templateId);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                              disabled={!templateId}
+                            >
+                              Duplicate
+                            </button>
+                            <button
+                              onClick={() => {
+                                setOpenActionMenuId(null);
+                                setDeleteTarget(track);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                              disabled={!templateId}
+                            >
+                              Delete
+                            </button>
                           </div>
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${statusBadgeClass}`}>
-                            {track.status}
-                          </span>
+                        )}
+                      </div>
+
+                      {/* Top Panel (highlighted/green sections of the cards) */}
+                      {/* pl-11 to account for checkbox on the left */}
+                      <div className={`px-4 pt-4 pb-3.5 min-h-[72px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-11 pr-9 flex items-center`}>
+                        <div className="flex items-center justify-between gap-2.5 text-left w-full">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate">{track.name}</h3>
+                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-350 truncate">{track.category || 'Daily Challenge'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Panel */}
+                      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                          <span>Total Days</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.totalDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                          <span>Questions</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.questionsAssigned}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
+                          <span>Status</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{track.status}</span>
                         </div>
 
-                        <div className="mt-3 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-[1.02rem] font-bold tracking-tight text-[#0f172a] dark:text-white truncate">{track.name}</h3>
-                            <span className="shrink-0 text-[#6f86a3] dark:text-[#9bb8de]">|</span>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5e7595] dark:text-[#9bb8de] truncate">{track.category}</p>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-[#5d6f86] dark:text-slate-300 line-clamp-2">{track.description || 'No description available.'}</p>
-                        </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-2.5">
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Total Days</p>
-                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
-                          </div>
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Questions</p>
-                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.questionsAssigned}</p>
-                          </div>
-                        </div>
-
-                      {/* Actions row */}
-                        <div className="flex items-center gap-2 mt-4">
                         <button
                           onClick={() => {
                             if (!templateId) return;
                             navigate(`/track-templates/${templateId}`);
                           }}
                           disabled={!templateId}
-                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
+                          className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-[#06224d] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
                         >
                           View Tasks
                         </button>
-                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiEdit2 className="w-[15px] h-[15px]" />
-                        </button>
-                        <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiCopy className="w-[15px] h-[15px]" />
-                        </button>
-                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiTrash2 className="w-[15px] h-[15px]" />
-                        </button>
                       </div>
-                    </div>
                     </div>
                   );
                 })}

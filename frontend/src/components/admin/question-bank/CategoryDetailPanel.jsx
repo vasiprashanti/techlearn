@@ -156,22 +156,40 @@ export const CategoryDetailPanel = ({
 
       {activeTab === 'questions' ? (
       <section className="bg-white/70 dark:bg-[#0f1f43]/90 backdrop-blur-xl border border-black/10 dark:border-white/15 rounded-2xl p-4 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 min-w-0">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-0 max-w-md rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Search and Action Buttons */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="relative w-full lg:max-w-md">
+              <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-555 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search by prompt, topic, tag, or track..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 border-0 bg-transparent pl-10 pr-3.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 focus:outline-none"
+                className="w-full h-10 border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 rounded-xl pl-10 pr-3.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
               />
             </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <button
+                onClick={onAddQuestion}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 h-10 px-5 rounded-xl bg-[#3C83F6] border border-[#3C83F6]/20 text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap"
+              >
+                <FiPlus className="w-4 h-4" />
+                Add Question
+              </button>
+              <button
+                onClick={onBulkAddQuestions}
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 h-10 px-5 rounded-xl border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap"
+              >
+                Bulk Add Questions
+              </button>
+            </div>
+          </div>
 
+          {/* Bottom Row: Filters */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Difficulty Filter Dropdown */}
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-slate-200 dark:hover:bg-black/40 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[140px]">
+            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
               <select
                 value={difficultyFilter}
                 onChange={(e) => setDifficultyFilter(e.target.value)}
@@ -182,10 +200,11 @@ export const CategoryDetailPanel = ({
                 <option className={dropdownOptionClass}>Medium</option>
                 <option className={dropdownOptionClass}>Hard</option>
               </select>
-              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-550" />
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             </div>
 
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-slate-200 dark:hover:bg-black/40 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[140px]">
+            {/* Status Filter */}
+            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -199,7 +218,8 @@ export const CategoryDetailPanel = ({
               <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             </div>
 
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-slate-200 dark:hover:bg-black/40 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[140px]">
+            {/* Tag Filter */}
+            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[140px] flex-1 sm:flex-initial">
               <select
                 value={tagFilter}
                 onChange={(e) => setTagFilter(e.target.value)}
@@ -211,7 +231,8 @@ export const CategoryDetailPanel = ({
               <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             </div>
 
-            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-slate-100 dark:bg-black/25 shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-slate-200 dark:hover:bg-black/40 transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35 min-w-[150px]">
+            {/* Sort Filter */}
+            <div className="relative rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-black/5 dark:hover:bg-white/10 transition-all min-w-[150px] flex-1 sm:flex-initial">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -224,22 +245,6 @@ export const CategoryDetailPanel = ({
               </select>
               <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={onAddQuestion}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white px-5 text-sm font-semibold shadow-sm hover:shadow transition-all"
-            >
-              <FiPlus className="w-4 h-4" />
-              Add Question
-            </button>
-            <button
-              onClick={onBulkAddQuestions}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#3C83F6]/25 bg-[#3C83F6]/10 text-[#3C83F6] hover:bg-[#3C83F6]/15 dark:text-[#bceaff] dark:bg-white/10 dark:hover:bg-white/15 px-5 text-sm font-semibold shadow-sm hover:shadow transition-all"
-            >
-              Bulk Add Questions
-            </button>
           </div>
         </div>
 
