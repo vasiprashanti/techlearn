@@ -741,77 +741,85 @@ export default function TrackTemplate() {
                   const templateId = track.id || track._id;
                   const Icon = track.icon;
                   const isSelected = selectedTrackIds.includes(templateId);
-                  const statusBadgeClass =
-                    track.status === 'Active'
-                      ? 'bg-emerald-600 text-white'
-                      : track.status === 'Draft'
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-slate-600 text-white';
+                  const trackTheme = track.status === 'Active'
+                    ? { topTint: 'bg-[#d2e9e5]/40 dark:bg-[#204744]/30', iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]', iconColor: 'text-[#129775] dark:text-emerald-300' }
+                    : track.status === 'Draft'
+                      ? { topTint: 'bg-[#d9ddee]/40 dark:bg-[#223454]/30', iconBg: 'bg-[#e6ebf5] dark:bg-[#2f4466]', iconColor: 'text-[#3c83f6] dark:text-blue-300' }
+                      : { topTint: 'bg-slate-100 dark:bg-slate-800/50', iconBg: 'bg-slate-200 dark:bg-slate-700', iconColor: 'text-slate-550 dark:text-slate-400' };
                   return (
-                    <div key={templateId || track.name} className={`relative rounded-2xl border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white dark:bg-[#0e2148] shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-250 overflow-hidden`}>
-                      <div className="absolute left-3.5 top-3.5 z-20">
+                    <article key={templateId || track.name} className={`relative rounded-2xl overflow-hidden border ${isSelected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/10'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left`}>
+                      {/* Checkbox - Aligned to top-left */}
+                      <div className="absolute left-4 top-3.5 z-20">
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleSelectToggle(templateId)}
-                          className="w-4.5 h-4.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
+                          className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white/70 dark:bg-black/30"
                         />
                       </div>
 
-                      <div className="p-5 pl-11">
-                        <div className="flex items-start justify-between gap-3.5">
-                          <div className="w-12 h-12 rounded-2xl bg-[#e3edfb] dark:bg-[#1f365c] text-[#2f73e0] dark:text-[#9dc4ff] flex items-center justify-center shrink-0 border border-black/5 dark:border-white/10 shadow-sm">
-                            <Icon className="w-5 h-5" />
+                      {/* Top Panel */}
+                      <div className={`px-4 pt-4 pb-3.5 min-h-[76px] border-b border-black/10 dark:border-white/15 ${trackTheme.topTint} pl-12 pr-3 flex items-center`}>
+                        <div className="flex items-center justify-between gap-2.5 text-left w-full">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm md:text-[15px] leading-snug font-bold text-slate-900 dark:text-white truncate">{track.name}</h3>
+                            <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-350 truncate">{track.category}</p>
                           </div>
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold leading-none ${statusBadgeClass}`}>
+                          <div className={`h-8.5 w-8.5 rounded-xl flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${trackTheme.iconBg}`}>
+                            <Icon className={`w-4.5 h-4.5 ${trackTheme.iconColor}`} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Panel */}
+                      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
+                        <p className="text-[11px] text-[#5d6f86] dark:text-slate-350 line-clamp-2 h-9 leading-snug">{track.description || 'No description available.'}</p>
+                        
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400 mt-1">
+                          <span>Total Days</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.totalDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
+                          <span>Questions</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{track.questionsAssigned}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 text-[11px] md:text-xs text-slate-555 dark:text-slate-400">
+                          <span>Status</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
+                            track.status === 'Active'
+                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300 font-semibold'
+                              : track.status === 'Draft'
+                                ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300 font-semibold'
+                                : 'bg-slate-100 text-slate-650 dark:bg-slate-800/40 dark:text-slate-300 font-semibold'
+                          }`}>
                             {track.status}
                           </span>
                         </div>
 
-                        <div className="mt-3 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-[1.02rem] font-bold tracking-tight text-[#0f172a] dark:text-white truncate">{track.name}</h3>
-                            <span className="shrink-0 text-[#6f86a3] dark:text-[#9bb8de]">|</span>
-                            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#5e7595] dark:text-[#9bb8de] truncate">{track.category}</p>
-                          </div>
-                          <p className="mt-1.5 text-xs leading-relaxed text-[#5d6f86] dark:text-slate-300 line-clamp-2">{track.description || 'No description available.'}</p>
+                        {/* Actions row */}
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <button
+                            onClick={() => {
+                              if (!templateId) return;
+                              navigate(`/track-templates/${templateId}`);
+                            }}
+                            disabled={!templateId}
+                            className="flex-1 h-9 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-[12px] font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
+                          >
+                            View Tasks
+                          </button>
+                          <button onClick={() => openEditTemplateModal(track)} className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 transition-colors" disabled={!templateId}>
+                            <FiEdit2 className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/5 transition-colors" disabled={!templateId}>
+                            <FiCopy className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setDeleteTarget(track)} className="h-9 w-9 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm" disabled={!templateId}>
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
                         </div>
-
-                        <div className="mt-4 grid grid-cols-2 gap-2.5">
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Total Days</p>
-                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.totalDays}</p>
-                          </div>
-                          <div className="rounded-xl border border-black/5 dark:border-white/10 bg-[#edf3fb] dark:bg-white/10 px-3.5 py-2.5">
-                            <p className="text-[11px] text-[#667b96] dark:text-slate-300">Questions</p>
-                            <p className="mt-0.5 text-base font-semibold text-[#0f172a] dark:text-white">{track.questionsAssigned}</p>
-                          </div>
-                        </div>
-
-                      {/* Actions row */}
-                        <div className="flex items-center gap-2 mt-4">
-                        <button
-                          onClick={() => {
-                            if (!templateId) return;
-                            navigate(`/track-templates/${templateId}`);
-                          }}
-                          disabled={!templateId}
-                          className="flex-1 h-10 inline-flex items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white transition-colors whitespace-nowrap"
-                        >
-                          View Tasks
-                        </button>
-                        <button onClick={() => openEditTemplateModal(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiEdit2 className="w-[15px] h-[15px]" />
-                        </button>
-                        <button onClick={() => duplicateTemplate(templateId)} title="Duplicate template" className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiCopy className="w-[15px] h-[15px]" />
-                        </button>
-                        <button onClick={() => setDeleteTarget(track)} className="h-10 w-10 inline-flex items-center justify-center rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#16294d] text-black/70 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors" disabled={!templateId}>
-                          <FiTrash2 className="w-[15px] h-[15px]" />
-                        </button>
                       </div>
-                    </div>
-                    </div>
+                    </article>
                   );
                 })}
               </div>
