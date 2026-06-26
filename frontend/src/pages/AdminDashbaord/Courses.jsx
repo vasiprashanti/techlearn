@@ -5,6 +5,29 @@ import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
 import { FiChevronDown, FiPlus, FiTrash2, FiEdit2, FiBookOpen, FiSearch } from "react-icons/fi";
 
+const getCourseTheme = (level) => {
+  const lvl = (level || '').toLowerCase();
+  if (lvl.includes('advanced')) {
+    return {
+      topTint: 'bg-purple-100/35 dark:bg-purple-950/20',
+      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
+      iconColor: 'text-purple-600 dark:text-purple-300',
+    };
+  } else if (lvl.includes('intermediate')) {
+    return {
+      topTint: 'bg-amber-100/35 dark:bg-amber-950/20',
+      iconBg: 'bg-amber-100 dark:bg-amber-900/50',
+      iconColor: 'text-amber-600 dark:text-amber-300',
+    };
+  } else {
+    return {
+      topTint: 'bg-[#d2e9e5]/40 dark:bg-[#204744]/30',
+      iconBg: 'bg-[#e4f4f1] dark:bg-[#285954]',
+      iconColor: 'text-[#129775] dark:text-emerald-300',
+    };
+  }
+};
+
 export default function Courses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,63 +399,61 @@ export default function Courses() {
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
             ) : (
-              <div className="overflow-x-auto overflow-y-hidden question-catalog-scroll mt-4 rounded-xl border border-black/10 dark:border-white/15 bg-white/70 dark:bg-white/5">
-                <table className="w-full min-w-[900px] table-fixed">
-                  <thead>
-                    <tr className="border-b border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[260px]">Course Title</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[420px]">Description</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[140px]">Level</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Topics</th>
-                      <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-black/50 dark:text-white/60 w-[120px]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-black/10 dark:divide-white/10">
-                    {courses.filter((course) => {
-                      const query = searchQuery.toLowerCase();
-                      return (
-                        course.title.toLowerCase().includes(query) ||
-                        course.description.toLowerCase().includes(query) ||
-                        course.level.toLowerCase().includes(query)
-                      );
-                    }).map((course) => (
-                      <tr key={course._id} className="hover:bg-white/30 dark:hover:bg-white/[0.02] transition-colors">
-                        <td className="px-4 py-3 text-sm font-semibold text-black dark:text-white truncate" title={course.title}>
-                          {course.title}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 truncate" title={course.description}>
-                          {course.description || "No description provided."}
-                        </td>
-                        <td className="px-4 py-3 text-xs">
-                          <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-xs font-semibold text-[#0f2b54] dark:text-blue-200">
-                            {course.level || "Beginner"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 font-medium">
-                          {course.topics}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleEdit(course)}
-                              className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 transition"
-                              title="Edit Topics"
-                            >
-                              <FiEdit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(course)}
-                              className="h-8 w-8 rounded-full inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10 transition"
-                              title="Delete Course"
-                            >
-                              <FiTrash2 className="w-3.5 h-3.5" />
-                            </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">
+                {courses.filter((course) => {
+                  const query = searchQuery.toLowerCase();
+                  return (
+                    course.title.toLowerCase().includes(query) ||
+                    course.description.toLowerCase().includes(query) ||
+                    course.level.toLowerCase().includes(query)
+                  );
+                }).map((course) => {
+                  const theme = getCourseTheme(course.level);
+                  return (
+                    <article key={course._id} className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
+                      {/* Top Panel */}
+                      <div className={`px-3 pt-3 pb-2.5 min-h-[58px] border-b border-black/10 dark:border-white/15 ${theme.topTint} pl-3 pr-3 flex items-center`}>
+                        <div className="flex items-center justify-between gap-2.5 text-left w-full">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate" title={course.title}>{course.title}</h3>
+                            <p className="mt-0.5 text-[9px] md:text-[10px] leading-tight text-slate-500 dark:text-slate-355 truncate">{course.level || 'Beginner'}</p>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className={`h-7 w-7 rounded-lg flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 ${theme.iconBg}`}>
+                            <FiBookOpen className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom Panel */}
+                      <div className="px-3 py-2.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-1.5 text-left">
+                        <p className="text-[11px] text-[#5d6f86] dark:text-slate-350 line-clamp-2 h-8 leading-tight">{course.description || 'No description provided.'}</p>
+                        
+                        <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-555 dark:text-slate-400 mt-2">
+                          <span>Topics</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{course.topics}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <button
+                            onClick={() => handleEdit(course)}
+                            className="flex-1 h-8 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <FiEdit2 className="w-3 h-3" />
+                            Edit Topics
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(course)}
+                            className="h-8 w-8 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 transition-all shadow-sm inline-flex items-center justify-center"
+                            title="Delete Course"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

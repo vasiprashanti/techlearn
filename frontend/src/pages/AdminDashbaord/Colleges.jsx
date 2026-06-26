@@ -479,101 +479,97 @@ const Colleges = () => {
             </section>
 
             {/* College Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {filteredColleges.map((college) => {
                 const activityRate = college.totalStudents > 0 ? Math.round((college.activeStudents / college.totalStudents) * 100) : 0;
                 return (
-                  <div key={college.id} className="bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl border border-black/10 dark:border-white/15 p-3.5 rounded-xl flex flex-col gap-3 h-full hover:bg-white dark:hover:bg-[#162a52] transition-colors group shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] text-left">
+                  <article key={college.id} className="relative rounded-xl overflow-hidden border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group text-left">
+                    
+                    {/* Action Menu (More details) */}
+                    <div className="absolute right-2 top-2 z-20 college-actions-container">
+                      <button
+                        type="button"
+                        className="college-actions-trigger w-6 h-6 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenActionMenuId((current) => (current === college.id ? null : college.id));
+                        }}
+                      >
+                        <FiMoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
 
-                    <div className="flex items-start justify-between min-h-[34px]">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] flex items-center justify-center text-sm font-semibold border border-[#3C83F6]/20 dark:border-[#bceaff]/30 shadow-sm">
+                      {openActionMenuId === college.id && (
+                        <div className="college-actions-menu absolute right-0 top-7 w-36 rounded-xl border border-black/10 dark:border-white/15 bg-white/95 dark:bg-[#0f1f43] backdrop-blur-xl shadow-xl overflow-hidden z-20">
+                          <button
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              openEdit(college);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => {
+                              setOpenActionMenuId(null);
+                              setDeleteError('');
+                              setPendingDeleteCollege(college);
+                            }}
+                            className="w-full text-left px-3 py-2 text-xs transition-colors text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Top Panel */}
+                    <div className="px-3 pt-3 pb-2.5 min-h-[58px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30 pl-3 pr-9 flex items-center">
+                      <div className="flex items-center justify-between gap-2.5 text-left w-full">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white truncate">{college.name}</h3>
+                          <p className="mt-0.5 text-[9px] md:text-[10px] leading-tight text-slate-500 dark:text-slate-355 truncate">{college.code || college.id}</p>
+                        </div>
+                        <div className="h-7 w-7 rounded-lg flex items-center justify-center text-xs font-semibold bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] dark:from-[#bceaff] dark:to-[#8ddcff] text-white dark:text-[#06224d] shrink-0 shadow-sm border border-[#3C83F6]/20 dark:border-[#bceaff]/30">
                           {college.name.charAt(0)}
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-sm md:text-[15px] font-semibold text-black/90 dark:text-white break-words sm:truncate sm:max-w-[190px] leading-tight">{college.name}</h3>
-                          <p className="text-[11px] text-black/50 dark:text-white/50 mt-0.5 truncate">{college.code || college.id}</p>
-                        </div>
-                      </div>
-
-                      <div className="relative shrink-0 self-start">
-                        <button
-                          type="button"
-                          className="college-actions-trigger w-7 h-7 rounded-lg border border-transparent text-black/45 dark:text-white/45 hover:bg-black/5 dark:hover:bg-white/10 hover:border-black/10 dark:hover:border-white/10 transition-colors flex items-center justify-center"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setOpenActionMenuId((current) => (current === college.id ? null : college.id));
-                          }}
-                        >
-                          <FiMoreHorizontal className="w-4 h-4" />
-                        </button>
-
-                        {openActionMenuId === college.id && (
-                          <div className="college-actions-menu absolute right-0 top-11 w-36 rounded-xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#071739] backdrop-blur-xl shadow-xl z-20 overflow-hidden">
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                openEdit(college);
-                              }}
-                              className="w-full text-left px-3.5 py-2.5 text-sm text-black/75 dark:text-white/80 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => {
-                                setOpenActionMenuId(null);
-                                setDeleteError('');
-                                setPendingDeleteCollege(college);
-                              }}
-                              className="w-full text-left px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="bg-white/70 dark:bg-white/5 rounded-xl p-2.5 border border-black/10 dark:border-white/15 min-h-[56px] flex flex-col justify-center">
-                        <p className="text-[11px] text-black/55 dark:text-white/55">Avg Score</p>
-                        <p className={`text-lg font-semibold tracking-tight mt-0.5 ${college.avgScore >= 80 ? 'text-black dark:text-white' : college.avgScore > 0 ? 'text-amber-500' : 'text-black/20 dark:text-white/20'}`}>
+                    {/* Bottom Panel */}
+                    <div className="px-3 py-2.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-1.5 text-left">
+                      <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-555 dark:text-slate-400">
+                        <span>Avg Score</span>
+                        <span className={`font-semibold tracking-tight ${college.avgScore >= 80 ? 'text-slate-800 dark:text-slate-200' : college.avgScore > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-slate-550'}`}>
                           {college.avgScore}%
-                        </p>
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-[10px] md:text-[11px] text-slate-555 dark:text-slate-400">
+                        <span>Activity Rate</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">
+                          {college.activeStudents} / {college.totalStudents} ({activityRate}%)
+                        </span>
                       </div>
 
-                      <div className="bg-white/70 dark:bg-white/5 rounded-xl p-2.5 border border-black/10 dark:border-white/15 min-h-[56px] flex flex-col justify-center">
-                        <p className="text-[11px] text-black/55 dark:text-white/55">Activity Rate</p>
-                        <p className="text-base font-semibold tracking-tight mt-0.5 text-black dark:text-white">
-                          {college.activeStudents} / {college.totalStudents}
-                          <span className="text-xs font-medium text-black/50 dark:text-white/50 ml-1">({activityRate}%)</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-auto">
+                      {/* View College Button */}
                       <button
                         onClick={() => navigate(`/colleges/${college.id}`, { state: { college } })}
-                        className="w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold tracking-tight flex items-center justify-center gap-1.5 transition-colors"
+                        className="mt-2 w-full h-8 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
                       >
-                        View College
-                        <FiArrowUpRight className="w-4 h-4" />
+                        View College <FiArrowUpRight className="w-3 h-3" />
                       </button>
                     </div>
-                  </div>
+                  </article>
                 );
               })}
             </div>
-
-            </>
-            )}
-          </div>
-        </main>
-      </div>
-    </>
-  );
+          </>
+          )}
+        </div>
+      </main>
+    </div>
+  </>
+);
 };
 
 export default Colleges;
-
-
