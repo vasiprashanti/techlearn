@@ -310,6 +310,20 @@ export default function Dashboard() {
       });
   }, [dailyTasks]);
 
+  const customTaskProgress = useMemo(() => {
+    if (groupedTasks.length === 0) return 0;
+    const weightPerGroup = 100 / groupedTasks.length;
+    let totalProgress = 0;
+    groupedTasks.forEach((group) => {
+      const totalQ = group.questions.length;
+      if (totalQ > 0) {
+        const completedQ = group.questions.filter((q) => q.completed).length;
+        totalProgress += (completedQ / totalQ) * weightPerGroup;
+      }
+    });
+    return Math.round(totalProgress);
+  }, [groupedTasks]);
+
   const handleGroupClick = (group) => {
     if (isFullyCompleted) {
       setToast({
@@ -928,7 +942,7 @@ export default function Dashboard() {
                         <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                       </div>
                       <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
-                        {completedTasks}/{totalTasks}
+                        {groupedTasks.filter((g) => g.completed).length}/{groupedTasks.length}
                       </span>
                     </div>
 
@@ -987,13 +1001,13 @@ export default function Dashboard() {
                       <div className="flex justify-between items-center font-press-start mb-0.5">
                         <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
                         <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
-                          {totalTasks > 0 ? `${taskProgress}%` : "No tasks"}
+                          {groupedTasks.length > 0 ? `${customTaskProgress}%` : "No tasks"}
                         </span>
                       </div>
                       <div className="w-full h-1.5 bg-black/10 dark:bg-black/50 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-inner">
                         <div 
                           className="h-full rounded-full transition-all duration-500 ease-out bg-[#3C83F6] shadow-[0_0_6px_#3C83F6]"
-                          style={{ width: `${totalTasks > 0 ? taskProgress : 0}%` }}
+                          style={{ width: `${groupedTasks.length > 0 ? customTaskProgress : 0}%` }}
                         />
                       </div>
                     </div>
