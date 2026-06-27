@@ -646,27 +646,105 @@ const Batches = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Track Templates*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={createBatchForm.assignedTrackTemplateIds[0] || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setCreateBatchForm((prev) => ({
-                          ...prev,
-                          assignedTrackTemplateIds: val ? [val] : [],
-                          assignedTrackTemplateId: val || '',
-                        }));
-                      }}
-                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                  {/* Dropdown multi-select */}
+                  <div className="relative mt-1" ref={trackTemplateDropdownRef}>
+                    {/* Trigger button */}
+                    <button
+                      type="button"
+                      onClick={() => setTrackTemplateDropdownOpen((prev) => !prev)}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all"
                     >
-                      <option className={dropdownOptionClass} value="">No Track</option>
-                      {trackTemplates.map((template) => (
-                        <option className={dropdownOptionClass} key={template.id} value={template.id}>
-                          {template.name} ({template.trackType})
-                        </option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      <span className="flex-1 min-w-0">
+                        {(createBatchForm.assignedTrackTemplateIds || []).length === 0 ? (
+                          <span className="text-slate-500 dark:text-slate-400 text-xs">No track template</span>
+                        ) : (
+                          <span className="flex flex-wrap gap-1">
+                            {(createBatchForm.assignedTrackTemplateIds || []).map((id) => {
+                              const tpl = trackTemplates.find((t) => String(t.id) === String(id));
+                              return tpl ? (
+                                <span
+                                  key={id}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#3C83F6]/10 dark:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-blue-300"
+                                >
+                                  {tpl.name}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCreateBatchForm((prev) => {
+                                        const nextIds = (prev.assignedTrackTemplateIds || []).filter((i) => i !== id);
+                                        return { ...prev, assignedTrackTemplateIds: nextIds, assignedTrackTemplateId: nextIds[0] || '' };
+                                      });
+                                    }}
+                                    className="ml-0.5 hover:text-red-500 transition-colors"
+                                    aria-label={`Remove ${tpl.name}`}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ) : null;
+                            })}
+                          </span>
+                        )}
+                      </span>
+                      <FiChevronDown className={`shrink-0 w-4 h-4 text-black/45 dark:text-white/50 transition-transform duration-200 ${trackTemplateDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {/* Dropdown panel */}
+                    {trackTemplateDropdownOpen && (
+                      <div
+                        className="absolute z-[150] mt-1.5 w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] shadow-xl overflow-hidden"
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        {/* No template option */}
+                        <label className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-b border-black/5 dark:border-white/5">
+                          <input
+                            type="checkbox"
+                            checked={(createBatchForm.assignedTrackTemplateIds || []).length === 0}
+                            onChange={() => setCreateBatchForm((prev) => ({ ...prev, assignedTrackTemplateIds: [], assignedTrackTemplateId: '' }))}
+                            className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                          />
+                          <span className="italic">No track template</span>
+                        </label>
+
+                        {/* Active templates */}
+                        <div className="max-h-40 overflow-y-auto">
+                          {trackTemplates.length === 0 ? (
+                            <p className="px-3 py-3 text-xs text-black/40 dark:text-white/40">No active track templates available.</p>
+                          ) : (
+                            trackTemplates.map((template) => {
+                              const templateId = String(template.id);
+                              const isChecked = (createBatchForm.assignedTrackTemplateIds || []).includes(templateId);
+                              return (
+                                <label
+                                  key={templateId}
+                                  className={`flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium cursor-pointer transition-colors ${
+                                    isChecked
+                                      ? 'bg-[#3C83F6]/8 dark:bg-[#3C83F6]/15 text-[#3C83F6] dark:text-blue-300'
+                                      : 'text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(event) => setCreateBatchForm((prev) => {
+                                      const currentIds = prev.assignedTrackTemplateIds || [];
+                                      const nextIds = event.target.checked
+                                        ? [...currentIds, templateId]
+                                        : currentIds.filter((id) => id !== templateId);
+                                      return { ...prev, assignedTrackTemplateIds: nextIds, assignedTrackTemplateId: nextIds[0] || '' };
+                                    })}
+                                    className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                                  />
+                                  <span className="flex-1 min-w-0 truncate">{template.name}</span>
+                                  <span className="shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{template.trackType}</span>
+                                </label>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

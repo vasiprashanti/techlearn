@@ -163,20 +163,31 @@ const getTrackTemplatesForAssignment = async (templateIds = []) => {
   const templateById = new Map(templates.map((template) => [String(template._id), template]));
   return uniqueTemplateIds.map((templateId) => templateById.get(templateId)).filter(Boolean);
 };
-const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
+const applyTrackTemplatesToBatchStudents = async ({ batchId, trackTemplates = [], previousTrackTemplateIds = [], session }) => {
   const students = await Student.find({ batchId }).select("_id").session(session).lean();
   const studentIds = students.map((student) => student._id);
   if (!studentIds.length) return 0;
 
   const now = new Date();
-  if (previousTrackTemplateId && String(previousTrackTemplateId) !== String(trackTemplateId)) {
+  const templateIds = trackTemplates.map((t) => t._id);
+
+  // Deactivate any currently active assignments for these students that are NOT in the new templateIds list
+  await StudentTrackAssignment.updateMany(
+    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $nin: templateIds } },
+    { $set: { status: "Draft", deactivatedAt: now } },
+    { session }
+  );
+
+  // For each template in the new list, make sure students have it active
+  for (const template of trackTemplates) {
+    const trackTemplateId = template._id;
     await StudentTrackAssignment.bulkWrite(
       studentIds.map((studentId) => ({
         updateOne: {
-          filter: { studentId, trackTemplateId: previousTrackTemplateId },
+          filter: { studentId, trackTemplateId },
           update: {
-            $set: { batchId, status: "Draft", deactivatedAt: now },
-            $setOnInsert: { assignedAt: now, activatedAt: now },
+            $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
+            $setOnInsert: { assignedAt: now },
           },
           upsert: true,
         },
@@ -185,25 +196,10 @@ const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, pre
     );
   }
 
-  await StudentTrackAssignment.updateMany(
-    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $ne: trackTemplateId } },
-    { $set: { status: "Draft", deactivatedAt: now } },
-    { session }
-  );
-  await StudentTrackAssignment.bulkWrite(
-    studentIds.map((studentId) => ({
-      updateOne: {
-        filter: { studentId, trackTemplateId },
-        update: {
-          $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
-          $setOnInsert: { assignedAt: now },
-        },
-        upsert: true,
-      },
-    })),
-    { session, ordered: true }
-  );
-  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackName } }, { session });
+  // Update students' primaryTrack to show the active track names joined by comma
+  const trackNames = trackTemplates.map((t) => t.name).join(", ");
+  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackNames } }, { session });
+
   return studentIds.length;
 };
 
@@ -1462,12 +1458,11 @@ export const updateBatchAdmin = async (req, res) => {
           { $set: update },
           { new: true, runValidators: true, session }
         );
-        if (trackTemplateChanged && trackTemplate) {
-          reassignedStudents = await applyTrackTemplateToBatchStudents({
+        if (trackTemplateChanged && trackTemplates.length > 0) {
+          reassignedStudents = await applyTrackTemplatesToBatchStudents({
             batchId,
-            trackTemplateId: trackTemplate._id,
-            previousTrackTemplateId,
-            trackName: trackTemplate.name,
+            trackTemplates,
+            previousTrackTemplateIds: existingTemplateIds,
             session,
           });
         } else if (trackTemplateChanged) {
