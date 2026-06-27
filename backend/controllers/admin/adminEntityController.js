@@ -727,7 +727,9 @@ export const getBatchDetail = async (req, res) => {
       userIds.length
         ? DailyTaskAttempt.find({ userId: { $in: userIds }, batchId }).lean()
         : Promise.resolve([]),
-      UserProgress.find({}).select("userId courseXP exerciseXP projectXP").lean(),
+      userIds.length
+        ? UserProgress.find({ userId: { $in: userIds } }).select("userId courseXP exerciseXP projectXP").lean()
+        : Promise.resolve([]),
     ]);
 
     const mcqSubmissions = studentEmails.length
@@ -1191,7 +1193,17 @@ export const getBatchDetail = async (req, res) => {
     const inactiveCount = students.length - activeCount;
 
     const resolvedTracks = (() => {
-      const templateTracks = (trackTemplates || []).map((template) => {
+      const activeTemplateIds = new Set([
+        batch.assignedDailyTaskTrack?._id,
+        batch.assignedDailyChallengeTrack?._id,
+        batch.assignedTrackTemplate?._id,
+      ].filter(Boolean).map(id => String(id)));
+
+      const activeTemplates = (trackTemplates || []).filter((template) =>
+        activeTemplateIds.has(String(template._id))
+      );
+
+      const templateTracks = activeTemplates.map((template) => {
         let days = [];
         let questionsAssigned = 0;
         const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
@@ -1250,7 +1262,7 @@ export const getBatchDetail = async (req, res) => {
       }).filter((t) => t.questionsAssigned > 0);
 
       const merged = [...templateTracks];
-      const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
+      const templateTypes = new Set(activeTemplates.map((t) => t.trackType));
       
       if (tracks && tracks.length > 0) {
         tracks.forEach((track) => {

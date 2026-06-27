@@ -200,6 +200,35 @@ export default function TrackTemplateDetails() {
     return Math.min(Math.max(elapsedDays, 1), Number(trackDetail?.totalDays || track?.totalDays || 1));
   }, [trackDetail?.assignedAt, trackDetail?.totalDays, track?.totalDays]);
 
+  const assignedDateText = useMemo(() => {
+    if (!track?.assignedBatch) {
+      return 'Schedule starts when assigned';
+    }
+
+    const startVal = track.assignedAt || track.batchStartDate;
+    if (!startVal) {
+      return `Assigned to ${track.assignedBatch}`;
+    }
+
+    const startDate = new Date(startVal);
+    if (Number.isNaN(startDate.getTime())) {
+      return `Assigned to ${track.assignedBatch}`;
+    }
+
+    const totalDays = Number(track.totalDays) || 1;
+    const endDate = new Date(startDate.getTime() + (totalDays - 1) * 24 * 60 * 60 * 1000);
+
+    const formatDate = (date) => {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    };
+
+    return `Assigned to ${track.assignedBatch} (${formatDate(startDate)} - ${formatDate(endDate)})`;
+  }, [track?.assignedBatch, track?.assignedAt, track?.batchStartDate, track?.totalDays]);
+
   const assignmentKey = (dayNumber, questionId) => `${dayNumber}:${questionId || 'day'}`;
   const parseAssignmentKey = (key) => {
     const [dayNumber, questionId] = String(key).split(':');
@@ -659,8 +688,8 @@ export default function TrackTemplateDetails() {
                     <span className="mx-2">·</span>
                     {track.totalDays} days
                   </p>
-                  <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300">
-                    Schedule starts when assigned
+                  <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300 font-medium">
+                    {assignedDateText}
                   </p>
                 </div>
               </div>

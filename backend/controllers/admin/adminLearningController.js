@@ -751,20 +751,7 @@ export const createTrackTemplate = async (req, res) => {
       if (!batch) return res.status(404).json({ success: false, message: "Assigned batch not found." });
     }
 
-    const trackType = req.body.trackType || "Daily Challenge";
-    if (batchId && (trackType === "Daily Challenge" || trackType === "Daily Task")) {
-      const existing = await TrackTemplate.findOne({
-        batchId,
-        trackType,
-        status: "Active",
-      });
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: `A batch cannot have multiple ${trackType} tracks simultaneously.`,
-        });
-      }
-    }
+    // Disabled: A batch can have multiple track templates in draft/active status; active tracking is determined by single select in batch form.
 
     const duration = resolveTemplateDuration(req.body);
     if (duration.error) {
@@ -817,7 +804,7 @@ export const getTrackTemplateDetail = async (req, res) => {
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId)
-      .populate("batchId", "name assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
+      .populate("batchId", "name startDate expiryDate assignedTrackTemplate assignedDailyTaskTrack assignedDailyChallengeTrack assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
       .populate("dayAssignments.questionId")
       .populate("dayAssignments.tasks.questionId")
       .populate("dayAssignments.tasks.batchId", "name")
@@ -858,6 +845,17 @@ export const getTrackTemplateDetail = async (req, res) => {
     }
     const availableQuestions = await Question.find(questionFilter).populate("categoryId", "title slug categoryType").lean();
 
+    const batch = template.batchId;
+    let isCurrentlyAssigned = false;
+    if (batch) {
+      const activeIds = [
+        batch.assignedTrackTemplate,
+        batch.assignedDailyTaskTrack,
+        batch.assignedDailyChallengeTrack,
+      ].filter(Boolean).map(id => String(id));
+      isCurrentlyAssigned = activeIds.includes(String(template._id));
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -873,11 +871,14 @@ export const getTrackTemplateDetail = async (req, res) => {
         category: template.category,
         iconKey: template.iconKey || getTrackTemplateIconKey(template.category),
         batchId: template.batchId?._id || template.batchId,
-        assignedBatch: template.batchId?.name || "",
-        assignedAt:
+        assignedBatch: isCurrentlyAssigned ? (template.batchId?.name || "") : "",
+        batchStartDate: isCurrentlyAssigned ? (template.batchId?.startDate || null) : null,
+        batchExpiryDate: isCurrentlyAssigned ? (template.batchId?.expiryDate || null) : null,
+        assignedAt: isCurrentlyAssigned ? (
           template.trackType === "Daily Task"
             ? template.batchId?.assignedDailyTaskTrackAt || template.batchId?.assignedTrackTemplateAt || null
-            : template.batchId?.assignedDailyChallengeTrackAt || template.batchId?.assignedTrackTemplateAt || null,
+            : template.batchId?.assignedDailyChallengeTrackAt || template.batchId?.assignedTrackTemplateAt || null
+        ) : null,
         versionHistory: template.versionHistory || [],
         trackType: effectiveType,
         dayAssignments: (template.dayAssignments || []).map((assignment) => ({
@@ -982,20 +983,7 @@ export const updateTrackTemplate = async (req, res) => {
 
     const nextTrackType = req.body.trackType || currentTrackType;
     const nextBatchId = req.body.batchId || template.batchId;
-    if (nextTrackType === "Daily Challenge" || nextTrackType === "Daily Task") {
-      const existing = await TrackTemplate.findOne({
-        _id: { $ne: templateId },
-        batchId: nextBatchId,
-        trackType: nextTrackType,
-        status: "Active",
-      });
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: `A batch cannot have multiple ${nextTrackType} tracks simultaneously.`,
-        });
-      }
-    }
+    // Disabled: A batch can have multiple track templates in draft/active status; active tracking is determined by single select in batch form.
 
     if (req.body.name) template.name = req.body.name.trim();
     if (req.body.description !== undefined) template.description = req.body.description?.trim() || "";
