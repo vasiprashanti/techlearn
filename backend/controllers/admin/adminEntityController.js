@@ -130,8 +130,13 @@ const getBatchTemplateAssignmentFields = (trackTemplate, changed = true) => {
 
 const getBatchTemplateAssignmentFieldsFromTemplates = (trackTemplates = [], changed = true) => {
   const templates = trackTemplates.filter(Boolean);
+  const templateIds = templates.map((t) => t._id);
+
   if (templates.length === 0) {
-    return getBatchTemplateAssignmentFields(null, changed);
+    return {
+      ...getBatchTemplateAssignmentFields(null, changed),
+      assignedTrackTemplateIds: [],
+    };
   }
 
   const assignedAt = changed ? new Date() : undefined;
@@ -146,6 +151,7 @@ const getBatchTemplateAssignmentFieldsFromTemplates = (trackTemplates = [], chan
     ...(assignedAt ? { assignedDailyTaskTrackAt: dailyTaskTemplate ? assignedAt : null } : {}),
     assignedDailyChallengeTrack: dailyChallengeTemplate?._id || null,
     ...(assignedAt ? { assignedDailyChallengeTrackAt: dailyChallengeTemplate ? assignedAt : null } : {}),
+    assignedTrackTemplateIds: templateIds,
   };
 };
 
@@ -163,20 +169,31 @@ const getTrackTemplatesForAssignment = async (templateIds = []) => {
   const templateById = new Map(templates.map((template) => [String(template._id), template]));
   return uniqueTemplateIds.map((templateId) => templateById.get(templateId)).filter(Boolean);
 };
-const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, previousTrackTemplateId, trackName, session }) => {
+const applyTrackTemplatesToBatchStudents = async ({ batchId, trackTemplates = [], previousTrackTemplateIds = [], session }) => {
   const students = await Student.find({ batchId }).select("_id").session(session).lean();
   const studentIds = students.map((student) => student._id);
   if (!studentIds.length) return 0;
 
   const now = new Date();
-  if (previousTrackTemplateId && String(previousTrackTemplateId) !== String(trackTemplateId)) {
+  const templateIds = trackTemplates.map((t) => t._id);
+
+  // Deactivate any currently active assignments for these students that are NOT in the new templateIds list
+  await StudentTrackAssignment.updateMany(
+    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $nin: templateIds } },
+    { $set: { status: "Draft", deactivatedAt: now } },
+    { session }
+  );
+
+  // For each template in the new list, make sure students have it active
+  for (const template of trackTemplates) {
+    const trackTemplateId = template._id;
     await StudentTrackAssignment.bulkWrite(
       studentIds.map((studentId) => ({
         updateOne: {
-          filter: { studentId, trackTemplateId: previousTrackTemplateId },
+          filter: { studentId, trackTemplateId },
           update: {
-            $set: { batchId, status: "Draft", deactivatedAt: now },
-            $setOnInsert: { assignedAt: now, activatedAt: now },
+            $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
+            $setOnInsert: { assignedAt: now },
           },
           upsert: true,
         },
@@ -185,25 +202,10 @@ const applyTrackTemplateToBatchStudents = async ({ batchId, trackTemplateId, pre
     );
   }
 
-  await StudentTrackAssignment.updateMany(
-    { studentId: { $in: studentIds }, status: "Active", trackTemplateId: { $ne: trackTemplateId } },
-    { $set: { status: "Draft", deactivatedAt: now } },
-    { session }
-  );
-  await StudentTrackAssignment.bulkWrite(
-    studentIds.map((studentId) => ({
-      updateOne: {
-        filter: { studentId, trackTemplateId },
-        update: {
-          $set: { batchId, status: "Active", activatedAt: now, deactivatedAt: null },
-          $setOnInsert: { assignedAt: now },
-        },
-        upsert: true,
-      },
-    })),
-    { session, ordered: true }
-  );
-  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackName } }, { session });
+  // Update students' primaryTrack to show the active track names joined by comma
+  const trackNames = trackTemplates.map((t) => t.name).join(", ");
+  await Student.updateMany({ _id: { $in: studentIds } }, { $set: { primaryTrack: trackNames } }, { session });
+
   return studentIds.length;
 };
 
@@ -506,6 +508,7 @@ export const listBatches = async (req, res) => {
       .populate("assignedTrackTemplate", "name category trackType status dayAssignments")
       .populate("assignedDailyTaskTrack", "name category trackType status dayAssignments")
       .populate("assignedDailyChallengeTrack", "name category trackType status dayAssignments")
+      .populate("assignedTrackTemplateIds", "name category trackType status dayAssignments")
       .lean();
 
     const batchIds = batches.map((batch) => batch._id);
@@ -534,48 +537,34 @@ export const listBatches = async (req, res) => {
 
     const data = batches.map((batch) => {
       const trackTemplates = [
+        ...(batch.assignedTrackTemplateIds || []),
         batch.assignedDailyTaskTrack,
         batch.assignedDailyChallengeTrack,
         batch.assignedTrackTemplate
-      ].filter(Boolean);
-
-      const activeTrackTemplatesToday = trackTemplates.filter((template) => {
-        const releaseStart = localCombineDateAndTime(template.startDate || batch.startDate, batch.releaseTime || "00:00");
-        if (now < releaseStart || (batch.expiryDate && now > new Date(batch.expiryDate))) {
-          return false;
-        }
-        const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === dayNumber);
-        if (!dayAssignment) return false;
-        const hasTasks = dayAssignment.tasks && dayAssignment.tasks.length > 0;
-        const hasDirectQuestion = !!dayAssignment.questionId;
-        return hasTasks || hasDirectQuestion;
-      });
+      ].filter(Boolean).filter((template, index, self) =>
+        self.findIndex(t => String(t._id || t) === String(template._id || template)) === index
+      );
 
       let currentActiveTrack = "No Track";
-      if (activeTrackTemplatesToday.length === 1) {
-        currentActiveTrack = activeTrackTemplatesToday[0].name || `${activeTrackTemplatesToday[0].trackType} Track`;
-      } else if (activeTrackTemplatesToday.length > 1) {
+      if (trackTemplates.length === 1) {
+        currentActiveTrack = trackTemplates[0].name || "No Track";
+      } else if (trackTemplates.length > 1) {
         currentActiveTrack = "Multiple Tracks";
-      } else {
-        const activeTrackTemplate = batch.assignedDailyTaskTrack;
-        if (activeTrackTemplate) {
-          currentActiveTrack = activeTrackTemplate.name || "No Track";
-        } else if (batch.assignedTrackTemplate) {
-          currentActiveTrack = batch.assignedTrackTemplate.name || "No Track";
-        }
       }
+
       return {
         id: batch._id,
         name: batch.name,
         college: batch.collegeId?.name || "Unknown College",
-        assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
+        assignedTrack: currentActiveTrack,
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
-        assignedTrackTemplateIds: [
-          batch.assignedDailyTaskTrack?._id,
-          batch.assignedDailyChallengeTrack?._id,
-          batch.assignedTrackTemplate?._id,
-        ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
+        assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
+          ? batch.assignedTrackTemplateIds.map((t) => String(t._id || t))
+          : [
+              batch.assignedDailyTaskTrack?._id,
+              batch.assignedDailyChallengeTrack?._id,
+              batch.assignedTrackTemplate?._id,
+            ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         assignedTrackTemplateCategory: batch.assignedTrackTemplate?.category || "",
@@ -714,6 +703,7 @@ export const getBatchDetail = async (req, res) => {
       TrackTemplate.find({
         $or: [
           { batchId },
+          ...(batch.assignedTrackTemplateIds ? batch.assignedTrackTemplateIds.map((id) => ({ _id: id })) : []),
           ...(batch.assignedDailyTaskTrack ? [{ _id: batch.assignedDailyTaskTrack }] : []),
           ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
         ],
@@ -727,7 +717,9 @@ export const getBatchDetail = async (req, res) => {
       userIds.length
         ? DailyTaskAttempt.find({ userId: { $in: userIds }, batchId }).lean()
         : Promise.resolve([]),
-      UserProgress.find({}).select("userId courseXP exerciseXP projectXP").lean(),
+      userIds.length
+        ? UserProgress.find({ userId: { $in: userIds } }).select("userId courseXP exerciseXP projectXP").lean()
+        : Promise.resolve([]),
     ]);
 
     const mcqSubmissions = studentEmails.length
@@ -1191,7 +1183,18 @@ export const getBatchDetail = async (req, res) => {
     const inactiveCount = students.length - activeCount;
 
     const resolvedTracks = (() => {
-      const templateTracks = (trackTemplates || []).map((template) => {
+      const activeTemplateIds = new Set([
+        ...(batch.assignedTrackTemplateIds || []),
+        batch.assignedDailyTaskTrack?._id,
+        batch.assignedDailyChallengeTrack?._id,
+        batch.assignedTrackTemplate?._id,
+      ].filter(Boolean).map(id => String(id)));
+
+      const activeTemplates = (trackTemplates || []).filter((template) =>
+        activeTemplateIds.has(String(template._id))
+      );
+
+      const templateTracks = activeTemplates.map((template) => {
         let days = [];
         let questionsAssigned = 0;
         const sortedDays = [...(template.dayAssignments || [])].sort((a, b) => a.dayNumber - b.dayNumber);
@@ -1250,7 +1253,7 @@ export const getBatchDetail = async (req, res) => {
       }).filter((t) => t.questionsAssigned > 0);
 
       const merged = [...templateTracks];
-      const templateTypes = new Set((trackTemplates || []).map((t) => t.trackType));
+      const templateTypes = new Set(activeTemplates.map((t) => t.trackType));
       
       if (tracks && tracks.length > 0) {
         tracks.forEach((track) => {
@@ -1321,12 +1324,23 @@ export const getBatchDetail = async (req, res) => {
     });
 
     let currentActiveTrack = "None";
-    if (activeTrackTemplatesToday.length === 1) {
-      currentActiveTrack = activeTrackTemplatesToday[0].name || `${activeTrackTemplatesToday[0].trackType} Track`;
-    } else if (activeTrackTemplatesToday.length > 1) {
-      currentActiveTrack = "Multiple Tracks";
+    if (activeTrackTemplatesToday.length > 0) {
+      currentActiveTrack = activeTrackTemplatesToday.map(t => t.name || `${t.trackType} Track`).join(", ");
     } else {
-      if (activeTrackTemplate) {
+      const fallbackTracks = [
+        ...(batch.assignedTrackTemplateIds || []),
+        batch.assignedDailyTaskTrack,
+        batch.assignedDailyChallengeTrack,
+        batch.assignedTrackTemplate
+      ].filter(Boolean);
+      
+      const uniqueFallbacks = (trackTemplates || []).filter(t =>
+        fallbackTracks.some(f => String(f._id || f) === String(t._id))
+      );
+
+      if (uniqueFallbacks.length > 0) {
+        currentActiveTrack = uniqueFallbacks.map(t => t.name || `${t.trackType} Track`).join(", ");
+      } else if (activeTrackTemplate) {
         currentActiveTrack = activeTrackTemplate.name || "None";
       } else if (batch.assignedTrackTemplate) {
         currentActiveTrack = batch.assignedTrackTemplate.name || "None";
@@ -1342,11 +1356,13 @@ export const getBatchDetail = async (req, res) => {
         college: batch.collegeId?.name || "Unknown College",
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
-        assignedTrackTemplateIds: [
-          batch.assignedDailyTaskTrack?._id,
-          batch.assignedDailyChallengeTrack?._id,
-          batch.assignedTrackTemplate?._id,
-        ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
+        assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
+          ? batch.assignedTrackTemplateIds.map((t) => String(t._id || t))
+          : [
+              batch.assignedDailyTaskTrack?._id,
+              batch.assignedDailyChallengeTrack?._id,
+              batch.assignedTrackTemplate?._id,
+            ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
@@ -1450,12 +1466,11 @@ export const updateBatchAdmin = async (req, res) => {
           { $set: update },
           { new: true, runValidators: true, session }
         );
-        if (trackTemplateChanged && trackTemplate) {
-          reassignedStudents = await applyTrackTemplateToBatchStudents({
+        if (trackTemplateChanged && trackTemplates.length > 0) {
+          reassignedStudents = await applyTrackTemplatesToBatchStudents({
             batchId,
-            trackTemplateId: trackTemplate._id,
-            previousTrackTemplateId,
-            trackName: trackTemplate.name,
+            trackTemplates,
+            previousTrackTemplateIds: existingTemplateIds,
             session,
           });
         } else if (trackTemplateChanged) {

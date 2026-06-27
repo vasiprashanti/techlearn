@@ -60,6 +60,15 @@ const batchSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    assignedTrackTemplateIds: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "TrackTemplate",
+        },
+      ],
+      default: [],
+    },
     batchSize: {
       type: Number,
       min: 1,

@@ -472,7 +472,7 @@ const Batches = () => {
     setIsCreateFormOpen(true);
   };
 
-  const createBatch = async (confirmTrackReplacement = false) => {
+  const createBatch = async () => {
     if (!createBatchForm.batchName.trim()) {
       setCreateError('Batch name is required');
       return;
@@ -504,25 +504,6 @@ const Batches = () => {
       ? createBatchForm.assignedTrackTemplateIds.map(String)
       : [];
     const selectedTemplateId = selectedTemplateIds[0] || null;
-    const originalTemplateIds = Array.isArray(createBatchForm.originalAssignedTrackTemplateIds)
-      ? createBatchForm.originalAssignedTrackTemplateIds.map(String)
-      : [];
-    const selectedTemplateKey = [...selectedTemplateIds].sort().join('|');
-    const originalTemplateKey = [...originalTemplateIds].sort().join('|');
-    const isTrackReplacement = editingBatchId && selectedTemplateKey !== originalTemplateKey;
-
-    if (isTrackReplacement && !confirmTrackReplacement) {
-      setPendingTrackReplacement({
-        batchName: createBatchForm.batchName,
-        newTemplate: selectedTemplateIds.length > 0
-          ? trackTemplates
-              .filter((template) => selectedTemplateIds.includes(String(template.id)))
-              .map((template) => template.name)
-              .join(', ')
-          : 'No track template',
-      });
-      return;
-    }
 
     setCreateError('');
     setIsSavingBatch(true);
@@ -535,7 +516,7 @@ const Batches = () => {
         expiryDate: createBatchForm.endDate,
         assignedTrackTemplateId: selectedTemplateId,
         assignedTrackTemplateIds: selectedTemplateIds,
-        confirmTrackReplacement,
+        confirmTrackReplacement: true,
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
       };
@@ -668,10 +649,9 @@ const Batches = () => {
                   {/* Dropdown multi-select */}
                   <div className="relative mt-1" ref={trackTemplateDropdownRef}>
                     {/* Trigger button */}
-                    <button
-                      type="button"
+                    <div
                       onClick={() => setTrackTemplateDropdownOpen((prev) => !prev)}
-                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all"
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all cursor-pointer"
                     >
                       <span className="flex-1 min-w-0">
                         {(createBatchForm.assignedTrackTemplateIds || []).length === 0 ? (
@@ -707,7 +687,7 @@ const Batches = () => {
                         )}
                       </span>
                       <FiChevronDown className={`shrink-0 w-4 h-4 text-black/45 dark:text-white/50 transition-transform duration-200 ${trackTemplateDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                    </div>
 
                     {/* Dropdown panel */}
                     {trackTemplateDropdownOpen && (
@@ -820,36 +800,7 @@ const Batches = () => {
         </div>
       )}
 
-      {pendingTrackReplacement && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setPendingTrackReplacement(null)} />
-          <div className="relative w-full max-w-md bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
-              <h3 className="text-base font-semibold text-[#3C83F6] dark:text-white">Replace Active Track</h3>
-              <p className="mt-2 text-sm leading-6 text-black/55 dark:text-white/60">
-                The current active track for every student in {pendingTrackReplacement.batchName} will move to Draft. {pendingTrackReplacement.newTemplate} will become their active track. Existing assignment history will be kept.
-              </p>
-            </div>
-            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
-              <button
-                onClick={() => setPendingTrackReplacement(null)}
-                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setPendingTrackReplacement(null);
-                  createBatch(true);
-                }}
-                className="px-4 py-2 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0]"
-              >
-                Confirm Change
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {pendingDeleteBatch && (
         <div className="fixed inset-0 z-[125] flex items-center justify-center px-4">
