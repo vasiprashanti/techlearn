@@ -598,12 +598,9 @@ const BatchDetails = () => {
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">
-                  {(() => {
-                    const trackName = batch.currentActiveTrack || batch.assignedTrack || 'None';
-                    return trackName.length > 20 ? `${trackName.substring(0, 17)}...` : trackName;
-                  })()}
-                </p>
+                <div className="text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words">
+                  {batch.currentActiveTrack || batch.assignedTrack || 'None'}
+                </div>
               </div>
             </div>
 

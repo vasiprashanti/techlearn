@@ -804,7 +804,7 @@ export const getTrackTemplateDetail = async (req, res) => {
     if (!assertObjectId(templateId, "templateId", res)) return;
 
     const template = await TrackTemplate.findById(templateId)
-      .populate("batchId", "name startDate expiryDate assignedTrackTemplate assignedDailyTaskTrack assignedDailyChallengeTrack assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
+      .populate("batchId", "name startDate expiryDate assignedTrackTemplateIds assignedTrackTemplate assignedDailyTaskTrack assignedDailyChallengeTrack assignedTrackTemplateAt assignedDailyTaskTrackAt assignedDailyChallengeTrackAt")
       .populate("dayAssignments.questionId")
       .populate("dayAssignments.tasks.questionId")
       .populate("dayAssignments.tasks.batchId", "name")
@@ -849,6 +849,7 @@ export const getTrackTemplateDetail = async (req, res) => {
     let isCurrentlyAssigned = false;
     if (batch) {
       const activeIds = [
+        ...(batch.assignedTrackTemplateIds || []),
         batch.assignedTrackTemplate,
         batch.assignedDailyTaskTrack,
         batch.assignedDailyChallengeTrack,

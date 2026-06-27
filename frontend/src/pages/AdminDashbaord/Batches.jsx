@@ -649,10 +649,9 @@ const Batches = () => {
                   {/* Dropdown multi-select */}
                   <div className="relative mt-1" ref={trackTemplateDropdownRef}>
                     {/* Trigger button */}
-                    <button
-                      type="button"
+                    <div
                       onClick={() => setTrackTemplateDropdownOpen((prev) => !prev)}
-                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all"
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all cursor-pointer"
                     >
                       <span className="flex-1 min-w-0">
                         {(createBatchForm.assignedTrackTemplateIds || []).length === 0 ? (
@@ -688,7 +687,7 @@ const Batches = () => {
                         )}
                       </span>
                       <FiChevronDown className={`shrink-0 w-4 h-4 text-black/45 dark:text-white/50 transition-transform duration-200 ${trackTemplateDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                    </div>
 
                     {/* Dropdown panel */}
                     {trackTemplateDropdownOpen && (
