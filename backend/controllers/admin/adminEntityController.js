@@ -1252,62 +1252,7 @@ export const getBatchDetail = async (req, res) => {
         };
       }).filter((t) => t.questionsAssigned > 0);
 
-      const merged = [...templateTracks];
-      const templateTypes = new Set(activeTemplates.map((t) => t.trackType));
-      
-      if (tracks && tracks.length > 0) {
-        tracks.forEach((track) => {
-          if (!templateTypes.has(track.trackType) && track.orderedQuestionIds?.length > 0) {
-            const mcq = [];
-            const coding = [];
-            const sql = [];
-
-            track.orderedQuestionIds.forEach((q) => {
-              const title = q.title;
-              if (!title) return;
-              const type = String(track.trackType).toLowerCase();
-              if (type === "sql" || String(q.trackType).toLowerCase() === "sql") {
-                sql.push(title);
-              } else if (type === "mcq" || String(q.categoryType).toLowerCase() === "mcq") {
-                mcq.push(title);
-              } else {
-                coding.push(title);
-              }
-            });
-
-            const days = [];
-            if (mcq.length > 0 || coding.length > 0 || sql.length > 0) {
-              days.push({
-                dayNumber: 1,
-                mcq,
-                coding,
-                sql
-              });
-            }
-
-            merged.push({
-              id: track._id,
-              name: `${track.trackType} Track`,
-              questionsAssigned: track.orderedQuestionIds.length,
-              days,
-            });
-          }
-        });
-      }
-
-      if (merged.length > 0) return merged;
-
-      if (batch.assignedTrack && batch.assignedTrackTemplate) {
-        return [
-          {
-            id: `assigned-${batch._id}`,
-            name: String(batch.assignedTrack).trim(),
-            questionsAssigned: 0,
-            days: [],
-          },
-        ];
-      }
-      return [];
+      return templateTracks;
     })();
 
     const activeTrackTemplatesToday = (trackTemplates || []).filter((template) => {
