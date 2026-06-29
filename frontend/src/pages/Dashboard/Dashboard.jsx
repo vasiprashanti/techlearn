@@ -760,7 +760,7 @@ export default function Dashboard() {
 
                   {/* Right Column: Name & College */}
                   <div className="text-left flex-1 min-w-0 -mt-6">
-                    <h2 className="font-press-start text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                    <h2 className="font-pixel-header text-xs sm:text-sm md:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
                       {userDisplayName}
                     </h2>
                     <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
@@ -775,7 +775,7 @@ export default function Dashboard() {
                     <div key={stat.title} className="flex items-center gap-2">
                       <div className="shrink-0">{stat.icon}</div>
                       <div className="flex flex-col text-left">
-                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
+                        <span className="font-pixel-header text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
                         <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
                       </div>
                     </div>
@@ -811,18 +811,18 @@ export default function Dashboard() {
                           }`}
                         >
                           <div
-                            className={`w-6 font-press-start text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
+                            className={`w-6 font-pixel-header text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
                               student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
                             }`}
                           >
                             #{student.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-press-start text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                            <div className={`font-pixel-header text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
                               {student.name}
                             </div>
                           </div>
-                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
+                          <div className="font-pixel-header text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
                             {student.totalXp.toLocaleString()}
                           </div>
                         </div>
@@ -868,7 +868,7 @@ export default function Dashboard() {
                           TODAY'S TASKS (DAY {projectData.assignment.current_day})
                         </h3>
                       </div>
-                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                      <span className="font-pixel-header text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
                         {projectData.projectCompletedToday}/{projectData.projectTotalToday}
                       </span>
                     </div>
@@ -904,7 +904,7 @@ export default function Dashboard() {
                                 {task.title}
                               </span>
                             </div>
-                            <span className="rounded-md border border-[#3C83F6]/20 bg-white/30 px-2 py-0.5 font-press-start text-[8px] leading-none text-[#3C83F6] dark:border-[#8fd9ff]/20 dark:bg-white/5 dark:text-[#8fd9ff]">
+                            <span className="rounded-md border border-[#3C83F6]/20 bg-white/30 px-2 py-0.5 font-pixel-header text-[8px] leading-none text-[#3C83F6] dark:border-[#8fd9ff]/20 dark:bg-white/5 dark:text-[#8fd9ff]">
                               +{task.xp} XP
                             </span>
                           </div>
@@ -922,7 +922,7 @@ export default function Dashboard() {
                     <div className="mt-1 shrink-0 w-full text-left">
                       <div className="flex justify-between items-center font-press-start mb-0.5">
                         <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
-                        <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                        <span className="font-pixel-header text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
                           {projectData.projectDayProgress}%
                         </span>
                       </div>
@@ -941,7 +941,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-1.5">
                         <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                       </div>
-                      <span className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                      <span className="font-pixel-header text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
                         {groupedTasks.filter((g) => g.completed).length}/{groupedTasks.length}
                       </span>
                     </div>
@@ -1000,7 +1000,7 @@ export default function Dashboard() {
                     <div className="mt-1 shrink-0 w-full">
                       <div className="flex justify-between items-center font-press-start mb-0.5">
                         <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
-                        <span className="text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
+                        <span className="font-pixel-header text-[10px] sm:text-xs font-bold text-[#3C83F6] dark:text-[#8fd9ff] leading-tight">
                           {groupedTasks.length > 0 ? `${customTaskProgress}%` : "No tasks"}
                         </span>
                       </div>
@@ -1057,7 +1057,7 @@ export default function Dashboard() {
                             <span className="font-press-start text-[10px] uppercase tracking-widest text-black/40 dark:text-[#7fb8e2]">
                               {exercise.courseTitle || 'Course'}
                             </span>
-                            <span className="font-press-start text-[10px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
+                            <span className="font-pixel-header text-[10px] uppercase font-medium text-[#3C83F6] dark:text-[#8fd9ff]">
                               +{exercise.xp || 0} XP
                             </span>
                           </div>
