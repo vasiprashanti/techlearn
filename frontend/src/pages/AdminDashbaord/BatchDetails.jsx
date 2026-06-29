@@ -892,11 +892,11 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[800px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 min-w-[150px] border-r border-black/5 dark:border-white/5 whitespace-nowrap">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[168px] min-w-[168px] border-r border-black/5 dark:border-white/5">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
-                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-12 whitespace-nowrap">
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
                                 </th>
                               ))}
@@ -904,7 +904,7 @@ const BatchDetails = () => {
                           </thead>
                           <tbody>
                             <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
                                 Attempted Students
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
@@ -918,7 +918,7 @@ const BatchDetails = () => {
                               })}
                             </tr>
                             <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
                                 Average Score
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
@@ -945,10 +945,10 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[800px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
-                              <th className="sticky left-8 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 min-w-[120px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
+                              <th className="sticky left-6 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
-                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-12 whitespace-nowrap">
+                                <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
                                 </th>
                               ))}
@@ -959,7 +959,7 @@ const BatchDetails = () => {
                               const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                               return (
                                 <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">
+                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-1 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">
                                     {isPlaceholder ? '-' : index + 1}
                                   </td>
                                   {isPlaceholder ? (
@@ -968,7 +968,7 @@ const BatchDetails = () => {
                                     </td>
                                   ) : (
                                     <>
-                                      <td className="sticky left-8 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[120px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
+                                      <td className="sticky left-6 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[125px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
                                         {student.name}
                                       </td>
                                       {Array.from({ length: maxTrackDays }).map((_, dIndex) => {
