@@ -2,8 +2,10 @@ import User from "../models/User.js";
 import UserProgress from "../models/UserProgress.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
 import StudentMcqSubmission from "../models/StudentMcqSubmission.js";
+import { TASK_XP } from "../services/xpService.js";
 
 const DEFAULT_LIMIT = 20;
+const MCQ_XP_VALUE = TASK_XP.MCQ || 10;
 
 const sumMapValues = (value) => {
   if (!value || typeof value !== "object") return 0;
@@ -68,10 +70,12 @@ export const getPublicLeaderboard = async (req, res) => {
       practiceSolvedCounts.map((entry) => [String(entry._id), entry.solvedCount])
     );
     const collegeMcqSolvedByEmail = new Map();
+    const collegeMcqXpByEmail = new Map();
     collegeMcqSubmissions.forEach((submission) => {
       const email = String(submission.studentEmail || "").trim().toLowerCase();
       const correctAnswers = (submission.answers || []).filter((answer) => answer.isCorrect).length;
       collegeMcqSolvedByEmail.set(email, (collegeMcqSolvedByEmail.get(email) || 0) + correctAnswers);
+      collegeMcqXpByEmail.set(email, (collegeMcqXpByEmail.get(email) || 0) + correctAnswers * MCQ_XP_VALUE);
     });
 
     const leaderboardRows = learnerRows
@@ -79,7 +83,9 @@ export const getPublicLeaderboard = async (req, res) => {
         const courseXp = isProjectUser ? 0 : sumMapValues(row.courseXP);
         const exerciseXp = isProjectUser ? 0 : sumMapValues(row.exerciseXP);
         const projectXp = sumMapValues(row.projectXP);
-        const totalXp = courseXp + exerciseXp + projectXp;
+        const email = String(row.userId.email || "").trim().toLowerCase();
+        const assessmentXp = isProjectUser ? 0 : (collegeMcqXpByEmail.get(email) || 0);
+        const totalXp = courseXp + exerciseXp + projectXp + assessmentXp;
 
         const completedExercises = Array.isArray(row.completedExercises)
           ? row.completedExercises.length
@@ -87,7 +93,7 @@ export const getPublicLeaderboard = async (req, res) => {
 
         const solvedCount = (
           (practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
-          (collegeMcqSolvedByEmail.get(String(row.userId.email || "").trim().toLowerCase()) || 0) ||
+          (collegeMcqSolvedByEmail.get(email) || 0) ||
           completedExercises
         );
 
@@ -99,6 +105,7 @@ export const getPublicLeaderboard = async (req, res) => {
           courseXp,
           exerciseXp,
           projectXp,
+          assessmentXp,
           completedExercises,
           solvedCount,
           updatedAt: row.updatedAt,
@@ -137,6 +144,7 @@ export const getPublicLeaderboard = async (req, res) => {
             courseXp: 0,
             exerciseXp: 0,
             projectXp: 0,
+            assessmentXp: 0,
             completedExercises: 0,
             solvedCount: 0,
           };

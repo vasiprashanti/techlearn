@@ -4,7 +4,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
-import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, FiCalendar, FiBookOpen, FiPlus, FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, FiCalendar, FiBookOpen, FiPlus, FiSearch, FiChevronDown, FiUserMinus } from 'react-icons/fi';
 
 const fallbackBatchMap = {};
 
@@ -52,9 +52,11 @@ const BatchDetails = () => {
   const [isSearchingExistingStudents, setIsSearchingExistingStudents] = useState(false);
   const [existingStudentSearchTotal, setExistingStudentSearchTotal] = useState(0);
   const [selectedExistingStudentId, setSelectedExistingStudentId] = useState('');
+  const [studentToRemove, setStudentToRemove] = useState(null);
   const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', status: 'Active' });
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
+  const [isRemovingStudent, setIsRemovingStudent] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -159,7 +161,7 @@ const BatchDetails = () => {
     setExistingStudentSearchTotal(0);
     setExistingStudentStatus('');
     setExistingStudentSort('name-asc');
-    setExistingStudentCollegeId(matchingCollege?.id || '');
+    setExistingStudentCollegeId('');
     setIsAddFormOpen(true);
   };
 
@@ -260,6 +262,23 @@ const BatchDetails = () => {
       setFormError(error.message || 'Failed to save student');
     } finally {
       setIsSavingStudent(false);
+    }
+  };
+
+  const removeStudentFromBatch = async () => {
+    if (!studentToRemove?.id) return;
+
+    setFormError('');
+    setIsRemovingStudent(true);
+    try {
+      await adminAPI.removeStudentFromBatch(studentToRemove.id, batch.id || batchId);
+      const remoteBatch = await adminAPI.getBatch(batchId);
+      setBatchDetail(preferRemoteData(remoteBatch, null));
+      setStudentToRemove(null);
+    } catch (error) {
+      setFormError(error.message || 'Failed to remove student from batch.');
+    } finally {
+      setIsRemovingStudent(false);
     }
   };
 
@@ -742,6 +761,7 @@ const BatchDetails = () => {
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Last Attempt Date/Time</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -753,7 +773,7 @@ const BatchDetails = () => {
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={8} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={9} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
@@ -786,6 +806,20 @@ const BatchDetails = () => {
                                         {student.status || 'Not Started'}
                                       </span>
                                     </td>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormError('');
+                                          setStudentToRemove(student);
+                                        }}
+                                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/15 bg-red-500/5 text-red-600 transition-colors hover:bg-red-500 hover:text-white dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-500 dark:hover:text-white"
+                                        aria-label={`Remove ${student.name} from batch`}
+                                        title="Remove from batch"
+                                      >
+                                        <FiUserMinus className="h-4 w-4" />
+                                      </button>
+                                    </td>
                                   </>
                                 )}
                               </tr>
@@ -793,7 +827,7 @@ const BatchDetails = () => {
                           })}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={9} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                              <td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                                 No students match your search query.
                               </td>
                             </tr>
@@ -978,6 +1012,39 @@ const BatchDetails = () => {
         </div>
       </main>
 
+      {studentToRemove && (
+        <div className="fixed inset-0 z-[132] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => !isRemovingStudent && setStudentToRemove(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10">
+              <h3 className="text-base font-semibold text-black/80 dark:text-white">Remove Student From Batch</h3>
+              <p className="mt-1 text-sm text-black/55 dark:text-white/55">
+                Remove <span className="font-semibold text-black/80 dark:text-white">{studentToRemove.name}</span> from {batch.name}? Their profile and progress will stay intact.
+              </p>
+              {formError && <p className="mt-2 text-xs text-red-500">{formError}</p>}
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setStudentToRemove(null)}
+                disabled={isRemovingStudent}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={removeStudentFromBatch}
+                disabled={isRemovingStudent}
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 bg-red-500 text-white hover:bg-red-600 disabled:opacity-70 transition-colors"
+              >
+                {isRemovingStudent ? 'Removing...' : 'Remove Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isAddFormOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsAddFormOpen(false)} />
@@ -1019,7 +1086,7 @@ const BatchDetails = () => {
                         }}
                         className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
                       >
-                        <option className={dropdownOptionClass} value="">All colleges</option>
+                        <option className={dropdownOptionClass} value="">All Colleges</option>
                         {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
                       </select>
                       <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
@@ -1033,7 +1100,7 @@ const BatchDetails = () => {
                         }}
                         className="appearance-none w-full px-3 py-2 pr-8 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none"
                       >
-                        <option className={dropdownOptionClass} value="">All statuses</option>
+                        <option className={dropdownOptionClass} value="">All Students</option>
                         <option className={dropdownOptionClass} value="Active">Active</option>
                         <option className={dropdownOptionClass} value="Inactive">Inactive</option>
                         <option className={dropdownOptionClass} value="Suspended">Suspended</option>
@@ -1072,14 +1139,29 @@ const BatchDetails = () => {
                               setSelectedExistingStudentId(studentId);
                               setStudentForm((prev) => ({ ...prev, track: student.track || prev.track, status: student.status || prev.status }));
                             }}
-                            className={`w-full px-3 py-2.5 text-left transition-colors ${isSelected ? 'bg-[#3C83F6]/10 dark:bg-[#7fb1ff]/15' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'}`}
+                            className={`w-full px-3 py-2.5 text-left transition-colors ${
+                              isSelected
+                                ? 'bg-[#001b4a] text-white dark:bg-[#7fb1ff] dark:text-[#06183d]'
+                                : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+                            }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{student.name}</p>
-                                <p className="mt-0.5 text-xs text-black/50 dark:text-white/55 truncate">{student.email}{student.rollNo ? ` · ${student.rollNo}` : ''}</p>
+                                <p className={`text-sm font-medium truncate ${isSelected ? 'text-white dark:text-[#06183d]' : 'text-slate-800 dark:text-white'}`}>{student.name}</p>
+                                <p className={`mt-0.5 text-xs truncate ${isSelected ? 'text-white/75 dark:text-[#06183d]/75' : 'text-black/50 dark:text-white/55'}`}>{student.email}{student.rollNo ? ` · ${student.rollNo}` : ''}</p>
                               </div>
-                              <span className="shrink-0 max-w-[40%] truncate rounded-full bg-black/[0.05] dark:bg-white/[0.08] px-2 py-0.5 text-[10px] text-black/55 dark:text-white/60">{student.batch}</span>
+                              <div className="flex max-w-[42%] shrink-0 flex-col items-end gap-1">
+                                {isSelected && (
+                                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#001b4a] dark:bg-[#06183d] dark:text-white">
+                                    Selected
+                                  </span>
+                                )}
+                                <span className={`max-w-full truncate rounded-full px-2 py-0.5 text-[10px] ${
+                                  isSelected
+                                    ? 'bg-white/15 text-white dark:bg-[#06183d]/10 dark:text-[#06183d]'
+                                    : 'bg-black/[0.05] text-black/55 dark:bg-white/[0.08] dark:text-white/60'
+                                }`}>{student.batch}</span>
+                              </div>
                             </div>
                           </button>
                         );

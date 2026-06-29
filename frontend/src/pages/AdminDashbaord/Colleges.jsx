@@ -661,7 +661,7 @@ const Colleges = () => {
                 <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
                 <button
                   onClick={handleClearSelection}
-                  className="text-xs sm:text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                  className="rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 bg-transparent hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C83F6]/35 transition-colors duration-150"
                 >
                   Clear
                 </button>
