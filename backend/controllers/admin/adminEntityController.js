@@ -500,6 +500,78 @@ export const deleteCollege = async (req, res) => {
   }
 };
 
+export const bulkDeleteCollegesAdmin = async (req, res) => {
+  try {
+    const { collegeIds } = req.body;
+    if (!Array.isArray(collegeIds) || collegeIds.length === 0) {
+      return res.status(400).json({ success: false, message: "collegeIds must be a non-empty array." });
+    }
+
+    for (const collegeId of collegeIds) {
+      if (!assertObjectId(collegeId, "collegeId", res)) return;
+    }
+
+    const colleges = await College.find({ _id: { $in: collegeIds } }).lean();
+    if (!colleges.length) {
+      return res.status(404).json({ success: false, message: "No colleges found for the provided IDs." });
+    }
+
+    const existingCollegeIds = colleges.map((college) => college._id);
+    const batches = await Batch.find({ collegeId: { $in: existingCollegeIds } }).select("_id").lean();
+    const batchIds = batches.map((batch) => batch._id);
+
+    const studentsToDelete = await Student.find({
+      $or: [
+        { collegeId: { $in: existingCollegeIds } },
+        ...(batchIds.length ? [{ batchId: { $in: batchIds } }] : []),
+      ],
+    })
+      .select("_id email")
+      .lean();
+
+    const studentIds = studentsToDelete.map((student) => student._id);
+    const studentEmails = studentsToDelete
+      .map((student) => String(student.email || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    await Promise.all([
+      Submission.deleteMany({
+        $or: [
+          ...(batchIds.length ? [{ batchId: { $in: batchIds } }] : []),
+          ...(studentIds.length ? [{ studentId: { $in: studentIds } }] : []),
+        ],
+      }),
+      studentEmails.length
+        ? StudentCodingSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentEmails.length
+        ? StudentMcqSubmission.deleteMany({ studentEmail: { $in: studentEmails } })
+        : Promise.resolve(),
+      studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
+      studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
+      batchIds.length ? Batch.deleteMany({ _id: { $in: batchIds } }) : Promise.resolve(),
+      College.deleteMany({ _id: { $in: existingCollegeIds } }),
+    ]);
+
+    for (const college of colleges) {
+      await writeAuditLog({
+        verb: "Deleted",
+        entityType: "College",
+        entityId: college._id,
+        action: "Deleted college in bulk",
+        detail: college.name,
+        actor: req.user,
+      });
+    }
+
+    return res.status(200).json({ success: true, message: `${colleges.length} colleges deleted successfully.` });
+  } catch (error) {
+    console.error("bulkDeleteCollegesAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to bulk delete colleges." });
+  }
+};
+
 export const listBatches = async (req, res) => {
   try {
     const batches = await Batch.find()

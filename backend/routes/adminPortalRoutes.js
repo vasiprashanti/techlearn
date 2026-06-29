@@ -13,6 +13,7 @@ import {
   createBatchAdmin,
   createCollege,
   createStudentAdmin,
+  bulkDeleteCollegesAdmin,
   deleteBatchAdmin,
   deleteCollege,
   deleteStudentAdmin,
@@ -92,6 +93,7 @@ router.get("/dashboard/system-health", getSystemHealthPage);
 
 router.get("/colleges", listColleges);
 router.post("/colleges", createCollege);
+router.post("/colleges/bulk-delete", bulkDeleteCollegesAdmin);
 router.get("/colleges/:collegeId", getCollegeDetail);
 router.put("/colleges/:collegeId", updateCollege);
 router.delete("/colleges/:collegeId", deleteCollege);
