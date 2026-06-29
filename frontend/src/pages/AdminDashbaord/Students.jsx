@@ -43,6 +43,47 @@ const normalizeStudent = (student) => ({
   joined: student.joined || null,
 });
 
+const getStudentRelevance = (student, query) => {
+  if (!query) return 0;
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+
+  const name = String(student.name || '').toLowerCase();
+  const email = String(student.email || '').toLowerCase();
+  const batch = String(student.batch || '').toLowerCase();
+  const college = String(student.college || '').toLowerCase();
+
+  const fields = [name, email, batch, college];
+
+  // 1. Exact match of the entire query in any field
+  for (const field of fields) {
+    if (field === q) return 1000;
+    if (field.startsWith(q)) return 500;
+    if (field.includes(q)) return 200;
+  }
+
+  // 2. Query terms in the same order
+  const terms = q.split(/\s+/).filter(Boolean);
+  if (terms.length > 1) {
+    const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const orderRegex = new RegExp(escapedTerms.join('.*'), 'i');
+    for (const field of fields) {
+      if (orderRegex.test(field)) return 100;
+    }
+  }
+
+  // 3. Match individual words/terms (no character-level matching)
+  let matchedTerms = 0;
+  for (const term of terms) {
+    const termMatched = fields.some(field => field.includes(term));
+    if (termMatched) matchedTerms++;
+  }
+  if (matchedTerms === terms.length) return 50;
+  if (matchedTerms > 0) return 10 * matchedTerms;
+
+  return 0;
+};
+
 const formatDateValue = (value) => {
   if (!value) return 'Not available';
   const date = new Date(value);
@@ -217,12 +258,22 @@ const Students = () => {
   };
 
   const filteredStudents = students.filter((student) => {
-    const matchesSearch = !tableSearch || student.name.toLowerCase().includes(tableSearch.toLowerCase()) || student.email.toLowerCase().includes(tableSearch.toLowerCase()) || student.batch.toLowerCase().includes(tableSearch.toLowerCase());
+    const searchText = tableSearch.trim().toLowerCase();
+    const matchesSearch = searchText.length === 0 || getStudentRelevance(student, searchText) > 0;
     return matchesSearch;
   });
 
   const sortedStudents = useMemo(() => {
     return [...filteredStudents].sort((a, b) => {
+      const query = tableSearch.trim().toLowerCase();
+      if (query) {
+        const relA = getStudentRelevance(a, query);
+        const relB = getStudentRelevance(b, query);
+        if (relA !== relB) {
+          return relB - relA;
+        }
+      }
+
       let aVal = a[studentSortField];
       let bVal = b[studentSortField];
 
@@ -244,7 +295,7 @@ const Students = () => {
           : (bVal || 0) - (aVal || 0);
       }
     });
-  }, [filteredStudents, studentSortField, studentSortDirection]);
+  }, [filteredStudents, studentSortField, studentSortDirection, tableSearch]);
 
   const filteredBatchOptions = useMemo(() => {
     if (!studentForm.collegeId) return batches;
