@@ -18,7 +18,7 @@ const studentSchema = new mongoose.Schema(
     batchId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Batch",
-      required: true,
+      default: null,
       index: true,
     },
 

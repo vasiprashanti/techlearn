@@ -22,6 +22,7 @@ import {
   listBatches,
   listColleges,
   listStudentsAdmin,
+  removeStudentFromBatchAdmin,
   searchExistingStudentsAdmin,
   updateBatchAdmin,
   updateCollege,
@@ -108,6 +109,7 @@ router.post("/students", createStudentAdmin);
 router.get("/students/search", searchExistingStudentsAdmin);
 router.get("/students/:studentId", getStudentDetailAdmin);
 router.put("/students/:studentId", updateStudentAdmin);
+router.patch("/students/:studentId/remove-batch", removeStudentFromBatchAdmin);
 router.delete("/students/:studentId", deleteStudentAdmin);
 
 router.get("/questions/categories", listQuestionCategories);

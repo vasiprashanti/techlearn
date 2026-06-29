@@ -1847,6 +1847,56 @@ export const updateStudentAdmin = async (req, res) => {
   }
 };
 
+export const removeStudentFromBatchAdmin = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { batchId } = req.body;
+    if (!assertObjectId(studentId, "studentId", res)) return;
+    if (!assertObjectId(batchId, "batchId", res)) return;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
+
+    if (!student.batchId || String(student.batchId) !== String(batchId)) {
+      return res.status(400).json({ success: false, message: "Student is not assigned to this batch." });
+    }
+
+    student.batchId = null;
+    await student.save();
+
+    await Promise.all([
+      student.userId
+        ? User.findByIdAndUpdate(student.userId, { $unset: { batchId: "", startDate: "" } })
+        : User.findOneAndUpdate({ email: student.email }, { $unset: { batchId: "", startDate: "" } }),
+      StudentTrackAssignment.updateMany(
+        { studentId: student._id, batchId, status: "Active" },
+        { $set: { status: "Inactive", deactivatedAt: new Date() } }
+      ),
+    ]);
+
+    await writeAuditLog({
+      verb: "Updated",
+      entityType: "Student",
+      entityId: student._id,
+      action: "Removed student from batch",
+      detail: student.name,
+      actor: req.user,
+      metadata: { batchId },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Student removed from batch successfully.",
+      data: student,
+    });
+  } catch (error) {
+    console.error("removeStudentFromBatchAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to remove student from batch.", error: error.message });
+  }
+};
+
 export const deleteStudentAdmin = async (req, res) => {
   try {
     const { studentId } = req.params;
