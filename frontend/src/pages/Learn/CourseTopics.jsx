@@ -9,20 +9,20 @@ import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/c
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-screen w-full min-w-0 overflow-x-clip font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-    <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
-      <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
+    <main className="flex-1 flex min-h-screen min-w-0 flex-col overflow-x-clip pt-20 md:pt-24">
+      <header className="px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
-        <aside className="hidden md:flex min-h-0 w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
+      <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+        <aside className="hidden md:flex w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
         </aside>
-        <div className="min-h-0 overflow-hidden px-4 pb-10 md:px-8 xl:px-0">
+        <div className="min-w-0 overflow-x-clip px-4 pb-10 md:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-[760px] p-8 md:px-10 lg:px-12">
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
@@ -128,14 +128,6 @@ const CourseTopics = () => {
   useEffect(() => { 
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [selectedTopic]);
-
-  useEffect(() => {
-    return () => {
-      window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-        detail: { isScrolled: false, isScrollingDown: false },
-      }));
-    };
-  }, []);
 
   if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
@@ -260,7 +252,7 @@ const CourseTopics = () => {
             </div>
           </aside>
 
-          {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
+          {/* Main Content */}
           <div className="relative min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:px-8 xl:px-0">
             <div className="mx-auto w-full max-w-[760px] pb-20">
 

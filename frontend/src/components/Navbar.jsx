@@ -58,15 +58,6 @@ const Navbar = () => {
     setLastScrollY(window.scrollY);
   }, [location.pathname]);
 
-  useEffect(() => {
-    const handleCourseContentScroll = (event) => {
-      setIsVisible(!event.detail?.isScrolled);
-    };
-
-    window.addEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
-    return () => window.removeEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
-  }, []);
-
   const [isForceHidden, setIsForceHidden] = useState(false);
 
   useEffect(() => {
