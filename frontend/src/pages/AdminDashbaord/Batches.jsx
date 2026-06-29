@@ -67,6 +67,47 @@ const normalizeBatch = (batch) => {
     createdAt: batch.createdAt || null,
   };
 };
+
+const getBatchRelevance = (batch, query) => {
+  if (!query) return 0;
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+
+  const name = String(batch.name || '').toLowerCase();
+  const college = String(batch.college || '').toLowerCase();
+  const track = String(batch.track || '').toLowerCase();
+  const id = String(batch.id || '').toLowerCase();
+
+  const fields = [name, college, track, id];
+
+  // 1. Exact match of the entire query in any field
+  for (const field of fields) {
+    if (field === q) return 1000;
+    if (field.startsWith(q)) return 500;
+    if (field.includes(q)) return 200;
+  }
+
+  // 2. Query terms in the same order
+  const terms = q.split(/\s+/).filter(Boolean);
+  if (terms.length > 1) {
+    const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const orderRegex = new RegExp(escapedTerms.join('.*'), 'i');
+    for (const field of fields) {
+      if (orderRegex.test(field)) return 100;
+    }
+  }
+
+  // 3. Match individual words/terms (no character-level matching)
+  let matchedTerms = 0;
+  for (const term of terms) {
+    const termMatched = fields.some(field => field.includes(term));
+    if (termMatched) matchedTerms++;
+  }
+  if (matchedTerms === terms.length) return 50;
+  if (matchedTerms > 0) return 10 * matchedTerms;
+
+  return 0;
+};
 const SearchModal = ({ isOpen, onClose, searchQuery, setSearchQuery, searchInputRef, filteredRoutes, navigate }) => {
   if (!isOpen) return null;
   return (
@@ -409,13 +450,17 @@ const Batches = () => {
       createdMonthFilter === 'All Months' ||
       getCreatedMonthLabel(batch.createdAt) === createdMonthFilter;
     const matchSearch =
-      searchText.length === 0 ||
-      String(batch.id || '').toLowerCase().includes(searchText) ||
-      String(batch.name || '').toLowerCase().includes(searchText) ||
-      String(batch.college || '').toLowerCase().includes(searchText) ||
-      String(batch.track || '').toLowerCase().includes(searchText);
+      searchText.length === 0 || getBatchRelevance(batch, searchText) > 0;
     return matchCollege && matchStatus && matchCategory && matchCreatedMonth && matchSearch;
   }).sort((a, b) => {
+    const query = batchSearchTerm.trim().toLowerCase();
+    if (query) {
+      const relA = getBatchRelevance(a, query);
+      const relB = getBatchRelevance(b, query);
+      if (relA !== relB) {
+        return relB - relA;
+      }
+    }
     if (!a.createdAt) return 1;
     if (!b.createdAt) return -1;
     return new Date(b.createdAt) - new Date(a.createdAt);

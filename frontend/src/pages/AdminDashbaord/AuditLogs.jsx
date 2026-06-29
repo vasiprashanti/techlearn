@@ -39,6 +39,25 @@ const verbConfig = {
   },
 };
 
+const formatIST = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 export default function AuditLogs() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -241,7 +260,7 @@ export default function AuditLogs() {
                       <span className="inline-flex items-center justify-center min-w-[56px] h-6 px-2 rounded-full text-[10px] font-semibold bg-[#dce9f6] dark:bg-white/10 border border-black/8 dark:border-white/10 text-[#294460] dark:text-white/85">
                         {log.type}
                       </span>
-                      <p className="mt-1 text-[11px] font-semibold text-[#8ea0b3] dark:text-white/55">{log.ts}</p>
+                      <p className="mt-1 text-[11px] font-semibold text-[#8ea0b3] dark:text-white/55">{formatIST(log.ts)}</p>
                     </div>
                   </div>
                 );
