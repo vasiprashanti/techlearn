@@ -505,7 +505,9 @@ export default function Dashboard() {
     rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
   }
   const photoUrl = rawPhotoUrl;
-  const collegeName = displayUser?.collegeName || "TechLearn Student";
+  const collegeName = displayUser?.collegeName && displayUser.collegeName !== "TechLearn Student"
+    ? displayUser.collegeName
+    : (displayUser?.programSelection || "Placement Sprint");
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -592,6 +594,7 @@ export default function Dashboard() {
           __html: `
             @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
             .font-press-start { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.4; }
+            .font-press-start-2p { font-family: "Press Start 2P", "Courier New", monospace; line-height: 1.4; }
             .font-pixel-header { font-family: "Press Start 2P", "Courier New", monospace; line-height: 1.6; }
             .pixel-icon { filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.4)); image-rendering: pixelated; }
           `,
@@ -760,7 +763,7 @@ export default function Dashboard() {
 
                   {/* Right Column: Name & College */}
                   <div className="text-left flex-1 min-w-0 -mt-6">
-                    <h2 className="font-press-start text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
+                    <h2 className="font-press-start-2p text-sm sm:text-base text-[#00113b] dark:text-[#8fd9ff] uppercase tracking-wide leading-tight truncate">
                       {userDisplayName}
                     </h2>
                     <p className="font-press-start text-xs sm:text-sm text-[#00113b]/70 dark:text-[#81bde6] mt-1 font-medium leading-tight truncate">
@@ -775,7 +778,7 @@ export default function Dashboard() {
                     <div key={stat.title} className="flex items-center gap-2">
                       <div className="shrink-0">{stat.icon}</div>
                       <div className="flex flex-col text-left">
-                        <span className="font-press-start text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
+                        <span className="font-press-start-2p text-[10px] sm:text-xs text-[#00113b] dark:text-white leading-tight">{stat.value}</span>
                         <span className="font-press-start text-[10px] sm:text-xs text-[#00113b]/70 dark:text-[#81bde6] mt-0.5 whitespace-nowrap font-medium leading-tight">{stat.title}</span>
                       </div>
                     </div>
@@ -822,7 +825,7 @@ export default function Dashboard() {
                               {student.name}
                             </div>
                           </div>
-                          <div className="font-press-start text-[10px] sm:text-xs text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
+                          <div className="font-press-start-2p text-[8px] sm:text-[9.5px] text-[#8A2BE2] dark:text-[#E0B0FF] shrink-0 leading-tight font-normal">
                             {student.totalXp.toLocaleString()}
                           </div>
                         </div>
