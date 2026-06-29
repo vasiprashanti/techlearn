@@ -663,7 +663,7 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -697,6 +697,7 @@ export const createBatchAdmin = async (req, res) => {
               batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
+              programSelection: programSelection || "Placement Sprint",
             },
           ],
           { session, ordered: true }
@@ -1454,6 +1455,19 @@ export const updateBatchAdmin = async (req, res) => {
       });
     }
 
+    const programChanged = req.body.programSelection && req.body.programSelection !== existingBatch.programSelection;
+    if (programChanged && req.body.confirmProgramReplacement !== true) {
+      const studentCount = await Student.countDocuments({ batchId });
+      if (studentCount > 0) {
+        return res.status(409).json({
+          success: false,
+          code: "PROGRAM_REPLACEMENT_CONFIRMATION_REQUIRED",
+          message: `Confirm updating the program to "${req.body.programSelection}" for all ${studentCount} students in this batch.`,
+          data: { studentCount },
+        });
+      }
+    }
+
     const update = {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
@@ -1466,6 +1480,7 @@ export const updateBatchAdmin = async (req, res) => {
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
+      programSelection: req.body.programSelection || existingBatch.programSelection || "Placement Sprint",
     };
 
     if (req.body.collegeId) {
@@ -1496,6 +1511,21 @@ export const updateBatchAdmin = async (req, res) => {
             { $set: { status: "Draft", deactivatedAt: new Date() } },
             { session }
           );
+        }
+        if (programChanged) {
+          await Student.updateMany(
+            { batchId },
+            { $set: { programSelection: req.body.programSelection } },
+            { session }
+          );
+          const studentEmails = await Student.find({ batchId }).distinct("email");
+          if (studentEmails.length > 0) {
+            await User.updateMany(
+              { email: { $in: studentEmails } },
+              { $set: { programSelection: req.body.programSelection } },
+              { session }
+            );
+          }
         }
       });
     } finally {
@@ -1760,7 +1790,7 @@ export const createStudentAdmin = async (req, res) => {
       batchId,
       userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
-      programSelection: programSelection || "Placement Sprint",
+      programSelection: programSelection || batch.programSelection || "Placement Sprint",
       status: status || "Active",
     });
 
@@ -1769,7 +1799,7 @@ export const createStudentAdmin = async (req, res) => {
         $set: {
           batchId,
           startDate: batch.startDate,
-          programSelection: programSelection || "Placement Sprint",
+          programSelection: programSelection || batch.programSelection || "Placement Sprint",
         },
       });
     }
