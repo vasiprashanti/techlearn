@@ -112,7 +112,7 @@ const Footer = () => {
         <img
           src="/logo-no-bg-small.webp"
           alt="TechLearn Solutions"
-          loading="lazy"
+          loading="eager"
           className="w-full max-w-full h-12 object-contain sm:h-32 md:h-56 sm:object-cover object-bottom"
           draggable="false"
         />
