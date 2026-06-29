@@ -232,6 +232,9 @@ async function request(path, options = {}) {
         const errorPayload = await response.json().catch(() => ({}));
         const errorMessage = getErrorMessage(errorPayload, `Request failed with status ${response.status}`);
         const error = new Error(errorMessage);
+        error.code = errorPayload?.code;
+        error.data = errorPayload?.data;
+        error.status = response.status;
 
         if (isGet && isRetriableStatus(response.status) && attempt < maxAttempts) {
           await delay(GET_RETRY_DELAY_MS);

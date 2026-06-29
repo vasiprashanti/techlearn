@@ -45,42 +45,11 @@ const normalizeStudent = (student) => ({
 
 const getStudentRelevance = (student, query) => {
   if (!query) return 0;
-  const q = query.trim().toLowerCase();
-  if (!q) return 0;
-
+  const q = query.toLowerCase();
   const name = String(student.name || '').toLowerCase();
-  const email = String(student.email || '').toLowerCase();
-  const batch = String(student.batch || '').toLowerCase();
-  const college = String(student.college || '').toLowerCase();
-
-  const fields = [name, email, batch, college];
-
-  // 1. Exact match of the entire query in any field
-  for (const field of fields) {
-    if (field === q) return 1000;
-    if (field.startsWith(q)) return 500;
-    if (field.includes(q)) return 200;
+  if (name.startsWith(q)) {
+    return 1000 - name.indexOf(q);
   }
-
-  // 2. Query terms in the same order
-  const terms = q.split(/\s+/).filter(Boolean);
-  if (terms.length > 1) {
-    const escapedTerms = terms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const orderRegex = new RegExp(escapedTerms.join('.*'), 'i');
-    for (const field of fields) {
-      if (orderRegex.test(field)) return 100;
-    }
-  }
-
-  // 3. Match individual words/terms (no character-level matching)
-  let matchedTerms = 0;
-  for (const term of terms) {
-    const termMatched = fields.some(field => field.includes(term));
-    if (termMatched) matchedTerms++;
-  }
-  if (matchedTerms === terms.length) return 50;
-  if (matchedTerms > 0) return 10 * matchedTerms;
-
   return 0;
 };
 
@@ -127,23 +96,92 @@ const StudentModal = ({ student, onClose }) => {
   if (!student) return null;
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#e8edf4] dark:bg-[#0a1737] p-4 text-slate-900 dark:text-slate-100 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-[22px] font-semibold break-words text-slate-900 dark:text-white">{student.name}</h2>
-          <button onClick={onClose} className="text-xl leading-none text-slate-500 dark:text-white/60 hover:text-slate-700 dark:hover:text-white" aria-label="Close student detail">×</button>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-md transition-opacity duration-300" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-6 text-slate-900 dark:text-slate-100 shadow-2xl overflow-hidden transform transition-all duration-300">
+        
+        {/* Top Decorative bar */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#3C83F6] to-[#7fb1ff]" />
+
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:text-white/60 dark:hover:text-white text-lg w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors" 
+          aria-label="Close details"
+        >
+          ✕
+        </button>
+
+        {/* Header Info */}
+        <div className="flex items-center gap-4 pb-5 border-b border-black/5 dark:border-white/10 mt-2">
+          <div className="w-12 h-12 rounded-full bg-[#3C83F6]/10 dark:bg-white/5 flex items-center justify-center text-xl font-bold text-[#3C83F6] dark:text-[#8fd9ff] border border-[#3C83F6]/25 dark:border-white/15 select-none shrink-0">
+            {student.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white truncate">{student.name}</h2>
+            <p className="text-xs text-slate-500 dark:text-white/60 truncate mt-0.5">{student.email || 'No email registered'}</p>
+          </div>
         </div>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-[15px]">
-          <div><span className="text-slate-500 dark:text-white/55">Email:</span> <span className="font-medium break-all text-slate-900 dark:text-white">{student.email || 'Not available'}</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">College:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.college || 'Not available'}</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Batch:</span> <span className="font-medium break-words text-slate-900 dark:text-white">{student.batch || 'Not available'}</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Track:</span> <span className="font-semibold break-words text-slate-900 dark:text-white">{student.track || 'Not available'}</span></div>
-          <div><span className="text-slate-500">Accuracy:</span> <span className="inline-flex rounded-full bg-emerald-600 text-white font-semibold px-2 py-0.5 text-[0.76em]">{student.accuracy}%</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Streak:</span> <span className="font-medium text-slate-900 dark:text-white">{student.streak} days</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Tests Taken:</span> <span className="font-medium text-slate-900 dark:text-white">{student.testsTaken ?? 'Not available'}</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Last Active:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.lastActive)}</span></div>
-          <div><span className="text-slate-500">Status:</span> <span className={`inline-flex rounded-full text-white font-semibold px-2 py-0.5 text-[0.76em] ${student.status === 'Active' ? 'bg-emerald-600' : 'bg-rose-500'}`}>{student.status}</span></div>
-          <div><span className="text-slate-500 dark:text-white/55">Joined:</span> <span className="font-medium text-slate-900 dark:text-white">{formatDateValue(student.joined)}</span></div>
+
+        {/* Info Grid */}
+        <div className="mt-5 space-y-4 text-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">College</span>
+              <span className="block font-semibold mt-1 truncate text-slate-700 dark:text-white">{student.college || 'Not assigned'}</span>
+            </div>
+            <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Batch</span>
+              <span className="block font-semibold mt-1 truncate text-slate-700 dark:text-white">{student.batch || 'Not assigned'}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Track</span>
+              <span className="block font-semibold mt-1 truncate text-slate-700 dark:text-white">{student.track || 'General Track'}</span>
+            </div>
+            <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
+              <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Program Selection</span>
+              <span className="block font-bold mt-1 truncate text-[#3C83F6] dark:text-[#8fd9ff]">{student.programSelection || 'Placement Sprint'}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-black/[0.01] dark:bg-white/[0.01] p-2.5 rounded-xl text-center border border-black/[0.03] dark:border-white/[0.03]">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Progress</span>
+              <span className="block font-bold text-base mt-1 text-emerald-600 dark:text-emerald-400">{student.accuracy}%</span>
+            </div>
+            <div className="bg-black/[0.01] dark:bg-white/[0.01] p-2.5 rounded-xl text-center border border-black/[0.03] dark:border-white/[0.03]">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Streak</span>
+              <span className="block font-bold text-base mt-1 text-slate-700 dark:text-white">{student.streak} days</span>
+            </div>
+            <div className="bg-black/[0.01] dark:bg-white/[0.01] p-2.5 rounded-xl text-center border border-black/[0.03] dark:border-white/[0.03]">
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Tests Taken</span>
+              <span className="block font-bold text-base mt-1 text-slate-700 dark:text-white">{student.testsTaken ?? 0}</span>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-black/5 dark:border-white/10 grid grid-cols-2 gap-4 text-xs text-slate-500 dark:text-white/60">
+            <div>
+              <span className="block text-[10px] uppercase font-bold tracking-wider text-[#8498ad] dark:text-white/40">Last Active</span>
+              <span className="block mt-0.5 font-medium text-slate-700 dark:text-slate-350">{formatDateValue(student.lastActive)}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase font-bold tracking-wider text-[#8498ad] dark:text-white/40">Joined Date</span>
+              <span className="block mt-0.5 font-medium text-slate-700 dark:text-slate-350">{formatDateValue(student.joined)}</span>
+            </div>
+          </div>
+          
+          <div className="pt-2 flex items-center justify-between">
+            <span className="text-xs text-slate-400 dark:text-white/35 font-medium">Status</span>
+            <span className={`inline-flex rounded-full text-xs font-bold px-3 py-1 ${
+              student.status === 'Active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-500/20' :
+              student.status === 'Completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-500/20' :
+              'bg-slate-100 text-slate-800 dark:bg-slate-500/10 dark:text-slate-400 border border-slate-500/20'
+            }`}>
+              {student.status}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -737,55 +775,35 @@ const Students = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 lg:hidden">
-              {sortedStudents.map((student) => (
-                <article key={student.id} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-black/85 dark:text-white break-words">{student.name}</h3>
-                      <p className="mt-1 text-sm text-black/55 dark:text-white/60 break-all">{student.email}</p>
-                    </div>
-                    <span className={`shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full border inline-flex items-center ${student.status === 'Active' ? 'border-emerald-500/20 text-white bg-emerald-500' : 'border-rose-400/20 text-white bg-rose-500'}`}>{student.status}</span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div><p className="text-black/45 dark:text-white/45">College</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.college || 'Not available'}</p></div>
-                    <div><p className="text-black/45 dark:text-white/45">Batch</p><p className="mt-1 font-medium text-black/80 dark:text-white break-words">{student.batch || 'Not available'}</p></div>
-                    <div className="col-span-2"><p className="text-black/45 dark:text-white/45">Track</p><p className="mt-1 font-medium text-black/75 dark:text-white/70 break-words">{student.track}</p></div>
-                    <div><p className="text-black/45 dark:text-white/45">Accuracy</p><p className="mt-1 font-medium">{student.accuracy}%</p></div>
-                    <div><p className="text-black/45 dark:text-white/45">Streak</p><p className="mt-1 font-medium">{student.streak} days</p></div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-end gap-2">
-                    <button onClick={() => setSelectedStudent(student)} className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${student.name}`}><FiEye className="w-4 h-4" /></button>
-                    <button onClick={() => openEditStudent(student)} className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${student.name}`}><FiEdit2 className="w-4 h-4" /></button>
-                    <button onClick={() => setPendingDeleteStudent(student)} className="h-9 rounded-xl px-3 inline-flex items-center justify-center text-black/70 dark:text-white/70 hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${student.name}`}><FiTrash2 className="w-4 h-4" /></button>
-                  </div>
-                </article>
-              ))}
-              {sortedStudents.length === 0 && <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</div>}
-            </div>
-
-            <div className="hidden lg:block bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-auto max-h-[78vh]">
-              <table className="w-full min-w-[1180px] table-fixed">
-                <thead className="border-b-2 border-black/12 dark:border-white/12">
+            <div className="bg-white dark:bg-[#0f1f43] backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-2xl overflow-x-auto max-h-[78vh] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/15 dark:[&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full">
+              <table className="w-full min-w-[750px] table-fixed border-collapse">
+                <thead className="border-b border-black/12 dark:border-white/12">
                   <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur select-none">
-                    {['#', 'Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status', 'Actions'].map((col) => {
-                      const isSortable = ['Name', 'Email', 'College', 'Batch', 'Track', 'Accuracy', 'Streak', 'Status'].includes(col);
+                    {['#', 'Student', 'Batch', 'Track', 'Progress', 'Status', 'Actions'].map((col) => {
+                      const isSortable = ['Student', 'Batch', 'Track', 'Progress', 'Status'].includes(col);
                       const fieldMap = {
-                        'Name': 'name',
-                        'Email': 'email',
-                        'College': 'college',
+                        'Student': 'name',
                         'Batch': 'batch',
                         'Track': 'track',
-                        'Accuracy': 'accuracy',
-                        'Streak': 'streak',
+                        'Progress': 'accuracy',
                         'Status': 'status'
                       };
                       const sortField = fieldMap[col];
+                      
+                      let widthClass = '';
+                      if (col === '#') widthClass = 'w-[5%]';
+                      else if (col === 'Student') widthClass = 'w-[25%]';
+                      else if (col === 'Batch') widthClass = 'w-[20%]';
+                      else if (col === 'Track') widthClass = 'w-[14%]';
+                      else if (col === 'Progress') widthClass = 'w-[9%]';
+                      else if (col === 'Status') widthClass = 'w-[9%]';
+                      else if (col === 'Actions') widthClass = 'w-[18%]';
+
                       return (
                         <th 
                           key={col} 
                           onClick={() => isSortable && toggleStudentSort(sortField)}
-                          className={`px-4 py-3 text-left text-sm font-semibold text-black/55 dark:text-white/60 ${col === '#' ? 'w-14' : ''} ${isSortable ? 'cursor-pointer hover:text-blue-500 transition-colors' : ''}`}
+                          className={`px-3 py-3 text-center text-[11px] sm:text-xs md:text-sm font-bold text-[#8498ad] dark:text-white/55 ${widthClass} ${isSortable ? 'cursor-pointer hover:text-[#3C83F6] transition-colors' : ''}`}
                         >
                           {col}
                           {isSortable && studentSortField === sortField && (
@@ -798,26 +816,34 @@ const Students = () => {
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
                   {sortedStudents.map((student, index) => (
-                    <tr key={student.id} className="border-b border-black/12 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/[0.04]">
-                      <td className="px-4 py-3 text-sm font-semibold text-black/55 dark:text-white/60">{index + 1}</td>
-                      <td className="px-4 py-3 text-sm font-semibold truncate">{student.name}</td>
-                      <td className="px-4 py-3 text-[13px] truncate">{student.email}</td>
-                      <td className="px-4 py-3 text-sm truncate">{student.college || 'Not available'}</td>
-                      <td className="px-4 py-3 text-sm truncate">{student.batch || 'Not available'}</td>
-                      <td className="px-4 py-3 text-sm truncate">{student.track}</td>
-                      <td className="px-4 py-3 text-sm">{student.accuracy}%</td>
-                      <td className="px-4 py-3 text-sm">{student.streak} days</td>
-                      <td className="px-4 py-3 text-sm">{student.status}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <button onClick={() => setSelectedStudent(student)} className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${student.name}`}><FiEye className="w-4 h-4" /></button>
-                          <button onClick={() => openEditStudent(student)} className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${student.name}`}><FiEdit2 className="w-4 h-4" /></button>
-                          <button onClick={() => setPendingDeleteStudent(student)} className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${student.name}`}><FiTrash2 className="w-4 h-4" /></button>
+                    <tr key={student.id} className="border-b border-black/12 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                      <td className="px-3 py-3 text-center text-[11px] sm:text-xs md:text-sm font-semibold text-black/55 dark:text-white/60">{index + 1}</td>
+                      <td className="px-3 py-3 text-center truncate">
+                        <p className="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-800 dark:text-white/90 truncate">{student.name}</p>
+                        <p className="text-[9px] sm:text-[10px] md:text-[11px] text-slate-500 dark:text-white/55 truncate mt-0.5">{student.email}</p>
+                      </td>
+                      <td className="px-3 py-3 text-center text-[10px] sm:text-[11px] md:text-xs text-slate-850 dark:text-white/75 truncate">{student.batch || 'Not available'}</td>
+                      <td className="px-3 py-3 text-center text-[10px] sm:text-[11px] md:text-xs text-slate-850 dark:text-white/75 truncate">{student.track}</td>
+                      <td className="px-3 py-3 text-center text-[10px] sm:text-[11px] md:text-xs text-slate-850 dark:text-white/80 font-medium">{student.accuracy}%</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] sm:text-[10px] md:text-[11px] font-semibold ${
+                          student.status === 'Active' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-500/20' :
+                          student.status === 'Completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-500/20' :
+                          'bg-slate-100 text-slate-800 dark:bg-slate-500/10 dark:text-slate-400 border border-slate-500/20'
+                        }`}>
+                          {student.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5 pl-6 sm:pl-8">
+                          <button onClick={() => setSelectedStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${student.name}`}><FiEye className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => openEditStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${student.name}`}><FiEdit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={() => setPendingDeleteStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${student.name}`}><FiTrash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </td>
                     </tr>
                   ))}
-                  {sortedStudents.length === 0 && <tr><td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
+                  {sortedStudents.length === 0 && <tr><td colSpan={7} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">No students match your current filters.</td></tr>}
                 </tbody>
               </table>
             </div>

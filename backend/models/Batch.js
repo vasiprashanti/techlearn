@@ -84,6 +84,11 @@ const batchSchema = new mongoose.Schema(
       default: BATCH_STATUS.DRAFT,
       required: true,
     },
+    programSelection: {
+      type: String,
+      enum: ["Placement Sprint", "Full Stack Project Program", "Both"],
+      default: "Placement Sprint",
+    },
   },
   { timestamps: true }
 );
