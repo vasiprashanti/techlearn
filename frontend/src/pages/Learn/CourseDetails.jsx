@@ -194,7 +194,7 @@ const CourseDetails = () => {
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="flex-1 min-w-0 transition-all duration-700 ease-in-out z-10 pt-24 md:pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-x-clip overflow-y-auto">
+      <main className="flex-1 min-w-0 transition-all duration-700 ease-in-out z-10 pt-24 md:pt-28 pb-12 px-4 sm:px-6 md:px-12 lg:px-16 overflow-x-clip">
         <div className="max-w-[1600px] mx-auto space-y-8">
           
           {/* Top Header */}

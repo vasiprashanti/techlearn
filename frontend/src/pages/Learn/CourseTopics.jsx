@@ -371,7 +371,7 @@ const CourseTopics = () => {
           <div
             ref={scrollContainerRef}
             onScroll={handleContentScroll}
-            className="relative min-h-0 min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="relative min-h-0 min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:overscroll-contain md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
