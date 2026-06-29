@@ -17,7 +17,7 @@ const CourseTopicsSkeleton = ({ isDarkMode }) => (
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
       <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
-        <aside className="hidden md:flex w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
+        <aside className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
@@ -225,7 +225,7 @@ const CourseTopics = () => {
         <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
           <aside
             data-course-sidebar="true"
-            className="hidden md:flex w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
+            className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
           >
             <div className="px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14">
               <div className="space-y-2">
