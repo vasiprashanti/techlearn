@@ -892,7 +892,7 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[800px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[168px] min-w-[168px] border-r border-black/5 dark:border-white/5">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
@@ -904,7 +904,7 @@ const BatchDetails = () => {
                           </thead>
                           <tbody>
                             <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
                                 Attempted Students
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
@@ -918,7 +918,7 @@ const BatchDetails = () => {
                               })}
                             </tr>
                             <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
                                 Average Score
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
