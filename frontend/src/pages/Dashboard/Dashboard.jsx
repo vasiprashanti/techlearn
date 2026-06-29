@@ -814,14 +814,14 @@ export default function Dashboard() {
                           }`}
                         >
                           <div
-                            className={`w-6 font-pixel-header text-[10px] sm:text-xs text-left shrink-0 leading-tight ${
+                            className={`w-6 font-press-start-2p text-[8px] sm:text-[9.5px] text-left shrink-0 leading-tight ${
                               student.rank === 1 ? 'text-amber-500 font-medium' : student.rank === 2 ? 'text-slate-400 font-medium' : student.rank === 3 ? 'text-amber-700 font-medium' : 'text-[#00113b]/70 dark:text-[#81bde6] font-medium'
                             }`}
                           >
                             #{student.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-pixel-header text-[10px] sm:text-xs truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                            <div className={`font-press-start-2p text-[8px] sm:text-[9.5px] truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
                               {student.name}
                             </div>
                           </div>
