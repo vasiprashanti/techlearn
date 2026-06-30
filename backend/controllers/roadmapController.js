@@ -2,7 +2,74 @@ import mongoose from "mongoose";
 import Roadmap from "../models/Roadmap.js";
 import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
+import StudentTrackAssignment from "../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../utils/auditLogger.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const combineDateAndTime = (dateValue, timeValue = "00:00") => {
+  const date = dateValue ? new Date(dateValue) : new Date();
+  if (Number.isNaN(date.getTime())) return new Date();
+
+  const [hours = "0", minutes = "0"] = String(timeValue || "00:00").split(":");
+  date.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
+  return date;
+};
+
+const getCurrentDayFromAssignment = (assignment, batch) => {
+  const assignmentDate = assignment?.assignedAt || assignment?.activatedAt || batch?.assignedTrackTemplateAt || batch?.startDate || new Date();
+  const releaseStart = combineDateAndTime(assignmentDate, batch?.releaseTime || "00:00");
+  const elapsedDays = Math.floor((Date.now() - releaseStart.getTime()) / DAY_MS);
+  return Math.max(1, elapsedDays + 1);
+};
+
+const getTaskLabel = (task) => {
+  const question = task?.questionId;
+  if (!question || typeof question !== "object") return task?.taskType || "Assigned task";
+  return question.prompt || question.question || question.title || question.tag || question.topic || task?.taskType || "Assigned task";
+};
+
+const buildActiveTrackRoadmap = (assignment, batch) => {
+  const track = assignment?.trackTemplateId;
+  if (!track || typeof track !== "object") return null;
+
+  const currentDay = getCurrentDayFromAssignment(assignment, batch);
+  const totalDays = Number(track.totalDays || track.dayAssignments?.length || 1);
+  const dayMap = new Map((track.dayAssignments || []).map((day) => [Number(day.dayNumber), day]));
+
+  const sections = Array.from({ length: totalDays }).map((_, index) => {
+    const dayNumber = index + 1;
+    const day = dayMap.get(dayNumber);
+    const tasks = day?.tasks?.length
+      ? day.tasks
+      : day?.questionId
+        ? [{ taskType: track.trackType || "Daily Challenge", questionId: day.questionId }]
+        : [];
+    const state = dayNumber < currentDay ? "Completed / revision available" : dayNumber === currentDay ? "Current day" : "Locked";
+    const taskLines = tasks.length
+      ? tasks.map((task, taskIndex) => `- ${taskIndex + 1}. ${getTaskLabel(task)}${task?.xpValue ? ` (${task.xpValue} XP)` : ""}`).join("\n")
+      : "- Tasks will appear once this day is configured.";
+
+    return `## Day ${dayNumber}\n\n**Status:** ${state}\n\n${taskLines}`;
+  });
+
+  return {
+    title: track.name || "Current Active Track",
+    description: `${track.trackType || "Track"} progress for ${batch?.name || "your batch"}. Day ${Math.min(currentDay, totalDays)} of ${totalDays}.`,
+    markdownBody: sections.join("\n\n"),
+    activeTrack: {
+      id: track._id,
+      name: track.name,
+      trackType: track.trackType,
+      category: track.category,
+      currentDay: Math.min(currentDay, totalDays),
+      totalDays,
+      assignedAt: assignment.assignedAt,
+      batchId: batch?._id || assignment.batchId,
+      batchName: batch?.name || "",
+    },
+  };
+};
 
 const normalizeBatchIds = (value) => {
   const rawIds = Array.isArray(value) ? value : [];
@@ -187,16 +254,63 @@ export const deleteRoadmapAdmin = async (req, res) => {
 export const getCurrentUserRoadmap = async (req, res) => {
   try {
     let batchId = req.user?.batchId || null;
+    let student = null;
 
     if (!batchId && req.user?.email) {
-      const student = await Student.findOne({ email: String(req.user.email).trim().toLowerCase() })
-        .select("batchId")
+      student = await Student.findOne({ email: String(req.user.email).trim().toLowerCase() })
+        .select("_id batchId")
         .lean();
       batchId = student?.batchId || null;
     }
 
+    if (!student && req.user?._id) {
+      student = await Student.findOne({ userId: req.user._id }).select("_id batchId").lean();
+      batchId = batchId || student?.batchId || null;
+    }
+
     if (!batchId) {
       return res.status(200).json({ success: true, data: null });
+    }
+
+    if (student?._id) {
+      const [batch, activeAssignment] = await Promise.all([
+        Batch.findById(batchId).select("_id name startDate releaseTime assignedTrackTemplateAt").lean(),
+        StudentTrackAssignment.findOne({
+          studentId: student._id,
+          batchId,
+          status: "Active",
+        })
+          .populate({
+            path: "trackTemplateId",
+            populate: [
+              {
+                path: "dayAssignments.tasks.questionId",
+                select: "qid prompt question title tag topic xpValue",
+              },
+              {
+                path: "dayAssignments.questionId",
+                select: "qid prompt question title tag topic xpValue",
+              },
+            ],
+          })
+          .lean(),
+      ]);
+
+      const activeTrackRoadmap = buildActiveTrackRoadmap(activeAssignment, batch);
+      if (activeTrackRoadmap) {
+        return res.status(200).json({
+          success: true,
+          data: {
+            id: `active-track-${activeTrackRoadmap.activeTrack.id}`,
+            assignedBatchIds: [batchId],
+            assignedBatches: batch ? [{ id: batch._id, name: batch.name }] : [],
+            status: "Active",
+            updatedAt: activeAssignment.updatedAt,
+            createdAt: activeAssignment.createdAt,
+            ...activeTrackRoadmap,
+          },
+        });
+      }
     }
 
     const roadmap = await Roadmap.findOne({
