@@ -93,8 +93,7 @@ const calculateStreak = (submissions) => {
 
 const formatQuestion = (question) => {
   const category = question.categoryId && typeof question.categoryId === "object" ? question.categoryId : null;
-  const categoryType = normalizeCategoryType(question.categoryType || category?.categoryType);
-  if (categoryType && categoryType !== "Coding") return null;
+  const categoryType = normalizeCategoryType(question.categoryType || category?.categoryType) || "Coding";
 
   const content = question.content || {};
   const track = normalizePracticeTrack(category?.title || question.categoryTitle || question.trackType);
@@ -106,7 +105,7 @@ const formatQuestion = (question) => {
     subtitle: question.tags?.[0] || category?.title || question.categoryTitle || question.trackType || track,
     difficulty: question.difficulty || "Easy",
     topic: track,
-    categoryType: categoryType || "Coding",
+    categoryType: categoryType,
     description: question.description || "",
     inputFormat: question.inputFormat || "",
     outputFormat: question.outputFormat || "",
@@ -114,22 +113,34 @@ const formatQuestion = (question) => {
     hiddenTestCases: content.hiddenTestCases?.length ? content.hiddenTestCases : question.hiddenTestCases || [],
     editorial: question.editorial || content.solutionNotes || "",
     solutionCode: question.solutionCode || "",
+    options: content.options || [],
   };
 };
 
 export const listPracticeQuestions = async (req, res) => {
   try {
     const requestedTrack = normalizePracticeTrack(req.query.track);
+
+    // 1. Fetch categories marked "Practice" or "Both"
+    const Category = mongoose.model("Category");
+    const activeCategories = await Category.find({
+      visibility: { $in: ["Practice", "Both"] },
+      status: "Active",
+    }).lean();
+    const categoryIds = activeCategories.map((c) => c._id);
+
+    // 2. Fetch active questions belonging to these categories
     const query = {
       status: "Active",
       isActive: { $ne: false },
-      $or: [{ categoryType: "Coding" }, { categoryType: { $exists: false } }, { categoryType: null }],
+      categoryId: { $in: categoryIds },
     };
 
     const questions = await Question.find(query)
-      .populate("categoryId", "title slug categoryType")
+      .populate("categoryId", "title slug categoryType visibility")
       .sort({ createdAt: -1 })
       .lean();
+
     const data = questions
       .map(formatQuestion)
       .filter(Boolean)
@@ -475,14 +486,21 @@ export const recordPracticeSubmission = async (req, res) => {
 
 export const getPracticeStats = async (req, res) => {
   try {
+    const Category = mongoose.model("Category");
+    const activeCategories = await Category.find({
+      visibility: { $in: ["Practice", "Both"] },
+      status: "Active",
+    }).lean();
+    const categoryIds = activeCategories.map((c) => c._id);
+
     const [questions, submissions] = await Promise.all([
       Question.find({
         status: "Active",
         isActive: { $ne: false },
-        $or: [{ categoryType: "Coding" }, { categoryType: { $exists: false } }, { categoryType: null }],
+        categoryId: { $in: categoryIds },
       })
         .select("trackType categoryTitle categoryType categoryId")
-        .populate("categoryId", "title slug categoryType")
+        .populate("categoryId", "title slug categoryType visibility")
         .lean(),
       PracticeSubmission.find({ userId: req.user._id }).sort({ submittedAt: -1 }).lean(),
     ]);

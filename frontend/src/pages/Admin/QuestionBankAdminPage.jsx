@@ -92,6 +92,7 @@ export const QuestionBankAdminPage = () => {
         const editableFields = {
           title: formPayload.title,
           status: formPayload.status,
+          visibility: formPayload.visibility,
         };
         await questionBankApi.updateCategory(editingCategory.id || editingCategory._id, editableFields);
       } else {

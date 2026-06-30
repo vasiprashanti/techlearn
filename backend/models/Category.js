@@ -34,6 +34,14 @@ const categorySchema = new mongoose.Schema(
       enum: ['Active', 'Draft', 'Archived'],
       default: 'Draft',
     },
+    visibility: {
+      type: String,
+      enum: {
+        values: ['Assessment', 'Practice', 'Both'],
+        message: 'visibility must be Assessment, Practice, or Both',
+      },
+      default: 'Both',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Admin',
