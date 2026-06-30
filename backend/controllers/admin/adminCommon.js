@@ -142,6 +142,7 @@ export const listKnownQuestionCategories = async () => {
     icon: category.icon || "chart",
     categoryType: category.categoryType,
     status: category.status,
+    visibility: category.visibility || "Both",
   }));
 };
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
-import { Play, SendHorizontal } from "lucide-react";
+import { Play, SendHorizontal, Clock } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import {
@@ -60,13 +60,66 @@ export default function DailyChallengeTest() {
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const [timerWarning, setTimerWarning] = useState(false);
 
+  const [activeProblemIndex, setActiveProblemIndex] = useState(0);
+  const [solutions, setSolutions] = useState({});
+  const [submittedProblems, setSubmittedProblems] = useState(new Set());
+
   const autoSubmitTriggered = useRef(false);
   const editorCleanupRef = useRef(null);
-  const problem = challenge?.problems?.[0];
+
+  const problem = challenge?.problems?.[activeProblemIndex];
 
   const announceClipboardBlocked = useCallback((actionLabel) => {
     setOutput(`${actionLabel} is disabled during the Daily Challenge.`);
   }, []);
+
+  const isMcq = problem?.categoryType === "MCQ";
+  const mcqOptions = problem?.content?.options || [];
+
+  // Reset or load code for active problem
+  useEffect(() => {
+    if (problem) {
+      const isChallengeMcq = problem.categoryType === "MCQ";
+      const currentSolution = solutions[activeProblemIndex];
+      if (currentSolution) {
+        setCode(currentSolution.code);
+        setSelectedLanguage(currentSolution.language);
+      } else {
+        if (isChallengeMcq) {
+          setCode("");
+        } else {
+          setCode(LANGUAGES[selectedLanguage]?.starter || "");
+        }
+      }
+    }
+  }, [problem, activeProblemIndex]);
+
+  // Keep solutions map in sync with current text editor inputs
+  const handleCodeChange = (newCode) => {
+    setCode(newCode);
+    setSolutions((prev) => ({
+      ...prev,
+      [activeProblemIndex]: {
+        ...prev[activeProblemIndex],
+        code: newCode,
+        language: selectedLanguage,
+      },
+    }));
+  };
+
+  const handleLanguageChange = (newLang) => {
+    setSelectedLanguage(newLang);
+    const starter = LANGUAGES[newLang]?.starter || "";
+    setCode(starter);
+    setSolutions((prev) => ({
+      ...prev,
+      [activeProblemIndex]: {
+        ...prev[activeProblemIndex],
+        code: starter,
+        language: newLang,
+      },
+    }));
+  };
 
   useEffect(() => {
     if (!session?.isVerified || !session?.studentEmail) {
@@ -88,6 +141,17 @@ export default function DailyChallengeTest() {
         setChallenge(responseChallenge);
         setAttempt(attemptPayload);
         setTimeLeft(Math.max(0, Number(attemptPayload?.secondsRemaining || 0)));
+
+        if (responseChallenge && responseChallenge.problems) {
+          const initialSolutions = {};
+          responseChallenge.problems.forEach((prob, idx) => {
+            initialSolutions[idx] = {
+              code: prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter,
+              language: "python"
+            };
+          });
+          setSolutions(initialSolutions);
+        }
 
         setDailyChallengeSession(linkId, {
           challenge: responseChallenge,
@@ -169,7 +233,7 @@ export default function DailyChallengeTest() {
         attemptId: attempt?.id,
         solutions: [
           {
-            problemIndex: 0,
+            problemIndex: activeProblemIndex,
             language: selectedLanguage,
             submittedCode: code,
           },
@@ -207,7 +271,7 @@ export default function DailyChallengeTest() {
   const handleSubmit = async () => {
     if (!problem || !studentEmail) return;
     if (!code.trim()) {
-      setOutput("Please write code before submitting.");
+      setOutput("Please write code or select an option before submitting.");
       return;
     }
 
@@ -220,7 +284,7 @@ export default function DailyChallengeTest() {
         attemptId: attempt?.id,
         solutions: [
           {
-            problemIndex: 0,
+            problemIndex: activeProblemIndex,
             language: selectedLanguage,
             submittedCode: code,
           },
@@ -233,11 +297,24 @@ export default function DailyChallengeTest() {
         setAttempt(data.attempt);
         setDailyChallengeSession(linkId, { attempt: data.attempt });
       }
-      setHasSubmitted(true);
 
-      // Automatically end challenge and redirect to results
-      const endResponse = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: finalAttempt?.id });
-      moveToResult(endResponse?.data || {});
+      const nextSubmitted = new Set(submittedProblems);
+      nextSubmitted.add(activeProblemIndex);
+      setSubmittedProblems(nextSubmitted);
+
+      setOutput(`✅ Question ${activeProblemIndex + 1} Submitted Successfully!\nScore: ${data.problemScore || 0}`);
+
+      // If all questions are submitted, end challenge and redirect
+      if (challenge && nextSubmitted.size === challenge.problems.length) {
+        const endResponse = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: finalAttempt?.id });
+        moveToResult(endResponse?.data || {});
+      } else {
+        // Automatically switch to the next uncompleted problem
+        const nextIdx = challenge.problems.findIndex((_, idx) => !nextSubmitted.has(idx));
+        if (nextIdx !== -1) {
+          setActiveProblemIndex(nextIdx);
+        }
+      }
     } catch (error) {
       setOutput(error.message || "Submission failed.");
     } finally {
@@ -263,7 +340,22 @@ export default function DailyChallengeTest() {
     if (!studentEmail) return;
 
     try {
-      const response = await dailyChallengeAPI.autoSubmit(linkId, { studentEmail, attemptId: attempt?.id });
+      // Gather all unsubmitted solutions or current state
+      const finalSolutions = [];
+      challenge.problems.forEach((prob, idx) => {
+        const sol = solutions[idx] || {};
+        finalSolutions.push({
+          problemIndex: idx,
+          language: sol.language || "python",
+          submittedCode: idx === activeProblemIndex ? code : (sol.code || ""),
+        });
+      });
+
+      const response = await dailyChallengeAPI.autoSubmit(linkId, {
+        studentEmail,
+        attemptId: attempt?.id,
+        solutions: finalSolutions,
+      });
       moveToResult(response?.data || {});
     } catch (error) {
       setOutput(error.message || "Auto-submit failed.");
@@ -280,6 +372,8 @@ export default function DailyChallengeTest() {
       </div>
     );
   }
+
+  const isDone = submittedProblems.has(activeProblemIndex);
 
   return (
     <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
@@ -299,176 +393,249 @@ export default function DailyChallengeTest() {
             />
           )}
         </div>
-        <div className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200">
+        <div className="text-xs md:text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-[#2563eb] dark:text-[#8fd9ff]" />
           Time Left: <span className={timerWarning ? "text-red-500" : ""}>{formatTime(timeLeft)}</span>
         </div>
       </header>
 
       <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
-        {/* Left Panel (35% Width on large screens, stacks on mobile) */}
+        {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
         <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
           <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
+            {challenge?.problems?.length > 1 && (
+              <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
+                {challenge.problems.map((p, idx) => {
+                  const isActive = idx === activeProblemIndex;
+                  const isSubmitted = submittedProblems.has(idx);
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveProblemIndex(idx)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-200 ${
+                        isActive
+                          ? "bg-[#2563eb] text-white border-[#2563eb]"
+                          : "bg-white/30 text-gray-700 border-black/5 hover:bg-white/50 dark:bg-white/5 dark:text-gray-300 dark:border-white/5 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      Question {idx + 1} {isSubmitted && "✓"}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
             
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                Coding Round
+                {isMcq ? "Multiple Choice" : "Coding Round"}
               </span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
-              </span>
+              {!isMcq && (
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                  Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
+                </span>
+              )}
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
             <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{problem.description}</p>
 
-            <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300 border-t border-gray-300/30 dark:border-gray-700/30 pt-3">
-              <div>
-                <h3 className="font-semibold text-gray-950 dark:text-white">Input Format</h3>
-                <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.inputDescription || "Refer to problem statement."}</p>
+            {!isMcq && (
+              <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300 border-t border-gray-300/30 dark:border-gray-700/30 pt-3">
+                <div>
+                  <h3 className="font-semibold text-gray-950 dark:text-white">Input Format</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.inputDescription || "Refer to problem statement."}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-950 dark:text-white">Output Format</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.outputDescription || "Return expected output."}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-950 dark:text-white">Output Format</h3>
-                <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.outputDescription || "Return expected output."}</p>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
-        {/* Right Panel - Stacks on mobile */}
-        <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
-          {/* Card 1: Coding Space */}
-          <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-            <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
-              <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-                <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
-                
-                <select
-                  value={selectedLanguage}
-                  onChange={(event) => {
-                    const nextLanguage = event.target.value;
-                    setSelectedLanguage(nextLanguage);
-                    setCode(LANGUAGES[nextLanguage].starter);
-                  }}
-                  className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                >
-                  {Object.values(LANGUAGES).map((language) => (
-                    <option key={language.id} value={language.id}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Run / Submit buttons */}
-              <div className="flex items-center gap-2 justify-end w-full sm:w-auto z-10">
-                <button
-                  type="button"
-                  onClick={handleRun}
-                  disabled={running || submitting}
-                  className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
-                >
-                  <Play className="h-3.5 w-3.5" />
-                  {running ? "Run..." : "Run"}
-                </button>
+        {/* Right Panel - MCQ Choices or Monaco Code Space */}
+        {isMcq ? (
+          <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
+            <section className="flex-grow flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-5 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+              <div className="mb-4 flex items-center justify-between shrink-0 border-b border-black/5 dark:border-white/5 pb-3">
+                <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Select the Correct Option</span>
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={running || submitting || hasSubmitted}
-                  className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                  disabled={!code || submitting || isDone}
+                  className="justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                 >
                   <SendHorizontal className="h-3.5 w-3.5" />
-                  {hasSubmitted ? "Submitted" : submitting ? "Submit" : "Submit"}
+                  {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit Answer"}
                 </button>
               </div>
-            </div>
 
-            <div className="flex-1 overflow-hidden rounded-none border border-gray-300 dark:border-gray-700">
-              <Editor
-                onMount={(editor) => {
-                  if (typeof editorCleanupRef.current === "function") {
-                    editorCleanupRef.current();
-                  }
+              <div className="flex-grow overflow-y-auto pr-1 space-y-3">
+                {mcqOptions.map((opt) => {
+                  const isSelected = code === opt.label;
+                  return (
+                    <button
+                      key={opt.label}
+                      onClick={() => handleCodeChange(opt.label)}
+                      disabled={isDone || submitting}
+                      className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
+                        isSelected
+                          ? "border-[#2563eb] bg-[#2563eb]/10 dark:border-[#8fd9ff] dark:bg-[#8fd9ff]/15"
+                          : "border-black/5 bg-white/30 hover:bg-white/50 dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        isSelected
+                          ? "bg-[#2563eb] text-white dark:bg-[#8fd9ff] dark:text-[#020b23]"
+                          : "bg-black/10 dark:bg-white/10 text-gray-700 dark:text-gray-300"
+                      }`}>
+                        {opt.label}
+                      </span>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {opt.text}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        ) : (
+          <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
+            {/* Card 1: Coding Space */}
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+              <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
+                <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+                  <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
+                  
+                  <select
+                    value={selectedLanguage}
+                    onChange={(event) => handleLanguageChange(event.target.value)}
+                    disabled={isDone || running || submitting}
+                    className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  >
+                    {Object.values(LANGUAGES).map((language) => (
+                      <option key={language.id} value={language.id}>
+                        {language.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                  const editorNode = editor.getDomNode();
-                  if (!editorNode) return;
+                {/* Run / Submit buttons */}
+                <div className="flex items-center gap-2 justify-end w-full sm:w-auto z-10">
+                  <button
+                    type="button"
+                    onClick={handleRun}
+                    disabled={isDone || running || submitting}
+                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    {running ? "Run..." : "Run"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isDone || running || submitting}
+                    className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                  >
+                    <SendHorizontal className="h-3.5 w-3.5" />
+                    {isDone ? "Submitted" : submitting ? "Submit" : "Submit"}
+                  </button>
+                </div>
+              </div>
 
-                  const blockClipboardEvent = (event) => {
-                    event.preventDefault();
-
-                    if (event.type === "paste") {
-                      announceClipboardBlocked("Paste");
-                    } else if (event.type === "copy") {
-                      announceClipboardBlocked("Copy");
-                    } else if (event.type === "cut") {
-                      announceClipboardBlocked("Cut");
+              <div className="flex-1 overflow-hidden rounded-none border border-gray-300 dark:border-gray-700">
+                <Editor
+                  onMount={(editor) => {
+                    if (typeof editorCleanupRef.current === "function") {
+                      editorCleanupRef.current();
                     }
-                  };
 
-                  const blockShortcut = (event) => {
-                    const pressedKey = String(event.key || "").toLowerCase();
-                    const isClipboardShortcut =
-                      ((event.ctrlKey || event.metaKey) &&
-                        ["c", "v", "x", "insert"].includes(pressedKey)) ||
-                      (event.shiftKey && pressedKey === "insert");
+                    const editorNode = editor.getDomNode();
+                    if (!editorNode) return;
 
-                    if (!isClipboardShortcut) return;
+                    const blockClipboardEvent = (event) => {
+                      event.preventDefault();
 
-                    event.preventDefault();
+                      if (event.type === "paste") {
+                        announceClipboardBlocked("Paste");
+                      } else if (event.type === "copy") {
+                        announceClipboardBlocked("Copy");
+                      } else if (event.type === "cut") {
+                        announceClipboardBlocked("Cut");
+                      }
+                    };
 
-                    if (pressedKey === "v" || (event.shiftKey && pressedKey === "insert")) {
-                      announceClipboardBlocked("Paste");
-                    } else if (pressedKey === "x") {
-                      announceClipboardBlocked("Cut");
-                    } else {
-                      announceClipboardBlocked("Copy");
-                    }
-                  };
+                    const blockShortcut = (event) => {
+                      const pressedKey = String(event.key || "").toLowerCase();
+                      const isClipboardShortcut =
+                        ((event.ctrlKey || event.metaKey) &&
+                          ["c", "v", "x", "insert"].includes(pressedKey)) ||
+                        (event.shiftKey && pressedKey === "insert");
 
-                  editorNode.addEventListener("copy", blockClipboardEvent, true);
-                  editorNode.addEventListener("cut", blockClipboardEvent, true);
-                  editorNode.addEventListener("paste", blockClipboardEvent, true);
-                  editorNode.addEventListener("keydown", blockShortcut, true);
+                      if (!isClipboardShortcut) return;
 
-                  editorCleanupRef.current = () => {
-                    editorNode.removeEventListener("copy", blockClipboardEvent, true);
-                    editorNode.removeEventListener("cut", blockClipboardEvent, true);
-                    editorNode.removeEventListener("paste", blockClipboardEvent, true);
-                    editorNode.removeEventListener("keydown", blockShortcut, true);
-                  };
-                }}
-                language={LANGUAGES[selectedLanguage].monacoLanguage}
-                value={code}
-                onChange={(value) => setCode(value || "")}
-                theme={theme === "dark" ? "vs-dark" : "light"}
-                options={{
-                  contextmenu: false,
-                  minimap: { enabled: false },
-                  wordWrap: "on",
-                  fontSize: 14,
-                  scrollBeyondLastLine: false,
-                }}
-              />
-            </div>
-          </section>
+                      event.preventDefault();
 
-          {/* Card 2: Terminal Output */}
-          <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-            <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
-              Terminal
-            </div>
-            <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
-              {output}
-            </pre>
-          </section>
-        </div>
+                      if (pressedKey === "v" || (event.shiftKey && pressedKey === "insert")) {
+                        announceClipboardBlocked("Paste");
+                      } else if (pressedKey === "x") {
+                        announceClipboardBlocked("Cut");
+                      } else {
+                        announceClipboardBlocked("Copy");
+                      }
+                    };
+
+                    editorNode.addEventListener("copy", blockClipboardEvent, true);
+                    editorNode.addEventListener("cut", blockClipboardEvent, true);
+                    editorNode.addEventListener("paste", blockClipboardEvent, true);
+                    editorNode.addEventListener("keydown", blockShortcut, true);
+
+                    editorCleanupRef.current = () => {
+                      editorNode.removeEventListener("copy", blockClipboardEvent, true);
+                      editorNode.removeEventListener("cut", blockClipboardEvent, true);
+                      editorNode.removeEventListener("paste", blockClipboardEvent, true);
+                      editorNode.removeEventListener("keydown", blockShortcut, true);
+                    };
+                  }}
+                  language={LANGUAGES[selectedLanguage].monacoLanguage}
+                  value={code}
+                  onChange={handleCodeChange}
+                  theme={theme === "dark" ? "vs-dark" : "light"}
+                  options={{
+                    readOnly: isDone,
+                    contextmenu: false,
+                    minimap: { enabled: false },
+                    wordWrap: "on",
+                    fontSize: 14,
+                    scrollBeyondLastLine: false,
+                  }}
+                />
+              </div>
+            </section>
+
+            {/* Card 2: Terminal Output */}
+            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+              <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
+                Terminal
+              </div>
+              <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
+                {output}
+              </pre>
+            </section>
+          </div>
+        )}
       </div>
 
       {/* Fixed Footer Action Bar */}
       <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
         <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap">
-          Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
+          {!isMcq && `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}`}
         </div>
         
         <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap">

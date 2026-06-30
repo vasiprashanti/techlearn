@@ -280,80 +280,75 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-  const orderedQuestions = track.orderedQuestionIds || [];
-  const resolvedQuestion = orderedQuestions[dayNumber - 1];
-  const resolvedQuestionId = resolvedQuestion?._id || resolvedQuestion;
   const durationMinutes = DAILY_CHALLENGE_RULES.timerLimitMinutes;
 
-  console.log("[DAILY_CHALLENGE_DEBUG] Question Resolution:", {
-    dayNumber,
-    totalQuestionsInTrack: orderedQuestions.length,
-    resolvedQuestionId,
-    resolvedQuestionTitle: resolvedQuestion?.title,
-    orderedQuestionsInfo: orderedQuestions.map((q, idx) => ({
-      index: idx,
-      id: q?._id || q,
-      title: q?.title,
-    })),
-  });
+  let resolvedQuestionIds = [];
+  if (batch.assignedDailyChallengeTrack) {
+    const trackTemplate = await mongoose.model("TrackTemplate")
+      .findById(batch.assignedDailyChallengeTrack)
+      .lean();
+    const dayAssignment = trackTemplate?.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+    if (dayAssignment) {
+      if (dayAssignment.tasks && dayAssignment.tasks.length > 0) {
+        resolvedQuestionIds = dayAssignment.tasks.map((t) => t.questionId).filter(Boolean);
+      } else if (dayAssignment.questionId) {
+        resolvedQuestionIds = [dayAssignment.questionId];
+      }
+    }
+  }
 
-  if (!resolvedQuestionId) {
+  if (resolvedQuestionIds.length === 0) {
+    const orderedQuestions = track.orderedQuestionIds || [];
+    const resolvedQuestion = orderedQuestions[dayNumber - 1];
+    const resolvedQuestionId = resolvedQuestion?._id || resolvedQuestion;
+    if (resolvedQuestionId) {
+      resolvedQuestionIds = [resolvedQuestionId];
+    }
+  }
+
+  if (resolvedQuestionIds.length === 0) {
     console.log("[DAILY_CHALLENGE_DEBUG] No question for today in track, attempting fallback...");
-    
-    // Fallback: Try to use any available question from the database
     const fallbackQuestion = await Question.findOne({}).lean();
     if (fallbackQuestion) {
-      console.log("[DAILY_CHALLENGE_DEBUG] Using fallback question:", {
-        questionId: fallbackQuestion._id,
-        questionTitle: fallbackQuestion.title,
-      });
-      
       return {
         student: studentContext.student,
         studentEmail: studentContext.studentEmail,
         accessSource: studentContext.accessSource,
         batch,
         track,
-        question: fallbackQuestion,
+        questions: [fallbackQuestion],
         dayNumber,
         durationMinutes,
       };
     }
-
     const error = new Error(`No Daily Challenge question is configured for today. Admin needs to configure questions for ${track.trackType} track in ${batch.name} batch.`);
     error.statusCode = 404;
     throw error;
   }
 
-  const question =
-    resolvedQuestion.hiddenTestCases && resolvedQuestion.visibleTestCases
-      ? resolvedQuestion
-      : await Question.findById(resolvedQuestionId).lean();
+  const questions = await Promise.all(
+    resolvedQuestionIds.map(async (qId) => {
+      const qDoc = await Question.findById(qId).lean();
+      return qDoc;
+    })
+  );
 
-  if (!question) {
-    console.log("[DAILY_CHALLENGE_DEBUG] Question not found by ID, attempting fallback...");
-    
-    // Fallback: If question doesn't exist, use any available question
+  const validQuestions = questions.filter(Boolean);
+  if (validQuestions.length === 0) {
     const fallbackQuestion = await Question.findOne({}).lean();
     if (fallbackQuestion) {
-      console.log("[DAILY_CHALLENGE_DEBUG] Using fallback question:", {
-        questionId: fallbackQuestion._id,
-        questionTitle: fallbackQuestion.title,
-      });
-      
       return {
         student: studentContext.student,
         studentEmail: studentContext.studentEmail,
         accessSource: studentContext.accessSource,
         batch,
         track,
-        question: fallbackQuestion,
+        questions: [fallbackQuestion],
         dayNumber,
         durationMinutes,
       };
     }
-
-    const error = new Error("The configured Daily Challenge question could not be found, and no fallback question is available.");
+    const error = new Error("The configured Daily Challenge questions could not be found, and no fallback question is available.");
     error.statusCode = 404;
     throw error;
   }
@@ -364,14 +359,18 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     accessSource: studentContext.accessSource,
     batch,
     track,
-    question,
+    questions: validQuestions,
     dayNumber,
     durationMinutes,
   };
 };
 
-export const upsertDailyChallengeRound = async ({ batch, track, question, dayNumber, durationMinutes }) => {
+export const upsertDailyChallengeRound = async ({ batch, track, questions, dayNumber, durationMinutes }) => {
   const linkId = `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}`;
+  const resolvedQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
+
+  const problems = resolvedQuestions.map((q) => mapQuestionToProblem(q));
+
   const roundPayload = {
     title: `Daily Challenge - ${batch.name} - ${track.trackType} - Day ${dayNumber}`,
     college: batch.name,
@@ -379,11 +378,11 @@ export const upsertDailyChallengeRound = async ({ batch, track, question, dayNum
     trackId: track._id,
     date: startOfDay(),
     duration: durationMinutes,
-    problems: [mapQuestionToProblem(question)],
+    problems,
     linkId,
     isActive: true,
     challengeType: "daily_challenge",
-    questionId: question._id,
+    questionId: resolvedQuestions[0]?._id || null, // Fallback link for backward compatibility
     dayNumber,
     trackType: normalizeTrackType(track.trackType),
   };
@@ -392,7 +391,7 @@ export const upsertDailyChallengeRound = async ({ batch, track, question, dayNum
     { linkId },
     { $set: roundPayload },
     { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  ).populate("questionId");
 };
 
 export const resolveDailyChallengeParticipant = async ({ codingRound, user, email }) => {

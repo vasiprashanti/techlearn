@@ -84,7 +84,7 @@ export const getDailyChallengeByLink = async (req, res) => {
       linkId,
       challengeType: "daily_challenge",
       isActive: true,
-    }).lean();
+    }).populate("questionId").lean();
 
     if (!codingRound) {
       return res.status(404).json({

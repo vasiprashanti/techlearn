@@ -6,6 +6,7 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
     title: '',
     categoryType: 'Coding',
     status: 'Draft',
+    visibility: 'Both',
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -19,12 +20,14 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
         title: editingCategory.title || '',
         categoryType: editingCategory.categoryType || 'Coding',
         status: editingCategory.status || 'Draft',
+        visibility: editingCategory.visibility || 'Both',
       });
     } else {
       setForm({
         title: '',
         categoryType: 'Coding',
         status: 'Draft',
+        visibility: 'Both',
       });
     }
     setError('');
@@ -87,6 +90,22 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
               placeholder="Enter category name"
               className={categoryFormInputClass}
             />
+          </div>
+
+          <div>
+            <label className="admin-micro-label text-black/45 dark:text-white/45">Visibility</label>
+            <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+              <select
+                value={form.visibility}
+                onChange={(e) => setForm(prev => ({ ...prev, visibility: e.target.value }))}
+                className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+              >
+                <option className={dropdownOptionClass} value="Both">Both</option>
+                <option className={dropdownOptionClass} value="Practice">Practice</option>
+                <option className={dropdownOptionClass} value="Assessment">Assessment</option>
+              </select>
+              <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+            </div>
           </div>
 
           <div>

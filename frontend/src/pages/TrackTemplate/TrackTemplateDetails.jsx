@@ -41,6 +41,14 @@ const categorySlugMap = {
   'Machine Learning': 'machine-learning',
 };
 
+const slugifyCategory = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+
 const difficultyPillClass = (difficulty) => {
   if (difficulty === 'Easy') return 'bg-[#16a34a] text-white';
   if (difficulty === 'Medium') return 'bg-[#dbe7ff] text-[#3c83f6]';
@@ -143,7 +151,7 @@ export default function TrackTemplateDetails() {
     return 'Coding';
   }, [hasMcq, hasCoding]);
 
-  const categorySlug = track ? categorySlugMap[track.category] : null;
+  const categorySlug = track ? (categorySlugMap[track.category] || slugifyCategory(track.category)) : null;
 
   const assignedQuestionIdSet = useMemo(() => {
     const ids = new Set();
