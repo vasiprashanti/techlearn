@@ -1384,6 +1384,7 @@ export const getBatchDetail = async (req, res) => {
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
+        releaseTime: batch.releaseTime || "00:00",
         status: batch.status,
         start: formatDateLabel(batch.startDate),
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",

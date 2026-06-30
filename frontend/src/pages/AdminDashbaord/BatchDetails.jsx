@@ -37,6 +37,8 @@ const BatchDetails = () => {
   const [colleges, setColleges] = useState([]);
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
+  const [trackTemplates, setTrackTemplates] = useState([]);
+  const [placementCourse, setPlacementCourse] = useState(null);
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
   const [studentSortOrder, setStudentSortOrder] = useState('rank-asc');
@@ -57,6 +59,14 @@ const BatchDetails = () => {
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isRemovingStudent, setIsRemovingStudent] = useState(false);
+  const [isTrackFormOpen, setIsTrackFormOpen] = useState(false);
+  const [trackForm, setTrackForm] = useState({
+    assignedTrackTemplateId: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [trackFormError, setTrackFormError] = useState('');
+  const [isSavingTrack, setIsSavingTrack] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -69,12 +79,25 @@ const BatchDetails = () => {
     ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
-      const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
+      const normalizedTrackTemplates = preferRemoteData(remoteTracks, [])
+        .map((track) => ({ ...track, id: String(track.id || track._id) }))
+        .filter((track) => track.id && track.name);
+      const normalizedTracks = normalizedTrackTemplates.map((track) => track.name).filter(Boolean);
       const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
+      setTrackTemplates(normalizedTrackTemplates);
       setTracks(uniqueTracks);
     }).catch(() => {});
+
+    adminAPI.getCourses()
+      .then((coursesResponse) => {
+        const courses = preferRemoteData(coursesResponse?.courses || coursesResponse, []);
+        const course = courses.find((item) => /placement\s*sprint/i.test(item.title || ''))
+          || courses.find((item) => /placement/i.test(item.title || ''));
+        setPlacementCourse(course || null);
+      })
+      .catch(() => setPlacementCourse(null));
   }, []);
 
   const batch = useMemo(() => {
@@ -279,6 +302,59 @@ const BatchDetails = () => {
       setFormError(error.message || 'Failed to remove student from batch.');
     } finally {
       setIsRemovingStudent(false);
+    }
+  };
+
+  const openTrackForm = () => {
+    const assignedIds = Array.isArray(batch.assignedTrackTemplateIds)
+      ? batch.assignedTrackTemplateIds.map(String)
+      : (batch.assignedTrackTemplateId ? [String(batch.assignedTrackTemplateId)] : []);
+    setTrackForm({
+      assignedTrackTemplateId: assignedIds[0] || '',
+      startDate: batch.startDateValue || '',
+      endDate: batch.expiryDateValue || '',
+    });
+    setTrackFormError('');
+    setIsTrackFormOpen(true);
+  };
+
+  const saveTrackAssignment = async (confirmTrackReplacement = false) => {
+    if (!trackForm.assignedTrackTemplateId) {
+      setTrackFormError('Select a track template.');
+      return;
+    }
+
+    setTrackFormError('');
+    setIsSavingTrack(true);
+    try {
+      const selectedTemplate = trackTemplates.find((template) => String(template.id) === String(trackForm.assignedTrackTemplateId));
+      await adminAPI.updateBatch(batch.id || batchId, {
+        collegeId: batch.collegeId,
+        name: batch.name,
+        startDate: trackForm.startDate || batch.startDateValue,
+        expiryDate: trackForm.endDate || batch.expiryDateValue,
+        releaseTime: batch.releaseTime || '00:00',
+        status: batch.status || 'Active',
+        assignedTrack: selectedTemplate?.name || batch.assignedTrack || '',
+        assignedTrackTemplateId: trackForm.assignedTrackTemplateId,
+        assignedTrackTemplateIds: [trackForm.assignedTrackTemplateId],
+        batchSize: batch.batchSize,
+        confirmTrackReplacement,
+      });
+      const remoteBatch = await adminAPI.getBatch(batchId);
+      setBatchDetail(preferRemoteData(remoteBatch, null));
+      setIsTrackFormOpen(false);
+    } catch (error) {
+      if (error.message?.includes('Confirm replacing') && !confirmTrackReplacement) {
+        const confirmed = window.confirm('This batch already has an active track. The existing active track will become Draft and the new track will become Active for all students. Continue?');
+        if (confirmed) {
+          await saveTrackAssignment(true);
+          return;
+        }
+      }
+      setTrackFormError(error.message || 'Failed to update active track.');
+    } finally {
+      setIsSavingTrack(false);
     }
   };
 
@@ -617,9 +693,33 @@ const BatchDetails = () => {
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
-                <div className="text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words">
-                  {batch.currentActiveTrack || batch.assignedTrack || 'None'}
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={openTrackForm}
+                    className="text-left text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words hover:text-[#3C83F6] dark:hover:text-[#8fd9ff] transition-colors"
+                    title="Edit active track"
+                  >
+                    {batch.currentActiveTrack || batch.assignedTrack || 'None'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openTrackForm}
+                    className="shrink-0 rounded-lg border border-[#3C83F6]/20 px-2 py-1 text-[10px] font-semibold text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:text-[#8fd9ff]"
+                  >
+                    Edit
+                  </button>
                 </div>
+                {placementCourse && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/admin/topics/${placementCourse._id || placementCourse.id}`)}
+                    className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#3C83F6] hover:underline dark:text-[#8fd9ff]"
+                  >
+                    <FiBookOpen className="h-3 w-3" />
+                    Open Course
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1040,6 +1140,86 @@ const BatchDetails = () => {
               >
                 {isRemovingStudent ? 'Removing...' : 'Remove Student'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isTrackFormOpen && (
+        <div className="fixed inset-0 z-[131] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => !isSavingTrack && setIsTrackFormOpen(false)} />
+          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Edit Active Track</h2>
+                <p className="mt-1 text-xs text-black/45 dark:text-white/45">Updates apply to all students in this batch.</p>
+              </div>
+              <button onClick={() => setIsTrackFormOpen(false)} disabled={isSavingTrack} className="text-sm text-black/40 dark:text-white/40 disabled:opacity-60">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="admin-micro-label text-black/45 dark:text-white/45">Track Template*</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={trackForm.assignedTrackTemplateId}
+                    onChange={(e) => setTrackForm((prev) => ({ ...prev, assignedTrackTemplateId: e.target.value }))}
+                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="">Select track template</option>
+                    {trackTemplates.map((template) => (
+                      <option className={dropdownOptionClass} key={template.id} value={template.id}>
+                        {template.name} {template.trackType ? `(${template.trackType})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
+                  <input
+                    type="date"
+                    value={trackForm.startDate}
+                    onChange={(e) => setTrackForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                    className={`mt-1 ${studentFormInputClass}`}
+                  />
+                </div>
+                <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
+                  <input
+                    type="date"
+                    value={trackForm.endDate}
+                    onChange={(e) => setTrackForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    className={`mt-1 ${studentFormInputClass}`}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#3C83F6]/15 bg-[#3C83F6]/5 px-3 py-2 text-xs leading-relaxed text-black/55 dark:text-white/60">
+                If another active track already exists, it will be moved to Draft and this track will become Active for the full batch.
+              </div>
+
+              {trackFormError && <p className="text-xs text-red-500">{trackFormError}</p>}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsTrackFormOpen(false)}
+                  disabled={isSavingTrack}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveTrackAssignment(false)}
+                  disabled={isSavingTrack}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70"
+                >
+                  {isSavingTrack ? 'Saving...' : 'Save Track'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

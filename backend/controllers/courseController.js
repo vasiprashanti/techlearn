@@ -281,9 +281,9 @@ export const getCourseById = async (req, res) => {
     }
 
     // Fetch topics using topicIds array and populate notesId
-    const topics = await Topic.find({ _id: { $in: course.topicIds } }).populate(
-      "notesId"
-    );
+    const topics = await Topic.find({ _id: { $in: course.topicIds } })
+      .populate("notesId")
+      .sort({ index: 1, createdAt: 1 });
 
     const formattedTopics = topics.map((topic) => ({
       topicId: topic._id,

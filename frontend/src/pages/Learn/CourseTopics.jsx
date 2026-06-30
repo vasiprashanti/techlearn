@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import { courseAPI } from "../../services/api";
@@ -45,6 +45,7 @@ const CourseTopics = () => {
 
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const cachedCourse = readCachedCourseDetails(courseId);
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
@@ -123,6 +124,14 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
+
+  useEffect(() => {
+    if (!totalTopics) return;
+    const requestedDay = Number(searchParams.get("day"));
+    if (!Number.isFinite(requestedDay) || requestedDay <= 0) return;
+    const nextIndex = Math.min(Math.max(requestedDay - 1, 0), totalTopics - 1);
+    setSelectedTopic(nextIndex);
+  }, [searchParams, totalTopics]);
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 

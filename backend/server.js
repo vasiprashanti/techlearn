@@ -18,6 +18,7 @@ import xpRoutes from "./routes/xpRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import dashboardProjectRoutes from "./routes/dashboardProjectRoutes.js";
 import studentProjectRoutes from "./routes/studentProjectRoutes.js";
+import placementLearningRoutes from "./routes/placementLearningRoutes.js";
 
 import miniRouter from "./routes/mini.js";
 import majorRouter from "./routes/major.js";
@@ -105,6 +106,7 @@ app.use("/api/certification", certificationRoutes);
 app.use("/api/compiler", compilerRoutes);
 app.use("/api/xp", xpRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/placement-learning", placementLearningRoutes);
 app.use("/api", mcqRouter);
 app.use("/api/college-mcq", collegeMcqRoutes);
 app.use("/api/college-coding", codingRoundRoutes);
