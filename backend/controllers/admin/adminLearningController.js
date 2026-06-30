@@ -49,10 +49,15 @@ const syncTemplateToTrack = async (template) => {
     ? template.trackType
     : normalizeTrackType(template.category);
   let orderedQuestionIds = [];
-  if (normalizedType === "Daily Task") {
+  if (normalizedType === "Daily Task" || normalizedType === "Daily Challenge") {
     orderedQuestionIds = (template.dayAssignments || [])
       .sort((a, b) => a.dayNumber - b.dayNumber)
-      .flatMap((assignment) => (assignment.tasks || []).map((t) => t.questionId))
+      .flatMap((assignment) => {
+        if (assignment.tasks && assignment.tasks.length > 0) {
+          return assignment.tasks.map((t) => t.questionId);
+        }
+        return [assignment.questionId];
+      })
       .filter(Boolean);
   } else {
     orderedQuestionIds = [...(template.dayAssignments || [])]
@@ -1135,11 +1140,7 @@ export const assignTrackTemplateDay = async (req, res) => {
       ])
     );
 
-    if (template.trackType === "Daily Task") {
-      if (!taskType) {
-        return res.status(400).json({ success: false, message: "taskType is required for Daily Tasks." });
-      }
-
+    if (template.trackType === "Daily Task" || template.trackType === "Daily Challenge") {
       let dayAssignment = template.dayAssignments.find((assignment) => assignment.dayNumber === normalizedDayNumber);
       if (!dayAssignment) {
         template.dayAssignments.push({ dayNumber: normalizedDayNumber, tasks: [] });
@@ -1155,8 +1156,15 @@ export const assignTrackTemplateDay = async (req, res) => {
 
       requestedQuestionIds.forEach((id) => {
         if (assignedQuestionIds.has(String(id))) return;
+        let resolvedTaskType = taskType;
+        if (!resolvedTaskType && template.trackType === "Daily Challenge") {
+          const qDoc = questionDocs.find((q) => String(q._id) === String(id));
+          resolvedTaskType = qDoc?.categoryType === "MCQ" ? "MCQ" : "Coding";
+        }
+        if (!resolvedTaskType) resolvedTaskType = "Coding";
+
         dayAssignment.tasks.push({
-          taskType,
+          taskType: resolvedTaskType,
           questionId: id,
           batchId: batchId || template.batchId || null,
           xpValue: questionXpById.get(String(id)) || 10,

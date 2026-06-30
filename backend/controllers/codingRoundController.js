@@ -3,6 +3,7 @@ import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 import Student from "../models/Student.js";
 import StudentCodingSubmission from "../models/StudentCodingSubmission.js";
 import Submission from "../models/Submission.js";
+import Question from "../models/Questions.js";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import {
@@ -22,6 +23,8 @@ import {
   startOfDay,
 } from "../utils/dailyChallengeUtils.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
+import UserProgress from "../models/UserProgress.js";
+import { calculateChallengeXP } from "../services/xpService.js";
 
 const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
   const email =
@@ -257,6 +260,44 @@ const finalizeDailyChallengeAttempt = async ({
   });
   attempt.finalSubmissionId = linkedSubmission?._id || attempt.finalSubmissionId;
   await attempt.save();
+
+  // Award XP for each question/problem
+  try {
+    let totalChallengeXpAwarded = 0;
+    if (codingRound && codingRound.problems) {
+      for (let i = 0; i < codingRound.problems.length; i++) {
+        const problem = codingRound.problems[i];
+        const score = submission.problemScores ? (submission.problemScores.get(i.toString()) || 0) : 0;
+        const baseXP = calculateChallengeXP({
+          difficulty: problem.difficulty || "Easy",
+          hintsUsed: 0,
+          withinWindow: false,
+          firstAttempt: true,
+        });
+        const earnedXP = Math.round((score / 100) * baseXP);
+        totalChallengeXpAwarded += earnedXP;
+      }
+    }
+
+    if (totalChallengeXpAwarded > 0 && student?.userId) {
+      let progress = await UserProgress.findOne({ userId: student.userId });
+      if (!progress) {
+        progress = new UserProgress({
+          userId: student.userId,
+          courseXP: new Map(),
+          exerciseXP: new Map(),
+          completedExercises: [],
+        });
+      }
+      const courseIdKey = String(codingRound.trackId || "daily_challenge");
+      const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
+      progress.exerciseXP.set(courseIdKey, currentXP + totalChallengeXpAwarded);
+      await progress.save();
+      invalidateDashboardCache(student.userId);
+    }
+  } catch (xpError) {
+    console.error("Error awarding Daily Challenge XP:", xpError);
+  }
 
   await updateStudentChallengeStats({ student, submission });
 
@@ -525,7 +566,7 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
-    const codingRound = await CodingRound.findOne({ linkId });
+    const codingRound = await CodingRound.findOne({ linkId }).populate("questionId");
     if (!codingRound) {
       return res.status(404).json({
         success: false,
@@ -642,7 +683,7 @@ export const startDailyChallengeAttempt = async (req, res) => {
       linkId,
       challengeType: "daily_challenge",
       isActive: true,
-    });
+    }).populate("questionId");
 
     if (!codingRound) {
       return res.status(404).json({
@@ -841,28 +882,44 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
     let testsPassed = 0;
     let testsFailed = 0;
-    const allTestCases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
-    const totalTests = allTestCases.length;
+    let totalTests = 0;
 
-    for (let i = 0; i < totalTests; i++) {
-      const testCase = allTestCases[i];
+    const question = await Question.findById(codingRound.questionId || problem.questionId).select("+content.correctOption").lean();
+    const isMcq = question?.categoryType === "MCQ";
 
-      try {
-        const testResult = await testCodeWithJudge0(
-          submittedCode,
-          languageId,
-          testCase.input,
-          testCase.expectedOutput
-        );
+    if (isMcq) {
+      totalTests = 1;
+      const studentAns = String(submittedCode || "").trim().toUpperCase();
+      const correctAns = String(question?.content?.correctOption || "").trim().toUpperCase();
+      if (studentAns === correctAns) {
+        testsPassed = 1;
+      } else {
+        testsFailed = 1;
+      }
+    } else {
+      const allTestCases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
+      totalTests = allTestCases.length;
 
-        const passed = testResult.success && testResult.outputMatches;
-        if (passed) {
-          testsPassed++;
-        } else {
+      for (let i = 0; i < totalTests; i++) {
+        const testCase = allTestCases[i];
+
+        try {
+          const testResult = await testCodeWithJudge0(
+            submittedCode,
+            languageId,
+            testCase.input,
+            testCase.expectedOutput
+          );
+
+          const passed = testResult.success && testResult.outputMatches;
+          if (passed) {
+            testsPassed++;
+          } else {
+            testsFailed++;
+          }
+        } catch (error) {
           testsFailed++;
         }
-      } catch (error) {
-        testsFailed++;
       }
     }
 
@@ -1260,6 +1317,20 @@ export const runCodingRoundAnswers = async (req, res) => {
           success: false,
           message: `Problem at index ${problemIndex} not found`,
         });
+      }
+
+      const question = await Question.findById(codingRound.questionId || problem.questionId).lean();
+      const isMcq = question?.categoryType === "MCQ";
+
+      if (isMcq) {
+        runResults.push({
+          problemIndex,
+          language,
+          success: true,
+          compileSuccess: true,
+          feedback: "MCQ selection verified. You can now Submit."
+        });
+        continue;
       }
 
       const languageId = LANGUAGE_IDS[language?.toLowerCase()];
