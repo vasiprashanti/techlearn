@@ -463,12 +463,12 @@ export default function TrackTemplate() {
               </div>
 
               <div>
-                {createTemplateForm.trackType === 'Daily Task' ? (
+                {createTemplateForm.trackType === 'Daily Task' || createTemplateForm.trackType === 'Daily Challenge' ? (
                   <div>
                     <label className="admin-micro-label text-black/50 dark:text-white/50">Select Categories to Include* (Multiple allowed)</label>
                     <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto">
                       {questionCategories.map((cat) => {
-                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task'
+                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task' && createTemplateForm.category !== 'Daily Challenge'
                           ? createTemplateForm.category.split(',').map((c) => c.trim())
                           : [];
                         const isChecked = selectedList.includes(cat);
@@ -486,7 +486,7 @@ export default function TrackTemplate() {
                                 } else {
                                   nextList = nextList.filter((c) => c !== cat);
                                 }
-                                const nextCategoryVal = nextList.length > 0 ? nextList.join(', ') : 'Daily Task';
+                                const nextCategoryVal = nextList.length > 0 ? nextList.join(', ') : createTemplateForm.trackType;
                                 updateCreateTemplateField('category', nextCategoryVal);
                               }}
                               className="rounded border-black/10 text-[#3C83F6] focus:ring-[#3C83F6]"

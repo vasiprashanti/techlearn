@@ -634,14 +634,14 @@ const BatchDetails = () => {
                       <div key={trackId} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-all duration-300 col-span-1">
                         <button
                           onClick={() => toggleTrack(trackId)}
-                          className="w-full flex items-center justify-between px-3 py-2 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
+                          className="w-full flex items-center justify-between px-3 py-2 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02] min-w-0"
                         >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-[10px] select-none">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-[10px] select-none shrink-0">
                               {isExpanded ? '▼' : '▶'}
                             </span>
-                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">{track.name}</span>
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">({track.questionsAssigned} questions)</span>
+                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={track.name}>{track.name}</span>
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium shrink-0">({track.questionsAssigned})</span>
                           </div>
                         </button>
                         {isExpanded && (

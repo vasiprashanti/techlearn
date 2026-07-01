@@ -717,13 +717,6 @@ export const listTrackTemplates = async (req, res) => {
     const templates = await TrackTemplate.find().populate("batchId", "name").sort({ createdAt: -1 }).lean();
     const data = templates.map((template) => {
       let effectiveType = template.trackType || "Daily Challenge";
-      if (effectiveType === "Daily Challenge") {
-        const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-        const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-        if (hasTasks || isDailyTaskCategory) {
-          effectiveType = "Daily Task";
-        }
-      }
       return {
         id: template._id,
         name: template.name,
@@ -835,13 +828,6 @@ export const getTrackTemplateDetail = async (req, res) => {
     }
 
     let effectiveType = template.trackType || "Daily Challenge";
-    if (effectiveType === "Daily Challenge") {
-      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-      if (hasTasks || isDailyTaskCategory) {
-        effectiveType = "Daily Task";
-      }
-    }
 
     let questionFilter = { status: "Active", isActive: { $ne: false } };
     if (effectiveType === "Daily Task") {
@@ -995,13 +981,6 @@ export const updateTrackTemplate = async (req, res) => {
     }
 
     let currentTrackType = template.trackType || "Daily Challenge";
-    if (currentTrackType === "Daily Challenge") {
-      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-      if (hasTasks || isDailyTaskCategory) {
-        currentTrackType = "Daily Task";
-      }
-    }
 
     const nextTrackType = req.body.trackType || currentTrackType;
     const nextBatchId = req.body.batchId || template.batchId;
