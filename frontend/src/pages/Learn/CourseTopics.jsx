@@ -206,7 +206,7 @@ const CourseTopics = () => {
                     <ChevronLeft className="w-4 h-4 text-[#001862]/60 dark:text-white/60" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 minimal-scrollbar">
                   {currentCourse.topics.map((topic, index) => {
                     const isActive = selectedTopic === index;
 
@@ -234,7 +234,7 @@ const CourseTopics = () => {
         <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
           <aside
             data-course-sidebar="true"
-            className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto"
+            className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
           >
             <div className="px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14">
               <div className="space-y-2">
