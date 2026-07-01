@@ -1143,6 +1143,16 @@ export const getBatchDetail = async (req, res) => {
         }
 
         todayScore = totalAssigned > 0 ? `${totalCorrect}/${totalAssigned}` : "—";
+
+        // Count how many non-empty categories exist
+        const activeCategories = [];
+        if (todayScoresDetail.mcq && todayScoresDetail.mcq !== "—") activeCategories.push("mcq");
+        if (todayScoresDetail.coding && todayScoresDetail.coding !== "—") activeCategories.push("coding");
+        if (todayScoresDetail.sql && todayScoresDetail.sql !== "—") activeCategories.push("sql");
+
+        if (activeCategories.length > 1) {
+          todayScore = "View Scores";
+        }
       }
 
       const totalXp = userXpMap.get(String(studentUserId)) || 0;
