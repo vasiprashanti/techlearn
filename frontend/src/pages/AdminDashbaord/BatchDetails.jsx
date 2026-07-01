@@ -38,7 +38,7 @@ const BatchDetails = () => {
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [trackTemplates, setTrackTemplates] = useState([]);
-  const [placementCourse, setPlacementCourse] = useState(null);
+  const [courses, setCourses] = useState([]);
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
   const [studentSortOrder, setStudentSortOrder] = useState('rank-asc');
@@ -67,6 +67,10 @@ const BatchDetails = () => {
   });
   const [trackFormError, setTrackFormError] = useState('');
   const [isSavingTrack, setIsSavingTrack] = useState(false);
+  const [isCourseFormOpen, setIsCourseFormOpen] = useState(false);
+  const [courseForm, setCourseForm] = useState({ attachedCourseId: '' });
+  const [courseFormError, setCourseFormError] = useState('');
+  const [isSavingCourse, setIsSavingCourse] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -92,12 +96,16 @@ const BatchDetails = () => {
 
     adminAPI.getCourses()
       .then((coursesResponse) => {
-        const courses = preferRemoteData(coursesResponse?.courses || coursesResponse, []);
-        const course = courses.find((item) => /placement\s*sprint/i.test(item.title || ''))
-          || courses.find((item) => /placement/i.test(item.title || ''));
-        setPlacementCourse(course || null);
+        const normalizedCourses = preferRemoteData(coursesResponse?.courses || coursesResponse, [])
+          .map((course) => ({
+            ...course,
+            id: String(course.id || course._id),
+            title: course.title || 'Untitled Course',
+          }))
+          .filter((course) => course.id);
+        setCourses(normalizedCourses);
       })
-      .catch(() => setPlacementCourse(null));
+      .catch(() => setCourses([]));
   }, []);
 
   const batch = useMemo(() => {
@@ -355,6 +363,44 @@ const BatchDetails = () => {
       setTrackFormError(error.message || 'Failed to update active track.');
     } finally {
       setIsSavingTrack(false);
+    }
+  };
+
+  const buildBatchUpdatePayload = (extra = {}) => {
+    return {
+      collegeId: batch.collegeId,
+      name: batch.name,
+      startDate: batch.startDateValue,
+      expiryDate: batch.expiryDateValue,
+      releaseTime: batch.releaseTime || '00:00',
+      status: batch.status || 'Active',
+      batchSize: batch.batchSize,
+      programSelection: batch.programSelection || 'Placement Sprint',
+      ...extra,
+    };
+  };
+
+  const openCourseForm = () => {
+    setCourseForm({ attachedCourseId: batch.attachedCourse?.id ? String(batch.attachedCourse.id) : '' });
+    setCourseFormError('');
+    setIsCourseFormOpen(true);
+  };
+
+  const saveCourseAttachment = async (attachedCourseId = courseForm.attachedCourseId) => {
+    setCourseFormError('');
+    setIsSavingCourse(true);
+    try {
+      await adminAPI.updateBatch(
+        batch.id || batchId,
+        buildBatchUpdatePayload({ attachedCourseId: attachedCourseId || null })
+      );
+      const remoteBatch = await adminAPI.getBatch(batchId);
+      setBatchDetail(preferRemoteData(remoteBatch, null));
+      setIsCourseFormOpen(false);
+    } catch (error) {
+      setCourseFormError(error.message || 'Failed to update attached course.');
+    } finally {
+      setIsSavingCourse(false);
     }
   };
 
@@ -710,16 +756,6 @@ const BatchDetails = () => {
                     Edit
                   </button>
                 </div>
-                {placementCourse && (
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/admin/topics/${placementCourse._id || placementCourse.id}`)}
-                    className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#3C83F6] hover:underline dark:text-[#8fd9ff]"
-                  >
-                    <FiBookOpen className="h-3 w-3" />
-                    Open Course
-                  </button>
-                )}
               </div>
             </div>
 
@@ -770,6 +806,68 @@ const BatchDetails = () => {
               ) : (
                 <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
                   No tracks are attached to this batch yet.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="admin-section-heading">Attached Courses</h3>
+                {batch.attachedCourse && (
+                  <button
+                    type="button"
+                    onClick={openCourseForm}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-[#3C83F6]/20 px-3 py-2 text-xs font-semibold text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:text-[#8fd9ff]"
+                  >
+                    <FiBookOpen className="h-3.5 w-3.5" />
+                    Change Course
+                  </button>
+                )}
+              </div>
+
+              {batch.attachedCourse ? (
+                <div className="rounded-2xl border border-black/5 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#0f1f43]">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                        {batch.attachedCourse.title}
+                      </p>
+                      <p className="mt-1 text-xs text-black/50 dark:text-white/55">
+                        {batch.attachedCourse.numTopics || 0} topics available for day-wise notes
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/topics/${batch.attachedCourse.id}`)}
+                        className="rounded-xl border border-black/10 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/5"
+                      >
+                        Open Course
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => saveCourseAttachment(null)}
+                        disabled={isSavingCourse}
+                        className="rounded-xl border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-500/10 disabled:opacity-60 dark:text-red-300"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center">
+                  <p className="text-xs sm:text-sm text-black/45 dark:text-white/45">
+                    No course is attached to this batch yet. Attach a course only when this batch should receive day-wise notes.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openCourseForm}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#3C83F6] px-4 py-2 text-xs font-semibold text-white hover:bg-[#2f73e0]"
+                  >
+                    <FiPlus className="h-3.5 w-3.5" />
+                    Attach Course
+                  </button>
                 </div>
               )}
             </div>
@@ -1140,6 +1238,65 @@ const BatchDetails = () => {
               >
                 {isRemovingStudent ? 'Removing...' : 'Remove Student'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCourseFormOpen && (
+        <div className="fixed inset-0 z-[131] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => !isSavingCourse && setIsCourseFormOpen(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Attach Course</h2>
+                <p className="mt-1 text-xs text-black/45 dark:text-white/45">Used only for day-wise notes on the student dashboard.</p>
+              </div>
+              <button onClick={() => setIsCourseFormOpen(false)} disabled={isSavingCourse} className="text-sm text-black/40 dark:text-white/40 disabled:opacity-60">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="admin-micro-label text-black/45 dark:text-white/45">Course</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                  <select
+                    value={courseForm.attachedCourseId}
+                    onChange={(e) => setCourseForm({ attachedCourseId: e.target.value })}
+                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="">No course attached</option>
+                    {courses.map((course) => (
+                      <option className={dropdownOptionClass} key={course.id} value={course.id}>
+                        {course.title}
+                      </option>
+                    ))}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#3C83F6]/15 bg-[#3C83F6]/5 px-3 py-2 text-xs leading-relaxed text-black/55 dark:text-white/60">
+                Course attachment does not change the active track, daily challenge, or daily task assignment.
+              </div>
+
+              {courseFormError && <p className="text-xs text-red-500">{courseFormError}</p>}
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsCourseFormOpen(false)}
+                  disabled={isSavingCourse}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveCourseAttachment()}
+                  disabled={isSavingCourse}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70"
+                >
+                  {isSavingCourse ? 'Saving...' : 'Save Course'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

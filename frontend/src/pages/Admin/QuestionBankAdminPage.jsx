@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiTrash2, FiCode, FiGrid } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiCode, FiGrid, FiChevronDown, FiSearch } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
@@ -27,6 +27,10 @@ export const QuestionBankAdminPage = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
 
   const handleSelectToggle = (id) => {
     setSelectedCategoryIds((prev) =>
@@ -128,6 +132,27 @@ export const QuestionBankAdminPage = () => {
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
   const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
   const draftCategoriesCount = categories.filter((cat) => cat.status === 'Draft').length;
+  const categoryTypeOptions = Array.from(
+    new Set(categories.map((cat) => cat.categoryType).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+  const filteredCategories = categories
+    .filter((category) => {
+      const q = categorySearch.trim().toLowerCase();
+      const matchesSearch = !q ||
+        String(category.title || '').toLowerCase().includes(q) ||
+        String(category.categoryType || '').toLowerCase().includes(q);
+      const matchesType = typeFilter === 'all' || category.categoryType === typeFilter;
+      const matchesStatus = statusFilter === 'all' || category.status === statusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+      if (sortBy === 'name-asc') return String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' });
+      if (sortBy === 'name-desc') return String(b.title || '').localeCompare(String(a.title || ''), undefined, { sensitivity: 'base' });
+      if (sortBy === 'questions-desc') return (b.total || 0) - (a.total || 0);
+      if (sortBy === 'questions-asc') return (a.total || 0) - (b.total || 0);
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -279,13 +304,13 @@ export const QuestionBankAdminPage = () => {
                 <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
                   <input
                     type="checkbox"
-                    checked={categories.length > 0 && categories.every(c => selectedCategoryIds.includes(c.id || c._id))}
+                    checked={filteredCategories.length > 0 && filteredCategories.every(c => selectedCategoryIds.includes(c.id || c._id))}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        const newSelections = new Set([...selectedCategoryIds, ...categories.map(c => c.id || c._id)]);
+                        const newSelections = new Set([...selectedCategoryIds, ...filteredCategories.map(c => c.id || c._id)]);
                         setSelectedCategoryIds(Array.from(newSelections));
                       } else {
-                        setSelectedCategoryIds(selectedCategoryIds.filter(id => !categories.some(c => (c.id || c._id) === id)));
+                        setSelectedCategoryIds(selectedCategoryIds.filter(id => !filteredCategories.some(c => (c.id || c._id) === id)));
                       }
                     }}
                     className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
@@ -302,8 +327,61 @@ export const QuestionBankAdminPage = () => {
               </button>
             </div>
 
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_180px_180px_180px]">
+              <div className="relative">
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40 dark:text-white/45" />
+                <input
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  placeholder="Search categories..."
+                  className="h-10 w-full rounded-xl border border-black/10 bg-white/80 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                >
+                  <option value="all">All Types</option>
+                  {categoryTypeOptions.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+              </div>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Active">Active</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Archived">Archived</option>
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+              </div>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                >
+                  <option value="recent">Recently Added</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                  <option value="questions-desc">Most Questions</option>
+                  <option value="questions-asc">Fewest Questions</option>
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+              </div>
+            </div>
+
             <CategoryListPanel
-              categories={categories}
+              categories={filteredCategories}
               selectedCategoryIds={selectedCategoryIds}
               onSelectToggle={handleSelectToggle}
               onEditCategory={handleEditCategoryClick}

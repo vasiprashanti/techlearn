@@ -4,6 +4,7 @@ import { calculateTaskXP, TASK_XP } from "../../services/xpService.js";
 import PracticeSubmission from "../../models/PracticeSubmission.js";
 import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
 import College from "../../models/College.js";
+import Course from "../../models/Course.js";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Submission from "../../models/Submission.js";
@@ -581,6 +582,7 @@ export const listBatches = async (req, res) => {
       .populate("assignedDailyTaskTrack", "name category trackType status dayAssignments")
       .populate("assignedDailyChallengeTrack", "name category trackType status dayAssignments")
       .populate("assignedTrackTemplateIds", "name category trackType status dayAssignments")
+      .populate("attachedCourse", "title description numTopics topicIds")
       .lean();
 
     const batchIds = batches.map((batch) => batch._id);
@@ -639,6 +641,14 @@ export const listBatches = async (req, res) => {
             ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
+        attachedCourse: batch.attachedCourse
+          ? {
+              id: batch.attachedCourse._id,
+              title: batch.attachedCourse.title,
+              description: batch.attachedCourse.description || "",
+              numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
+            }
+          : null,
         assignedTrackTemplateCategory: batch.assignedTrackTemplate?.category || "",
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
@@ -742,6 +752,7 @@ export const getBatchDetail = async (req, res) => {
     const batch = await Batch.findById(batchId)
       .populate("collegeId", "name")
       .populate("assignedTrackTemplate", "name category trackType status")
+      .populate("attachedCourse", "title description numTopics topicIds")
       .lean();
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
@@ -1383,9 +1394,18 @@ export const getBatchDetail = async (req, res) => {
             ].filter(Boolean).map(String).filter((templateId, index, templateIds) => templateIds.indexOf(templateId) === index),
         assignedTrackTemplateName: batch.assignedTrackTemplate?.name || "",
         assignedTrackTemplateAt: batch.assignedTrackTemplateAt || null,
+        attachedCourse: batch.attachedCourse
+          ? {
+              id: batch.attachedCourse._id,
+              title: batch.attachedCourse.title,
+              description: batch.attachedCourse.description || "",
+              numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
+            }
+          : null,
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         releaseTime: batch.releaseTime || "00:00",
         status: batch.status,
+        programSelection: batch.programSelection || "Placement Sprint",
         start: formatDateLabel(batch.startDate),
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
         expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
@@ -1421,10 +1441,16 @@ export const updateBatchAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    const requestedTemplateIds = Array.isArray(req.body.assignedTrackTemplateIds)
-      ? req.body.assignedTrackTemplateIds.map(String)
-      : (req.body.assignedTrackTemplateId ? [String(req.body.assignedTrackTemplateId)] : []);
+    const hasTrackAssignmentPayload =
+      Array.isArray(req.body.assignedTrackTemplateIds) ||
+      Object.prototype.hasOwnProperty.call(req.body, "assignedTrackTemplateId");
+    const requestedTemplateIds = hasTrackAssignmentPayload
+      ? (Array.isArray(req.body.assignedTrackTemplateIds)
+          ? req.body.assignedTrackTemplateIds.map(String)
+          : (req.body.assignedTrackTemplateId ? [String(req.body.assignedTrackTemplateId)] : []))
+      : [];
     const existingTemplateIds = [
+      ...(existingBatch.assignedTrackTemplateIds || []),
       existingBatch.assignedDailyTaskTrack,
       existingBatch.assignedDailyChallengeTrack,
       existingBatch.assignedTrackTemplate,
@@ -1432,9 +1458,11 @@ export const updateBatchAdmin = async (req, res) => {
     const requestedTemplateKey = [...requestedTemplateIds].sort().join('|');
     const existingTemplateKey = [...existingTemplateIds].sort().join('|');
     const previousTrackTemplateId = existingBatch.assignedTrackTemplate || null;
-    const trackTemplateChanged = requestedTemplateKey !== existingTemplateKey;
-    const trackTemplates = await getTrackTemplatesForAssignment(requestedTemplateIds);
-    if (!trackTemplates) {
+    const trackTemplateChanged = hasTrackAssignmentPayload && requestedTemplateKey !== existingTemplateKey;
+    const trackTemplates = hasTrackAssignmentPayload
+      ? await getTrackTemplatesForAssignment(requestedTemplateIds)
+      : [];
+    if (hasTrackAssignmentPayload && !trackTemplates) {
       return res.status(400).json({ success: false, message: "Select active track templates only." });
     }
     const trackTemplate = trackTemplates.find((template) => template.trackType === "Daily Challenge") || trackTemplates[0] || null;
@@ -1473,16 +1501,35 @@ export const updateBatchAdmin = async (req, res) => {
       name: req.body.name?.trim(),
       startDate: req.body.startDate,
       expiryDate: req.body.expiryDate,
-      assignedTrack: trackTemplates.map((template) => template.name).join(", ") || req.body.assignedTrack?.trim() || "",
-      ...getBatchTemplateAssignmentFieldsFromTemplates(
-        trackTemplates,
-        trackTemplateChanged || (trackTemplates.length > 0 && !existingBatch.assignedTrackTemplateAt)
-      ),
       batchSize: Number.isFinite(parsedBatchSize) && parsedBatchSize > 0 ? parsedBatchSize : null,
       releaseTime: req.body.releaseTime || "00:00",
       status: req.body.status,
       programSelection: req.body.programSelection || existingBatch.programSelection || "Placement Sprint",
     };
+
+    if (hasTrackAssignmentPayload) {
+      Object.assign(update, {
+        assignedTrack: trackTemplates.map((template) => template.name).join(", ") || req.body.assignedTrack?.trim() || "",
+        ...getBatchTemplateAssignmentFieldsFromTemplates(
+          trackTemplates,
+          trackTemplateChanged || (trackTemplates.length > 0 && !existingBatch.assignedTrackTemplateAt)
+        ),
+      });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "attachedCourseId")) {
+      const rawCourseId = req.body.attachedCourseId;
+      if (rawCourseId === null || rawCourseId === "") {
+        update.attachedCourse = null;
+      } else {
+        if (!assertObjectId(rawCourseId, "attachedCourseId", res)) return;
+        const courseExists = await Course.exists({ _id: rawCourseId });
+        if (!courseExists) {
+          return res.status(404).json({ success: false, message: "Course not found." });
+        }
+        update.attachedCourse = rawCourseId;
+      }
+    }
 
     if (req.body.collegeId) {
       if (!assertObjectId(req.body.collegeId, "collegeId", res)) return;

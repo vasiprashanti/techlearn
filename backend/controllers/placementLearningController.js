@@ -26,17 +26,10 @@ const getCurrentBatchDay = (batch) => {
   return Math.max(1, elapsedDays + 1);
 };
 
-const findPlacementSprintCourse = async () => {
-  const placementRegex = /placement\s*sprint/i;
-  const placementCourse = await Course.findOne({ title: placementRegex }).sort({ updatedAt: -1 }).lean();
-  if (placementCourse) return placementCourse;
-
-  return Course.findOne({ title: /placement/i }).sort({ updatedAt: -1 }).lean();
-};
-
 const buildTopicPayload = (topic, index, currentDay, courseId) => {
   const day = index + 1;
   const isLocked = day > currentDay;
+  const hasNotes = Boolean(topic.notesId);
   return {
     day,
     week: Math.ceil(day / 7),
@@ -44,9 +37,10 @@ const buildTopicPayload = (topic, index, currentDay, courseId) => {
     title: topic.title,
     slug: topic.slug,
     notesId: topic.notesId?._id || topic.notesId || null,
+    hasNotes,
     isCurrent: day === currentDay,
     isLocked,
-    href: isLocked ? null : `/learn/courses/${courseId}/topics?day=${day}`,
+    href: isLocked || !hasNotes ? null : `/learn/courses/${courseId}/topics?day=${day}`,
   };
 };
 
@@ -77,12 +71,20 @@ export const getPlacementLearningDashboard = async (req, res) => {
       });
     }
 
-    const course = await findPlacementSprintCourse();
+    if (!batch.attachedCourse) {
+      return res.status(200).json({
+        success: true,
+        hasPlacementLearning: false,
+        message: "No course is attached to this batch yet.",
+      });
+    }
+
+    const course = await Course.findById(batch.attachedCourse).lean();
     if (!course) {
       return res.status(200).json({
         success: true,
         hasPlacementLearning: false,
-        message: "Placement Sprint course is not available yet.",
+        message: "The attached course is not available yet.",
       });
     }
 
@@ -124,7 +126,7 @@ export const getPlacementLearningDashboard = async (req, res) => {
         title: course.title,
         description: course.description || "",
       },
-      todayTopic: currentTopic
+      todayTopic: currentTopic?.notesId
         ? buildTopicPayload(currentTopic, currentTopicIndex, currentDay, course._id)
         : null,
       totalDays,

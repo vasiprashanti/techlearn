@@ -705,53 +705,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                ) : hasPlacementLearning ? (
-                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
-                    <div
-                      className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
-                      style={{
-                        backgroundImage: `url(${heroBg})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                    />
-                    <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
-
-                    <div className="z-10 flex flex-wrap items-center justify-between gap-2 w-full shrink-0 sm:flex-nowrap">
-                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight text-left">
-                        Today's Notes
-                      </h1>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                          <span className="whitespace-nowrap leading-none">DAY {placementLearning.batch?.currentDay || 1}</span>
-                        </span>
-                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                          {placementLearning.course?.title || 'Placement Sprint'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="z-10 flex flex-1 flex-col justify-end text-left w-full mt-4 sm:mt-5 text-white">
-                      <div className="max-w-2xl space-y-2">
-                        <p className="font-press-start text-[10px] sm:text-xs uppercase tracking-widest text-[#8fd9ff]">
-                          {placementLearning.batch?.name || 'Active Batch'}
-                        </p>
-                        <h2 className="font-pixel-header text-sm sm:text-base md:text-lg leading-relaxed text-white">
-                          {placementLearning.todayTopic?.title || 'Notes are being prepared'}
-                        </h2>
-                      </div>
-                      <div className="mt-4 flex w-full justify-end">
-                        <button
-                          onClick={() => navigate(todayNotesHref)}
-                          disabled={!placementLearning.todayTopic}
-                          className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          Today's Notes <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 ) : (
                   <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
                     <div
@@ -789,17 +742,31 @@ export default function Dashboard() {
                       ) : (
                         <>
                           {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
-                          <div className="flex w-full justify-end pt-1">
+                          <div className="flex w-full flex-wrap justify-end gap-2 pt-1">
                             <button
                               onClick={() => {
                                 if (activeChallenge?.linkId) {
                                   navigate(`/daily-challenge/${activeChallenge.linkId}`);
+                                } else {
+                                  setToast({
+                                    show: true,
+                                    message: "No Daily Challenge assigned today. Please check back tomorrow.",
+                                    type: "info",
+                                  });
                                 }
                               }}
                               className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                             >
                               Go to Daily challenge <ChevronRight className="w-3 h-3" />
                             </button>
+                            {hasPlacementLearning && placementLearning?.todayTopic && (
+                              <button
+                                onClick={() => navigate(todayNotesHref)}
+                                className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                              >
+                                Today's Notes <ChevronRight className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                         </>
                       )}
@@ -1102,9 +1069,15 @@ export default function Dashboard() {
                   <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
                     {hasPlacementLearning ? 'Recent Activity' : 'Recent Activity & Exercises'}
                   </h3>
-                  <button onClick={() => navigate(hasPlacementLearning ? todayNotesHref : '/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    {hasPlacementLearning ? "Today's Notes" : 'View All History'}
-                  </button>
+                  {hasPlacementLearning && placementLearning?.todayTopic ? (
+                    <button onClick={() => navigate(todayNotesHref)} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                      Today's Notes
+                    </button>
+                  ) : !hasPlacementLearning ? (
+                    <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                      View All History
+                    </button>
+                  ) : null}
                 </div>
 
                 {hasPlacementLearning ? (
