@@ -251,77 +251,94 @@ export const deleteRoadmapAdmin = async (req, res) => {
   }
 };
 
+
+
 export const getCurrentUserRoadmap = async (req, res) => {
   try {
     let batchId = req.user?.batchId || null;
     let student = null;
 
-    if (!batchId && req.user?.email) {
+    if (req.user?.email) {
       student = await Student.findOne({ email: String(req.user.email).trim().toLowerCase() })
-        .select("_id batchId")
+        .select("_id batchId programSelection")
         .lean();
-      batchId = student?.batchId || null;
-    }
-
-    if (!student && req.user?._id) {
-      student = await Student.findOne({ userId: req.user._id }).select("_id batchId").lean();
-      batchId = batchId || student?.batchId || null;
-    }
-
-    if (!batchId) {
-      return res.status(200).json({ success: true, data: null });
-    }
-
-    if (student?._id) {
-      const [batch, activeAssignment] = await Promise.all([
-        Batch.findById(batchId).select("_id name startDate releaseTime assignedTrackTemplateAt").lean(),
-        StudentTrackAssignment.findOne({
-          studentId: student._id,
-          batchId,
-          status: "Active",
-        })
-          .populate({
-            path: "trackTemplateId",
-            populate: [
-              {
-                path: "dayAssignments.tasks.questionId",
-                select: "qid prompt question title tag topic xpValue",
-              },
-              {
-                path: "dayAssignments.questionId",
-                select: "qid prompt question title tag topic xpValue",
-              },
-            ],
-          })
-          .lean(),
-      ]);
-
-      const activeTrackRoadmap = buildActiveTrackRoadmap(activeAssignment, batch);
-      if (activeTrackRoadmap) {
-        return res.status(200).json({
-          success: true,
-          data: {
-            id: `active-track-${activeTrackRoadmap.activeTrack.id}`,
-            assignedBatchIds: [batchId],
-            assignedBatches: batch ? [{ id: batch._id, name: batch.name }] : [],
-            status: "Active",
-            updatedAt: activeAssignment.updatedAt,
-            createdAt: activeAssignment.createdAt,
-            ...activeTrackRoadmap,
-          },
-        });
+      if (student?.batchId) {
+        batchId = student.batchId;
       }
     }
 
-    const roadmap = await Roadmap.findOne({
-      assignedBatchIds: batchId,
-      status: "Active",
-    })
-      .sort({ updatedAt: -1 })
-      .populate("assignedBatchIds", "name")
-      .lean();
+    if (!student && req.user?._id) {
+      student = await Student.findOne({ userId: req.user._id })
+        .select("_id batchId programSelection")
+        .lean();
+      if (student?.batchId) {
+        batchId = student.batchId;
+      }
+    }
 
-    return res.status(200).json({ success: true, data: roadmap ? formatRoadmap(roadmap) : null });
+    let batch = null;
+    if (batchId) {
+      batch = await Batch.findById(batchId)
+        .select("_id name startDate releaseTime assignedTrackTemplateAt programSelection")
+        .lean();
+    }
+
+    // 1. If the student has an assigned roadmap, show that roadmap.
+    if (batchId) {
+      const roadmap = await Roadmap.findOne({
+        assignedBatchIds: batchId,
+        status: "Active",
+      })
+        .sort({ updatedAt: -1 })
+        .populate("assignedBatchIds", "name")
+        .lean();
+
+      if (roadmap) {
+        return res.status(200).json({ success: true, data: formatRoadmap(roadmap) });
+      }
+    }
+
+    // 2. If no roadmap is assigned, detect the student’s batch/program.
+    let program = "Placement Sprint";
+    if (student?.programSelection) {
+      program = student.programSelection;
+    } else if (batch?.programSelection) {
+      program = batch.programSelection;
+    } else if (req.user?.programSelection) {
+      program = req.user.programSelection;
+    }
+
+    // 3. Use the default roadmap for that program, such as Placement Sprint or Project Sprint.
+    let searchTitles = [];
+    if (program === "Placement Sprint") {
+      searchTitles = ["Placement Sprint"];
+    } else if (program === "Full Stack Project Program") {
+      searchTitles = ["Full Stack Project Program", "Project Sprint"];
+    } else if (program === "Both") {
+      searchTitles = ["Placement Sprint", "Project Sprint", "Full Stack Project Program"];
+    } else {
+      searchTitles = [program];
+    }
+
+    let defaultRoadmap = null;
+    for (const title of searchTitles) {
+      defaultRoadmap = await Roadmap.findOne({
+        title: { $regex: new RegExp(`^${title}$`, "i") },
+        status: "Active",
+      })
+        .sort({ updatedAt: -1 })
+        .lean();
+      if (defaultRoadmap) {
+        break;
+      }
+    }
+
+    if (defaultRoadmap) {
+      return res.status(200).json({ success: true, data: formatRoadmap(defaultRoadmap) });
+    }
+
+    // 4. If no default roadmap exists for that program yet, show a clean empty state.
+    return res.status(200).json({ success: true, data: null });
   } catch (error) {
     console.error("getCurrentUserRoadmap error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch assigned roadmap." });

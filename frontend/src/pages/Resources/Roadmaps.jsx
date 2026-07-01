@@ -214,6 +214,7 @@ export default function Roadmaps() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeStepId, setActiveStepId] = useState('');
+  const [isEmpty, setIsEmpty] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -222,19 +223,26 @@ export default function Roadmaps() {
       try {
         setLoading(true);
         setError('');
+        setIsEmpty(false);
 
         const hasToken = Boolean(localStorage.getItem('token') || localStorage.getItem('authToken'));
         if (hasToken) {
           try {
             const assignedRoadmapPayload = await resourceAPI.getCurrentRoadmap();
             const assignedRoadmap = assignedRoadmapPayload?.data || assignedRoadmapPayload;
-            if (assignedRoadmap?.markdownBody && !cancelled) {
-              setMarkdown(assignedRoadmap.markdownBody);
-              setRoadmapTitle(assignedRoadmap.title || 'Roadmap');
-              setRoadmapDescription(assignedRoadmap.description || '');
+            if (!cancelled) {
+              if (assignedRoadmap?.markdownBody) {
+                setMarkdown(assignedRoadmap.markdownBody);
+                setRoadmapTitle(assignedRoadmap.title || 'Roadmap');
+                setRoadmapDescription(assignedRoadmap.description || '');
+              } else {
+                setMarkdown('');
+                setIsEmpty(true);
+              }
               return;
             }
-          } catch {
+          } catch (e) {
+            console.error('Failed to load user roadmap from API:', e);
             // Fall back to the default markdown file below.
           }
         }
@@ -306,10 +314,11 @@ export default function Roadmaps() {
   const activeStep = parsedRoadmap.steps.find((step) => step.id === activeStepId);
 
   const heroTitle = roadmapTitle !== 'Roadmap' ? roadmapTitle : parsedRoadmap.title || 'Roadmap';
-  const heroDescription =
-    roadmapDescription ||
-    parsedRoadmap.intro ||
-    'Follow the assigned batch or track roadmap, and open any milestone for details.';
+  const heroDescription = isEmpty
+    ? 'No active roadmap configuration found.'
+    : (roadmapDescription ||
+       parsedRoadmap.intro ||
+       'Follow the assigned batch or track roadmap, and open any milestone for details.');
 
   const statusCopy = useMemo(() => {
     if (loading) {
@@ -348,6 +357,11 @@ export default function Roadmaps() {
               {heroTitle.toUpperCase()}
             </span>
           </h1>
+          {heroDescription && (
+            <p className="mt-3.5 text-sm leading-6 text-[#00113b]/65 dark:text-[#afcff1]/70 max-w-2xl mx-auto">
+              {heroDescription}
+            </p>
+          )}
         </motion.div>
 
         {loading ? (
@@ -364,6 +378,16 @@ export default function Roadmaps() {
             </div>
             <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">{statusCopy.title}</h2>
             <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">{statusCopy.description}</p>
+          </section>
+        ) : isEmpty ? (
+          <section className="dashboard-surface dashboard-surface-strong mx-auto max-w-2xl border-dashed p-8 text-center">
+            <div className="mx-auto mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-[#8ec8ff]/45 bg-white/40 px-5 py-5 text-[#1266af] dark:border-[#6fbfff]/24 dark:bg-[#051738]/75 dark:text-[#9cd6ff]">
+              <AlertCircle className="h-5 w-5" />
+            </div>
+            <h2 className="text-2xl font-semibold tracking-tight text-[#00113b] dark:text-[#d3edff]">No Roadmap Available</h2>
+            <p className="mt-3 text-sm leading-7 text-[#00113b]/65 dark:text-[#afcff1]">
+              There is no roadmap assigned to your program yet. Please check back later.
+            </p>
           </section>
         ) : (
           <>
