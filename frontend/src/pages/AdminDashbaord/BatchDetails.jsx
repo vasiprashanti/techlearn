@@ -755,6 +755,7 @@ const BatchDetails = () => {
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task Score</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap font-bold">Total XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
@@ -772,7 +773,7 @@ const BatchDetails = () => {
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={11} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={12} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
@@ -791,6 +792,11 @@ const BatchDetails = () => {
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
                                       <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
                                         {student.todayChallengeXp ? `+${student.todayChallengeXp} XP` : '—'}
+                                      </span>
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                        {student.todayScore || '—'}
                                       </span>
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
@@ -833,7 +839,7 @@ const BatchDetails = () => {
                           })}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={12} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                              <td colSpan={13} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                                 No students match your search query.
                               </td>
                             </tr>
