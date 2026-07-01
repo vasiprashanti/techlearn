@@ -786,10 +786,37 @@ const BatchDetails = () => {
                                     <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                       {formatEmail(student.email)}
                                     </td>
-                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
-                                        {student.todayChallengeScore || '—'}
-                                      </span>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
+                                      {student.todayChallengeScore === 'View Scores' ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-challenge` ? null : `${student.email}-challenge`)}
+                                            className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                          >
+                                            View score
+                                          </button>
+                                          {activeScoreTooltip === `${student.email}-challenge` && (
+                                            <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
+                                              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
+                                              {Object.entries(student.todayChallengeScoresDetail || {}).map(([key, scoreVal]) => {
+                                                if (!scoreVal || scoreVal === '—') return null;
+                                                const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
+                                                return (
+                                                  <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
+                                                    <span>{label}</span>
+                                                    <span>{scoreVal}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                          {student.todayChallengeScore || '—'}
+                                        </span>
+                                      )}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
                                       <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
@@ -801,13 +828,13 @@ const BatchDetails = () => {
                                         <>
                                           <button
                                             type="button"
-                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === student.email ? null : student.email)}
+                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-task` ? null : `${student.email}-task`)}
                                             className="text-[11px] sm:text-xs font-semibold text-emerald-600 hover:text-emerald-700 underline dark:text-emerald-300 dark:hover:text-emerald-200"
                                           >
                                             View score
                                           </button>
-                                          {activeScoreTooltip === student.email && (
-                                            <div className="absolute z-[100] bottom-full mb-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
+                                          {activeScoreTooltip === `${student.email}-task` && (
+                                            <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                               <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                               {Object.entries(student.todayScoresDetail || {}).map(([key, scoreVal]) => {
                                                 if (!scoreVal || scoreVal === '—') return null;
@@ -1080,7 +1107,7 @@ const BatchDetails = () => {
                                                     View score
                                                   </button>
                                                   {activeDayScoreTooltip === `${student.email}-${dayNum}` && (
-                                                    <div className="absolute z-[100] bottom-full mb-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
+                                                    <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                                       <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                                       {Object.entries(student.dayWiseHistoryTasksDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
                                                         if (!scoreVal || scoreVal === '—') return null;
