@@ -716,14 +716,9 @@ export const listTrackTemplates = async (req, res) => {
   try {
     const templates = await TrackTemplate.find().populate("batchId", "name").sort({ createdAt: -1 }).lean();
     const data = templates.map((template) => {
-      let effectiveType = template.trackType || "Daily Challenge";
-      if (effectiveType === "Daily Challenge") {
-        const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-        const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-        if (hasTasks || isDailyTaskCategory) {
-          effectiveType = "Daily Task";
-        }
-      }
+      const effectiveType = template.trackType === "Daily Task" || template.category === "Daily Task"
+        ? "Daily Task"
+        : "Daily Challenge";
       return {
         id: template._id,
         name: template.name,
@@ -834,17 +829,12 @@ export const getTrackTemplateDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    let effectiveType = template.trackType || "Daily Challenge";
-    if (effectiveType === "Daily Challenge") {
-      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-      if (hasTasks || isDailyTaskCategory) {
-        effectiveType = "Daily Task";
-      }
-    }
+    const effectiveType = template.trackType === "Daily Task" || template.category === "Daily Task"
+      ? "Daily Task"
+      : "Daily Challenge";
 
     let questionFilter = { status: "Active", isActive: { $ne: false } };
-    if (effectiveType === "Daily Task") {
+    if (effectiveType === "Daily Task" || effectiveType === "Daily Challenge") {
       if (template.category && template.category !== "Daily Task") {
         const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
         if (categoriesList.length > 0) {
@@ -994,14 +984,9 @@ export const updateTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    let currentTrackType = template.trackType || "Daily Challenge";
-    if (currentTrackType === "Daily Challenge") {
-      const hasTasks = template.dayAssignments?.some((d) => d.tasks?.length > 0);
-      const isDailyTaskCategory = template.category === "Daily Task" || template.category?.includes(",");
-      if (hasTasks || isDailyTaskCategory) {
-        currentTrackType = "Daily Task";
-      }
-    }
+    const currentTrackType = template.trackType === "Daily Task" || template.category === "Daily Task"
+      ? "Daily Task"
+      : "Daily Challenge";
 
     const nextTrackType = req.body.trackType || currentTrackType;
     const nextBatchId = req.body.batchId || template.batchId;
@@ -1157,7 +1142,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     const normalizedDayNumber = Number(dayNumber);
     const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
-      .select("_id xpValue xp_value xp points")
+      .select("_id categoryType xpValue xp_value xp points")
       .lean();
     const questionXpById = new Map(
       questionDocs.map((question) => [

@@ -267,14 +267,17 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     const dayAssignment = (trackTemplate.dayAssignments || []).find(
       (assignment) => Number(assignment.dayNumber) === Number(dayNumber)
     );
-    const templateQuestionId =
-      dayAssignment?.questionId ||
-      (dayAssignment?.tasks || []).find((task) => task.taskType === "Coding" && task.questionId)?.questionId ||
-      dayAssignment?.tasks?.[0]?.questionId;
+    const templateQuestionIds = dayAssignment?.tasks?.length
+      ? dayAssignment.tasks.map((task) => task.questionId).filter(Boolean)
+      : [dayAssignment?.questionId].filter(Boolean);
 
-    if (templateQuestionId) {
-      const question = await Question.findById(templateQuestionId).lean();
-      if (question) {
+    if (templateQuestionIds.length) {
+      const questions = await Question.find({ _id: { $in: templateQuestionIds } }).lean();
+      const questionOrder = new Map(templateQuestionIds.map((id, index) => [String(id), index]));
+      const orderedQuestions = questions.sort(
+        (a, b) => (questionOrder.get(String(a._id)) ?? 0) - (questionOrder.get(String(b._id)) ?? 0)
+      );
+      if (orderedQuestions.length) {
         return {
           student: studentContext.student,
           studentEmail: studentContext.studentEmail,
@@ -285,7 +288,8 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
             trackType: desiredTrackType,
             name: trackTemplate.name,
           },
-          question,
+          question: orderedQuestions[0],
+          questions: orderedQuestions,
           dayNumber,
           durationMinutes: DAILY_CHALLENGE_RULES.timerLimitMinutes,
         };

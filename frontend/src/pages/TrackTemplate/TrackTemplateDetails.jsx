@@ -119,6 +119,8 @@ export default function TrackTemplateDetails() {
     return null;
   }, [trackDetail, location.state, templateId]);
 
+  const isMultiQuestionTrack = track?.trackType === 'Daily Task' || track?.trackType === 'Daily Challenge';
+
   // Helper to determine if track has MCQ and/or Coding category elements
   const { hasMcq, hasCoding } = useMemo(() => {
     const categories = track?.category
@@ -165,6 +167,9 @@ export default function TrackTemplateDetails() {
   }, [trackDetail?.dayAssignments]);
 
   const filteredQuestions = useMemo(() => {
+    if (track?.trackType === 'Daily Challenge') {
+      return availableQuestions.filter((question) => !assignedQuestionIdSet.has(String(question.id || question._id)));
+    }
     if (!addDayForm.taskType) return availableQuestions;
 
     const taskTypeLower = addDayForm.taskType.toLowerCase();
@@ -193,7 +198,7 @@ export default function TrackTemplateDetails() {
 
       return true;
     });
-  }, [availableQuestions, addDayForm.taskType, allCategories, assignedQuestionIdSet]);
+  }, [availableQuestions, addDayForm.taskType, allCategories, assignedQuestionIdSet, track?.trackType]);
 
   const dayWiseQuestions = filteredQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
@@ -245,7 +250,7 @@ export default function TrackTemplateDetails() {
 
   const selectableAssignments = useMemo(() => {
     return (trackDetail?.dayAssignments || []).flatMap((day) => {
-      if (track?.trackType === 'Daily Task') {
+      if (isMultiQuestionTrack) {
         return (day.tasks || []).map((task) => ({
           key: assignmentKey(day.dayNumber, task.questionId),
           dayNumber: day.dayNumber,
@@ -256,7 +261,7 @@ export default function TrackTemplateDetails() {
         ? [{ key: assignmentKey(day.dayNumber, day.questionId), dayNumber: day.dayNumber, questionId: null }]
         : [];
     });
-  }, [trackDetail?.dayAssignments, track?.trackType]);
+  }, [trackDetail?.dayAssignments, isMultiQuestionTrack]);
 
   const selectableAssignmentKeys = useMemo(
     () => selectableAssignments.map((assignment) => assignment.key),
@@ -329,7 +334,7 @@ export default function TrackTemplateDetails() {
   }, [templateId]);
 
   useEffect(() => {
-    if (track?.trackType === 'Daily Task') {
+    if (isMultiQuestionTrack) {
       if (trackDetail?.availableQuestions) {
         setAvailableQuestions(trackDetail.availableQuestions);
       }
@@ -359,7 +364,7 @@ export default function TrackTemplateDetails() {
     return () => {
       cancelled = true;
     };
-  }, [categorySlug, track?.trackType, trackDetail?.availableQuestions]);
+  }, [categorySlug, isMultiQuestionTrack, trackDetail?.availableQuestions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -745,7 +750,7 @@ export default function TrackTemplateDetails() {
             </div>
 
             <div className="space-y-2.5">
-              {track?.trackType === 'Daily Task' ? (
+              {isMultiQuestionTrack ? (
                 (trackDetail?.dayAssignments || []).map((day) => (
                   <article key={`day-${day.dayNumber}`} className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -758,7 +763,7 @@ export default function TrackTemplateDetails() {
                         className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
                       >
                         <FiPlus className="w-3.5 h-3.5" />
-                        Add Task
+                        {track?.trackType === 'Daily Task' ? 'Add Task' : 'Add Question'}
                       </button>
                     </div>
                     {expandedDays[day.dayNumber] && <div className="space-y-2 pl-3">
