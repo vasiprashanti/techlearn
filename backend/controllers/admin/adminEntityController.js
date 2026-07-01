@@ -1224,6 +1224,8 @@ export const getBatchDetail = async (req, res) => {
 
       for (let day = 1; day <= 30; day++) {
         // --- 1. DAILY TASKS ---
+        let correctTasks = 0;
+        let totalTasks = 0;
         let correctMcq = 0;
         let totalMcq = 0;
         let correctSql = 0;
@@ -1236,16 +1238,25 @@ export const getBatchDetail = async (req, res) => {
         );
         if (dayAttempt) {
           const mcqTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
-          correctMcq += mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const completedMcqs = mcqTasks.filter(t => t.status === "Completed" && t.isCorrect);
+          correctMcq += completedMcqs.length;
           totalMcq += mcqTasks.length;
+          correctTasks += completedMcqs.length;
+          totalTasks += mcqTasks.length;
 
           const sqlTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "SQL");
-          correctSql += sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const completedSqls = sqlTasks.filter(t => t.status === "Completed" && t.isCorrect);
+          correctSql += completedSqls.length;
           totalSql += sqlTasks.length;
+          correctTasks += completedSqls.length;
+          totalTasks += sqlTasks.length;
 
           const codingTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "Coding" || t.taskType === "Debugging");
-          correctCoding += codingTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          const completedCodings = codingTasks.filter(t => t.status === "Completed" && t.isCorrect);
+          correctCoding += completedCodings.length;
           totalCoding += codingTasks.length;
+          correctTasks += completedCodings.length;
+          totalTasks += codingTasks.length;
         }
 
         // Submissions for daily tasks on this day
