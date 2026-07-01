@@ -1208,46 +1208,64 @@ export const getBatchDetail = async (req, res) => {
         todayXp = todayChallengeXp + todayTaskXp;
       }
 
-      const dayWiseHistory = {};
+      const dayWiseHistoryTasks = {};
+      const dayWiseHistoryChallenges = {};
+
       for (let day = 1; day <= 30; day++) {
-        let correct = 0;
-        let total = 0;
+        // --- 1. DAILY TASKS ---
+        let correctTasks = 0;
+        let totalTasks = 0;
 
         const dayAttempt = dailyTaskAttempts.find(
           (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === day
         );
         if (dayAttempt) {
           const mcqTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
-          correct += mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          total += mcqTasks.length;
+          correctTasks += mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          totalTasks += mcqTasks.length;
 
           const sqlTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "SQL");
-          correct += sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          total += sqlTasks.length;
+          correctTasks += sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          totalTasks += sqlTasks.length;
 
           const codingTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "Coding" || t.taskType === "Debugging");
-          correct += codingTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          total += codingTasks.length;
+          correctTasks += codingTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
+          totalTasks += codingTasks.length;
         }
 
-        const assignedIdsForDay = dayToAssignedIds.get(day) || new Set();
-        let daySubs = allCombinedSubs.filter(sub => {
-          const subId = String(sub.questionId?._id || sub.questionId || sub.collegeMcqId?._id || sub.collegeMcqId || sub.questionBankId || sub._id);
-          return assignedIdsForDay.has(subId);
+        // Submissions for daily tasks on this day
+        // Let's find templates of Daily Task
+        const dailyTaskTemplates = (trackTemplates || []).filter(t => t.trackType === "Daily Task");
+        const assignedTaskIdsForDay = new Set();
+        dailyTaskTemplates.forEach(template => {
+          const d = template.dayAssignments?.find(da => da.dayNumber === day);
+          if (d) {
+            if (d.questionId) assignedTaskIdsForDay.add(String(d.questionId._id || d.questionId));
+            if (d.tasks) {
+              d.tasks.forEach(t => {
+                if (t.questionId) assignedTaskIdsForDay.add(String(t.questionId._id || t.questionId));
+              });
+            }
+          }
         });
 
-        if (daySubs.length === 0) {
+        let dayTaskSubs = allCombinedSubs.filter(sub => {
+          const subId = String(sub.questionId?._id || sub.questionId || sub.collegeMcqId?._id || sub.collegeMcqId || sub.questionBankId || sub._id);
+          return assignedTaskIdsForDay.has(subId);
+        });
+
+        if (dayTaskSubs.length === 0 && !dayAttempt) {
           const releaseStart = localCombineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
           const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
           const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
-          daySubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd);
+          dayTaskSubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd && sub.challengeType !== "daily_challenge" && !sub.codingRoundId);
         }
 
-        let subCorrect = 0;
-        let subTotal = 0;
-        if (daySubs.length > 0) {
+        let subCorrectTasks = 0;
+        let subTotalTasks = 0;
+        if (dayTaskSubs.length > 0) {
           const uniqueSubs = new Map();
-          daySubs.forEach(s => {
+          dayTaskSubs.forEach(s => {
             const key = s.questionId?._id || s.questionId || s.collegeMcqId?._id || s.collegeMcqId || s._id;
             if (!uniqueSubs.has(String(key))) {
               uniqueSubs.set(String(key), s);
@@ -1257,40 +1275,99 @@ export const getBatchDetail = async (req, res) => {
             if (s.type === "StudentMcqSubmission") {
               const c = s.answers?.filter(a => a.isCorrect).length ?? s.score ?? 0;
               const t = s.answers?.length || s.collegeMcqId?.questions?.length || 1;
-              subCorrect += c;
-              subTotal += t;
+              subCorrectTasks += c;
+              subTotalTasks += t;
             } else if (s.type === "PracticeSubmission") {
-              subCorrect += s.isCorrect ? 1 : 0;
-              subTotal += 1;
+              subCorrectTasks += s.isCorrect ? 1 : 0;
+              subTotalTasks += 1;
             } else {
               const passed = s.finalSubmissionResults?.passedTestCases ?? (s.status === "Passed" ? 1 : 0);
               const t = s.finalSubmissionResults?.totalTestCases ?? 1;
-              subCorrect += passed;
-              subTotal += t;
+              subCorrectTasks += passed;
+              subTotalTasks += t;
             }
           });
         }
 
-        const finalCorrect = correct + subCorrect;
-        const finalTotal = total + subTotal;
+        const finalCorrectTasks = correctTasks + subCorrectTasks;
+        const finalTotalTasks = totalTasks + subTotalTasks;
 
-        if (finalTotal > 0) {
-          dayWiseHistory[day] = `${finalCorrect}/${finalTotal}`;
+        if (finalTotalTasks > 0) {
+          dayWiseHistoryTasks[day] = `${finalCorrectTasks}/${finalTotalTasks}`;
         } else {
           let isAssigned = false;
-          (trackTemplates || []).forEach(template => {
-            (template.dayAssignments || []).forEach(d => {
-              if (d.dayNumber === day) {
-                const hasTasks = d.tasks && d.tasks.length > 0;
-                const hasDirectQuestion = !!d.questionId;
-                if (hasTasks || hasDirectQuestion) {
-                  isAssigned = true;
-                }
-              }
-            });
+          dailyTaskTemplates.forEach(template => {
+            const d = template.dayAssignments?.find(da => da.dayNumber === day);
+            if (d && (d.questionId || (d.tasks && d.tasks.length > 0))) {
+              isAssigned = true;
+            }
           });
+          dayWiseHistoryTasks[day] = isAssigned ? "NIL" : "NA";
+        }
 
-          dayWiseHistory[day] = isAssigned ? "NIL" : "NA";
+        // --- 2. DAILY CHALLENGES ---
+        // Find if student has a Daily Challenge Attempt for this day
+        // Query dailyChallengeAttempts for this day number and student email
+        const dayChallengeAttempt = dailyChallengeAttempts.find(
+          (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail && att.workingDay === day
+        );
+
+        // Submissions for daily challenges on this day
+        const dailyChallengeTemplates = (trackTemplates || []).filter(t => t.trackType === "Daily Challenge");
+        const assignedChallengeIdsForDay = new Set();
+        dailyChallengeTemplates.forEach(template => {
+          const d = template.dayAssignments?.find(da => da.dayNumber === day);
+          if (d) {
+            if (d.questionId) assignedChallengeIdsForDay.add(String(d.questionId._id || d.questionId));
+            if (d.tasks) {
+              d.tasks.forEach(t => {
+                if (t.questionId) assignedChallengeIdsForDay.add(String(t.questionId._id || t.questionId));
+              });
+            }
+          }
+        });
+
+        let dayChallengeSubs = allCombinedSubs.filter(sub => {
+          const subId = String(sub.questionId?._id || sub.questionId || sub.collegeMcqId?._id || sub.collegeMcqId || sub.questionBankId || sub._id);
+          const isChallenge = sub.challengeType === "daily_challenge" || !!sub.codingRoundId;
+          return assignedChallengeIdsForDay.has(subId) || (isChallenge && dayChallengeAttempt && (String(sub.attemptId) === String(dayChallengeAttempt._id) || String(sub._id) === String(dayChallengeAttempt.finalSubmissionId)));
+        });
+
+        if (dayChallengeSubs.length === 0) {
+          const releaseStart = localCombineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
+          const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
+          const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+          dayChallengeSubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd && (sub.challengeType === "daily_challenge" || !!sub.codingRoundId));
+        }
+
+        let correctChallenges = 0;
+        let totalChallenges = 0;
+        if (dayChallengeSubs.length > 0) {
+          const uniqueSubs = new Map();
+          dayChallengeSubs.forEach(s => {
+            const key = s.questionId?._id || s.questionId || s.collegeMcqId?._id || s.collegeMcqId || s._id;
+            if (!uniqueSubs.has(String(key))) {
+              uniqueSubs.set(String(key), s);
+            }
+          });
+          uniqueSubs.forEach(s => {
+            // Daily challenge scores are out of 100 accuracy
+            correctChallenges += s.totalScore || s.accuracyScore || 0;
+            totalChallenges += 100;
+          });
+        }
+
+        if (totalChallenges > 0) {
+          dayWiseHistoryChallenges[day] = `${correctChallenges}/${totalChallenges}`;
+        } else {
+          let isAssigned = false;
+          dailyChallengeTemplates.forEach(template => {
+            const d = template.dayAssignments?.find(da => da.dayNumber === day);
+            if (d && (d.questionId || (d.tasks && d.tasks.length > 0))) {
+              isAssigned = true;
+            }
+          });
+          dayWiseHistoryChallenges[day] = isAssigned ? "NIL" : "NA";
         }
       }
 
@@ -1306,7 +1383,8 @@ export const getBatchDetail = async (req, res) => {
         todayChallengeXp,
         todayTaskXp,
         leaderboardRank,
-        dayWiseHistory,
+        dayWiseHistoryTasks,
+        dayWiseHistoryChallenges,
         lastAttemptAt,
         status,
       };

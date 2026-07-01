@@ -346,24 +346,24 @@ const BatchDetails = () => {
     return `Day ${dayNum} - ${targetDate.toLocaleDateString('en-US', options)}`;
   }, [batch.startDateValue]);
 
-  const getAttemptedCountForDay = useCallback((dayNum) => {
+  const getAttemptedCountForDay = useCallback((dayNum, historyKey = 'dayWiseHistoryTasks') => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     if (isPlaceholder) return 0;
     return table.filter(student => {
-      const score = student.dayWiseHistory?.[dayNum];
+      const score = student[historyKey]?.[dayNum];
       return score && score !== 'NIL' && score !== 'NA' && score !== '—';
     }).length;
   }, [batch.studentsTable]);
 
-  const getAverageScoreForDay = useCallback((dayNum) => {
+  const getAverageScoreForDay = useCallback((dayNum, historyKey = 'dayWiseHistoryTasks') => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     if (isPlaceholder) return '—';
     const scores = [];
     let maxDen = 0;
     table.forEach(student => {
-      const score = student.dayWiseHistory?.[dayNum];
+      const score = student[historyKey]?.[dayNum];
       if (score && score !== 'NIL' && score !== 'NA' && score !== '—') {
         const parts = score.split('/');
         if (parts.length === 2) {
@@ -399,13 +399,19 @@ const BatchDetails = () => {
     const today = batchDetail?.dayNumber || 1;
     if (reportStatusFilter === 'Attempted Today') {
       list = list.filter(student => {
-        const score = student.dayWiseHistory?.[today];
-        return score && score !== 'NIL' && score !== 'NA' && score !== '—';
+        const scoreT = student.dayWiseHistoryTasks?.[today];
+        const scoreC = student.dayWiseHistoryChallenges?.[today];
+        const attemptedT = scoreT && scoreT !== 'NIL' && scoreT !== 'NA' && scoreT !== '—';
+        const attemptedC = scoreC && scoreC !== 'NIL' && scoreC !== 'NA' && scoreC !== '—';
+        return attemptedT || attemptedC;
       });
     } else if (reportStatusFilter === 'Not Attempted Today') {
       list = list.filter(student => {
-        const score = student.dayWiseHistory?.[today];
-        return !score || score === 'NIL' || score === 'NA' || score === '—';
+        const scoreT = student.dayWiseHistoryTasks?.[today];
+        const scoreC = student.dayWiseHistoryChallenges?.[today];
+        const attemptedT = scoreT && scoreT !== 'NIL' && scoreT !== 'NA' && scoreT !== '—';
+        const attemptedC = scoreC && scoreC !== 'NIL' && scoreC !== 'NA' && scoreC !== '—';
+        return !attemptedT && !attemptedC;
       });
     } else if (reportStatusFilter === 'Completed') {
       list = list.filter(student => student.status === 'Completed');
@@ -418,40 +424,32 @@ const BatchDetails = () => {
     // 3. Sorting
     if (reportSortOrder !== 'default') {
       list.sort((a, b) => {
-        let scoreA = 0;
-        let countA = 0;
-        Object.keys(a.dayWiseHistory || {}).forEach(k => {
-          const val = a.dayWiseHistory[k];
-          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
-            const parts = val.split('/');
-            if (parts.length === 2) {
-              scoreA += parseFloat(parts[0]) / parseFloat(parts[1]);
-              countA++;
+        const getAvg = (student, key) => {
+          let scoreSum = 0;
+          let count = 0;
+          Object.keys(student[key] || {}).forEach(k => {
+            const val = student[key][k];
+            if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
+              const parts = val.split('/');
+              if (parts.length === 2) {
+                scoreSum += parseFloat(parts[0]) / parseFloat(parts[1]);
+                count++;
+              }
             }
-          }
-        });
-        
-        let scoreB = 0;
-        let countB = 0;
-        Object.keys(b.dayWiseHistory || {}).forEach(k => {
-          const val = b.dayWiseHistory[k];
-          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
-            const parts = val.split('/');
-            if (parts.length === 2) {
-              scoreB += parseFloat(parts[0]) / parseFloat(parts[1]);
-              countB++;
-            }
-          }
-        });
-        
-        const avgA = countA > 0 ? scoreA / countA : 0;
-        const avgB = countB > 0 ? scoreB / countB : 0;
-        
-        if (reportSortOrder === 'low-to-high') {
-          return avgA - avgB;
-        } else {
-          return avgB - avgA;
+          });
+          return count > 0 ? scoreSum / count : 0;
+        };
+
+        if (reportSortOrder === 'tasks-low-to-high') {
+          return getAvg(a, 'dayWiseHistoryTasks') - getAvg(b, 'dayWiseHistoryTasks');
+        } else if (reportSortOrder === 'tasks-high-to-low') {
+          return getAvg(b, 'dayWiseHistoryTasks') - getAvg(a, 'dayWiseHistoryTasks');
+        } else if (reportSortOrder === 'challenge-low-to-high') {
+          return getAvg(a, 'dayWiseHistoryChallenges') - getAvg(b, 'dayWiseHistoryChallenges');
+        } else if (reportSortOrder === 'challenge-high-to-low') {
+          return getAvg(b, 'dayWiseHistoryChallenges') - getAvg(a, 'dayWiseHistoryChallenges');
         }
+        return 0;
       });
     }
     
@@ -875,15 +873,17 @@ const BatchDetails = () => {
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                       </div>
-                      <div className="relative w-32 sm:w-36 md:w-40">
+                      <div className="relative w-40 sm:w-48 md:w-56">
                         <select
                           value={reportSortOrder}
                           onChange={(e) => setReportSortOrder(e.target.value)}
                           className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                         >
                           <option className={dropdownOptionClass} value="default">Default Sort</option>
-                          <option className={dropdownOptionClass} value="low-to-high">Score: Low to High</option>
-                          <option className={dropdownOptionClass} value="high-to-low">Score: High to Low</option>
+                          <option className={dropdownOptionClass} value="tasks-low-to-high">Daily Tasks: Low to High</option>
+                          <option className={dropdownOptionClass} value="tasks-high-to-low">Daily Tasks: High to Low</option>
+                          <option className={dropdownOptionClass} value="challenge-low-to-high">Daily Challenges: Low to High</option>
+                          <option className={dropdownOptionClass} value="challenge-high-to-low">Daily Challenges: High to Low</option>
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                       </div>
@@ -897,10 +897,10 @@ const BatchDetails = () => {
                         <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Day-wise Summary</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                        <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[168px] min-w-[168px] border-r border-black/5 dark:border-white/5">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[220px] min-w-[220px] border-r border-black/5 dark:border-white/5">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
@@ -911,13 +911,14 @@ const BatchDetails = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
-                                Attempted Students
+                            {/* Daily Tasks Metrics */}
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Attempted (Daily Tasks)
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
-                                const count = getAttemptedCountForDay(dayNum);
+                                const count = getAttemptedCountForDay(dayNum, 'dayWiseHistoryTasks');
                                 return (
                                   <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                     {count}
@@ -925,15 +926,44 @@ const BatchDetails = () => {
                                 );
                               })}
                             </tr>
-                            <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
-                                Average Score
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Average Score (Daily Tasks)
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
-                                const avg = getAverageScoreForDay(dayNum);
+                                const avg = getAverageScoreForDay(dayNum, 'dayWiseHistoryTasks');
                                 return (
                                   <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    {avg}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            {/* Daily Challenges Metrics */}
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Attempted (Daily Challenges)
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const count = getAttemptedCountForDay(dayNum, 'dayWiseHistoryChallenges');
+                                return (
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                                    {count}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Average Score (Daily Challenges)
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const avg = getAverageScoreForDay(dayNum, 'dayWiseHistoryChallenges');
+                                return (
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 whitespace-nowrap">
                                     {avg}
                                   </td>
                                 );
@@ -950,11 +980,12 @@ const BatchDetails = () => {
                         <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Student-wise Report</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                        <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
                               <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
                               <th className="sticky left-6 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
+                              <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
@@ -971,7 +1002,7 @@ const BatchDetails = () => {
                                     {isPlaceholder ? '-' : index + 1}
                                   </td>
                                   {isPlaceholder ? (
-                                    <td colSpan={maxTrackDays + 1} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                    <td colSpan={maxTrackDays + 2} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
                                       No enrolled students
                                     </td>
                                   ) : (
@@ -979,20 +1010,29 @@ const BatchDetails = () => {
                                       <td className="sticky left-6 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[125px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
                                         {student.name}
                                       </td>
+                                      <td className="px-2 py-2 text-left text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+                                        <div className="text-slate-500 dark:text-slate-400">Daily Tasks</div>
+                                        <div className="text-blue-600 dark:text-blue-400 mt-2">Daily Challenge</div>
+                                      </td>
                                       {Array.from({ length: maxTrackDays }).map((_, dIndex) => {
                                         const dayNum = dIndex + 1;
-                                        const score = student.dayWiseHistory?.[dayNum] || 'NA';
+                                        const scoreTasks = student.dayWiseHistoryTasks?.[dayNum] || 'NA';
+                                        const scoreChallenge = student.dayWiseHistoryChallenges?.[dayNum] || 'NA';
                                         
-                                        let scoreClass = "text-slate-500 dark:text-slate-400";
-                                        if (score === 'NIL') scoreClass = "text-amber-500 dark:text-amber-400 font-semibold";
-                                        else if (score === 'NA') scoreClass = "text-slate-300 dark:text-slate-600";
-                                        else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
+                                        let classT = "text-slate-500 dark:text-slate-400";
+                                        if (scoreTasks === 'NIL') classT = "text-amber-500 dark:text-amber-400 font-semibold";
+                                        else if (scoreTasks === 'NA') classT = "text-slate-300 dark:text-slate-650";
+                                        else classT = "text-emerald-600 dark:text-emerald-400 font-semibold";
+
+                                        let classC = "text-slate-550 dark:text-slate-450";
+                                        if (scoreChallenge === 'NIL') classC = "text-amber-500 dark:text-amber-400 font-semibold";
+                                        else if (scoreChallenge === 'NA') classC = "text-slate-300 dark:text-slate-650";
+                                        else classC = "text-blue-600 dark:text-blue-400 font-semibold";
 
                                         return (
                                           <td key={dIndex} className="px-2 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap">
-                                            <span className={scoreClass}>
-                                              {score}
-                                            </span>
+                                            <div className={classT}>{scoreTasks}</div>
+                                            <div className={`${classC} mt-2`}>{scoreChallenge}</div>
                                           </td>
                                         );
                                       })}
