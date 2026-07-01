@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiTrash2, FiCode, FiGrid } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiCode, FiGrid, FiChevronDown } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
@@ -9,6 +9,8 @@ import CategoryListPanel from '../../components/admin/question-bank/CategoryList
 import CategoryCreateModal from '../../components/admin/question-bank/CategoryCreateModal';
 import { useQuestionBankCategories } from '../../hooks/useQuestionBankCategories';
 import { questionBankApi } from '../../api/questionBankApi';
+
+const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
 export const QuestionBankAdminPage = () => {
   const { theme } = useTheme();
@@ -302,11 +304,12 @@ export const QuestionBankAdminPage = () => {
 
           {/* Category Listing Container */}
           <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-4">
+              {/* Left Column: Title & Select All */}
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Question Categories</h2>
                 
-                <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
                   <input
                     type="checkbox"
                     checked={categories.length > 0 && categories.every(c => selectedCategoryIds.includes(c.id || c._id))}
@@ -318,24 +321,26 @@ export const QuestionBankAdminPage = () => {
                         setSelectedCategoryIds(selectedCategoryIds.filter(id => !categories.some(c => (c.id || c._id) === id)));
                       }
                     }}
-                    className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                    className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
                   />
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              
+              {/* Right Column: Filters & Button */}
+              <div className="flex flex-wrap items-center gap-2">
                 {/* Status Filter */}
                 <div className="relative">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
                   >
                     <option className={dropdownOptionClass} value="All">All Statuses</option>
                     <option className={dropdownOptionClass} value="Active">Active</option>
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
 
                 {/* Category Type Filter */}
@@ -343,14 +348,14 @@ export const QuestionBankAdminPage = () => {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
                   >
                     <option className={dropdownOptionClass} value="All">All Types</option>
                     <option className={dropdownOptionClass} value="Coding">Coding</option>
                     <option className={dropdownOptionClass} value="MCQ">MCQ</option>
                     <option className={dropdownOptionClass} value="Notes">Notes</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
 
                 {/* Sort dropdown */}
@@ -358,22 +363,22 @@ export const QuestionBankAdminPage = () => {
                   <select
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value)}
-                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer max-w-[100px] text-ellipsis overflow-hidden whitespace-nowrap"
                   >
                     <option className={dropdownOptionClass} value="default">Default Sort</option>
-                    <option className={dropdownOptionClass} value="name-asc">Name: A to Z</option>
-                    <option className={dropdownOptionClass} value="name-desc">Name: Z to A</option>
-                    <option className={dropdownOptionClass} value="count-desc">Questions: High to Low</option>
-                    <option className={dropdownOptionClass} value="count-asc">Questions: Low to High</option>
+                    <option className={dropdownOptionClass} value="name-asc">Name: A-Z</option>
+                    <option className={dropdownOptionClass} value="name-desc">Name: Z-A</option>
+                    <option className={dropdownOptionClass} value="count-desc">High to Low</option>
+                    <option className={dropdownOptionClass} value="count-asc">Low to High</option>
                   </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
 
                 <button
                   onClick={handleAddCategoryClick}
-                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-5 text-sm font-semibold transition-colors shadow-sm"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-4 text-xs font-bold transition-colors shadow-sm"
                 >
-                  <FiPlus className="w-4 h-4" />
+                  <FiPlus className="w-3.5 h-3.5" />
                   Add Category
                 </button>
               </div>
