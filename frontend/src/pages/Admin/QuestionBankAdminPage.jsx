@@ -62,6 +62,33 @@ export const QuestionBankAdminPage = () => {
     setMounted(true);
   }, []);
 
+  const filteredAndSortedCategories = React.useMemo(() => {
+    let list = [...categories];
+
+    // 1. Status Filter
+    if (statusFilter !== 'All') {
+      list = list.filter(cat => cat.status === statusFilter);
+    }
+
+    // 2. Type Filter
+    if (typeFilter !== 'All') {
+      list = list.filter(cat => (cat.categoryType || '').toLowerCase() === typeFilter.toLowerCase());
+    }
+
+    // 3. Sort Order
+    if (sortOrder === 'name-asc') {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else if (sortOrder === 'name-desc') {
+      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    } else if (sortOrder === 'count-desc') {
+      list.sort((a, b) => (b.total || 0) - (a.total || 0));
+    } else if (sortOrder === 'count-asc') {
+      list.sort((a, b) => (a.total || 0) - (b.total || 0));
+    }
+
+    return list;
+  }, [categories, statusFilter, typeFilter, sortOrder]);
+
   if (!mounted || loading) {
     return <LoadingScreen />;
   }
@@ -127,33 +154,6 @@ export const QuestionBankAdminPage = () => {
   const handleViewCategory = (category) => {
     navigate(`/admin/question-bank/${category.id || category._id}`);
   };
-
-  const filteredAndSortedCategories = React.useMemo(() => {
-    let list = [...categories];
-
-    // 1. Status Filter
-    if (statusFilter !== 'All') {
-      list = list.filter(cat => cat.status === statusFilter);
-    }
-
-    // 2. Type Filter
-    if (typeFilter !== 'All') {
-      list = list.filter(cat => (cat.categoryType || '').toLowerCase() === typeFilter.toLowerCase());
-    }
-
-    // 3. Sort Order
-    if (sortOrder === 'name-asc') {
-      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-    } else if (sortOrder === 'name-desc') {
-      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
-    } else if (sortOrder === 'count-desc') {
-      list.sort((a, b) => (b.total || 0) - (a.total || 0));
-    } else if (sortOrder === 'count-asc') {
-      list.sort((a, b) => (a.total || 0) - (b.total || 0));
-    }
-
-    return list;
-  }, [categories, statusFilter, typeFilter, sortOrder]);
 
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
   const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
