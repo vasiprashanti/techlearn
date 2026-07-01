@@ -28,9 +28,9 @@ export const QuestionBankAdminPage = () => {
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [categorySearch, setCategorySearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
+  const [typeFilter, setTypeFilter] = useState('MCQ');
+  const [statusFilter, setStatusFilter] = useState('Active');
+  const [sortBy, setSortBy] = useState('newest');
 
   const handleSelectToggle = (id) => {
     setSelectedCategoryIds((prev) =>
@@ -132,26 +132,30 @@ export const QuestionBankAdminPage = () => {
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
   const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
   const draftCategoriesCount = categories.filter((cat) => cat.status === 'Draft').length;
-  const categoryTypeOptions = Array.from(
-    new Set(categories.map((cat) => cat.categoryType).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
+  const getCategoryTime = (category, fields) => {
+    for (const field of fields) {
+      const timestamp = new Date(category?.[field] || 0).getTime();
+      if (Number.isFinite(timestamp) && timestamp > 0) return timestamp;
+    }
+    return 0;
+  };
   const filteredCategories = categories
     .filter((category) => {
       const q = categorySearch.trim().toLowerCase();
       const matchesSearch = !q ||
         String(category.title || '').toLowerCase().includes(q) ||
         String(category.categoryType || '').toLowerCase().includes(q);
-      const matchesType = typeFilter === 'all' || category.categoryType === typeFilter;
-      const matchesStatus = statusFilter === 'all' || category.status === statusFilter;
+      const matchesType = category.categoryType === typeFilter;
+      const matchesStatus = category.status === statusFilter;
       return matchesSearch && matchesType && matchesStatus;
     })
     .sort((a, b) => {
-      if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
-      if (sortBy === 'name-asc') return String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' });
-      if (sortBy === 'name-desc') return String(b.title || '').localeCompare(String(a.title || ''), undefined, { sensitivity: 'base' });
-      if (sortBy === 'questions-desc') return (b.total || 0) - (a.total || 0);
-      if (sortBy === 'questions-asc') return (a.total || 0) - (b.total || 0);
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+      if (sortBy === 'oldest') return getCategoryTime(a, ['createdAt']) - getCategoryTime(b, ['createdAt']);
+      if (sortBy === 'last-opened') {
+        return getCategoryTime(b, ['lastOpenedAt', 'openedAt', 'updatedAt', 'createdAt']) -
+          getCategoryTime(a, ['lastOpenedAt', 'openedAt', 'updatedAt', 'createdAt']);
+      }
+      return getCategoryTime(b, ['createdAt']) - getCategoryTime(a, ['createdAt']);
     });
 
   return (
@@ -343,10 +347,9 @@ export const QuestionBankAdminPage = () => {
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
                 >
-                  <option value="all">All Types</option>
-                  {categoryTypeOptions.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
+                  <option value="MCQ">MCQ</option>
+                  <option value="Coding">Coding</option>
+                  <option value="Query">Query</option>
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
               </div>
@@ -356,7 +359,6 @@ export const QuestionBankAdminPage = () => {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
                 >
-                  <option value="all">All Categories</option>
                   <option value="Active">Active</option>
                   <option value="Draft">Draft</option>
                   <option value="Archived">Archived</option>
@@ -369,12 +371,9 @@ export const QuestionBankAdminPage = () => {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
                 >
-                  <option value="recent">Recently Added</option>
                   <option value="oldest">Oldest First</option>
-                  <option value="name-asc">Name A-Z</option>
-                  <option value="name-desc">Name Z-A</option>
-                  <option value="questions-desc">Most Questions</option>
-                  <option value="questions-asc">Fewest Questions</option>
+                  <option value="newest">Newest First</option>
+                  <option value="last-opened">Last Opened</option>
                 </select>
                 <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
               </div>
