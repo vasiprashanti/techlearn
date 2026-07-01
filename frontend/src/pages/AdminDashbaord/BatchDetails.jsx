@@ -807,7 +807,7 @@ const BatchDetails = () => {
                                             View score
                                           </button>
                                           {activeScoreTooltip === student.email && (
-                                            <div className="absolute z-[100] mt-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
+                                            <div className="absolute z-[100] bottom-full mb-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
                                               <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                               {Object.entries(student.todayScoresDetail || {}).map(([key, scoreVal]) => {
                                                 if (!scoreVal || scoreVal === '—') return null;
@@ -1080,7 +1080,7 @@ const BatchDetails = () => {
                                                     View score
                                                   </button>
                                                   {activeDayScoreTooltip === `${student.email}-${dayNum}` && (
-                                                    <div className="absolute z-[100] mt-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
+                                                    <div className="absolute z-[100] bottom-full mb-1 right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]">
                                                       <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                                       {Object.entries(student.dayWiseHistoryTasksDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
                                                         if (!scoreVal || scoreVal === '—') return null;

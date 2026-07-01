@@ -1144,13 +1144,14 @@ export const getBatchDetail = async (req, res) => {
 
         todayScore = totalAssigned > 0 ? `${totalCorrect}/${totalAssigned}` : "—";
 
-        // Count how many non-empty categories exist
-        const activeCategories = [];
-        if (todayScoresDetail.mcq && todayScoresDetail.mcq !== "—") activeCategories.push("mcq");
-        if (todayScoresDetail.coding && todayScoresDetail.coding !== "—") activeCategories.push("coding");
-        if (todayScoresDetail.sql && todayScoresDetail.sql !== "—") activeCategories.push("sql");
+        // Count how many non-empty categories exist in assignments today
+        const assignedCategoriesCount = [
+          (totalMCQsInTemplateToday || 0) > 0,
+          (totalSQLInTemplateToday || 0) > 0,
+          (totalCodingInTemplateToday || 0) > 0
+        ].filter(Boolean).length;
 
-        if (activeCategories.length > 1) {
+        if (assignedCategoriesCount > 1 && totalAssigned > 0) {
           todayScore = "View Scores";
         }
       }
@@ -1287,6 +1288,9 @@ export const getBatchDetail = async (req, res) => {
           dayTaskSubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd && sub.challengeType !== "daily_challenge" && !sub.codingRoundId);
         }
 
+        let subCorrectTasks = 0;
+        let subTotalTasks = 0;
+
         // Compute dynamic scores details for this day
         let dayTasksDetail = { mcq: "—", sql: "—", coding: "—" };
         
@@ -1364,13 +1368,29 @@ export const getBatchDetail = async (req, res) => {
         const finalTotalTasks = totalTasks + subTotalTasks;
 
         if (finalTotalTasks > 0) {
-          // Count active types
-          const activeTypes = [];
-          if (dayTasksDetail.mcq && dayTasksDetail.mcq !== "—") activeTypes.push("mcq");
-          if (dayTasksDetail.sql && dayTasksDetail.sql !== "—") activeTypes.push("sql");
-          if (dayTasksDetail.coding && dayTasksDetail.coding !== "—") activeTypes.push("coding");
+          // Count assigned categories in template for this day
+          let dayMcqAssigned = 0;
+          let daySqlAssigned = 0;
+          let dayCodingAssigned = 0;
+          dailyTaskTemplates.forEach(template => {
+            const d = template.dayAssignments?.find(da => da.dayNumber === day);
+            if (d && d.tasks) {
+              dayMcqAssigned += d.tasks.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS").length;
+              daySqlAssigned += d.tasks.filter(t => t.taskType === "SQL").length;
+              dayCodingAssigned += d.tasks.filter(t => t.taskType === "Coding" || t.taskType === "Debugging").length;
+            }
+            if (d && d.questionId) {
+              dayCodingAssigned += 1;
+            }
+          });
 
-          if (activeTypes.length > 1) {
+          const assignedCategoriesCount = [
+            dayMcqAssigned > 0,
+            daySqlAssigned > 0,
+            dayCodingAssigned > 0
+          ].filter(Boolean).length;
+
+          if (assignedCategoriesCount > 1) {
             dayWiseHistoryTasks[day] = "View Scores";
           } else {
             dayWiseHistoryTasks[day] = `${finalCorrectTasks}/${finalTotalTasks}`;

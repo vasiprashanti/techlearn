@@ -27,6 +27,9 @@ export const QuestionBankAdminPage = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [sortOrder, setSortOrder] = useState('default');
 
   const handleSelectToggle = (id) => {
     setSelectedCategoryIds((prev) =>
@@ -124,6 +127,33 @@ export const QuestionBankAdminPage = () => {
   const handleViewCategory = (category) => {
     navigate(`/admin/question-bank/${category.id || category._id}`);
   };
+
+  const filteredAndSortedCategories = React.useMemo(() => {
+    let list = [...categories];
+
+    // 1. Status Filter
+    if (statusFilter !== 'All') {
+      list = list.filter(cat => cat.status === statusFilter);
+    }
+
+    // 2. Type Filter
+    if (typeFilter !== 'All') {
+      list = list.filter(cat => (cat.categoryType || '').toLowerCase() === typeFilter.toLowerCase());
+    }
+
+    // 3. Sort Order
+    if (sortOrder === 'name-asc') {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else if (sortOrder === 'name-desc') {
+      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
+    } else if (sortOrder === 'count-desc') {
+      list.sort((a, b) => (b.total || 0) - (a.total || 0));
+    } else if (sortOrder === 'count-asc') {
+      list.sort((a, b) => (a.total || 0) - (b.total || 0));
+    }
+
+    return list;
+  }, [categories, statusFilter, typeFilter, sortOrder]);
 
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
   const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
@@ -293,17 +323,64 @@ export const QuestionBankAdminPage = () => {
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
                 </div>
               </div>
-              <button
-                onClick={handleAddCategoryClick}
-                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-5 text-sm font-semibold transition-colors shadow-sm"
-              >
-                <FiPlus className="w-4 h-4" />
-                Add Category
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Status Filter */}
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  >
+                    <option className={dropdownOptionClass} value="All">All Statuses</option>
+                    <option className={dropdownOptionClass} value="Active">Active</option>
+                    <option className={dropdownOptionClass} value="Draft">Draft</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                </div>
+
+                {/* Category Type Filter */}
+                <div className="relative">
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  >
+                    <option className={dropdownOptionClass} value="All">All Types</option>
+                    <option className={dropdownOptionClass} value="Coding">Coding</option>
+                    <option className={dropdownOptionClass} value="MCQ">MCQ</option>
+                    <option className={dropdownOptionClass} value="Notes">Notes</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                </div>
+
+                {/* Sort dropdown */}
+                <div className="relative">
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className="appearance-none h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                  >
+                    <option className={dropdownOptionClass} value="default">Default Sort</option>
+                    <option className={dropdownOptionClass} value="name-asc">Name: A to Z</option>
+                    <option className={dropdownOptionClass} value="name-desc">Name: Z to A</option>
+                    <option className={dropdownOptionClass} value="count-desc">Questions: High to Low</option>
+                    <option className={dropdownOptionClass} value="count-asc">Questions: Low to High</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                </div>
+
+                <button
+                  onClick={handleAddCategoryClick}
+                  className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-5 text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  Add Category
+                </button>
+              </div>
             </div>
 
             <CategoryListPanel
-              categories={categories}
+              categories={filteredAndSortedCategories}
               selectedCategoryIds={selectedCategoryIds}
               onSelectToggle={handleSelectToggle}
               onEditCategory={handleEditCategoryClick}
