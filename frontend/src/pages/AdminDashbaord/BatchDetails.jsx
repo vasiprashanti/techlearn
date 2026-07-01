@@ -749,15 +749,16 @@ const BatchDetails = () => {
 
                   <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[1200px] table-auto">
+                      <table className="w-full min-w-[1400px] table-auto">
                         <thead>
                           <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-32 whitespace-nowrap">Student Name</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's Score</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's XP</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Total XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap font-bold">Total XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Last Attempt Date/Time</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
@@ -773,7 +774,7 @@ const BatchDetails = () => {
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={9} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={11} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
@@ -785,14 +786,21 @@ const BatchDetails = () => {
                                       {formatEmail(student.email)}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff]">
-                                        {formatScore(student)}
+                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                        {student.todayChallengeScore || '—'}
                                       </span>
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                      {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                        {student.todayChallengeXp ? `+${student.todayChallengeXp} XP` : '—'}
+                                      </span>
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                        {student.todayTaskXp ? `+${student.todayTaskXp} XP` : '—'}
+                                      </span>
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                       {student.totalXp || 0} XP
                                     </td>
                                     <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
@@ -827,7 +835,7 @@ const BatchDetails = () => {
                           })}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                              <td colSpan={12} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                                 No students match your search query.
                               </td>
                             </tr>

@@ -12,6 +12,7 @@ import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
 import Track from "../../models/Track.js";
 import User from "../../models/User.js";
 import UserProgress from "../../models/UserProgress.js";
+import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentProject from "../../models/StudentProject.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
@@ -766,7 +767,7 @@ export const getBatchDetail = async (req, res) => {
       userIds.push(u._id);
     });
 
-    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress] = await Promise.all([
+    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
         studentIds.length
@@ -792,6 +793,9 @@ export const getBatchDetail = async (req, res) => {
         : Promise.resolve([]),
       userIds.length
         ? UserProgress.find({ userId: { $in: userIds } }).select("userId courseXP exerciseXP projectXP").lean()
+        : Promise.resolve([]),
+      studentEmails.length
+        ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
         : Promise.resolve([]),
     ]);
 
@@ -1141,15 +1145,68 @@ export const getBatchDetail = async (req, res) => {
         todayScore = totalAssigned > 0 ? `${totalCorrect}/${totalAssigned}` : "—";
       }
 
-      if (hasRealAttemptToday) {
-        status = (todayAttempt && todayAttempt.isFullyCompleted) ? "Completed" : "In Progress";
-      } else {
-        const isAbsentToday = (totalMCQsInTemplateToday + totalSQLInTemplateToday + totalCodingInTemplateToday > 0);
-        status = isAbsentToday ? "Absent" : (isBatchClosed ? "Not Attempted" : "Not Started");
-      }
-
       const totalXp = userXpMap.get(String(studentUserId)) || 0;
       const leaderboardRank = userRankMap.get(String(studentUserId)) || null;
+
+      // Calculate challenge score and challenge XP for today
+      let todayChallengeScore = "—";
+      let todayChallengeXp = 0;
+      let todayTaskXp = 0;
+
+      // Find if student has a Daily Challenge Attempt today
+      const studentChallengeAttemptToday = dailyChallengeAttempts.find(
+        (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail
+      );
+      if (studentChallengeAttemptToday) {
+        // Find corresponding coding submission or submission
+        const attemptSub = submissions.find(
+          (sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id) || 
+                   String(sub._id) === String(studentChallengeAttemptToday.finalSubmissionId)
+        );
+        if (attemptSub) {
+          todayChallengeScore = `${attemptSub.totalScore || 0}/100`;
+          // Sum up XP earned from this daily challenge
+          todayChallengeXp = attemptSub.xpEarned || attemptSub.totalScore || 0;
+        } else {
+          // If attempt exists but no submission yet (started or otp_verified)
+          todayChallengeScore = "0/100";
+        }
+      }
+
+      // Tasks progress XP
+      if (todayAttempt) {
+        let xpFromAttempt = 0;
+        let completedCount = 0;
+        todayAttempt.tasksProgress.forEach(t => {
+          if (t.status === "Completed") {
+            completedCount++;
+            
+            const isMcqLike = t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS";
+            if (isMcqLike && t.isCorrect !== true) {
+              return;
+            }
+
+            const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed || 0 });
+            if (t.taskType === "Coding" || t.taskType === "SQL") {
+              const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+              const fraction = Math.max(0, Math.min(100, acc)) / 100;
+              xpFromAttempt += Math.round(baseXp * fraction);
+            } else {
+              xpFromAttempt += baseXp;
+            }
+          }
+        });
+        if (completedCount > 0 && completedCount === todayAttempt.tasksProgress.length) {
+          xpFromAttempt += (TASK_XP.ALL_COMPLETED_BONUS || 25);
+          xpFromAttempt += (TASK_XP.NO_SKIP_BONUS || 10);
+        }
+        todayTaskXp = xpFromAttempt;
+      }
+
+      // Check all-time daily challenge/tasks XP if todayXp wasn't set through attempts
+      if (todayXp === 0) {
+        todayXp = todayChallengeXp + todayTaskXp;
+      }
 
       const dayWiseHistory = {};
       for (let day = 1; day <= 30; day++) {
@@ -1245,6 +1302,9 @@ export const getBatchDetail = async (req, res) => {
         todayScoresDetail,
         todayXp,
         totalXp,
+        todayChallengeScore,
+        todayChallengeXp,
+        todayTaskXp,
         leaderboardRank,
         dayWiseHistory,
         lastAttemptAt,
