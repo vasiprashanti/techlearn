@@ -65,6 +65,28 @@ const practiceSubmissionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    testCaseResults: {
+      type: [
+        {
+          index: Number,
+          visible: { type: Boolean, default: true },
+          passed: Boolean,
+          expectedOutput: String,
+          actualOutput: String,
+          status: String,
+          executionTime: Number,
+        },
+      ],
+      default: [],
+    },
+    passedTestCases: {
+      type: Number,
+      default: 0,
+    },
+    totalTestCases: {
+      type: Number,
+      default: 0,
+    },
     submittedAt: {
       type: Date,
       default: Date.now,

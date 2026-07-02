@@ -134,6 +134,8 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
   const endedAt = attempt?.endedAt || submission.roundEndedAt || new Date();
   const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
   const xpGained = Math.max(0, Math.round(submission.totalScore || 0));
+  const problemScores = Array.from(submission.problemScores?.values?.() || []).map((score) => Number(score || 0));
+  const allSubmittedProblemsPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
 
   return {
     challengeMetrics: {
@@ -146,9 +148,11 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       evaluationStatus: submission.autoEnded
         ? "Timeout"
         : submission.isRoundEnded
-          ? submission.totalScore === 100
+          ? allSubmittedProblemsPassed
             ? "Passed"
-            : "Failed"
+            : submission.totalScore > 0
+              ? "PartialPass"
+              : "Failed"
           : "Pending",
       correctSolutions,
       totalProblems,
@@ -170,13 +174,24 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
   }
 
   const totalScore = Number(submission.totalScore || 0);
+  const problemScores = Array.from(submission.problemScores?.values?.() || []).map((score) => Number(score || 0));
+  const allSubmittedProblemsPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
+  const allTestCaseDetails = Array.from(submission.problemTestCaseResults?.entries?.() || [])
+    .flatMap(([problemIndex, results = []]) =>
+      (results || []).map((result) => ({
+        ...result,
+        problemIndex: Number(problemIndex),
+      }))
+    );
+  const passedTestCases = allTestCaseDetails.filter((result) => result.passed).length;
+  const totalTestCases = allTestCaseDetails.length;
   const nextStatus =
-    submission.isRoundEnded && totalScore === 100
+    submission.isRoundEnded && allSubmittedProblemsPassed
       ? "Passed"
       : submission.isRoundEnded && submission.autoEnded
         ? "Timeout"
         : submission.isRoundEnded && totalScore > 0
-          ? "Failed"
+          ? "PartialPass"
           : "Pending";
 
   return Submission.findOneAndUpdate(
@@ -194,9 +209,18 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
         runCount: Array.from(submission.problemRuns?.values?.() || []).reduce((sum, value) => sum + Number(value || 0), 0),
         accuracyScore: totalScore,
         totalScore,
+        xpEarned: Math.max(0, Math.round(totalScore)),
         status: nextStatus,
         submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
         executionTime: 0,
+        finalSubmissionResults: totalTestCases > 0 ? {
+          passedTestCases,
+          totalTestCases,
+          testCaseDetails: allTestCaseDetails,
+          compileOutput: null,
+          runtimeError: null,
+          evaluatedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
+        } : null,
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -883,8 +907,9 @@ export const submitCodingRoundAnswers = async (req, res) => {
     let testsPassed = 0;
     let testsFailed = 0;
     let totalTests = 0;
+    const testCaseDetails = [];
 
-    const question = await Question.findById(codingRound.questionId || problem.questionId).select("+content.correctOption").lean();
+    const question = await Question.findById(problem.questionId || codingRound.questionId).select("+content.correctOption").lean();
     const isMcq = question?.categoryType === "MCQ";
 
     if (isMcq) {
@@ -897,7 +922,14 @@ export const submitCodingRoundAnswers = async (req, res) => {
         testsFailed = 1;
       }
     } else {
-      const allTestCases = [...problem.visibleTestCases, ...problem.hiddenTestCases];
+      const allTestCases = [
+        ...(problem.visibleTestCases || []).map((testCase, index) => ({ ...testCase, visible: true, index })),
+        ...(problem.hiddenTestCases || []).map((testCase, index) => ({
+          ...testCase,
+          visible: false,
+          index: (problem.visibleTestCases || []).length + index,
+        })),
+      ];
       totalTests = allTestCases.length;
 
       for (let i = 0; i < totalTests; i++) {
@@ -917,13 +949,31 @@ export const submitCodingRoundAnswers = async (req, res) => {
           } else {
             testsFailed++;
           }
+          testCaseDetails.push({
+            index: testCase.index,
+            visible: testCase.visible,
+            passed,
+            expectedOutput: testCase.expectedOutput || "",
+            actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
+            status: testResult.statusDescription || "",
+            executionTime: Number(testResult.executionTime || 0),
+          });
         } catch (error) {
           testsFailed++;
+          testCaseDetails.push({
+            index: testCase.index,
+            visible: testCase.visible,
+            passed: false,
+            expectedOutput: testCase.expectedOutput || "",
+            actualOutput: "",
+            status: error?.message || "Execution Error",
+            executionTime: 0,
+          });
         }
       }
     }
 
-    const accuracy = Math.round((testsPassed / totalTests) * 100);
+    const accuracy = totalTests > 0 ? Math.round((testsPassed / totalTests) * 100) : 0;
     const problemScore = accuracy;
     const isCorrect = testsPassed === totalTests;
 
@@ -933,6 +983,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
 
       const problemSubmitted = new Map();
       problemSubmitted.set(problemIndex.toString(), true);
+      const problemTestCaseResults = new Map();
+      problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
@@ -944,13 +996,16 @@ export const submitCodingRoundAnswers = async (req, res) => {
         studentEmail: normalizedEmail,
         problemScores,
         problemSubmitted,
+        problemTestCaseResults,
         totalScore: problemScore,
         lastSubmissionAt: new Date(),
       });
     } else {
       if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
+      if (!submission.problemTestCaseResults) submission.problemTestCaseResults = new Map();
       submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
+      submission.problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
       submission.studentId = submission.studentId || participant?.student?._id || null;
       submission.batchId = submission.batchId || codingRound.batchId || null;
       submission.trackId = submission.trackId || codingRound.trackId || null;
@@ -990,7 +1045,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
         testsPassed,
         failedTestCases: testsFailed,
         totalTestCases: totalTests,
-        evaluationStatus: isCorrect ? "Passed" : "Failed",
+        evaluationStatus: isCorrect ? "Passed" : (testsPassed > 0 ? "PartialPass" : "Failed"),
+        testCaseResults: testCaseDetails,
         feedback: isCorrect
           ? "Perfect! All test cases passed."
           : `Partial Correctness! Score: ${problemScore}. Failed: ${testsFailed}/${totalTests} test cases.`,
@@ -1319,7 +1375,7 @@ export const runCodingRoundAnswers = async (req, res) => {
         });
       }
 
-      const question = await Question.findById(codingRound.questionId || problem.questionId).lean();
+      const question = await Question.findById(problem.questionId || codingRound.questionId).lean();
       const isMcq = question?.categoryType === "MCQ";
 
       if (isMcq) {
@@ -1551,7 +1607,7 @@ export const endCodingRound = async (req, res) => {
         roundEndedAt: submission.roundEndedAt,
         problemResults,
         accuracy: submission.totalScore,
-        evaluationStatus: linkedSubmission?.status || (submission.totalScore === 100 ? "Passed" : "Pending"),
+        evaluationStatus: linkedSubmission?.status || (correctSolutions === codingRound.problems.length ? "Passed" : (submission.totalScore > 0 ? "PartialPass" : "Pending")),
         totalScore: submission.totalScore,
         maxPossibleScore: codingRound.problems.length * 100,
         totalProblems: codingRound.problems.length,
