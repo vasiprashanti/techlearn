@@ -1045,7 +1045,7 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap">#</th>
                               <th className="sticky left-6 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
                               <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
@@ -1060,7 +1060,7 @@ const BatchDetails = () => {
                               const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                               return (
                                 <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-1 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">
+                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-1 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                                     {isPlaceholder ? '-' : index + 1}
                                   </td>
                                   {isPlaceholder ? (
@@ -1072,7 +1072,7 @@ const BatchDetails = () => {
                                       <td className="sticky left-6 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[125px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
                                         {student.name}
                                       </td>
-                                      <td className="px-2 py-2 text-left text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+                                      <td className="px-4 py-2 text-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
                                         <div className="text-slate-500 dark:text-slate-400">Daily Tasks</div>
                                         <div className="text-blue-600 dark:text-blue-400 mt-2">Daily Challenge</div>
                                       </td>
