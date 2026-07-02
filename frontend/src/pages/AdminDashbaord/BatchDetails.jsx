@@ -800,7 +800,7 @@ const BatchDetails = () => {
                                             <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                               <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                               {Object.entries(student.todayChallengeScoresDetail || {}).map(([key, scoreVal]) => {
-                                                if (!scoreVal || scoreVal === '—') return null;
+                                                if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
                                                 const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
                                                 return (
                                                   <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
@@ -1045,8 +1045,8 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
-                              <th className="sticky left-8 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 w-36 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-0 py-2 whitespace-nowrap" style={{width: '2rem', minWidth: '2rem'}}>#</th>
+                              <th className="sticky bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem'}}>Student Name</th>
                               <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
@@ -1066,10 +1066,10 @@ const BatchDetails = () => {
                                     </td>
                                   ) : (
                                     <>
-                                      <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/40 dark:text-white/40 whitespace-nowrap">
-                                        {index + 1}
-                                      </td>
-                                      <td className="sticky left-8 bg-white dark:bg-[#0f1f43] z-20 px-3 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[130px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
+                                  <td className="sticky z-20 bg-white dark:bg-[#0f1f43] text-center text-[11px] sm:text-xs font-semibold text-black/40 dark:text-white/40 whitespace-nowrap px-0" style={{left: 0, width: '2rem', minWidth: '2rem'}}>
+                                    {index + 1}
+                                  </td>
+                                  <td className="sticky z-20 bg-white dark:bg-[#0f1f43] px-3 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem', maxWidth: '130px'}} title={student.name}>
                                         {student.name}
                                       </td>
                                       <td className="px-4 py-2 text-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
@@ -1143,7 +1143,7 @@ const BatchDetails = () => {
                                                     <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                                       <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                                       {Object.entries(student.dayWiseHistoryChallengesDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
-                                                        if (!scoreVal || scoreVal === '—') return null;
+                                                        if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
                                                         const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
                                                         return (
                                                           <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
