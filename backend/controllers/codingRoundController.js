@@ -133,9 +133,28 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
   const startedAt = attempt?.startedAt || submission.submittedAt || submission.createdAt || new Date();
   const endedAt = attempt?.endedAt || submission.roundEndedAt || new Date();
   const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
-  const xpGained = Math.max(0, Math.round(submission.totalScore || 0));
+  let calculatedXpGained = 0;
+  if (codingRound && codingRound.problems) {
+    for (let i = 0; i < codingRound.problems.length; i++) {
+      const problem = codingRound.problems[i];
+      const score = submission.problemScores ? (submission.problemScores.get(i.toString()) || 0) : 0;
+      const baseXP = calculateChallengeXP({
+        difficulty: problem.difficulty || "Easy",
+        hintsUsed: 0,
+        withinWindow: false,
+        firstAttempt: true,
+      });
+      calculatedXpGained += Math.round((score / 100) * baseXP);
+    }
+  }
+
+  const xpGained = calculatedXpGained;
   const problemScores = Array.from(submission.problemScores?.values?.() || []).map((score) => Number(score || 0));
-  const allSubmittedProblemsPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
+  const actualCorrect = codingRound.problems.filter((problem, index) => {
+    const score = submission.problemScores ? (submission.problemScores.get(index.toString()) || 0) : 0;
+    return score >= 100;
+  }).length;
+  const allSubmittedProblemsPassed = actualCorrect === codingRound.problems.length;
 
   return {
     challengeMetrics: {
@@ -143,18 +162,18 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       streak,
       timeTakenSeconds,
       timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
-      accuracy: submission.totalScore || 0,
-      score: submission.totalScore || 0,
+      accuracy: Math.round((actualCorrect / totalProblems) * 100),
+      score: `${actualCorrect}/${totalProblems}`,
       evaluationStatus: submission.autoEnded
         ? "Timeout"
         : submission.isRoundEnded
           ? allSubmittedProblemsPassed
             ? "Passed"
-            : submission.totalScore > 0
+            : actualCorrect > 0
               ? "PartialPass"
               : "Failed"
           : "Pending",
-      correctSolutions,
+      correctSolutions: actualCorrect,
       totalProblems,
     },
   };

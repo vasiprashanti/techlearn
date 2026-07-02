@@ -324,6 +324,20 @@ export default function DailyChallengeTest() {
 
   const handleEndChallenge = async () => {
     if (!studentEmail) return;
+
+    const totalProblems = challenge?.problems?.length || 0;
+    const submittedCount = submittedProblems.size;
+
+    if (submittedCount < totalProblems) {
+      const confirmEnd = window.confirm(
+        `You have only submitted ${submittedCount} out of ${totalProblems} questions. Are you sure you want to end the Daily Challenge?`
+      );
+      if (!confirmEnd) return;
+    } else {
+      const confirmEnd = window.confirm("Are you sure you want to submit your Daily Challenge and end the session?");
+      if (!confirmEnd) return;
+    }
+
     setSubmitting(true);
 
     try {
