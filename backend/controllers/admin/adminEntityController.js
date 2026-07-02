@@ -786,8 +786,8 @@ export const getBatchDetail = async (req, res) => {
           ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
         ],
       })
-        .populate("dayAssignments.questionId", "title categoryType categorySlug trackType")
-        .populate("dayAssignments.tasks.questionId", "title categoryType categorySlug trackType")
+        .populate("dayAssignments.questionId", "title categoryType categorySlug trackType difficulty")
+        .populate("dayAssignments.tasks.questionId", "title categoryType categorySlug trackType difficulty")
         .lean(),
       userIds.length
         ? PracticeSubmission.find({ userId: { $in: userIds } }).lean()
@@ -1166,14 +1166,17 @@ export const getBatchDetail = async (req, res) => {
                 return;
               }
 
-              const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed || 0 });
-              if (t.taskType === "Coding" || t.taskType === "SQL") {
-                const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
-                const fraction = Math.max(0, Math.min(100, acc)) / 100;
-                xpFromAttempt += Math.round(baseXp * fraction);
-              } else {
-                xpFromAttempt += baseXp;
+              let difficulty = "Easy";
+              const templateTask = activeTrackTemplate?.dayAssignments
+                ?.find(da => da.dayNumber === studentDayNumber)
+                ?.tasks?.find(tsk => String(tsk.questionId?._id || tsk.questionId) === String(t.questionId));
+              if (templateTask && templateTask.questionId?.difficulty) {
+                difficulty = templateTask.questionId.difficulty;
               }
+
+              const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+              const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, difficulty, accuracy: acc });
+              xpFromAttempt += baseXp;
             }
           });
           if (completedCount > 0 && completedCount === todayAttempt.tasksProgress.length) {
@@ -1434,14 +1437,17 @@ export const getBatchDetail = async (req, res) => {
               return;
             }
 
-            const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed || 0 });
-            if (t.taskType === "Coding" || t.taskType === "SQL") {
-              const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
-              const fraction = Math.max(0, Math.min(100, acc)) / 100;
-              xpFromAttempt += Math.round(baseXp * fraction);
-            } else {
-              xpFromAttempt += baseXp;
+            let difficulty = "Easy";
+            const templateTask = activeDailyTaskTemplate?.dayAssignments
+              ?.find(da => da.dayNumber === day)
+              ?.tasks?.find(tsk => String(tsk.questionId?._id || tsk.questionId) === String(t.questionId));
+            if (templateTask && templateTask.questionId?.difficulty) {
+              difficulty = templateTask.questionId.difficulty;
             }
+
+            const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+            const baseXp = t.xpValue || calculateTaskXP({ taskType: t.taskType, difficulty, accuracy: acc });
+            xpFromAttempt += baseXp;
           }
         });
         if (completedCount > 0 && completedCount === todayAttempt.tasksProgress.length) {

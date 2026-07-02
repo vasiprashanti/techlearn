@@ -285,7 +285,7 @@ export const submitDailyTask = async (req, res) => {
       return res.status(400).json({ success: false, message: "No Daily Task track assigned to this batch." });
     }
 
-    const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack);
+    const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack).populate("dayAssignments.tasks.questionId");
     if (!trackTemplate) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
@@ -379,9 +379,11 @@ export const submitDailyTask = async (req, res) => {
     );
 
     // Calculate XP
+    const difficulty = configuredTask?.questionId?.difficulty || "Easy";
+    const accuracy = typeof task.accuracy === "number" ? task.accuracy : 100;
     let xpEarned = Number(configuredTask?.xpValue || 0) > 0
       ? Number(configuredTask.xpValue)
-      : calculateTaskXP({ taskType, hintsUsed });
+      : calculateTaskXP({ taskType, difficulty, accuracy });
 
     // Calculate bonuses if all completed today
     let bonusXp = 0;
