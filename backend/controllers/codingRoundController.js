@@ -1022,8 +1022,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
-        batchId: codingRound.batchId || null,
-        trackId: codingRound.trackId || null,
+        batchId: challengeAttempt?.batchId || codingRound.batchId || null,
+        trackId: challengeAttempt?.trackId || codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
         studentEmail: normalizedEmail,
@@ -1048,8 +1048,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
       submission.problemLanguages.set(problemIndex.toString(), language);
 
       submission.studentId = submission.studentId || participant?.student?._id || null;
-      submission.batchId = submission.batchId || codingRound.batchId || null;
-      submission.trackId = submission.trackId || codingRound.trackId || null;
+      submission.batchId = submission.batchId || challengeAttempt?.batchId || codingRound.batchId || null;
+      submission.trackId = submission.trackId || challengeAttempt?.trackId || codingRound.trackId || null;
       submission.questionId = submission.questionId || codingRound.questionId || null;
       submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
 
@@ -1064,8 +1064,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
     await submission.save();
 
     if (challengeAttempt) {
-      challengeAttempt.status = "submitted";
-      challengeAttempt.submittedAt = new Date();
+      if (codingRound.challengeType !== "daily_challenge") {
+        challengeAttempt.status = "submitted";
+        challengeAttempt.submittedAt = new Date();
+      }
       challengeAttempt.lastActiveAt = new Date();
       challengeAttempt.finalLanguage = language;
       challengeAttempt.finalCode = submittedCode;
