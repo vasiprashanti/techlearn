@@ -770,7 +770,7 @@ export const getBatchDetail = async (req, res) => {
       userIds.push(u._id);
     });
 
-    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts] = await Promise.all([
+    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts, codingChallengeSubmissions] = await Promise.all([
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
         studentIds.length
@@ -800,6 +800,9 @@ export const getBatchDetail = async (req, res) => {
         : Promise.resolve([]),
       studentEmails.length
         ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
+        : Promise.resolve([]),
+      studentEmails.length
+        ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
         : Promise.resolve([]),
     ]);
 
@@ -1057,12 +1060,30 @@ export const getBatchDetail = async (req, res) => {
         const matchesBatchQuestion = sub.questionBankId && batchQuestionIds.has(String(sub.questionBankId));
         return matchesStudent && matchesBatchQuestion;
       });
+      const canonicalChallengeAttemptIds = new Set(
+        studentSubsAllTime.map((submission) => String(submission.attemptId || "")).filter(Boolean)
+      );
+      const studentCodingChallengeSubsAllTime = codingChallengeSubmissions.filter((sub) => {
+        const matchesStudent = String(sub.studentEmail || "").trim().toLowerCase() === studentEmail;
+        const alreadyLinked = sub.attemptId && canonicalChallengeAttemptIds.has(String(sub.attemptId));
+        return matchesStudent && !alreadyLinked;
+      });
 
       const allCombinedSubs = [
         ...studentSubsAllTime.map(s => ({ ...s, type: "Submission", date: new Date(s.submittedAt || s.createdAt) })),
         ...studentMcqSubsAllTime.map(s => ({ ...s, type: "StudentMcqSubmission", date: new Date(s.submittedAt) })),
-        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt) }))
+        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt) })),
+        ...studentCodingChallengeSubsAllTime.map(s => ({ ...s, type: "StudentCodingSubmission", date: new Date(s.lastSubmissionAt || s.submittedAt || s.createdAt) }))
       ].sort((a, b) => b.date - a.date);
+
+      const getCodingSubmissionTestStats = (submission) => {
+        const details = Object.values(submission.problemTestCaseResults || {})
+          .flatMap((results) => Array.isArray(results) ? results : []);
+        return {
+          passed: details.filter((result) => result.passed).length,
+          total: details.length,
+        };
+      };
 
       const latestAttempt = allCombinedSubs[0];
       const lastAttemptAt = latestAttempt ? latestAttempt.date.toISOString() : null;
@@ -1278,6 +1299,10 @@ export const getBatchDetail = async (req, res) => {
             } else if (s.type === "PracticeSubmission") {
               totalCorrect += s.isCorrect ? 1 : 0;
               totalAssigned += 1;
+            } else if (s.type === "StudentCodingSubmission") {
+              const stats = getCodingSubmissionTestStats(s);
+              totalCorrect += stats.passed || (Number(s.totalScore || 0) > 0 ? 1 : 0);
+              totalAssigned += stats.total || 1;
             } else {
               const passed = s.finalSubmissionResults?.passedTestCases ?? (s.status === "Passed" ? 1 : 0);
               const total = s.finalSubmissionResults?.totalTestCases ?? 1;
@@ -1286,8 +1311,8 @@ export const getBatchDetail = async (req, res) => {
             }
           });
           todayXp = todayCombinedSubs
-            .filter(s => s.type === "Submission")
-            .reduce((sum, s) => sum + (s.xpEarned || 0), 0);
+            .filter(s => s.type === "Submission" || s.type === "StudentCodingSubmission")
+            .reduce((sum, s) => sum + (s.xpEarned || s.totalScore || 0), 0);
         }
 
         todayScore = totalAssigned > 0 ? `${totalCorrect}/${totalAssigned}` : "—";
@@ -1327,6 +1352,10 @@ export const getBatchDetail = async (req, res) => {
           (sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id) || 
                    String(sub._id) === String(studentChallengeAttemptToday.finalSubmissionId)
         );
+        const fallbackChallengeSubs = studentCodingChallengeSubsAllTime
+          .filter((sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id))
+          .map((sub) => ({ ...sub, type: "StudentCodingSubmission" }));
+        const allChallengeSubs = [...challengeSubs, ...fallbackChallengeSubs];
 
         let maxChallengeXpToday = 0;
         if (dailyChallengeTemplate) {
@@ -1354,9 +1383,9 @@ export const getBatchDetail = async (req, res) => {
         if (dailyChallengeHasMultiple) {
           todayChallengeScore = "View Scores";
           // Group scores by category type
-          const mcqSubs = challengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "mcq");
-          const sqlSubs = challengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "sql");
-          const codingSubs = challengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "coding" || !questionIdToTypeMap.has(String(sub.questionId)));
+          const mcqSubs = allChallengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "mcq");
+          const sqlSubs = allChallengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "sql");
+          const codingSubs = allChallengeSubs.filter(sub => sub.type === "StudentCodingSubmission" || questionIdToTypeMap.get(String(sub.questionId)) === "coding" || !questionIdToTypeMap.has(String(sub.questionId)));
 
           // Calculate challenge template questions for today
           const challengeTemplateTodayQuestions = [];
@@ -1405,18 +1434,25 @@ export const getBatchDetail = async (req, res) => {
             todayChallengeScoresDetail.coding = `—/100`;
           }
 
-          const primarySub = challengeSubs[0];
+          const primarySub = allChallengeSubs[0];
           if (primarySub) {
             todayChallengeXp = primarySub.xpEarned || primarySub.totalScore || 0;
           }
         } else {
-          const attemptSub = challengeSubs[0];
+          const attemptSub = allChallengeSubs[0];
           if (attemptSub) {
             const earnedXp = attemptSub.xpEarned || attemptSub.totalScore || 0;
-            todayChallengeScore = `${earnedXp}/${maxChallengeXpToday}`;
+            if (attemptSub.type === "StudentCodingSubmission") {
+              const stats = getCodingSubmissionTestStats(attemptSub);
+              todayChallengeScore = stats.total > 0 ? `${stats.passed}/${stats.total}` : `${earnedXp}/100`;
+            } else if (attemptSub.finalSubmissionResults?.totalTestCases) {
+              todayChallengeScore = `${attemptSub.finalSubmissionResults.passedTestCases || 0}/${attemptSub.finalSubmissionResults.totalTestCases}`;
+            } else {
+              todayChallengeScore = `${attemptSub.accuracyScore ?? attemptSub.totalScore ?? earnedXp}/100`;
+            }
             todayChallengeXp = earnedXp;
           } else {
-            todayChallengeScore = `0/${maxChallengeXpToday}`;
+            todayChallengeScore = `0/100`;
           }
         }
       }

@@ -96,8 +96,16 @@ export const normalizeSubmissionStatus = (status) => {
       return "Accepted";
     case "Failed":
       return "Wrong Answer";
+    case "PartialPass":
+      return "Partial Pass";
     case "Timeout":
       return "TLE";
+    case "Pending":
+      return "Pending";
+    case "CompileError":
+      return "Compile Error";
+    case "RuntimeError":
+      return "Runtime Error";
     default:
       return "Error";
   }
