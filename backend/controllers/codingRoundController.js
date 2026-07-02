@@ -938,7 +938,24 @@ export const submitCodingRoundAnswers = async (req, res) => {
     let totalTests = 0;
     const testCaseDetails = [];
 
-    const question = await Question.findById(problem.questionId || codingRound.questionId).select("+content.correctOption").lean();
+    let targetQuestionId = problem.questionId;
+    if (!targetQuestionId && codingRound.challengeType === "daily_challenge") {
+      const TrackTemplate = mongoose.model("TrackTemplate");
+      const template = await TrackTemplate.findById(codingRound.trackId).lean();
+      if (template) {
+        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
+        if (dayAssignment) {
+          const tasks = dayAssignment.tasks || [];
+          if (tasks.length > 0) {
+            targetQuestionId = tasks[problemIndex]?.questionId;
+          } else if (dayAssignment.questionId && problemIndex === 0) {
+            targetQuestionId = dayAssignment.questionId;
+          }
+        }
+      }
+    }
+
+    const question = await Question.findById(targetQuestionId || codingRound.questionId).select("+content.correctOption").lean();
     const isMcq = question?.categoryType === "MCQ";
 
     if (isMcq) {

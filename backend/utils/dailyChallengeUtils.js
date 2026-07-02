@@ -53,6 +53,7 @@ export const normalizeTrackType = (value = "") => {
 };
 
 export const mapQuestionToProblem = (question) => ({
+  questionId: question._id,
   problemTitle: question.title,
   description: question.description || "Solve the assigned Daily Challenge question.",
   difficulty: question.difficulty || "Medium",
