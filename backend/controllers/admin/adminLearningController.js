@@ -415,11 +415,22 @@ export const listQuestionsAdmin = async (req, res) => {
     let category = null;
 
     if (req.query.categorySlug) {
-      category = await Category.findOne({ slug: req.query.categorySlug }).lean();
-      if (!category) {
-        return res.status(404).json({ success: false, message: "Question category not found." });
+      const slugs = req.query.categorySlug.split(",").map((s) => s.trim()).filter(Boolean);
+      if (slugs.length > 1) {
+        const categories = await Category.find({ slug: { $in: slugs } }).lean();
+        const categoryIds = categories.map((c) => c._id);
+        const categorySlugs = categories.map((c) => c.slug);
+        query.$or = [
+          { categoryId: { $in: categoryIds } },
+          { categorySlug: { $in: categorySlugs } }
+        ];
+      } else if (slugs.length === 1) {
+        category = await Category.findOne({ slug: slugs[0] }).lean();
+        if (!category) {
+          return res.status(404).json({ success: false, message: "Question category not found." });
+        }
+        query.$or = [{ categoryId: category._id }, { categorySlug: category.slug }];
       }
-      query.$or = [{ categoryId: category._id }, { categorySlug: category.slug }];
     }
 
     if (req.query.categoryId) {

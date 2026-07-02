@@ -151,7 +151,17 @@ export default function TrackTemplateDetails() {
     return 'Coding';
   }, [hasMcq, hasCoding]);
 
-  const categorySlug = track ? (categorySlugMap[track.category] || slugifyCategory(track.category)) : null;
+  const categorySlug = useMemo(() => {
+    if (!track || !track.category) return null;
+    return track.category
+      .split(",")
+      .map((cat) => {
+        const trimmed = cat.trim();
+        return categorySlugMap[trimmed] || slugifyCategory(trimmed);
+      })
+      .filter(Boolean)
+      .join(",");
+  }, [track]);
 
   const assignedQuestionIdSet = useMemo(() => {
     const ids = new Set();
@@ -178,17 +188,12 @@ export default function TrackTemplateDetails() {
         (c) => c.title && c.title.toLowerCase() === qCatName
       );
 
-      if (dbCat) {
-        if (isTaskTypeCoding) return dbCat.categoryType === 'Coding';
-        if (isTaskTypeMcq) return dbCat.categoryType === 'MCQ';
-      }
-
-      // Fallback matching if category is not found in database list
+      const qCatType = (question.categoryType || dbCat?.categoryType || "").toUpperCase();
       if (isTaskTypeCoding) {
-        return ['coding', 'debugging'].includes(qCatName) || !['mcq', 'aptitude', 'core cs'].includes(qCatName);
+        return qCatType === 'CODING' || ['coding', 'debugging'].includes(qCatName) || (!['mcq', 'aptitude', 'core cs'].includes(qCatName) && qCatType !== 'MCQ');
       }
       if (isTaskTypeMcq) {
-        return ['mcq', 'aptitude', 'core cs'].includes(qCatName);
+        return qCatType === 'MCQ' || ['mcq', 'aptitude', 'core cs'].includes(qCatName);
       }
 
       return true;
