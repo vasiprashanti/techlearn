@@ -557,7 +557,7 @@ export default function DailyChallengeTest() {
                   <select
                     value={selectedLanguage}
                     onChange={(event) => handleLanguageChange(event.target.value)}
-                    disabled={isDone || running || submitting}
+                    disabled={running || submitting}
                     className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
                     {Object.values(LANGUAGES).map((language) => (
@@ -573,7 +573,7 @@ export default function DailyChallengeTest() {
                   <button
                     type="button"
                     onClick={handleRun}
-                    disabled={isDone || running || submitting}
+                    disabled={running || submitting}
                     className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
                   >
                     <Play className="h-3.5 w-3.5" />
@@ -582,11 +582,11 @@ export default function DailyChallengeTest() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={isDone || running || submitting}
+                    disabled={running || submitting}
                     className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                   >
                     <SendHorizontal className="h-3.5 w-3.5" />
-                    {isDone ? "Submitted" : submitting ? "Submit" : "Submit"}
+                    {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
                   </button>
                 </div>
               </div>
@@ -664,7 +664,7 @@ export default function DailyChallengeTest() {
                   onChange={handleCodeChange}
                   theme={theme === "dark" ? "vs-dark" : "custom-light"}
                   options={{
-                    readOnly: isDone,
+                    readOnly: submitting,
                     contextmenu: false,
                     minimap: { enabled: false },
                     wordWrap: "on",
