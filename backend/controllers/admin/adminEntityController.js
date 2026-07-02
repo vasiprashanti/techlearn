@@ -1838,19 +1838,14 @@ todayXp = todayChallengeXp + todayTaskXp;
           totalChallenges = 70;
         }
 
-        if (dayChallengeHasMultiple) {
-          dayWiseHistoryChallenges[day] = "View Scores";
-        } else if (studentChallengeSub) {
-          dayWiseHistoryChallenges[day] = `${correctChallenges}/${totalChallenges}`;
+        if (studentChallengeSub) {
+          if (dayChallengeHasMultiple) {
+            dayWiseHistoryChallenges[day] = "View Scores";
+          } else {
+            dayWiseHistoryChallenges[day] = `${correctChallenges}/${totalChallenges}`;
+          }
         } else {
-          let isAssigned = false;
-          dailyChallengeTemplates.forEach(template => {
-            const d = template.dayAssignments?.find(da => da.daNumber === day || da.dayNumber === day);
-            if (d && (d.questionId || (d.tasks && d.tasks.length > 0))) {
-              isAssigned = true;
-            }
-          });
-          dayWiseHistoryChallenges[day] = isAssigned ? "NIL" : "NA";
+          dayWiseHistoryChallenges[day] = "NA";
         }
         dayWiseHistoryChallengesDetail[day] = dayChallengesDetail;
       }
