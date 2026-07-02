@@ -241,7 +241,7 @@ async function request(path, options = {}) {
           continue;
         }
 
-        if (isGet && isRetriableStatus(response.status) && requestCache.has(path)) {
+        if (isGet && isRetriableStatus(response.status) && !options.noCache && requestCache.has(path)) {
           return requestCache.get(path);
         }
 
@@ -259,7 +259,7 @@ async function request(path, options = {}) {
       const payload = await response.json().catch(() => null);
       const unwrapped = unwrapData(payload);
 
-      if (isGet) {
+      if (isGet && !options.noCache) {
         requestCache.set(path, unwrapped);
       } else {
         invalidateCacheForPath(path);
@@ -275,7 +275,7 @@ async function request(path, options = {}) {
         continue;
       }
 
-      if (isGet && requestCache.has(path)) {
+      if (isGet && !options.noCache && requestCache.has(path)) {
         return requestCache.get(path);
       }
 
@@ -299,7 +299,7 @@ export const adminAPI = {
   bulkDeleteColleges: (collegeIds) => request('/admin/colleges/bulk-delete', { method: 'POST', body: JSON.stringify({ collegeIds }) }),
 
   getBatches: () => request('/admin/batches'),
-  getBatch: (batchId) => request(`/admin/batches/${batchId}`),
+  getBatch: (batchId) => request(`/admin/batches/${batchId}`, { noCache: true }),
   createBatch: (body) => request('/admin/batches', { method: 'POST', body: JSON.stringify(body) }),
   updateBatch: (batchId, body) => request(`/admin/batches/${batchId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteBatch: (batchId) => request(`/admin/batches/${batchId}`, { method: 'DELETE' }),

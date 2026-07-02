@@ -1854,6 +1854,7 @@ todayXp = todayChallengeXp + todayTaskXp;
         dayWiseHistoryChallengesDetail[day] = dayChallengesDetail;
       }
 
+
       return {
         id: student._id,
         name: student.name,
