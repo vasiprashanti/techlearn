@@ -674,6 +674,37 @@ const BatchDetails = () => {
               )}
             </div>
 
+            {/* Attached Course */}
+            <div className="space-y-3">
+              <h3 className="admin-section-heading">Attached Course</h3>
+              {batch.attachedCourse ? (
+                <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
+                    <FiBookOpen className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{batch.attachedCourse.title}</p>
+                    {batch.attachedCourse.description && (
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{batch.attachedCourse.description}</p>
+                    )}
+                    <p className="mt-1 text-[11px] font-medium text-[#3C83F6] dark:text-[#bceaff]">
+                      {batch.attachedCourse.numTopics} {batch.attachedCourse.numTopics === 1 ? 'Topic' : 'Topics'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/admin/courses/${batch.attachedCourse.id}`)}
+                    className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#3C83F6]/30 dark:border-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] text-xs font-semibold hover:bg-[#3C83F6]/5 dark:hover:bg-[#bceaff]/5 transition-colors"
+                  >
+                    View Course
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
+                  No course is attached to this batch yet.
+                </div>
+              )}
+            </div>
+
             <div className="space-y-4">
               <div className="flex border-b border-black/10 dark:border-white/10 mt-2">
                 <button
@@ -800,7 +831,7 @@ const BatchDetails = () => {
                                             <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                               <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                               {Object.entries(student.todayChallengeScoresDetail || {}).map(([key, scoreVal]) => {
-                                                if (!scoreVal || scoreVal === '—') return null;
+                                                if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
                                                 const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
                                                 return (
                                                   <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
@@ -1045,8 +1076,8 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
-                              <th className="sticky left-6 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-0 py-2 whitespace-nowrap" style={{width: '2rem', minWidth: '2rem'}}>#</th>
+                              <th className="sticky bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem'}}>Student Name</th>
                               <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
@@ -1060,19 +1091,19 @@ const BatchDetails = () => {
                               const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                               return (
                                 <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                                  <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-20 px-1 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">
-                                    {isPlaceholder ? '-' : index + 1}
-                                  </td>
                                   {isPlaceholder ? (
-                                    <td colSpan={maxTrackDays + 2} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                    <td colSpan={maxTrackDays + 3} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
                                       No enrolled students
                                     </td>
                                   ) : (
                                     <>
-                                      <td className="sticky left-6 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[125px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
+                                  <td className="sticky z-20 bg-white dark:bg-[#0f1f43] text-center text-[11px] sm:text-xs font-semibold text-black/40 dark:text-white/40 whitespace-nowrap px-0" style={{left: 0, width: '2rem', minWidth: '2rem'}}>
+                                    {index + 1}
+                                  </td>
+                                  <td className="sticky z-20 bg-white dark:bg-[#0f1f43] px-3 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem', maxWidth: '130px'}} title={student.name}>
                                         {student.name}
                                       </td>
-                                      <td className="px-2 py-2 text-left text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+                                      <td className="px-4 py-2 text-center text-[11px] sm:text-xs font-semibold whitespace-nowrap">
                                         <div className="text-slate-500 dark:text-slate-400">Daily Tasks</div>
                                         <div className="text-blue-600 dark:text-blue-400 mt-2">Daily Challenge</div>
                                       </td>
@@ -1143,7 +1174,7 @@ const BatchDetails = () => {
                                                     <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
                                                       <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
                                                       {Object.entries(student.dayWiseHistoryChallengesDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
-                                                        if (!scoreVal || scoreVal === '—') return null;
+                                                        if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
                                                         const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
                                                         return (
                                                           <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">

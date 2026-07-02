@@ -133,9 +133,28 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
   const startedAt = attempt?.startedAt || submission.submittedAt || submission.createdAt || new Date();
   const endedAt = attempt?.endedAt || submission.roundEndedAt || new Date();
   const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
-  const xpGained = Math.max(0, Math.round(submission.totalScore || 0));
+  let calculatedXpGained = 0;
+  if (codingRound && codingRound.problems) {
+    for (let i = 0; i < codingRound.problems.length; i++) {
+      const problem = codingRound.problems[i];
+      const score = submission.problemScores ? (submission.problemScores.get(i.toString()) || 0) : 0;
+      const baseXP = calculateChallengeXP({
+        difficulty: problem.difficulty || "Easy",
+        hintsUsed: 0,
+        withinWindow: false,
+        firstAttempt: true,
+      });
+      calculatedXpGained += Math.round((score / 100) * baseXP);
+    }
+  }
+
+  const xpGained = calculatedXpGained;
   const problemScores = Array.from(submission.problemScores?.values?.() || []).map((score) => Number(score || 0));
-  const allSubmittedProblemsPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
+  const actualCorrect = codingRound.problems.filter((problem, index) => {
+    const score = submission.problemScores ? (submission.problemScores.get(index.toString()) || 0) : 0;
+    return score >= 100;
+  }).length;
+  const allSubmittedProblemsPassed = actualCorrect === codingRound.problems.length;
 
   return {
     challengeMetrics: {
@@ -143,18 +162,18 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       streak,
       timeTakenSeconds,
       timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
-      accuracy: submission.totalScore || 0,
-      score: submission.totalScore || 0,
+      accuracy: Math.round((actualCorrect / totalProblems) * 100),
+      score: `${actualCorrect}/${totalProblems}`,
       evaluationStatus: submission.autoEnded
         ? "Timeout"
         : submission.isRoundEnded
           ? allSubmittedProblemsPassed
             ? "Passed"
-            : submission.totalScore > 0
+            : actualCorrect > 0
               ? "PartialPass"
               : "Failed"
           : "Pending",
-      correctSolutions,
+      correctSolutions: actualCorrect,
       totalProblems,
     },
   };
@@ -763,6 +782,11 @@ export const startDailyChallengeAttempt = async (req, res) => {
       startAttempt: true,
     });
 
+    const submission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: normalizedEmail,
+    }).lean();
+
     return res.status(200).json({
       success: true,
       message: attempt.startedAt ? "Daily Challenge session ready." : "Daily Challenge started.",
@@ -770,6 +794,11 @@ export const startDailyChallengeAttempt = async (req, res) => {
         attempt: buildAttemptPayload(attempt),
         codingRound,
         instructions: DAILY_CHALLENGE_RULES,
+        savedAnswers: submission ? {
+          problemCodes: submission.problemCodes instanceof Map ? Object.fromEntries(submission.problemCodes) : (submission.problemCodes || {}),
+          problemLanguages: submission.problemLanguages instanceof Map ? Object.fromEntries(submission.problemLanguages) : (submission.problemLanguages || {}),
+          problemSubmitted: submission.problemSubmitted instanceof Map ? Object.fromEntries(submission.problemSubmitted) : (submission.problemSubmitted || {}),
+        } : null,
       },
     });
   } catch (error) {
@@ -915,7 +944,24 @@ export const submitCodingRoundAnswers = async (req, res) => {
     let totalTests = 0;
     const testCaseDetails = [];
 
-    const question = await Question.findById(problem.questionId || codingRound.questionId).select("+content.correctOption").lean();
+    let targetQuestionId = problem.questionId;
+    if (!targetQuestionId && codingRound.challengeType === "daily_challenge") {
+      const TrackTemplate = mongoose.model("TrackTemplate");
+      const template = await TrackTemplate.findById(codingRound.trackId).lean();
+      if (template) {
+        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
+        if (dayAssignment) {
+          const tasks = dayAssignment.tasks || [];
+          if (tasks.length > 0) {
+            targetQuestionId = tasks[problemIndex]?.questionId;
+          } else if (dayAssignment.questionId && problemIndex === 0) {
+            targetQuestionId = dayAssignment.questionId;
+          }
+        }
+      }
+    }
+
+    const question = await Question.findById(targetQuestionId || codingRound.questionId).select("+content.correctOption").lean();
     const isMcq = question?.categoryType === "MCQ";
 
     if (isMcq) {
@@ -991,30 +1037,42 @@ export const submitCodingRoundAnswers = async (req, res) => {
       problemSubmitted.set(problemIndex.toString(), true);
       const problemTestCaseResults = new Map();
       problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
+      const problemCodes = new Map();
+      problemCodes.set(problemIndex.toString(), submittedCode);
+      const problemLanguages = new Map();
+      problemLanguages.set(problemIndex.toString(), language);
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
         studentId: participant?.student?._id || null,
-        batchId: codingRound.batchId || null,
-        trackId: codingRound.trackId || null,
+        batchId: challengeAttempt?.batchId || codingRound.batchId || null,
+        trackId: challengeAttempt?.trackId || codingRound.trackId || null,
         questionId: codingRound.questionId || null,
         attemptId: challengeAttempt?._id || null,
         studentEmail: normalizedEmail,
         problemScores,
         problemSubmitted,
         problemTestCaseResults,
+        problemCodes,
+        problemLanguages,
         totalScore: problemScore,
         lastSubmissionAt: new Date(),
       });
     } else {
       if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
       if (!submission.problemTestCaseResults) submission.problemTestCaseResults = new Map();
+      if (!submission.problemCodes) submission.problemCodes = new Map();
+      if (!submission.problemLanguages) submission.problemLanguages = new Map();
+
       submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
       submission.problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
+      submission.problemCodes.set(problemIndex.toString(), submittedCode);
+      submission.problemLanguages.set(problemIndex.toString(), language);
+
       submission.studentId = submission.studentId || participant?.student?._id || null;
-      submission.batchId = submission.batchId || codingRound.batchId || null;
-      submission.trackId = submission.trackId || codingRound.trackId || null;
+      submission.batchId = submission.batchId || challengeAttempt?.batchId || codingRound.batchId || null;
+      submission.trackId = submission.trackId || challengeAttempt?.trackId || codingRound.trackId || null;
       submission.questionId = submission.questionId || codingRound.questionId || null;
       submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
 
@@ -1029,8 +1087,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
     await submission.save();
 
     if (challengeAttempt) {
-      challengeAttempt.status = "submitted";
-      challengeAttempt.submittedAt = new Date();
+      if (codingRound.challengeType !== "daily_challenge") {
+        challengeAttempt.status = "submitted";
+        challengeAttempt.submittedAt = new Date();
+      }
       challengeAttempt.lastActiveAt = new Date();
       challengeAttempt.finalLanguage = language;
       challengeAttempt.finalCode = submittedCode;
@@ -1596,6 +1656,7 @@ export const endCodingRound = async (req, res) => {
         problemIndex: index,
         problemTitle: problem.problemTitle,
         difficulty: problem.difficulty,
+        categoryType: problem.categoryType || "Coding",
         attempted: score > 0,
         score: score,
         maxScore: 100,
@@ -1748,6 +1809,8 @@ export const autoSubmitRound = async (req, res) => {
       return {
         problemIndex: index,
         problemTitle: problem.problemTitle,
+        difficulty: problem.difficulty,
+        categoryType: problem.categoryType || "Coding",
         attempted: score > 0,
         score: score,
         isCorrect: score === 100,

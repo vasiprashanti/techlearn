@@ -98,7 +98,7 @@ export default function DailyChallengeInstructions() {
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-4 md:p-6 font-sans text-slate-900 dark:text-slate-100">
-      <div className="w-full max-w-2xl flex items-center gap-3 mb-6 md:absolute md:left-6 md:top-6 md:mb-0 md:w-auto justify-center md:justify-start select-none">
+      <div className="w-full max-w-xl flex items-center gap-3 mb-6 md:absolute md:left-6 md:top-6 md:mb-0 md:w-auto justify-center md:justify-start select-none">
         <img
           src={theme === "dark" ? "/logoo2-small.webp" : "/logoo-small.webp"}
           alt="TLS"
@@ -110,7 +110,7 @@ export default function DailyChallengeInstructions() {
         </span>
       </div>
 
-      <div className="w-full max-w-2xl rounded-xl border border-black/5 bg-white/40 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-6">
+      <div className="w-full max-w-xl rounded-xl border border-black/5 bg-white/40 p-4 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] md:p-5">
         <h1 className="text-center font-press-start text-[10px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff] md:text-xs">
           Daily Challenge Instructions
         </h1>
@@ -126,41 +126,78 @@ export default function DailyChallengeInstructions() {
           <p className="mt-6 text-sm font-semibold text-red-500">{error}</p>
         ) : (
           <>
-            <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-              {[
-                ["Timer", `${timerLimitMinutes} minutes`],
-                ["Runs", `${rules.runLimitPerQuestion || 5} per question`],
-                ["Submissions", `${rules.submitLimitPerQuestion || 1} final`],
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="rounded-lg border border-black/5 bg-white/25 px-3 py-3 text-left dark:border-white/5 dark:bg-black/20"
-                >
-                  <span className="block font-press-start text-[8px] uppercase leading-relaxed text-[#00113b]/55 dark:text-[#81bde6]">
-                    {label}
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {/* MCQ Card */}
+              <div className="rounded-lg border border-black/5 bg-white/25 p-3 text-left dark:border-white/5 dark:bg-black/20 flex flex-col justify-between">
+                <div>
+                  <span className="block font-press-start text-[8px] uppercase leading-relaxed text-[#00113b]/70 dark:text-[#8fd9ff] mb-1.5">
+                    MCQ Questions
                   </span>
-                  <span className="mt-1 block text-sm font-semibold text-[#00113b] dark:text-white">
-                    {value}
-                  </span>
+                  <ul className="space-y-0.5 text-xs leading-relaxed text-[#00113b]/75 dark:text-[#cdeeff]">
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>Multiple choice single correct options.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>No negative marking.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>Saves automatically.</span>
+                    </li>
+                  </ul>
                 </div>
-              ))}
+                <div className="mt-2 pt-2 border-t border-black/5 dark:border-white/5">
+                  <span className="font-press-start text-[7px] uppercase text-[#00113b]/55 dark:text-[#81bde6]">Duration: </span>
+                  <span className="text-xs font-bold text-[#00113b] dark:text-white">{timerLimitMinutes} mins</span>
+                </div>
+              </div>
+
+              {/* Coding Card */}
+              <div className="rounded-lg border border-black/5 bg-white/25 p-3 text-left dark:border-white/5 dark:bg-black/20 flex flex-col justify-between">
+                <div>
+                  <span className="block font-press-start text-[8px] uppercase leading-relaxed text-[#00113b]/70 dark:text-[#8fd9ff] mb-1.5">
+                    Coding Questions
+                  </span>
+                  <ul className="space-y-0.5 text-xs leading-relaxed text-[#00113b]/75 dark:text-[#cdeeff]">
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>Write and compile code in editor.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>Runs: Max {rules.runLimitPerQuestion || 5} per question.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                      <span>Submit: {rules.submitLimitPerQuestion || 1} final submit.</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="mt-2 pt-2 border-t border-black/5 dark:border-white/5">
+                  <span className="font-press-start text-[7px] uppercase text-[#00113b]/55 dark:text-[#81bde6]">Grading: </span>
+                  <span className="text-xs font-bold text-[#00113b] dark:text-white">Based on test cases</span>
+                </div>
+              </div>
             </div>
 
-            <div className="mt-4 rounded-lg border border-black/5 bg-white/25 p-4 dark:border-white/5 dark:bg-black/20">
-              <h2 className="font-press-start text-[9px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
+            {/* Anti-cheat Card */}
+            <div className="mt-3 rounded-lg border border-black/5 bg-white/25 p-3 dark:border-white/5 dark:bg-black/20">
+              <h2 className="font-press-start text-[8px] uppercase tracking-wider text-[#00113b] dark:text-[#8fd9ff]">
                 Anti-cheat rules
               </h2>
-              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[#00113b]/75 dark:text-[#cdeeff]">
+              <ul className="mt-2 space-y-1 text-xs leading-relaxed text-[#00113b]/75 dark:text-[#cdeeff]">
                 {(rules.antiCheatRules || defaultRules.antiCheatRules).map((rule) => (
                   <li key={rule} className="flex gap-2">
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-red-500 dark:bg-red-400" />
                     <span>{rule}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="mt-5 flex justify-center">
+            <div className="mt-4 flex justify-center">
               <button
                 type="button"
                 onClick={startTest}

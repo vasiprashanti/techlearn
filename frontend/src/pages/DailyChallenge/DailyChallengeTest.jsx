@@ -63,6 +63,8 @@ export default function DailyChallengeTest() {
   const [activeProblemIndex, setActiveProblemIndex] = useState(0);
   const [solutions, setSolutions] = useState({});
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [endConfirmMessage, setEndConfirmMessage] = useState("");
 
   const autoSubmitTriggered = useRef(false);
   const editorCleanupRef = useRef(null);
@@ -138,19 +140,36 @@ export default function DailyChallengeTest() {
 
         const responseChallenge = response?.data?.codingRound || null;
         const attemptPayload = response?.data?.attempt || null;
+        const savedAnswers = response?.data?.savedAnswers || null;
+
         setChallenge(responseChallenge);
         setAttempt(attemptPayload);
         setTimeLeft(Math.max(0, Number(attemptPayload?.secondsRemaining || 0)));
 
         if (responseChallenge && responseChallenge.problems) {
           const initialSolutions = {};
+          const initialSubmitted = new Set();
+          const savedDraftStr = localStorage.getItem(`daily-challenge-draft-${linkId}`);
+          const savedDraft = savedDraftStr ? JSON.parse(savedDraftStr) : null;
+
           responseChallenge.problems.forEach((prob, idx) => {
+            const savedCode = savedAnswers?.problemCodes?.[idx.toString()];
+            const savedLang = savedAnswers?.problemLanguages?.[idx.toString()];
+            const isSavedSubmitted = savedAnswers?.problemSubmitted?.[idx.toString()];
+            const draft = savedDraft?.[idx];
+
             initialSolutions[idx] = {
-              code: prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter,
-              language: "python"
+              code: draft?.code !== undefined ? draft.code : (savedCode !== undefined ? savedCode : (prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter)),
+              language: draft?.language || savedLang || "python"
             };
+
+            if (isSavedSubmitted) {
+              initialSubmitted.add(idx);
+            }
           });
+
           setSolutions(initialSolutions);
+          setSubmittedProblems(initialSubmitted);
         }
 
         setDailyChallengeSession(linkId, {
@@ -170,6 +189,13 @@ export default function DailyChallengeTest() {
       cancelled = true;
     };
   }, [linkId, navigate, session?.isVerified, session?.studentEmail]);
+
+  // Save solutions to localStorage when it changes to persist drafts
+  useEffect(() => {
+    if (Object.keys(solutions).length > 0) {
+      localStorage.setItem(`daily-challenge-draft-${linkId}`, JSON.stringify(solutions));
+    }
+  }, [solutions, linkId]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -210,6 +236,7 @@ export default function DailyChallengeTest() {
   }, []);
 
   const moveToResult = (resultPayload) => {
+    localStorage.removeItem(`daily-challenge-draft-${linkId}`);
     setDailyChallengeSession(linkId, {
       result: resultPayload,
       completedAt: new Date().toISOString(),
@@ -322,8 +349,24 @@ export default function DailyChallengeTest() {
     }
   };
 
-  const handleEndChallenge = async () => {
+  const handleEndChallenge = () => {
     if (!studentEmail) return;
+
+    const totalProblems = challenge?.problems?.length || 0;
+    const submittedCount = submittedProblems.size;
+
+    if (submittedCount < totalProblems) {
+      setEndConfirmMessage(
+        `You have only submitted ${submittedCount} out of ${totalProblems} questions. Are you sure you want to end the Daily Challenge?`
+      );
+    } else {
+      setEndConfirmMessage("Are you sure you want to submit your Daily Challenge and end the session?");
+    }
+    setShowEndConfirm(true);
+  };
+
+  const executeEndChallenge = async () => {
+    setShowEndConfirm(false);
     setSubmitting(true);
 
     try {
@@ -466,11 +509,11 @@ export default function DailyChallengeTest() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!code || submitting || isDone}
+                  disabled={!code || submitting}
                   className="justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                 >
                   <SendHorizontal className="h-3.5 w-3.5" />
-                  {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit Answer"}
+                  {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
                 </button>
               </div>
 
@@ -484,7 +527,7 @@ export default function DailyChallengeTest() {
                       key={optLabel + index}
                       type="button"
                       onClick={() => handleCodeChange(optLabel)}
-                      disabled={isDone || submitting}
+                      disabled={submitting}
                       className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
                         isSelected
                           ? "border-[#2563eb] bg-[#2563eb]/10 dark:border-[#8fd9ff] dark:bg-[#8fd9ff]/15"
@@ -559,10 +602,10 @@ export default function DailyChallengeTest() {
                       base: 'vs',
                       inherit: true,
                       rules: [
-                        { token: '', foreground: '1e293b', background: 'daf0fa' },
+                        { token: '', foreground: '1e293b', background: 'ffffff' },
                       ],
                       colors: {
-                        'editor.background': '#daf0fa',
+                        'editor.background': '#ffffff',
                         'editor.foreground': '#1e293b',
                         'editorLineNumber.foreground': '#94a3b8',
                         'editorLineNumber.activeForeground': '#475569',
@@ -641,7 +684,7 @@ export default function DailyChallengeTest() {
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
                 Terminal
               </div>
-              <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
+              <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-white/60 dark:bg-black/35 p-2 rounded-none border border-black/5 dark:border-gray-700 text-gray-800 dark:text-emerald-400">
                 {output}
               </pre>
             </section>
@@ -651,15 +694,15 @@ export default function DailyChallengeTest() {
 
       {/* Fixed Footer Action Bar */}
       <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
-        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap">
-          {!isMcq && `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}`}
+        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap min-w-[80px] sm:min-w-[120px]">
+          {!isMcq ? `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}` : ""}
         </div>
         
-        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap">
+        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap flex-grow flex justify-center">
           DAILY CHALLENGE
         </div>
 
-        <div className="flex items-center z-10">
+        <div className="flex items-center z-10 min-w-[80px] sm:min-w-[120px] justify-end">
           <button
             type="button"
             onClick={handleEndChallenge}
@@ -670,6 +713,36 @@ export default function DailyChallengeTest() {
           </button>
         </div>
       </footer>
+
+      {showEndConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowEndConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] p-6 shadow-2xl backdrop-blur-xl text-center z-[210]">
+            <h3 className="text-sm font-bold text-[#0d2a57] dark:text-[#8fd9ff] uppercase tracking-wider font-press-start text-[10px]">
+              End Challenge
+            </h3>
+            <p className="mt-4 text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-semibold">
+              {endConfirmMessage}
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEndConfirm(false)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-semibold transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeEndChallenge}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all shadow-md active:scale-[0.98]"
+              >
+                Yes, End Challenge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

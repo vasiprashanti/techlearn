@@ -415,11 +415,22 @@ export const listQuestionsAdmin = async (req, res) => {
     let category = null;
 
     if (req.query.categorySlug) {
-      category = await Category.findOne({ slug: req.query.categorySlug }).lean();
-      if (!category) {
-        return res.status(404).json({ success: false, message: "Question category not found." });
+      const slugs = req.query.categorySlug.split(",").map((s) => s.trim()).filter(Boolean);
+      if (slugs.length > 1) {
+        const categories = await Category.find({ slug: { $in: slugs } }).lean();
+        const categoryIds = categories.map((c) => c._id);
+        const categorySlugs = categories.map((c) => c.slug);
+        query.$or = [
+          { categoryId: { $in: categoryIds } },
+          { categorySlug: { $in: categorySlugs } }
+        ];
+      } else if (slugs.length === 1) {
+        category = await Category.findOne({ slug: slugs[0] }).lean();
+        if (!category) {
+          return res.status(404).json({ success: false, message: "Question category not found." });
+        }
+        query.$or = [{ categoryId: category._id }, { categorySlug: category.slug }];
       }
-      query.$or = [{ categoryId: category._id }, { categorySlug: category.slug }];
     }
 
     if (req.query.categoryId) {
@@ -1147,7 +1158,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     const normalizedDayNumber = Number(dayNumber);
     const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
-      .select("_id xpValue xp_value xp points")
+      .select("_id xpValue xp_value xp points categoryType")
       .lean();
     const questionXpById = new Map(
       questionDocs.map((question) => [
@@ -1172,12 +1183,13 @@ export const assignTrackTemplateDay = async (req, res) => {
 
       requestedQuestionIds.forEach((id) => {
         if (assignedQuestionIds.has(String(id))) return;
-        let resolvedTaskType = taskType;
-        if (!resolvedTaskType && template.trackType === "Daily Challenge") {
-          const qDoc = questionDocs.find((q) => String(q._id) === String(id));
-          resolvedTaskType = qDoc?.categoryType === "MCQ" ? "MCQ" : "Coding";
+        const qDoc = questionDocs.find((q) => String(q._id) === String(id));
+        let resolvedTaskType = "Coding";
+        if (qDoc?.categoryType === "MCQ") {
+          resolvedTaskType = taskType === "Aptitude" || taskType === "Core CS" ? taskType : "MCQ";
+        } else {
+          resolvedTaskType = taskType === "SQL" || taskType === "Debugging" ? taskType : "Coding";
         }
-        if (!resolvedTaskType) resolvedTaskType = "Coding";
 
         dayAssignment.tasks.push({
           taskType: resolvedTaskType,

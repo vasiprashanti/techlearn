@@ -151,7 +151,17 @@ export default function TrackTemplateDetails() {
     return 'Coding';
   }, [hasMcq, hasCoding]);
 
-  const categorySlug = track ? (categorySlugMap[track.category] || slugifyCategory(track.category)) : null;
+  const categorySlug = useMemo(() => {
+    if (!track || !track.category) return null;
+    return track.category
+      .split(",")
+      .map((cat) => {
+        const trimmed = cat.trim();
+        return categorySlugMap[trimmed] || slugifyCategory(trimmed);
+      })
+      .filter(Boolean)
+      .join(",");
+  }, [track]);
 
   const assignedQuestionIdSet = useMemo(() => {
     const ids = new Set();
@@ -178,17 +188,12 @@ export default function TrackTemplateDetails() {
         (c) => c.title && c.title.toLowerCase() === qCatName
       );
 
-      if (dbCat) {
-        if (isTaskTypeCoding) return dbCat.categoryType === 'Coding';
-        if (isTaskTypeMcq) return dbCat.categoryType === 'MCQ';
-      }
-
-      // Fallback matching if category is not found in database list
+      const qCatType = (question.categoryType || dbCat?.categoryType || "").toUpperCase();
       if (isTaskTypeCoding) {
-        return ['coding', 'debugging'].includes(qCatName) || !['mcq', 'aptitude', 'core cs'].includes(qCatName);
+        return qCatType === 'CODING' || ['coding', 'debugging'].includes(qCatName) || (!['mcq', 'aptitude', 'core cs'].includes(qCatName) && qCatType !== 'MCQ');
       }
       if (isTaskTypeMcq) {
-        return ['mcq', 'aptitude', 'core cs'].includes(qCatName);
+        return qCatType === 'MCQ' || ['mcq', 'aptitude', 'core cs'].includes(qCatName);
       }
 
       return true;
@@ -506,18 +511,18 @@ export default function TrackTemplateDetails() {
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeAddDayModal} />
 
-          <div className="relative w-full max-w-5xl rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-4 md:p-5">
+          <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] shadow-2xl p-4 md:p-5">
             <button
               onClick={closeAddDayModal}
-              className="absolute right-3.5 top-3.5 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white"
+              className="absolute right-3.5 top-3.5 text-black/55 dark:text-white/60 hover:text-black dark:hover:text-white z-10"
               aria-label="Close assign question modal"
             >
               <FiX className="w-5 h-5" />
             </button>
 
-            <h2 className="text-lg md:text-xl font-semibold text-[#1a2335] dark:text-white">Assign Question to Day</h2>
+            <h2 className="text-lg md:text-xl font-semibold text-[#1a2335] dark:text-white shrink-0">Assign Question to Day</h2>
 
-            <div className="mt-4 space-y-3.5">
+            <div className="mt-4 space-y-3.5 flex-grow overflow-y-auto pr-1">
               <div>
                 <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Day Number</label>
                 <input
@@ -622,21 +627,22 @@ export default function TrackTemplateDetails() {
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2">
-                <button
-                  onClick={closeAddDayModal}
-                  className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={assignQuestionToDay}
-                  disabled={!addDayForm.questionIds.length}
-                  className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold"
-                >
-                  Assign {addDayForm.questionIds.length || ''} Question{addDayForm.questionIds.length === 1 ? '' : 's'}
-                </button>
-              </div>
+            </div>
+
+            <div className="pt-3 flex items-center justify-end gap-2 shrink-0 border-t border-black/5 dark:border-white/5 mt-3">
+              <button
+                onClick={closeAddDayModal}
+                className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={assignQuestionToDay}
+                disabled={!addDayForm.questionIds.length}
+                className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold"
+              >
+                Assign {addDayForm.questionIds.length || ''} Question{addDayForm.questionIds.length === 1 ? '' : 's'}
+              </button>
             </div>
           </div>
         </div>

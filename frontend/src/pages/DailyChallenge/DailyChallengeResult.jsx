@@ -43,11 +43,27 @@ export default function DailyChallengeResult() {
   const streak = typeof metrics.streak === "number" ? metrics.streak : "-";
   const timeTaken = formatTimeTaken(metrics);
 
+  const categoryBreakdown = useMemo(() => {
+    const problemResults = result?.problemResults || [];
+    const breakdown = {};
+    problemResults.forEach((p) => {
+      const cat = p.categoryType || "Coding";
+      if (!breakdown[cat]) {
+        breakdown[cat] = { correct: 0, total: 0 };
+      }
+      breakdown[cat].total += 1;
+      if (p.isCorrect || p.score >= 100) {
+        breakdown[cat].correct += 1;
+      }
+    });
+    return Object.entries(breakdown);
+  }, [result]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       clearDailyChallengeSession(linkId);
       navigate("/dashboard", { replace: true });
-    }, 8000);
+    }, 30000);
 
     return () => clearTimeout(timer);
   }, [linkId, navigate]);
@@ -119,6 +135,26 @@ export default function DailyChallengeResult() {
               </span>
             </div>
           </div>
+
+          {categoryBreakdown.length > 0 && (
+            <div className="mt-4 border-t border-black/5 dark:border-white/5 pt-3 w-full">
+              <span className="block text-center font-press-start text-[8px] uppercase tracking-wider text-[#00113b]/60 dark:text-[#8fd9ff]/70 mb-2">
+                Category breakdown
+              </span>
+              <div className="grid grid-cols-1 gap-2">
+                {categoryBreakdown.map(([cat, info]) => (
+                  <div key={cat} className="flex items-center justify-between rounded-lg border border-black/5 bg-white/25 px-4 py-2 dark:border-white/5 dark:bg-black/20">
+                    <span className="text-xs font-semibold text-[#00113b]/80 dark:text-slate-300 uppercase">
+                      {cat}
+                    </span>
+                    <span className="text-xs font-bold text-[#00113b] dark:text-white">
+                      {info.correct} / {info.total} Correct
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="pt-2">
             <button

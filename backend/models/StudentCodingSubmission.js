@@ -53,6 +53,16 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       of: Boolean,
       default: {},
     },
+    problemCodes: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+    problemLanguages: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     problemTestCaseResults: {
       type: Map,
       of: [

@@ -53,6 +53,7 @@ export const normalizeTrackType = (value = "") => {
 };
 
 export const mapQuestionToProblem = (question) => ({
+  questionId: question._id,
   problemTitle: question.title,
   description: question.description || "Solve the assigned Daily Challenge question.",
   difficulty: question.difficulty || "Medium",
@@ -364,21 +365,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   if (resolvedQuestionIds.length === 0) {
-    console.log("[DAILY_CHALLENGE_DEBUG] No question for today in track, attempting fallback...");
-    const fallbackQuestion = await Question.findOne({}).lean();
-    if (fallbackQuestion) {
-      return {
-        student: studentContext.student,
-        studentEmail: studentContext.studentEmail,
-        accessSource: studentContext.accessSource,
-        batch,
-        track,
-        questions: [fallbackQuestion],
-        dayNumber,
-        durationMinutes,
-      };
-    }
-    const error = new Error(`No Daily Challenge question is configured for today. Admin needs to configure questions for ${track.trackType} track in ${batch.name} batch.`);
+    const error = new Error(`No Daily Challenge questions are configured for today (Day ${dayNumber}).`);
     error.statusCode = 404;
     throw error;
   }
@@ -392,20 +379,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
 
   const validQuestions = questions.filter(Boolean);
   if (validQuestions.length === 0) {
-    const fallbackQuestion = await Question.findOne({}).lean();
-    if (fallbackQuestion) {
-      return {
-        student: studentContext.student,
-        studentEmail: studentContext.studentEmail,
-        accessSource: studentContext.accessSource,
-        batch,
-        track,
-        questions: [fallbackQuestion],
-        dayNumber,
-        durationMinutes,
-      };
-    }
-    const error = new Error("The configured Daily Challenge questions could not be found, and no fallback question is available.");
+    const error = new Error(`The configured Daily Challenge questions for today (Day ${dayNumber}) could not be found.`);
     error.statusCode = 404;
     throw error;
   }
