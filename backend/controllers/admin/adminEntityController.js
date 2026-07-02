@@ -870,6 +870,15 @@ export const getBatchDetail = async (req, res) => {
     const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - 5.5 * 60 * 60 * 1000);
     const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - 5.5 * 60 * 60 * 1000);
 
+    const dailyChallengeTemplate = (trackTemplates || []).find(
+      (t) => String(t._id) === String(batch.assignedDailyChallengeTrack?._id || batch.assignedDailyChallengeTrack)
+    );
+    const dailyTaskTemplate = (trackTemplates || []).find(
+      (t) => String(t._id) === String(batch.assignedDailyTaskTrack?._id || batch.assignedDailyTaskTrack)
+    ) || (trackTemplates || []).find(
+      (t) => String(t._id) === String(batch.assignedTrackTemplate?._id || batch.assignedTrackTemplate) && t.trackType === "Daily Task"
+    );
+
     const activeTrackTemplate = trackTemplates.find(
       (t) => t.trackType === "Daily Task"
     );
@@ -878,10 +887,11 @@ export const getBatchDetail = async (req, res) => {
     let totalCodingInTemplateToday = 0;
     const allottedTypesToday = [];
     let dayNumber = 0;
-    if (activeTrackTemplate) {
-      const releaseStart = localCombineDateAndTime(activeTrackTemplate.startDate || batch.startDate, batch.releaseTime || "00:00");
+    const targetTemplateForDay = activeTrackTemplate || dailyChallengeTemplate;
+    if (targetTemplateForDay) {
+      const releaseStart = localCombineDateAndTime(targetTemplateForDay.startDate || batch.startDate, batch.releaseTime || "00:00");
       dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-      const dayAssignment = activeTrackTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+      const dayAssignment = targetTemplateForDay.dayAssignments?.find((d) => d.dayNumber === dayNumber);
       if (dayAssignment) {
         (dayAssignment.tasks || []).forEach((t) => {
           const type = t.taskType;
@@ -1026,15 +1036,6 @@ export const getBatchDetail = async (req, res) => {
       });
       return Array.from(types);
     };
-
-    const dailyChallengeTemplate = (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedDailyChallengeTrack?._id || batch.assignedDailyChallengeTrack)
-    );
-    const dailyTaskTemplate = (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedDailyTaskTrack?._id || batch.assignedDailyTaskTrack)
-    ) || (trackTemplates || []).find(
-      (t) => String(t._id) === String(batch.assignedTrackTemplate?._id || batch.assignedTrackTemplate) && t.trackType === "Daily Task"
-    );
 
     const dailyChallengeTypes = getTrackQuestionTypes(dailyChallengeTemplate);
     const dailyChallengeHasMultiple = dailyChallengeTypes.length > 1;
