@@ -1158,7 +1158,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     const normalizedDayNumber = Number(dayNumber);
     const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
-      .select("_id xpValue xp_value xp points")
+      .select("_id xpValue xp_value xp points categoryType")
       .lean();
     const questionXpById = new Map(
       questionDocs.map((question) => [
@@ -1183,12 +1183,13 @@ export const assignTrackTemplateDay = async (req, res) => {
 
       requestedQuestionIds.forEach((id) => {
         if (assignedQuestionIds.has(String(id))) return;
-        let resolvedTaskType = taskType;
-        if (!resolvedTaskType && template.trackType === "Daily Challenge") {
-          const qDoc = questionDocs.find((q) => String(q._id) === String(id));
-          resolvedTaskType = qDoc?.categoryType === "MCQ" ? "MCQ" : "Coding";
+        const qDoc = questionDocs.find((q) => String(q._id) === String(id));
+        let resolvedTaskType = "Coding";
+        if (qDoc?.categoryType === "MCQ") {
+          resolvedTaskType = taskType === "Aptitude" || taskType === "Core CS" ? taskType : "MCQ";
+        } else {
+          resolvedTaskType = taskType === "SQL" || taskType === "Debugging" ? taskType : "Coding";
         }
-        if (!resolvedTaskType) resolvedTaskType = "Coding";
 
         dayAssignment.tasks.push({
           taskType: resolvedTaskType,
