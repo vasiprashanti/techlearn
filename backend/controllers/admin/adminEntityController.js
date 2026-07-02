@@ -802,7 +802,7 @@ export const getBatchDetail = async (req, res) => {
         ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
         : Promise.resolve([]),
       studentEmails.length
-        ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
+        ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails } }).lean()
         : Promise.resolve([]),
     ]);
 
@@ -1696,12 +1696,6 @@ todayXp = todayChallengeXp + todayTaskXp;
         }
 
         // --- 2. DAILY CHALLENGES ---
-        // Find if student has a Daily Challenge Attempt for this day
-        // Query dailyChallengeAttempts for this day number and student email
-        const dayChallengeAttempt = dailyChallengeAttempts.find(
-          (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail && (att.dayNumber === day || att.workingDay === day)
-        );
-
         // Submissions for daily challenges on this day
         const dailyChallengeTemplates = (trackTemplates || []).filter(t => t.trackType === "Daily Challenge");
         const activeDailyChallengeTemplate = (trackTemplates || []).find(
@@ -1721,10 +1715,15 @@ todayXp = todayChallengeXp + todayTaskXp;
           }
         });
 
+        // Find if student has a Daily Challenge Attempt for this day using questionId mapping
+        const dayChallengeAttempt = dailyChallengeAttempts.find(
+          (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                  assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId))
+        );
 
         const studentChallengeSub = challengeSubmissions.find(
           (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                  ((String(cs.trackId || "") === String(activeDailyChallengeTemplate?._id || "") && cs.workingDay === day) ||
+                  ((cs.attemptId && String(cs.attemptId) === String(dayChallengeAttempt?._id)) ||
                    (dayChallengeAttempt && String(cs.codingRoundId) === String(dayChallengeAttempt.codingRoundId)))
         );
 
