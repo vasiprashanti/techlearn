@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Submission from "../../models/Submission.js";
+import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import Question from "../../models/Questions.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import Resource from "../../models/Resource.js";
@@ -333,13 +334,13 @@ export const listSubmissionsPage = async (req, res) => {
       filter.studentId = req.query.studentId;
     }
 
-    const [total, submissions, totalToday, acceptedToday, averageExecution, pendingStudents] = await Promise.all([
+    const [total, submissions, totalToday, acceptedToday, averageExecution, pendingStudents, challengeCodingSubmissions] = await Promise.all([
       Submission.countDocuments(filter),
       Submission.find(filter)
         .sort({ submittedAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("studentId", "name")
+        .populate("studentId", "name email")
         .populate("batchId", "name")
         .populate("questionId", "title categoryTitle categorySlug trackType")
         .lean(),
@@ -357,7 +358,82 @@ export const listSubmissionsPage = async (req, res) => {
         .populate("batchId", "name")
         .limit(50)
         .lean(),
+      StudentCodingSubmission.find({
+        ...(filter.batchId ? { batchId: filter.batchId } : {}),
+        ...(filter.studentId ? { studentId: filter.studentId } : {}),
+        isRoundEnded: { $ne: true },
+        problemSubmitted: { $exists: true },
+      })
+        .sort({ lastSubmissionAt: -1 })
+        .limit(limit)
+        .populate("studentId", "name email")
+        .populate("batchId", "name")
+        .populate("questionId", "title categoryTitle categorySlug trackType")
+        .lean(),
     ]);
+
+    const canonicalAttemptIds = new Set(
+      submissions.map((submission) => String(submission.attemptId || "")).filter(Boolean)
+    );
+
+    const fallbackChallengeRows = challengeCodingSubmissions
+      .filter((submission) => submission.attemptId && !canonicalAttemptIds.has(String(submission.attemptId)))
+      .map((submission) => {
+        const problemScores = Object.values(submission.problemScores || {}).map((score) => Number(score || 0));
+        const totalScore = Number(submission.totalScore || 0);
+        const allPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
+        const allTestCaseDetails = Object.entries(submission.problemTestCaseResults || {}).flatMap(([problemIndex, results = []]) =>
+          (results || []).map((result) => ({
+            ...result,
+            problemIndex: Number(problemIndex),
+          }))
+        );
+        const passedTestCases = allTestCaseDetails.filter((result) => result.passed).length;
+        return {
+          id: `coding-${submission._id}`,
+          student: submission.studentId?.name || submission.studentEmail || "Unknown Student",
+          email: submission.studentId?.email || submission.studentEmail || "",
+          batch: submission.batchId?.name || "Unknown Batch",
+          question: submission.questionId?.title || "Daily Challenge",
+          track: getCategoryTitle(submission.questionId || {}),
+          lang: "Code",
+          status: allPassed ? "Accepted" : totalScore > 0 ? "Partial Pass" : "Wrong Answer",
+          xpEarned: Math.max(0, Math.round(totalScore)),
+          exec: "-",
+          when: submission.lastSubmissionAt || submission.submittedAt,
+          outputPreview: allTestCaseDetails.length
+            ? `${passedTestCases}/${allTestCaseDetails.length} test cases passed`
+            : "Daily Challenge coding submission saved",
+        };
+      });
+
+    const submissionRows = submissions.map((submission) => {
+      const passedTestCases = submission.finalSubmissionResults?.passedTestCases;
+      const totalTestCases = submission.finalSubmissionResults?.totalTestCases;
+      return {
+        id: submission._id,
+        student: submission.studentId?.name || "Unknown Student",
+        email: submission.studentId?.email || "",
+        batch: submission.batchId?.name || "Unknown Batch",
+        question: submission.questionId?.title || "Untitled Question",
+        track: getCategoryTitle(submission.questionId || {}),
+        lang: submission.language || "Code",
+        status: normalizeSubmissionStatus(submission.status),
+        xpEarned: Number(submission.xpEarned || submission.totalScore || 0),
+        exec: submission.executionTime ? `${submission.executionTime}ms` : "-",
+        when: submission.submittedAt,
+        outputPreview:
+          Number.isFinite(passedTestCases) && Number.isFinite(totalTestCases)
+            ? `${passedTestCases}/${totalTestCases} test cases passed`
+            : submission.status === "Passed"
+              ? "All test cases passed"
+              : "Submission evaluated",
+      };
+    });
+
+    const combinedSubmissions = [...submissionRows, ...fallbackChallengeRows]
+      .sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0))
+      .slice(0, limit);
 
     return res.status(200).json({
       success: true,
@@ -369,20 +445,7 @@ export const listSubmissionsPage = async (req, res) => {
           avgExecutionTime: `${Number((averageExecution[0]?.avg || 0).toFixed(0))}ms`,
           pendingStudents: pendingStudents.length,
         },
-        submissions: submissions.map((submission) => ({
-          id: submission._id,
-          student: submission.studentId?.name || "Unknown Student",
-          batch: submission.batchId?.name || "Unknown Batch",
-          question: submission.questionId?.title || "Untitled Question",
-          track: getCategoryTitle(submission.questionId || {}),
-          lang: "Code",
-          status: normalizeSubmissionStatus(submission.status),
-          xpEarned: Number(submission.xpEarned || submission.totalScore || 0),
-          exec: submission.executionTime ? `${submission.executionTime}ms` : "-",
-          when: submission.submittedAt,
-          outputPreview:
-            submission.status === "Passed" ? "All test cases passed" : "Failed on hidden test cases",
-        })),
+        submissions: combinedSubmissions,
         pendingStudents: pendingStudents.map((student) => ({
           id: student._id,
           name: student.name,

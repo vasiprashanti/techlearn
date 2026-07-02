@@ -204,14 +204,17 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
     );
   const passedTestCases = allTestCaseDetails.filter((result) => result.passed).length;
   const totalTestCases = allTestCaseDetails.length;
+  const hasSubmittedProblems = problemScores.length > 0;
   const nextStatus =
-    submission.isRoundEnded && allSubmittedProblemsPassed
-      ? "Passed"
-      : submission.isRoundEnded && submission.autoEnded
-        ? "Timeout"
-        : submission.isRoundEnded && totalScore > 0
+    submission.autoEnded
+      ? "Timeout"
+      : allSubmittedProblemsPassed
+        ? "Passed"
+        : totalScore > 0
           ? "PartialPass"
-          : "Pending";
+          : hasSubmittedProblems
+            ? "Failed"
+            : "Pending";
 
   return Submission.findOneAndUpdate(
     { attemptId: attempt._id },
@@ -232,6 +235,9 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
         status: nextStatus,
         submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
         executionTime: 0,
+        submittedCode: attempt.finalCode || null,
+        language: attempt.finalLanguage || null,
+        submissionType: "daily_challenge",
         finalSubmissionResults: totalTestCases > 0 ? {
           passedTestCases,
           totalTestCases,
@@ -1090,6 +1096,18 @@ export const submitCodingRoundAnswers = async (req, res) => {
       challengeAttempt.finalCode = submittedCode;
       challengeAttempt.codingSubmissionId = submission._id;
       await challengeAttempt.save();
+
+      const linkedSubmission = await upsertChallengeSubmissionRecord({
+        codingRound,
+        student: participant?.student,
+        attempt: challengeAttempt,
+        submission,
+      });
+
+      if (linkedSubmission?._id) {
+        challengeAttempt.finalSubmissionId = linkedSubmission._id;
+        await challengeAttempt.save();
+      }
     }
 
     res.status(200).json({

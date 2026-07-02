@@ -31,6 +31,7 @@ const statusConfig = {
   'TLE':          { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
   'Passed':       { Icon: FiCheckCircle, label: 'text-emerald-500 dark:text-emerald-400' },
   'Failed':       { Icon: FiXCircle,     label: 'text-rose-500 dark:text-rose-400' },
+  'Partial Pass': { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
   'Timeout':      { Icon: FiAlertCircle, label: 'text-amber-500 dark:text-amber-400' },
   'Error':        { Icon: FiAlertCircle, label: 'text-rose-500 dark:text-rose-400' },
   'Pending':      { Icon: FiClock,       label: 'text-[#3C83F6] dark:text-blue-400' },
@@ -108,7 +109,11 @@ export default function SubmissionMonitor() {
 
   const filteredSubs = submissionEntries.filter(s => {
     const q = tableSearch.toLowerCase();
-    return !q || s.student.toLowerCase().includes(q) || s.question.toLowerCase().includes(q) || s.batch.toLowerCase().includes(q);
+    return !q ||
+      s.student.toLowerCase().includes(q) ||
+      String(s.email || '').toLowerCase().includes(q) ||
+      s.question.toLowerCase().includes(q) ||
+      s.batch.toLowerCase().includes(q);
   });
 
   const challengeHistory = useMemo(() => {
@@ -169,7 +174,7 @@ export default function SubmissionMonitor() {
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">Submission Detail</h2>
-                <p className="text-xs text-black/45 dark:text-white/40 mt-0.5">{selectedSubmission.student} • {selectedSubmission.batch}</p>
+                <p className="text-xs text-black/45 dark:text-white/40 mt-0.5">{selectedSubmission.student} • {selectedSubmission.email || selectedSubmission.batch}</p>
               </div>
               <button onClick={() => setSelectedSubmission(null)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70">Close</button>
             </div>
@@ -198,7 +203,7 @@ export default function SubmissionMonitor() {
             <div className="px-6 pb-6">
               <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
                 <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Output Preview</p>
-                <pre className="text-xs text-black/65 dark:text-white/65 whitespace-pre-wrap">Status: {selectedSubmission.status}\nMemory: 64MB\nResult: {selectedSubmission.status === 'Accepted' ? 'All test cases passed' : 'Failed on hidden test cases'}</pre>
+                <pre className="text-xs text-black/65 dark:text-white/65 whitespace-pre-wrap">Status: {selectedSubmission.status}\nResult: {selectedSubmission.outputPreview || 'Submission evaluated'}</pre>
               </div>
             </div>
           </div>
@@ -247,7 +252,7 @@ export default function SubmissionMonitor() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="relative w-full md:max-w-[520px]">
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40 dark:text-white/40 pointer-events-none" />
-                <input type="text" placeholder="Search by student or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
+                <input type="text" placeholder="Search by student, email, or question..." value={tableSearch} onChange={e => setTableSearch(e.target.value)}
                   className="dashboard-input-surface h-10 rounded-full pl-11 pr-4 text-[13px] sm:text-sm leading-none" />
               </div>
               <button
