@@ -789,9 +789,9 @@ export const startDailyChallengeAttempt = async (req, res) => {
         codingRound,
         instructions: DAILY_CHALLENGE_RULES,
         savedAnswers: submission ? {
-          problemCodes: submission.problemCodes || {},
-          problemLanguages: submission.problemLanguages || {},
-          problemSubmitted: submission.problemSubmitted || {},
+          problemCodes: submission.problemCodes instanceof Map ? Object.fromEntries(submission.problemCodes) : (submission.problemCodes || {}),
+          problemLanguages: submission.problemLanguages instanceof Map ? Object.fromEntries(submission.problemLanguages) : (submission.problemLanguages || {}),
+          problemSubmitted: submission.problemSubmitted instanceof Map ? Object.fromEntries(submission.problemSubmitted) : (submission.problemSubmitted || {}),
         } : null,
       },
     });

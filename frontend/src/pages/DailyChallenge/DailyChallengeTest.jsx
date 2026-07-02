@@ -505,11 +505,11 @@ export default function DailyChallengeTest() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={!code || submitting || isDone}
+                  disabled={!code || submitting}
                   className="justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                 >
                   <SendHorizontal className="h-3.5 w-3.5" />
-                  {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit Answer"}
+                  {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
                 </button>
               </div>
 
@@ -523,7 +523,7 @@ export default function DailyChallengeTest() {
                       key={optLabel + index}
                       type="button"
                       onClick={() => handleCodeChange(optLabel)}
-                      disabled={isDone || submitting}
+                      disabled={submitting}
                       className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
                         isSelected
                           ? "border-[#2563eb] bg-[#2563eb]/10 dark:border-[#8fd9ff] dark:bg-[#8fd9ff]/15"
