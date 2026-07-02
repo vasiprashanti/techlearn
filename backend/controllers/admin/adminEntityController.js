@@ -1329,7 +1329,8 @@ export const getBatchDetail = async (req, res) => {
 
       const studentChallengeSubToday = challengeSubmissions.find(
         (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId)
+                ((String(cs.trackId || "") === String(dailyChallengeTemplate?._id || "") && cs.workingDay === dayNumber) ||
+                 (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId)))
       );
 
       if (studentChallengeAttemptToday) {
@@ -1723,7 +1724,8 @@ todayXp = todayChallengeXp + todayTaskXp;
 
         const studentChallengeSub = challengeSubmissions.find(
           (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                  dayChallengeAttempt && String(cs.codingRoundId) === String(dayChallengeAttempt.codingRoundId)
+                  ((String(cs.trackId || "") === String(activeDailyChallengeTemplate?._id || "") && cs.workingDay === day) ||
+                   (dayChallengeAttempt && String(cs.codingRoundId) === String(dayChallengeAttempt.codingRoundId)))
         );
 
         let correctChallenges = 0;
