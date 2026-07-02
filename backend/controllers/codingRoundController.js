@@ -776,6 +776,11 @@ export const startDailyChallengeAttempt = async (req, res) => {
       startAttempt: true,
     });
 
+    const submission = await StudentCodingSubmission.findOne({
+      codingRoundId: codingRound._id,
+      studentEmail: normalizedEmail,
+    }).lean();
+
     return res.status(200).json({
       success: true,
       message: attempt.startedAt ? "Daily Challenge session ready." : "Daily Challenge started.",
@@ -783,6 +788,11 @@ export const startDailyChallengeAttempt = async (req, res) => {
         attempt: buildAttemptPayload(attempt),
         codingRound,
         instructions: DAILY_CHALLENGE_RULES,
+        savedAnswers: submission ? {
+          problemCodes: submission.problemCodes || {},
+          problemLanguages: submission.problemLanguages || {},
+          problemSubmitted: submission.problemSubmitted || {},
+        } : null,
       },
     });
   } catch (error) {
@@ -1004,6 +1014,10 @@ export const submitCodingRoundAnswers = async (req, res) => {
       problemSubmitted.set(problemIndex.toString(), true);
       const problemTestCaseResults = new Map();
       problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
+      const problemCodes = new Map();
+      problemCodes.set(problemIndex.toString(), submittedCode);
+      const problemLanguages = new Map();
+      problemLanguages.set(problemIndex.toString(), language);
 
       submission = new StudentCodingSubmission({
         codingRoundId: codingRound._id,
@@ -1016,15 +1030,23 @@ export const submitCodingRoundAnswers = async (req, res) => {
         problemScores,
         problemSubmitted,
         problemTestCaseResults,
+        problemCodes,
+        problemLanguages,
         totalScore: problemScore,
         lastSubmissionAt: new Date(),
       });
     } else {
       if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
       if (!submission.problemTestCaseResults) submission.problemTestCaseResults = new Map();
+      if (!submission.problemCodes) submission.problemCodes = new Map();
+      if (!submission.problemLanguages) submission.problemLanguages = new Map();
+
       submission.problemSubmitted.set(problemIndex.toString(), true);
       submission.problemScores.set(problemIndex.toString(), problemScore);
       submission.problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
+      submission.problemCodes.set(problemIndex.toString(), submittedCode);
+      submission.problemLanguages.set(problemIndex.toString(), language);
+
       submission.studentId = submission.studentId || participant?.student?._id || null;
       submission.batchId = submission.batchId || codingRound.batchId || null;
       submission.trackId = submission.trackId || codingRound.trackId || null;

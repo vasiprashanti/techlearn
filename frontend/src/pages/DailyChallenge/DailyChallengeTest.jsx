@@ -138,19 +138,36 @@ export default function DailyChallengeTest() {
 
         const responseChallenge = response?.data?.codingRound || null;
         const attemptPayload = response?.data?.attempt || null;
+        const savedAnswers = response?.data?.savedAnswers || null;
+
         setChallenge(responseChallenge);
         setAttempt(attemptPayload);
         setTimeLeft(Math.max(0, Number(attemptPayload?.secondsRemaining || 0)));
 
         if (responseChallenge && responseChallenge.problems) {
           const initialSolutions = {};
+          const initialSubmitted = new Set();
+          const savedDraftStr = localStorage.getItem(`daily-challenge-draft-${linkId}`);
+          const savedDraft = savedDraftStr ? JSON.parse(savedDraftStr) : null;
+
           responseChallenge.problems.forEach((prob, idx) => {
+            const savedCode = savedAnswers?.problemCodes?.[idx.toString()];
+            const savedLang = savedAnswers?.problemLanguages?.[idx.toString()];
+            const isSavedSubmitted = savedAnswers?.problemSubmitted?.[idx.toString()];
+            const draft = savedDraft?.[idx];
+
             initialSolutions[idx] = {
-              code: prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter,
-              language: "python"
+              code: draft?.code !== undefined ? draft.code : (savedCode !== undefined ? savedCode : (prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter)),
+              language: draft?.language || savedLang || "python"
             };
+
+            if (isSavedSubmitted) {
+              initialSubmitted.add(idx);
+            }
           });
+
           setSolutions(initialSolutions);
+          setSubmittedProblems(initialSubmitted);
         }
 
         setDailyChallengeSession(linkId, {
@@ -170,6 +187,13 @@ export default function DailyChallengeTest() {
       cancelled = true;
     };
   }, [linkId, navigate, session?.isVerified, session?.studentEmail]);
+
+  // Save solutions to localStorage when it changes to persist drafts
+  useEffect(() => {
+    if (Object.keys(solutions).length > 0) {
+      localStorage.setItem(`daily-challenge-draft-${linkId}`, JSON.stringify(solutions));
+    }
+  }, [solutions, linkId]);
 
   useEffect(() => {
     if (timeLeft <= 0) {
@@ -210,6 +234,7 @@ export default function DailyChallengeTest() {
   }, []);
 
   const moveToResult = (resultPayload) => {
+    localStorage.removeItem(`daily-challenge-draft-${linkId}`);
     setDailyChallengeSession(linkId, {
       result: resultPayload,
       completedAt: new Date().toISOString(),
@@ -573,10 +598,10 @@ export default function DailyChallengeTest() {
                       base: 'vs',
                       inherit: true,
                       rules: [
-                        { token: '', foreground: '1e293b', background: 'daf0fa' },
+                        { token: '', foreground: '1e293b', background: 'ffffff' },
                       ],
                       colors: {
-                        'editor.background': '#daf0fa',
+                        'editor.background': '#ffffff',
                         'editor.foreground': '#1e293b',
                         'editorLineNumber.foreground': '#94a3b8',
                         'editorLineNumber.activeForeground': '#475569',
@@ -655,7 +680,7 @@ export default function DailyChallengeTest() {
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
                 Terminal
               </div>
-              <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-[#f3f4f6]/50 dark:bg-black/35 p-2 rounded-none border dark:border-gray-700 text-gray-800 dark:text-emerald-400">
+              <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-white/60 dark:bg-black/35 p-2 rounded-none border border-black/5 dark:border-gray-700 text-gray-800 dark:text-emerald-400">
                 {output}
               </pre>
             </section>
@@ -665,15 +690,15 @@ export default function DailyChallengeTest() {
 
       {/* Fixed Footer Action Bar */}
       <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
-        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap">
-          {!isMcq && `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}`}
+        <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap min-w-[80px] sm:min-w-[120px]">
+          {!isMcq ? `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}` : ""}
         </div>
         
-        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap">
+        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap flex-grow flex justify-center">
           DAILY CHALLENGE
         </div>
 
-        <div className="flex items-center z-10">
+        <div className="flex items-center z-10 min-w-[80px] sm:min-w-[120px] justify-end">
           <button
             type="button"
             onClick={handleEndChallenge}
