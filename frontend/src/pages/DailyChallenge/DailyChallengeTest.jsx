@@ -63,6 +63,8 @@ export default function DailyChallengeTest() {
   const [activeProblemIndex, setActiveProblemIndex] = useState(0);
   const [solutions, setSolutions] = useState({});
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [endConfirmMessage, setEndConfirmMessage] = useState("");
 
   const autoSubmitTriggered = useRef(false);
   const editorCleanupRef = useRef(null);
@@ -347,22 +349,24 @@ export default function DailyChallengeTest() {
     }
   };
 
-  const handleEndChallenge = async () => {
+  const handleEndChallenge = () => {
     if (!studentEmail) return;
 
     const totalProblems = challenge?.problems?.length || 0;
     const submittedCount = submittedProblems.size;
 
     if (submittedCount < totalProblems) {
-      const confirmEnd = window.confirm(
+      setEndConfirmMessage(
         `You have only submitted ${submittedCount} out of ${totalProblems} questions. Are you sure you want to end the Daily Challenge?`
       );
-      if (!confirmEnd) return;
     } else {
-      const confirmEnd = window.confirm("Are you sure you want to submit your Daily Challenge and end the session?");
-      if (!confirmEnd) return;
+      setEndConfirmMessage("Are you sure you want to submit your Daily Challenge and end the session?");
     }
+    setShowEndConfirm(true);
+  };
 
+  const executeEndChallenge = async () => {
+    setShowEndConfirm(false);
     setSubmitting(true);
 
     try {
@@ -557,7 +561,7 @@ export default function DailyChallengeTest() {
                   <select
                     value={selectedLanguage}
                     onChange={(event) => handleLanguageChange(event.target.value)}
-                    disabled={running || submitting}
+                    disabled={isDone || running || submitting}
                     className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   >
                     {Object.values(LANGUAGES).map((language) => (
@@ -573,7 +577,7 @@ export default function DailyChallengeTest() {
                   <button
                     type="button"
                     onClick={handleRun}
-                    disabled={running || submitting}
+                    disabled={isDone || running || submitting}
                     className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
                   >
                     <Play className="h-3.5 w-3.5" />
@@ -582,11 +586,11 @@ export default function DailyChallengeTest() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={running || submitting}
+                    disabled={isDone || running || submitting}
                     className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                   >
                     <SendHorizontal className="h-3.5 w-3.5" />
-                    {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
+                    {isDone ? "Submitted" : submitting ? "Submit" : "Submit"}
                   </button>
                 </div>
               </div>
@@ -664,7 +668,7 @@ export default function DailyChallengeTest() {
                   onChange={handleCodeChange}
                   theme={theme === "dark" ? "vs-dark" : "custom-light"}
                   options={{
-                    readOnly: submitting,
+                    readOnly: isDone,
                     contextmenu: false,
                     minimap: { enabled: false },
                     wordWrap: "on",
@@ -709,6 +713,36 @@ export default function DailyChallengeTest() {
           </button>
         </div>
       </footer>
+
+      {showEndConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowEndConfirm(false)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] p-6 shadow-2xl backdrop-blur-xl text-center z-[210]">
+            <h3 className="text-sm font-bold text-[#0d2a57] dark:text-[#8fd9ff] uppercase tracking-wider font-press-start text-[10px]">
+              End Challenge
+            </h3>
+            <p className="mt-4 text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-semibold">
+              {endConfirmMessage}
+            </p>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEndConfirm(false)}
+                className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 bg-[#edf1f6] dark:bg-[#18365f] text-[#1a2335] dark:text-white text-sm font-semibold transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={executeEndChallenge}
+                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all shadow-md active:scale-[0.98]"
+              >
+                Yes, End Challenge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
