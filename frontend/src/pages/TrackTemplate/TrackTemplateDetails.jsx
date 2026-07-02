@@ -119,6 +119,8 @@ export default function TrackTemplateDetails() {
     return null;
   }, [trackDetail, location.state, templateId]);
 
+  const isMultiQuestionTrack = track?.trackType === 'Daily Task' || track?.trackType === 'Daily Challenge';
+
   // Helper to determine if track has MCQ and/or Coding category elements
   const { hasMcq, hasCoding } = useMemo(() => {
     const categories = track?.category
@@ -165,6 +167,9 @@ export default function TrackTemplateDetails() {
   }, [trackDetail?.dayAssignments]);
 
   const filteredQuestions = useMemo(() => {
+    if (track?.trackType === 'Daily Challenge') {
+      return availableQuestions.filter((question) => !assignedQuestionIdSet.has(String(question.id || question._id)));
+    }
     if (!addDayForm.taskType) return availableQuestions;
 
     const taskTypeLower = addDayForm.taskType.toLowerCase();
@@ -193,7 +198,7 @@ export default function TrackTemplateDetails() {
 
       return true;
     });
-  }, [availableQuestions, addDayForm.taskType, allCategories, assignedQuestionIdSet]);
+  }, [availableQuestions, addDayForm.taskType, allCategories, assignedQuestionIdSet, track?.trackType]);
 
   const dayWiseQuestions = filteredQuestions;
   const Icon = iconMap[track?.iconKey] || FiCode;
@@ -245,22 +250,18 @@ export default function TrackTemplateDetails() {
 
   const selectableAssignments = useMemo(() => {
     return (trackDetail?.dayAssignments || []).flatMap((day) => {
-      if (track?.trackType === 'Daily Task' || track?.trackType === 'Daily Challenge') {
-        const direct = day.questionId
-          ? [{ key: assignmentKey(day.dayNumber, day.questionId), dayNumber: day.dayNumber, questionId: day.questionId }]
-          : [];
-        const taskAssignments = (day.tasks || []).map((task) => ({
+      if (isMultiQuestionTrack) {
+        return (day.tasks || []).map((task) => ({
           key: assignmentKey(day.dayNumber, task.questionId),
           dayNumber: day.dayNumber,
           questionId: task.questionId,
         }));
-        return [...direct, ...taskAssignments];
       }
       return day.questionId
         ? [{ key: assignmentKey(day.dayNumber, day.questionId), dayNumber: day.dayNumber, questionId: null }]
         : [];
     });
-  }, [trackDetail?.dayAssignments, track?.trackType]);
+  }, [trackDetail?.dayAssignments, isMultiQuestionTrack]);
 
   const selectableAssignmentKeys = useMemo(
     () => selectableAssignments.map((assignment) => assignment.key),
@@ -333,7 +334,7 @@ export default function TrackTemplateDetails() {
   }, [templateId]);
 
   useEffect(() => {
-    if (track?.trackType === 'Daily Task') {
+    if (isMultiQuestionTrack) {
       if (trackDetail?.availableQuestions) {
         setAvailableQuestions(trackDetail.availableQuestions);
       }
@@ -363,7 +364,7 @@ export default function TrackTemplateDetails() {
     return () => {
       cancelled = true;
     };
-  }, [categorySlug, track?.trackType, trackDetail?.availableQuestions]);
+  }, [categorySlug, isMultiQuestionTrack, trackDetail?.availableQuestions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -530,7 +531,7 @@ export default function TrackTemplateDetails() {
                 />
               </div>
 
-              {(track?.trackType === 'Daily Task' || track?.trackType === 'Daily Challenge') && (
+              {track?.trackType === 'Daily Task' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-[#1a2335] dark:text-white">Task Type</label>
@@ -749,44 +750,26 @@ export default function TrackTemplateDetails() {
             </div>
 
             <div className="space-y-2.5">
-              {track?.trackType === 'Daily Task' || track?.trackType === 'Daily Challenge' ? (
+              {isMultiQuestionTrack ? (
                 (trackDetail?.dayAssignments || []).map((day) => (
                   <article key={`day-${day.dayNumber}`} className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <button onClick={() => toggleDay(day.dayNumber)} className="inline-flex items-center gap-2 text-sm font-semibold text-[#0b1b38] dark:text-white">
                         {expandedDays[day.dayNumber] ? <FiChevronDown className="w-4 h-4" /> : <FiChevronRight className="w-4 h-4" />}
-                        Day {day.dayNumber} ({(day.tasks?.length || 0) + (day.questionId ? 1 : 0)} Questions)
+                        Day {day.dayNumber} ({day.tasks?.length || 0} Questions)
                       </button>
                       <button
                         onClick={() => openAddTaskModal(day.dayNumber)}
                         className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
                       >
                         <FiPlus className="w-3.5 h-3.5" />
-                        Add Question/Task
+                        {track?.trackType === 'Daily Task' ? 'Add Task' : 'Add Question'}
                       </button>
                     </div>
                     {expandedDays[day.dayNumber] && <div className="space-y-2 pl-3">
-                      {day.questionId && (
-                        <div className="flex items-start justify-between gap-3 border-t border-black/5 dark:border-white/5 pt-2 text-xs">
-                          <label className="flex min-w-0 flex-1 items-start gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedAssignments.includes(assignmentKey(day.dayNumber, day.questionId))}
-                              onChange={() => toggleAssignmentSelection(assignmentKey(day.dayNumber, day.questionId))}
-                              className="mt-0.5 h-3.5 w-3.5 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6]"
-                            />
-                            <span className="min-w-0 text-[#0b1b38] dark:text-white font-medium">
-                              <span className="mr-2 font-semibold text-slate-400 dark:text-slate-500">1.</span>
-                              <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[DSA/Coding]</span>
-                              {day.questionTitle || "Direct Assigned Question"}
-                            </span>
-                          </label>
-                        </div>
-                      )}
                       {day.tasks && day.tasks.length > 0 ? (
                         day.tasks.map((t, idx) => {
                           const key = assignmentKey(day.dayNumber, t.questionId);
-                          const seq = day.questionId ? idx + 2 : idx + 1;
                           return (
                           <div key={`${t.questionId}-${idx}`} className="flex items-start justify-between gap-3 border-t border-black/5 dark:border-white/5 pt-2 text-xs">
                             <label className="flex min-w-0 flex-1 items-start gap-2">
@@ -797,7 +780,7 @@ export default function TrackTemplateDetails() {
                                 className="mt-0.5 h-3.5 w-3.5 rounded border-black/20 text-[#3c83f6] focus:ring-[#3c83f6]"
                               />
                               <span className="min-w-0 text-[#0b1b38] dark:text-white font-medium">
-                              <span className="mr-2 font-semibold text-slate-400 dark:text-slate-500">{seq}.</span>
+                              <span className="mr-2 font-semibold text-slate-400 dark:text-slate-500">{idx + 1}.</span>
                               <span className="font-semibold text-blue-600 dark:text-blue-400 mr-2">[{t.taskType}]</span>
                               {t.questionTitle}
                               <span className="ml-2 rounded-full bg-[#dfe8f6] px-2 py-0.5 text-[10px] font-bold text-[#3c83f6] dark:bg-white/10 dark:text-blue-300">
@@ -816,9 +799,9 @@ export default function TrackTemplateDetails() {
                           </div>
                           );
                         })
-                      ) : (!day.questionId ? (
+                      ) : (
                         <p className="text-xs text-slate-400 dark:text-slate-500 italic">No tasks assigned yet.</p>
-                      ) : null)}
+                      )}
                     </div>}
                   </article>
                 ))

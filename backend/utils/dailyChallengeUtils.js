@@ -217,9 +217,23 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  const trackTemplate = batch.assignedDailyChallengeTrack
-    ? await mongoose.model("TrackTemplate").findById(batch.assignedDailyChallengeTrack)
+  const TrackTemplate = mongoose.model("TrackTemplate");
+  let trackTemplate = batch.assignedDailyChallengeTrack
+    ? await TrackTemplate.findById(batch.assignedDailyChallengeTrack)
     : null;
+  if (!trackTemplate) {
+    const candidateTemplateIds = [
+      ...(batch.assignedTrackTemplateIds || []),
+      batch.assignedTrackTemplate,
+    ].filter(Boolean);
+    if (candidateTemplateIds.length) {
+      trackTemplate = await TrackTemplate.findOne({
+        _id: { $in: candidateTemplateIds },
+        trackType: "Daily Challenge",
+        status: "Active",
+      });
+    }
+  }
   const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Challenge"), batch.releaseTime || "00:00");
   const batchEnd = endOfDay(batch.expiryDate);
   const now = new Date();
@@ -247,6 +261,41 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     studentPrimaryTrack: studentContext.student?.primaryTrack,
     batchAssignedTrack: batch.assignedTrack,
   });
+
+  if (trackTemplate) {
+    const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const dayAssignment = (trackTemplate.dayAssignments || []).find(
+      (assignment) => Number(assignment.dayNumber) === Number(dayNumber)
+    );
+    const templateQuestionIds = dayAssignment?.tasks?.length
+      ? dayAssignment.tasks.map((task) => task.questionId).filter(Boolean)
+      : [dayAssignment?.questionId].filter(Boolean);
+
+    if (templateQuestionIds.length) {
+      const questions = await Question.find({ _id: { $in: templateQuestionIds } }).lean();
+      const questionOrder = new Map(templateQuestionIds.map((id, index) => [String(id), index]));
+      const orderedQuestions = questions.sort(
+        (a, b) => (questionOrder.get(String(a._id)) ?? 0) - (questionOrder.get(String(b._id)) ?? 0)
+      );
+      if (orderedQuestions.length) {
+        return {
+          student: studentContext.student,
+          studentEmail: studentContext.studentEmail,
+          accessSource: studentContext.accessSource,
+          batch,
+          track: {
+            _id: trackTemplate._id,
+            trackType: desiredTrackType,
+            name: trackTemplate.name,
+          },
+          question: orderedQuestions[0],
+          questions: orderedQuestions,
+          dayNumber,
+          durationMinutes: DAILY_CHALLENGE_RULES.timerLimitMinutes,
+        };
+      }
+    }
+  }
 
   let track = await Track.findOne({
     batchId: batch._id,

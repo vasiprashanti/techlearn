@@ -168,7 +168,9 @@ export const recordPracticeSubmission = async (req, res) => {
 
     let canonicalQuestion = null;
     if (mongoose.Types.ObjectId.isValid(questionIdRaw)) {
-      canonicalQuestion = await Question.findById(questionIdRaw).lean();
+      canonicalQuestion = await Question.findById(questionIdRaw)
+        .select("+content.hiddenTestCases")
+        .lean();
     }
 
     const selectedAnswer = String(req.body.selectedAnswer || "").trim().toUpperCase();
@@ -176,6 +178,11 @@ export const recordPracticeSubmission = async (req, res) => {
     const isMcqSubmission = normalizedCategoryType === "MCQ" && ["A", "B", "C", "D"].includes(selectedAnswer);
 
     let isCorrect = Boolean(req.body.isCorrect);
+    let evaluatedScore = Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : null;
+    let evaluatedAccuracy = Number.isFinite(Number(req.body.accuracy)) ? Number(req.body.accuracy) : null;
+    let passedTestCases = 0;
+    let totalTestCases = 0;
+    let testCaseResults = [];
 
     if (track === "SQL") {
       const code = req.body.code;
@@ -219,7 +226,10 @@ export const recordPracticeSubmission = async (req, res) => {
       if (canonicalQuestion) {
         const visibleTestCases = canonicalQuestion.visibleTestCases || canonicalQuestion.content?.visibleTestCases || [];
         const hiddenTestCases = canonicalQuestion.hiddenTestCases || canonicalQuestion.content?.hiddenTestCases || [];
-        const allTestCases = [...visibleTestCases, ...hiddenTestCases];
+        const allTestCases = [
+          ...visibleTestCases.map((tc, index) => ({ ...tc, visible: true, index })),
+          ...hiddenTestCases.map((tc, index) => ({ ...tc, visible: false, index: visibleTestCases.length + index })),
+        ];
 
         // Filter out completely empty placeholder test cases
         const validTestCases = allTestCases.filter(tc => tc.input?.trim() || tc.output?.trim());
@@ -228,25 +238,49 @@ export const recordPracticeSubmission = async (req, res) => {
           const { testCodeWithJudge0, LANGUAGE_IDS } = await import("../utils/judgeUtil.js");
           const langId = LANGUAGE_IDS[String(language || "").toLowerCase()] || 71; // Default to Python
 
-          let allPassed = true;
           for (const tc of validTestCases) {
-            const judgeRes = await testCodeWithJudge0(code, langId, tc.input, tc.output);
-            if (!judgeRes.passed) {
-              allPassed = false;
-              break;
+            try {
+              const judgeRes = await testCodeWithJudge0(code, langId, tc.input, tc.output);
+              if (judgeRes.passed) passedTestCases += 1;
+              testCaseResults.push({
+                index: tc.index,
+                visible: tc.visible,
+                passed: Boolean(judgeRes.passed),
+                expectedOutput: tc.output || "",
+                actualOutput: judgeRes.passed ? undefined : (judgeRes.actualOutput || judgeRes.output || ""),
+                status: judgeRes.statusDescription || "",
+                executionTime: Number(judgeRes.executionTime || 0),
+              });
+            } catch (error) {
+              testCaseResults.push({
+                index: tc.index,
+                visible: tc.visible,
+                passed: false,
+                expectedOutput: tc.output || "",
+                actualOutput: "",
+                status: error?.message || "Execution Error",
+                executionTime: 0,
+              });
             }
           }
-          isCorrect = allPassed;
+          totalTestCases = validTestCases.length;
+          evaluatedAccuracy = Math.round((passedTestCases / totalTestCases) * 100);
+          evaluatedScore = evaluatedAccuracy / 100;
+          isCorrect = passedTestCases === totalTestCases;
         } else {
           isCorrect = true;
+          evaluatedAccuracy = 100;
+          evaluatedScore = 1;
         }
       } else {
         isCorrect = true;
+        evaluatedAccuracy = 100;
+        evaluatedScore = 1;
       }
     }
 
-    const score = Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : (isCorrect ? 1 : 0);
-    const accuracy = Number.isFinite(Number(req.body.accuracy)) ? Number(req.body.accuracy) : (isCorrect ? 100 : 0);
+    const score = evaluatedScore !== null ? evaluatedScore : (isCorrect ? 1 : 0);
+    const accuracy = evaluatedAccuracy !== null ? evaluatedAccuracy : (isCorrect ? 100 : 0);
 
     const submission = await PracticeSubmission.create({
       userId: req.user._id,
@@ -260,6 +294,9 @@ export const recordPracticeSubmission = async (req, res) => {
       isCorrect,
       score,
       accuracy,
+      testCaseResults,
+      passedTestCases,
+      totalTestCases,
       submittedAt: req.body.timestamp ? new Date(req.body.timestamp) : new Date(),
     });
 

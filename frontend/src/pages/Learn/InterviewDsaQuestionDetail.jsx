@@ -6,7 +6,6 @@ import remarkGfm from 'remark-gfm';
 import { ArrowLeft, CheckCircle, Play } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
-import { compilerAPI } from '../../services/api';
 import { practiceAPI } from '../../services/practiceApi';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -234,22 +233,23 @@ export default function InterviewDsaQuestionDetail() {
       return;
     }
     setIsRunning(true);
-    setOutput('Running...');
+    setOutput('Running against saved test cases...');
 
     try {
-      const result = await compilerAPI.compileCode({
+      const res = await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'DSA',
+        isCorrect: false,
+        code,
         language: selectedLanguage,
-        source_code: code,
-        stdin: '',
+        finalize: false,
       });
-
-      let outputText = '';
-      if (result?.stdout) outputText += result.stdout;
-      if (result?.stderr) outputText += `\nError:\n${result.stderr}`;
-      if (result?.compile_output) outputText += `\nCompilation Output:\n${result.compile_output}`;
-      if (!outputText.trim()) outputText = 'Code executed successfully (no output)';
-
-      setOutput(outputText);
+      const passed = Number(res?.passedTestCases || 0);
+      const total = Number(res?.totalTestCases || 0);
+      const accuracy = Number(res?.accuracy || 0);
+      const detail = total > 0 ? `${passed}/${total} test cases passed (${accuracy}% accuracy).` : 'Code submitted for evaluation.';
+      setOutput(detail);
+      setIsLastSubmissionCorrect(Boolean(res?.isCorrect));
     } catch (error) {
       setOutput(`Execution failed: ${error?.message || 'Unknown error occurred'}`);
     } finally {
@@ -272,11 +272,17 @@ export default function InterviewDsaQuestionDetail() {
         language: selectedLanguage,
         finalize: false,
       });
-      if (res && res.isCorrect) {
-        setOutput('Submission successful! All test cases passed.');
+      const passed = Number(res?.passedTestCases || 0);
+      const total = Number(res?.totalTestCases || 0);
+      const accuracy = Number(res?.accuracy || 0);
+      if (res?.isCorrect) {
+        setOutput(`Submission successful! ${passed}/${total} test cases passed.`);
         setIsLastSubmissionCorrect(true);
+      } else if (passed > 0) {
+        setOutput(`Partial submission saved. ${passed}/${total} test cases passed (${accuracy}% accuracy).`);
+        setIsLastSubmissionCorrect(false);
       } else {
-        setOutput('Error: Incorrect submission. Some test cases failed.');
+        setOutput(total > 0 ? `Submission saved. 0/${total} test cases passed.` : 'Submission saved for evaluation.');
         setIsLastSubmissionCorrect(false);
       }
     } catch (error) {

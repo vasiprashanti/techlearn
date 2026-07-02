@@ -69,6 +69,12 @@ const batchSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    attachedCourse: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      default: null,
+      index: true,
+    },
     batchSize: {
       type: Number,
       min: 1,

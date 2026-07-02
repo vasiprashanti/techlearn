@@ -1603,3 +1603,29 @@ html {
 .dark .text-lavender {
   color: #d6c7ff;
 }
+
+/* Minimal scrollbar styles for cleaner layout containers */
+.minimal-scrollbar::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25) !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
+
+.minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45) !important;
+}
+
+/* Firefox support */
+.minimal-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
+}

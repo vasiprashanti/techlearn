@@ -135,6 +135,15 @@ export const courseAPI = {
   },
 };
 
+export const placementLearningAPI = {
+  getDashboard: async () => {
+    const response = await fetch(`${API_BASE}/placement-learning/dashboard`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse(response);
+  },
+};
+
 // User Progress API
 export const progressAPI = {
   // Get user progress (userId is extracted from JWT token on backend)
@@ -474,6 +483,7 @@ export const API_ERRORS = {
 export default {
   authAPI,
   courseAPI,
+  placementLearningAPI,
   progressAPI,
   exerciseAPI,
   paymentAPI,

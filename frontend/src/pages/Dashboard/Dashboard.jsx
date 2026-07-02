@@ -13,6 +13,7 @@ import { useUser } from '../../context/UserContext';
 import leaderboardApi from '../../services/leaderboardApi';
 import { dailyChallengeAPI } from '../../services/dailyChallengeApi';
 import { practiceAPI } from '../../services/practiceApi';
+import { placementLearningAPI } from '../../services/api';
 import { getStudentActiveProject, toggleStudentProjectTask } from '../../api/project';
 import heroBg from '../../assets/hero-bg-dashboard.webp';
 import pixelArrowImg from '../../assets/pixel-arrow.png';
@@ -99,6 +100,7 @@ export default function Dashboard() {
   const [projectData, setProjectData] = useState(null);
   const [projectLoading, setProjectLoading] = useState(true);
   const [advancementModal, setAdvancementModal] = useState({ isOpen: false, completedDay: 1, nextDay: 2 });
+  const [placementLearning, setPlacementLearning] = useState(null);
   
   // Optimistic UI updates states
   const [pendingToggles, setPendingToggles] = useState(new Set());
@@ -127,6 +129,16 @@ export default function Dashboard() {
       console.error("Failed to load project data:", error);
     } finally {
       setProjectLoading(false);
+    }
+  };
+
+  const loadPlacementLearning = async () => {
+    try {
+      const res = await placementLearningAPI.getDashboard();
+      setPlacementLearning(res?.hasPlacementLearning ? res : null);
+    } catch (error) {
+      console.error("Failed to load placement learning:", error);
+      setPlacementLearning(null);
     }
   };
 
@@ -273,6 +285,7 @@ export default function Dashboard() {
       setTasksLoaded(true);
     }
     loadProjectData();
+    loadPlacementLearning();
   }, []);
 
   // Group the daily tasks for the checklist display
@@ -515,6 +528,16 @@ export default function Dashboard() {
     day: 'numeric',
   });
 
+  const hasPlacementLearning = !projectLoading && !hasActiveProject && !!placementLearning?.hasPlacementLearning;
+  const todayNotesHref = placementLearning?.todayTopic?.href || (
+    placementLearning?.course?.id
+      ? `/learn/courses/${placementLearning.course.id}/topics?day=${placementLearning.batch?.currentDay || 1}`
+      : '/learn'
+  );
+  const hasEmptyLeaderboard =
+    !leaderboardLoading &&
+    (!leaderboardEntries.length || leaderboardEntries.every((entry) => Number(entry.totalXp || 0) === 0));
+
   const projectStats = hasActiveProject && projectData ? [
     { title: 'Project XP', value: projectData.projectXpEarned.toLocaleString(), icon: <PixelStar /> },
     { title: 'Tasks Done', value: `${projectData.projectCompletedTotal}/${projectData.totalProjectTasks}`, icon: <PixelQuestion /> },
@@ -719,17 +742,31 @@ export default function Dashboard() {
                       ) : (
                         <>
                           {/* Button at bottom right with slightly more rounded edges (rounded-md) */}
-                          <div className="flex w-full justify-end pt-1">
+                          <div className="flex w-full flex-wrap justify-end gap-2 pt-1">
                             <button
                               onClick={() => {
                                 if (activeChallenge?.linkId) {
                                   navigate(`/daily-challenge/${activeChallenge.linkId}`);
+                                } else {
+                                  setToast({
+                                    show: true,
+                                    message: "No Daily Challenge assigned today. Please check back tomorrow.",
+                                    type: "info",
+                                  });
                                 }
                               }}
                               className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                             >
                               Go to Daily challenge <ChevronRight className="w-3 h-3" />
                             </button>
+                            {hasPlacementLearning && placementLearning?.todayTopic && (
+                              <button
+                                onClick={() => navigate(todayNotesHref)}
+                                className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                              >
+                                Today's Notes <ChevronRight className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
                         </>
                       )}
@@ -806,6 +843,14 @@ export default function Dashboard() {
                           <PlaceholderBar className="h-2 w-10" />
                         </div>
                       ))
+                    : hasEmptyLeaderboard ? (
+                        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#3C83F6]/25 bg-[#3C83F6]/5 px-4 py-6 text-center">
+                          <p className="font-pixel-header text-[10px] sm:text-xs text-[#00113b] dark:text-[#8fd9ff]">Leaderboard starts today</p>
+                          <p className="font-press-start text-[10px] sm:text-xs leading-relaxed text-[#00113b]/65 dark:text-[#81bde6]">
+                            Complete today's Daily Challenge to earn XP and claim a rank.
+                          </p>
+                        </div>
+                      )
                     : featuredLeaderboard.map((student) => (
                         <div
                           key={student.userId}
@@ -1021,13 +1066,70 @@ export default function Dashboard() {
               {/* Bottom Section: Recent Activity & Exercises - Spans all columns */}
               <div className="w-full lg:col-span-8 order-5 lg:order-none border border-black/5 dark:border-[#15366f]/45 bg-white/40 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-4 md:p-5 rounded-xl flex flex-col">
                 <div className="flex items-center justify-between mb-4 shrink-0">
-                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">Recent Activity & Exercises</h3>
-                  <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
-                    View All History
-                  </button>
+                  <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
+                    {hasPlacementLearning ? 'Recent Activity' : 'Recent Activity & Exercises'}
+                  </h3>
+                  {hasPlacementLearning && placementLearning?.todayTopic ? (
+                    <button onClick={() => navigate(todayNotesHref)} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                      Today's Notes
+                    </button>
+                  ) : !hasPlacementLearning ? (
+                    <button onClick={() => navigate('/learn/exercises')} className="font-press-start text-[10px] sm:text-xs text-[#3C83F6] dark:text-blue-400 hover:underline">
+                      View All History
+                    </button>
+                  ) : null}
                 </div>
 
-                {isLoading ? (
+                {hasPlacementLearning ? (
+                  <div className="space-y-4">
+                    {(placementLearning.weeks || []).map((week) => (
+                      <div key={week.week} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-pixel-header text-[9px] md:text-[10px] tracking-wider text-[#00113b]/80 dark:text-[#8fd9ff]">
+                            {week.label}
+                          </h4>
+                          <span className="font-press-start text-[10px] text-[#00113b]/45 dark:text-[#81bde6]/80">
+                            {week.days.filter((day) => !day.isLocked).length}/{week.days.length} unlocked
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                          {week.days.map((day) => (
+                            <button
+                              type="button"
+                              key={day.day}
+                              onClick={() => !day.isLocked && navigate(day.href)}
+                              disabled={day.isLocked}
+                              className={`group min-h-[92px] rounded-xl border p-4 text-left transition-all duration-300 ${
+                                day.isCurrent
+                                  ? 'border-[#3C83F6]/55 bg-[#3C83F6]/10 shadow-[0_8px_24px_rgba(60,131,246,0.18)]'
+                                  : day.isLocked
+                                    ? 'border-black/5 dark:border-white/10 bg-white/10 dark:bg-white/[0.03] opacity-55 cursor-not-allowed'
+                                    : 'border-black/5 dark:border-[#15366f]/40 bg-white/20 dark:bg-[#020b23]/30 hover:bg-white/40 dark:hover:bg-[#020b23]/60 hover:-translate-y-0.5'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <span className="font-press-start text-[10px] uppercase tracking-widest text-[#00113b]/55 dark:text-[#81bde6]">
+                                  Day {day.day}
+                                </span>
+                                <span className={`font-press-start text-[9px] uppercase ${day.isLocked ? 'text-[#00113b]/35 dark:text-white/35' : 'text-[#3C83F6] dark:text-[#8fd9ff]'}`}>
+                                  {day.isLocked ? 'Locked' : day.isCurrent ? 'Today' : 'View'}
+                                </span>
+                              </div>
+                              <p className="mt-3 line-clamp-2 font-press-start text-xs sm:text-sm leading-relaxed text-[#00113b] dark:text-white">
+                                {day.title}
+                              </p>
+                              {!day.isLocked && (
+                                <div className="mt-3 flex justify-end">
+                                  <ChevronRight className="h-3.5 w-3.5 text-[#3C83F6] transition-transform group-hover:translate-x-1" />
+                                </div>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : isLoading ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {Array.from({ length: 3 }).map((_, index) => (
                       <div

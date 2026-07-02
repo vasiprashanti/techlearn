@@ -31,6 +31,14 @@ const Navbar = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
+      const maxScrollY = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+      const isNearPageBottom = maxScrollY - currentScrollY < 24;
+
+      if (isNearPageBottom && currentScrollY > 100) {
+        setIsVisible(false);
+        setLastScrollY(currentScrollY);
+        return;
+      }
 
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
@@ -49,15 +57,6 @@ const Navbar = () => {
     setIsVisible(true);
     setLastScrollY(window.scrollY);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const handleCourseContentScroll = (event) => {
-      setIsVisible(!event.detail?.isScrolled);
-    };
-
-    window.addEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
-    return () => window.removeEventListener('techlearn:course-content-scroll', handleCourseContentScroll);
-  }, []);
 
   const [isForceHidden, setIsForceHidden] = useState(false);
 

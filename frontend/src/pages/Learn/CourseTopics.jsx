@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
 import { courseAPI } from "../../services/api";
@@ -9,20 +9,20 @@ import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/c
 const MarkdownContent = lazy(() => import('./MarkdownContent'));
 
 const CourseTopicsSkeleton = ({ isDarkMode }) => (
-    <div className={`flex min-h-screen w-full font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
+    <div className={`flex min-h-screen w-full min-w-0 overflow-x-clip font-sans antialiased text-[#001862] dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
     <ScrollProgress />
     <div className={`fixed inset-0 -z-10 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
-    <main className="flex-1 flex flex-col h-screen overflow-hidden pt-20 md:pt-24">
-      <header className="flex-shrink-0 px-6 md:px-12 pt-4 pb-4">
+    <main className="flex-1 flex min-h-screen min-w-0 flex-col overflow-x-clip pt-20 md:pt-24">
+      <header className="px-6 md:px-12 pt-4 pb-4">
         <div className="h-4 w-32 rounded-full bg-[#7ec9ff]/30 dark:bg-white/10 animate-pulse" />
       </header>
-      <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
-        <aside className="hidden md:flex min-h-0 w-64 justify-self-start flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
+      <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+        <aside className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 dark:border-white/5 bg-[#bceaff]/80 dark:bg-[#020b23] backdrop-blur-2xl p-3">
           {Array.from({ length: 10 }).map((_, index) => (
             <div key={index} className="mb-2 h-11 rounded-lg bg-[#e4f6ff]/65 dark:bg-white/10 animate-pulse" />
           ))}
         </aside>
-        <div className="min-h-0 overflow-hidden px-4 pb-10 md:px-8 xl:px-0">
+        <div className="min-w-0 overflow-x-clip px-4 pb-10 md:px-8 xl:px-0">
           <div className="mx-auto w-full max-w-[760px] p-8 md:px-10 lg:px-12">
             <div className="h-10 w-3/4 rounded-xl bg-white/35 dark:bg-white/10 animate-pulse" />
             <div className="mt-10 space-y-4">
@@ -45,17 +45,11 @@ const CourseTopics = () => {
 
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const cachedCourse = readCachedCourseDetails(courseId);
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
-  const [isCourseHeaderHidden, setIsCourseHeaderHidden] = useState(false);
-
   const [selectedTopic, setSelectedTopic] = useState(0);
-  
-  // Ref for the scrollable container
-  const scrollContainerRef = useRef(null);
-  const lastContentScrollTopRef = useRef(0);
-  const touchStartYRef = useRef(null);
 
   const [backendCourse, setBackendCourse] = useState(cachedCourse);
   const [loading, setLoading] = useState(!cachedCourse);
@@ -130,110 +124,19 @@ const CourseTopics = () => {
   const totalTopics = currentCourse?.topics?.length || 0;
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
-  const getNotesScrollState = (node = scrollContainerRef.current) => {
-    if (!node) return { atTop: true, atBottom: true, canScroll: false };
 
-    const maxScrollTop = Math.max(node.scrollHeight - node.clientHeight, 0);
-    const canScroll = maxScrollTop > 2;
-
-    return {
-      atTop: node.scrollTop <= 2,
-      atBottom: node.scrollTop >= maxScrollTop - 2,
-      canScroll,
-    };
-  };
-
-  const isSidebarScrollEvent = (event) => {
-    return Boolean(event.target?.closest?.('[data-course-sidebar="true"]'));
-  };
-
-  const scrollNotesBy = (deltaY) => {
-    const scroller = scrollContainerRef.current;
-    if (!scroller || !deltaY) return false;
-
-    const { atTop, atBottom, canScroll } = getNotesScrollState(scroller);
-    if (!canScroll) return false;
-
-    const isScrollingDown = deltaY > 0;
-    const shouldScrollNotes =
-      (isScrollingDown && !atBottom) || (!isScrollingDown && !atTop);
-
-    if (!shouldScrollNotes) return false;
-
-    scroller.scrollTop += deltaY;
-    return true;
-  };
-
-  const handlePrimaryAreaWheel = (event) => {
-    if (window.innerWidth < 768) return;
-    if (isSidebarScrollEvent(event)) return;
-
-    if (scrollNotesBy(event.deltaY)) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
-  const handlePrimaryAreaTouchStart = (event) => {
-    if (window.innerWidth < 768) return;
-    if (isSidebarScrollEvent(event)) {
-      touchStartYRef.current = null;
-      return;
-    }
-
-    touchStartYRef.current = event.touches?.[0]?.clientY ?? null;
-  };
-
-  const handlePrimaryAreaTouchMove = (event) => {
-    if (window.innerWidth < 768) return;
-    if (isSidebarScrollEvent(event) || touchStartYRef.current === null) return;
-
-    const currentY = event.touches?.[0]?.clientY;
-    if (typeof currentY !== 'number') return;
-
-    const deltaY = touchStartYRef.current - currentY;
-    if (scrollNotesBy(deltaY)) {
-      event.preventDefault();
-      event.stopPropagation();
-      touchStartYRef.current = currentY;
-    }
-  };
+  useEffect(() => {
+    if (!totalTopics) return;
+    const requestedDay = Number(searchParams.get("day"));
+    if (!Number.isFinite(requestedDay) || requestedDay <= 0) return;
+    const nextIndex = Math.min(Math.max(requestedDay - 1, 0), totalTopics - 1);
+    setSelectedTopic(nextIndex);
+  }, [searchParams, totalTopics]);
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
-    if (scrollContainerRef.current) {
-      // Direct DOM manipulation ensures it snaps instantly without weird transition glitches
-      scrollContainerRef.current.scrollTop = 0;
-    }
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-    lastContentScrollTopRef.current = 0;
-    setIsCourseHeaderHidden(false);
-    window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-      detail: { isScrolled: false, isScrollingDown: false },
-    }));
   }, [selectedTopic]);
-
-  const handleContentScroll = (event) => {
-    const currentScrollTop = event.currentTarget.scrollTop;
-    const isScrollingDown = currentScrollTop > lastContentScrollTopRef.current;
-    const shouldHideHeader = currentScrollTop > 24 && isScrollingDown;
-
-    lastContentScrollTopRef.current = Math.max(currentScrollTop, 0);
-    window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-      detail: { isScrolled: shouldHideHeader, isScrollingDown },
-    }));
-    setIsCourseHeaderHidden((current) => (
-      current === shouldHideHeader ? current : shouldHideHeader
-    ));
-  };
-
-  useEffect(() => {
-    return () => {
-      window.dispatchEvent(new CustomEvent('techlearn:course-content-scroll', {
-        detail: { isScrolled: false, isScrollingDown: false },
-      }));
-    };
-  }, []);
 
   if (loading && !backendCourse) return <CourseTopicsSkeleton isDarkMode={isDarkMode} />;
 
@@ -260,14 +163,10 @@ const CourseTopics = () => {
       {/* Unified Background */}
       <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? "bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]" : "bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]"}`} />
 
-      <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:h-screen md:overflow-hidden md:pt-24">
+      <main className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col overflow-x-clip pt-20 transition-all duration-700 ease-in-out md:pt-24">
         
         {/* Top Header */}
-        <header className={`flex-shrink-0 overflow-hidden flex items-center justify-between px-4 sm:px-7 md:px-12 transition-all duration-300 ease-out ${
-          isCourseHeaderHidden
-            ? "max-h-0 py-0 opacity-0 pointer-events-none"
-            : "max-h-32 pt-4 pb-4 opacity-100"
-        }`}>
+        <header className="flex-shrink-0 flex items-center justify-between px-4 pt-4 pb-4 sm:px-7 md:px-12">
           <div className="flex flex-col items-start gap-3">
             <button 
                 onClick={() => navigate('/learn')} 
@@ -307,7 +206,7 @@ const CourseTopics = () => {
                     <ChevronLeft className="w-4 h-4 text-[#001862]/60 dark:text-white/60" />
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2 minimal-scrollbar">
                   {currentCourse.topics.map((topic, index) => {
                     const isActive = selectedTopic === index;
 
@@ -332,17 +231,12 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div
-          onWheel={handlePrimaryAreaWheel}
-          onTouchStart={handlePrimaryAreaTouchStart}
-          onTouchMove={handlePrimaryAreaTouchMove}
-          className="flex-1 min-h-0 min-w-0 overflow-x-clip md:overflow-hidden md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
-        >
+        <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
           <aside
             data-course-sidebar="true"
-            className="hidden md:flex min-h-0 w-64 justify-self-start flex-col overflow-hidden rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none"
+            className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
           >
-            <div className="flex-1 overflow-y-auto px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="px-3 py-4 md:ml-6 md:max-w-[13.5rem] md:px-0 md:py-14">
               <div className="space-y-2">
                 {currentCourse.topics.map((topic, index) => {
                   const isActive = selectedTopic === index;
@@ -367,12 +261,8 @@ const CourseTopics = () => {
             </div>
           </aside>
 
-          {/* Main Content Scroll Area - Attached ref here for auto-scroll */}
-          <div
-            ref={scrollContainerRef}
-            onScroll={handleContentScroll}
-            className="relative min-h-0 min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:overflow-y-auto md:px-8 xl:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          >
+          {/* Main Content */}
+          <div className="relative min-w-0 overflow-x-clip px-4 pb-10 pt-0 transition-all duration-500 ease-out md:px-8 xl:px-0">
             <div className="mx-auto w-full max-w-[760px] pb-20">
 
               {/* Reading Content */}

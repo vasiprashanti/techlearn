@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiTrash2, FiCode, FiGrid, FiChevronDown } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiCode, FiGrid, FiChevronDown, FiSearch } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
@@ -9,8 +9,6 @@ import CategoryListPanel from '../../components/admin/question-bank/CategoryList
 import CategoryCreateModal from '../../components/admin/question-bank/CategoryCreateModal';
 import { useQuestionBankCategories } from '../../hooks/useQuestionBankCategories';
 import { questionBankApi } from '../../api/questionBankApi';
-
-const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
 export const QuestionBankAdminPage = () => {
   const { theme } = useTheme();
@@ -29,9 +27,10 @@ export const QuestionBankAdminPage = () => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [typeFilter, setTypeFilter] = useState('All');
-  const [sortOrder, setSortOrder] = useState('default');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('MCQ');
+  const [statusFilter, setStatusFilter] = useState('Active');
+  const [sortBy, setSortBy] = useState('newest');
 
   const handleSelectToggle = (id) => {
     setSelectedCategoryIds((prev) =>
@@ -63,33 +62,6 @@ export const QuestionBankAdminPage = () => {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const filteredAndSortedCategories = React.useMemo(() => {
-    let list = [...categories];
-
-    // 1. Status Filter
-    if (statusFilter !== 'All') {
-      list = list.filter(cat => cat.status === statusFilter);
-    }
-
-    // 2. Type Filter
-    if (typeFilter !== 'All') {
-      list = list.filter(cat => (cat.categoryType || '').toLowerCase() === typeFilter.toLowerCase());
-    }
-
-    // 3. Sort Order
-    if (sortOrder === 'name-asc') {
-      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-    } else if (sortOrder === 'name-desc') {
-      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
-    } else if (sortOrder === 'count-desc') {
-      list.sort((a, b) => (b.total || 0) - (a.total || 0));
-    } else if (sortOrder === 'count-asc') {
-      list.sort((a, b) => (a.total || 0) - (b.total || 0));
-    }
-
-    return list;
-  }, [categories, statusFilter, typeFilter, sortOrder]);
 
   if (!mounted || loading) {
     return <LoadingScreen />;
@@ -160,6 +132,31 @@ export const QuestionBankAdminPage = () => {
   const totalQuestionsCount = categories.reduce((sum, cat) => sum + (cat.total || 0), 0);
   const activeCategoriesCount = categories.filter((cat) => cat.status === 'Active').length;
   const draftCategoriesCount = categories.filter((cat) => cat.status === 'Draft').length;
+  const getCategoryTime = (category, fields) => {
+    for (const field of fields) {
+      const timestamp = new Date(category?.[field] || 0).getTime();
+      if (Number.isFinite(timestamp) && timestamp > 0) return timestamp;
+    }
+    return 0;
+  };
+  const filteredCategories = categories
+    .filter((category) => {
+      const q = categorySearch.trim().toLowerCase();
+      const matchesSearch = !q ||
+        String(category.title || '').toLowerCase().includes(q) ||
+        String(category.categoryType || '').toLowerCase().includes(q);
+      const matchesType = category.categoryType === typeFilter;
+      const matchesStatus = category.status === statusFilter;
+      return matchesSearch && matchesType && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') return getCategoryTime(a, ['createdAt']) - getCategoryTime(b, ['createdAt']);
+      if (sortBy === 'last-opened') {
+        return getCategoryTime(b, ['lastOpenedAt', 'openedAt', 'updatedAt', 'createdAt']) -
+          getCategoryTime(a, ['lastOpenedAt', 'openedAt', 'updatedAt', 'createdAt']);
+      }
+      return getCategoryTime(b, ['createdAt']) - getCategoryTime(a, ['createdAt']);
+    });
 
   return (
     <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
@@ -304,88 +301,86 @@ export const QuestionBankAdminPage = () => {
 
           {/* Category Listing Container */}
           <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-4">
-              {/* Left Column: Title & Select All */}
-              <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Question Categories</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl md:text-2xl leading-tight font-semibold text-slate-900 dark:text-white">Question Categories</h2>
                 
-                <div className="flex items-center gap-2 px-2.5 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
+                <div className="flex items-center gap-2 px-3 py-1 bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl h-9 shrink-0">
                   <input
                     type="checkbox"
-                    checked={categories.length > 0 && categories.every(c => selectedCategoryIds.includes(c.id || c._id))}
+                    checked={filteredCategories.length > 0 && filteredCategories.every(c => selectedCategoryIds.includes(c.id || c._id))}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        const newSelections = new Set([...selectedCategoryIds, ...categories.map(c => c.id || c._id)]);
+                        const newSelections = new Set([...selectedCategoryIds, ...filteredCategories.map(c => c.id || c._id)]);
                         setSelectedCategoryIds(Array.from(newSelections));
                       } else {
-                        setSelectedCategoryIds(selectedCategoryIds.filter(id => !categories.some(c => (c.id || c._id) === id)));
+                        setSelectedCategoryIds(selectedCategoryIds.filter(id => !filteredCategories.some(c => (c.id || c._id) === id)));
                       }
                     }}
-                    className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
+                    className="w-4 h-4 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6] cursor-pointer bg-white dark:bg-black/30"
                   />
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Select All</span>
                 </div>
               </div>
-              
-              {/* Right Column: Filters & Button */}
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Status Filter */}
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
-                  >
-                    <option className={dropdownOptionClass} value="All">All Statuses</option>
-                    <option className={dropdownOptionClass} value="Active">Active</option>
-                    <option className={dropdownOptionClass} value="Draft">Draft</option>
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
-                </div>
+              <button
+                onClick={handleAddCategoryClick}
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-5 text-sm font-semibold transition-colors shadow-sm"
+              >
+                <FiPlus className="w-4 h-4" />
+                Add Category
+              </button>
+            </div>
 
-                {/* Category Type Filter */}
-                <div className="relative">
-                  <select
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
-                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
-                  >
-                    <option className={dropdownOptionClass} value="All">All Types</option>
-                    <option className={dropdownOptionClass} value="Coding">Coding</option>
-                    <option className={dropdownOptionClass} value="MCQ">MCQ</option>
-                    <option className={dropdownOptionClass} value="Notes">Notes</option>
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
-                </div>
-
-                {/* Sort dropdown */}
-                <div className="relative">
-                  <select
-                    value={sortOrder}
-                    onChange={(e) => setSortOrder(e.target.value)}
-                    className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer max-w-[100px] text-ellipsis overflow-hidden whitespace-nowrap"
-                  >
-                    <option className={dropdownOptionClass} value="default">Default Sort</option>
-                    <option className={dropdownOptionClass} value="name-asc">Name: A-Z</option>
-                    <option className={dropdownOptionClass} value="name-desc">Name: Z-A</option>
-                    <option className={dropdownOptionClass} value="count-desc">High to Low</option>
-                    <option className={dropdownOptionClass} value="count-asc">Low to High</option>
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
-                </div>
-
-                <button
-                  onClick={handleAddCategoryClick}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] px-4 text-xs font-bold transition-colors shadow-sm"
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_180px_180px_180px]">
+              <div className="relative">
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40 dark:text-white/45" />
+                <input
+                  value={categorySearch}
+                  onChange={(e) => setCategorySearch(e.target.value)}
+                  placeholder="Search categories..."
+                  className="h-10 w-full rounded-xl border border-black/10 bg-white/80 pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                />
+              </div>
+              <div className="relative">
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
                 >
-                  <FiPlus className="w-3.5 h-3.5" />
-                  Add Category
-                </button>
+                  <option value="MCQ">MCQ</option>
+                  <option value="Coding">Coding</option>
+                  <option value="Query">Query</option>
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+              </div>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Archived">Archived</option>
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
+              </div>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-black/10 bg-white/80 px-3 pr-9 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-[#3C83F6]/25 dark:border-white/15 dark:bg-[#0f1f43] dark:text-white"
+                >
+                  <option value="oldest">Oldest First</option>
+                  <option value="newest">Newest First</option>
+                  <option value="last-opened">Last Opened</option>
+                </select>
+                <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45 dark:text-white/60" />
               </div>
             </div>
 
             <CategoryListPanel
-              categories={filteredAndSortedCategories}
+              categories={filteredCategories}
               selectedCategoryIds={selectedCategoryIds}
               onSelectToggle={handleSelectToggle}
               onEditCategory={handleEditCategoryClick}
