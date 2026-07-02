@@ -1324,7 +1324,8 @@ export const getBatchDetail = async (req, res) => {
       let todayTaskXp = 0;
 
       const studentChallengeAttemptToday = dailyChallengeAttempts.find(
-        (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail
+        (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                 String(att.batchId || "") === String(batchId)
       );
 
       const studentChallengeSubToday = challengeSubmissions.find(
@@ -1715,9 +1716,10 @@ todayXp = todayChallengeXp + todayTaskXp;
           }
         });
 
-        // Find if student has a Daily Challenge Attempt for this day using questionId mapping
+        // Find if student has a Daily Challenge Attempt for this day using questionId mapping, filtered by batchId
         const dayChallengeAttempt = dailyChallengeAttempts.find(
           (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                  String(att.batchId || "") === String(batchId) &&
                   assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId))
         );
 
