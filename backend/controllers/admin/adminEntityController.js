@@ -770,11 +770,7 @@ export const getBatchDetail = async (req, res) => {
       userIds.push(u._id);
     });
 
-<<<<<<< HEAD
-    const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts, challengeSubmissions] = await Promise.all([
-=======
     const [tracks, submissions, trackTemplates, practiceSubmissions, dailyTaskAttempts, allProgress, dailyChallengeAttempts, codingChallengeSubmissions] = await Promise.all([
->>>>>>> cfd280cc4e1101252290398e271640c237150b98
       Track.find({ batchId }).populate("orderedQuestionIds", "title").lean(),
       Submission.find(
         studentIds.length
@@ -805,14 +801,12 @@ export const getBatchDetail = async (req, res) => {
       studentEmails.length
         ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
         : Promise.resolve([]),
-      studentEmails.length
-<<<<<<< HEAD
-        ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails } }).lean()
-=======
+            studentEmails.length
         ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
->>>>>>> cfd280cc4e1101252290398e271640c237150b98
         : Promise.resolve([]),
     ]);
+
+          const challengeSubmissions = codingChallengeSubmissions;
 
     const mcqSubmissions = studentEmails.length
       ? await StudentMcqSubmission.find({ studentEmail: { $in: studentEmails } })
@@ -1358,19 +1352,18 @@ export const getBatchDetail = async (req, res) => {
         (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
                  String(att.batchId || "") === String(batchId)
       );
-<<<<<<< HEAD
-=======
-      if (studentChallengeAttemptToday) {
-        // Find corresponding challenge submissions
-        const challengeSubs = submissions.filter(
-          (sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id) || 
-                   String(sub._id) === String(studentChallengeAttemptToday.finalSubmissionId)
-        );
-        const fallbackChallengeSubs = studentCodingChallengeSubsAllTime
-          .filter((sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id))
-          .map((sub) => ({ ...sub, type: "StudentCodingSubmission" }));
-        const allChallengeSubs = [...challengeSubs, ...fallbackChallengeSubs];
->>>>>>> cfd280cc4e1101252290398e271640c237150b98
+      const allChallengeSubs = studentChallengeAttemptToday
+        ? [
+            ...submissions.filter(
+              (sub) =>
+                String(sub.attemptId || "") === String(studentChallengeAttemptToday._id) ||
+                String(sub._id) === String(studentChallengeAttemptToday.finalSubmissionId)
+            ),
+            ...studentCodingChallengeSubsAllTime
+              .filter((sub) => String(sub.attemptId || "") === String(studentChallengeAttemptToday._id))
+              .map((sub) => ({ ...sub, type: "StudentCodingSubmission" })),
+          ]
+        : [];
 
       const studentChallengeSubToday = challengeSubmissions.find(
         (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
@@ -1466,16 +1459,16 @@ export const getBatchDetail = async (req, res) => {
 
         if (dailyChallengeHasMultiple) {
           todayChallengeScore = "View Scores";
-<<<<<<< HEAD
-        } else if (studentChallengeSubToday) {
-          todayChallengeScore = `${todayChallengeXp}/${maxChallengeXpToday}`;
         } else {
-          todayChallengeScore = `0/${maxChallengeXpToday}`;
-=======
           // Group scores by category type
-          const mcqSubs = allChallengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "mcq");
-          const sqlSubs = allChallengeSubs.filter(sub => questionIdToTypeMap.get(String(sub.questionId)) === "sql");
-          const codingSubs = allChallengeSubs.filter(sub => sub.type === "StudentCodingSubmission" || questionIdToTypeMap.get(String(sub.questionId)) === "coding" || !questionIdToTypeMap.has(String(sub.questionId)));
+          const mcqSubs = allChallengeSubs.filter((sub) => questionIdToTypeMap.get(String(sub.questionId)) === "mcq");
+          const sqlSubs = allChallengeSubs.filter((sub) => questionIdToTypeMap.get(String(sub.questionId)) === "sql");
+          const codingSubs = allChallengeSubs.filter(
+            (sub) =>
+              sub.type === "StudentCodingSubmission" ||
+              questionIdToTypeMap.get(String(sub.questionId)) === "coding" ||
+              !questionIdToTypeMap.has(String(sub.questionId))
+          );
 
           // Calculate challenge template questions for today
           const challengeTemplateTodayQuestions = [];
@@ -1483,7 +1476,7 @@ export const getBatchDetail = async (req, res) => {
             const dayAssignment = dailyChallengeTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
             if (dayAssignment) {
               if (dayAssignment.tasks && dayAssignment.tasks.length > 0) {
-                dayAssignment.tasks.forEach(t => {
+                dayAssignment.tasks.forEach((t) => {
                   if (t.questionId) challengeTemplateTodayQuestions.push(t.questionId);
                 });
               } else if (dayAssignment.questionId) {
@@ -1495,7 +1488,7 @@ export const getBatchDetail = async (req, res) => {
           let totalMcqToday = 0;
           let totalSqlToday = 0;
           let totalCodingToday = 0;
-          challengeTemplateTodayQuestions.forEach(q => {
+          challengeTemplateTodayQuestions.forEach((q) => {
             const type = questionIdToTypeMap.get(String(q._id || q));
             if (type === "mcq") totalMcqToday++;
             else if (type === "sql") totalSqlToday++;
@@ -1503,14 +1496,14 @@ export const getBatchDetail = async (req, res) => {
           });
 
           if (mcqSubs.length > 0) {
-            const totalCorrect = mcqSubs.filter(s => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
+            const totalCorrect = mcqSubs.filter((s) => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
             todayChallengeScoresDetail.mcq = `${totalCorrect}/${totalMcqToday}`;
           } else if (totalMcqToday > 0) {
             todayChallengeScoresDetail.mcq = `—/${totalMcqToday}`;
           }
 
           if (sqlSubs.length > 0) {
-            const totalCorrect = sqlSubs.filter(s => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
+            const totalCorrect = sqlSubs.filter((s) => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
             todayChallengeScoresDetail.sql = `${totalCorrect}/${totalSqlToday}`;
           } else if (totalSqlToday > 0) {
             todayChallengeScoresDetail.sql = `—/${totalSqlToday}`;
@@ -1528,23 +1521,12 @@ export const getBatchDetail = async (req, res) => {
           if (primarySub) {
             todayChallengeXp = primarySub.xpEarned || primarySub.totalScore || 0;
           }
-        } else {
-          const attemptSub = allChallengeSubs[0];
-          if (attemptSub) {
-            const earnedXp = attemptSub.xpEarned || attemptSub.totalScore || 0;
-            if (attemptSub.type === "StudentCodingSubmission") {
-              const stats = getCodingSubmissionTestStats(attemptSub);
-              todayChallengeScore = stats.total > 0 ? `${stats.passed}/${stats.total}` : `${earnedXp}/100`;
-            } else if (attemptSub.finalSubmissionResults?.totalTestCases) {
-              todayChallengeScore = `${attemptSub.finalSubmissionResults.passedTestCases || 0}/${attemptSub.finalSubmissionResults.totalTestCases}`;
-            } else {
-              todayChallengeScore = `${attemptSub.accuracyScore ?? attemptSub.totalScore ?? earnedXp}/100`;
-            }
-            todayChallengeXp = earnedXp;
+
+          if (studentChallengeSubToday) {
+            todayChallengeScore = `${todayChallengeXp}/${maxChallengeXpToday}`;
           } else {
-            todayChallengeScore = `0/100`;
+            todayChallengeScore = `0/${maxChallengeXpToday}`;
           }
->>>>>>> cfd280cc4e1101252290398e271640c237150b98
         }
       }
 
