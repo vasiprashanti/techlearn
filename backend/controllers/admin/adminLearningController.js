@@ -716,9 +716,9 @@ export const listTrackTemplates = async (req, res) => {
   try {
     const templates = await TrackTemplate.find().populate("batchId", "name").sort({ createdAt: -1 }).lean();
     const data = templates.map((template) => {
-      const effectiveType = template.trackType === "Daily Task" || template.category === "Daily Task"
-        ? "Daily Task"
-        : "Daily Challenge";
+      const effectiveType = template.trackType
+        ? template.trackType
+        : (template.category === "Daily Task" ? "Daily Task" : "Daily Challenge");
       return {
         id: template._id,
         name: template.name,
@@ -829,9 +829,9 @@ export const getTrackTemplateDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const effectiveType = template.trackType === "Daily Task" || template.category === "Daily Task"
-      ? "Daily Task"
-      : "Daily Challenge";
+    const effectiveType = template.trackType
+      ? template.trackType
+      : (template.category === "Daily Task" ? "Daily Task" : "Daily Challenge");
 
     let questionFilter = { status: "Active", isActive: { $ne: false } };
     if (effectiveType === "Daily Task" || effectiveType === "Daily Challenge") {
@@ -984,9 +984,9 @@ export const updateTrackTemplate = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const currentTrackType = template.trackType === "Daily Task" || template.category === "Daily Task"
-      ? "Daily Task"
-      : "Daily Challenge";
+    const currentTrackType = template.trackType
+      ? template.trackType
+      : (template.category === "Daily Task" ? "Daily Task" : "Daily Challenge");
 
     const nextTrackType = req.body.trackType || currentTrackType;
     const nextBatchId = req.body.batchId || template.batchId;
@@ -994,19 +994,24 @@ export const updateTrackTemplate = async (req, res) => {
 
     if (req.body.name) template.name = req.body.name.trim();
     if (req.body.description !== undefined) template.description = req.body.description?.trim() || "";
-    if (req.body.category) {
+    if (req.body.category !== undefined) {
       const nextCategory = req.body.category.trim();
-      const categoriesList = nextCategory.split(",").map((c) => c.trim());
-      const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
-      const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
-      if (hasPracticeCategory) {
-        return res.status(400).json({
-          success: false,
-          message: "Templates cannot be associated with categories configured for 'Practice' visibility.",
-        });
+      if (nextCategory) {
+        const categoriesList = nextCategory.split(",").map((c) => c.trim());
+        const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+        const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
+        if (hasPracticeCategory) {
+          return res.status(400).json({
+            success: false,
+            message: "Templates cannot be associated with categories configured for 'Practice' visibility.",
+          });
+        }
+        template.category = nextCategory;
+        template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
+      } else {
+        template.category = req.body.trackType || template.trackType || "Daily Challenge";
+        template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
       }
-      template.category = nextCategory;
-      template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
     }
     if (req.body.batchId) {
       if (!assertObjectId(req.body.batchId, "batchId", res)) return;
@@ -1142,7 +1147,7 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     const normalizedDayNumber = Number(dayNumber);
     const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
-      .select("_id categoryType xpValue xp_value xp points")
+      .select("_id xpValue xp_value xp points")
       .lean();
     const questionXpById = new Map(
       questionDocs.map((question) => [

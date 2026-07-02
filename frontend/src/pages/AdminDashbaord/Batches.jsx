@@ -242,9 +242,9 @@ const BatchCard = ({ batch, onEdit, onDelete, navigate, selected, onSelectToggle
 
       {/* Bottom Panel */}
       <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
-        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
-          <span>Active Track</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">{batch.track || 'No Track'}</span>
+        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400 min-w-0">
+          <span className="shrink-0">Active Track</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate ml-2 text-right flex-1 min-w-0" title={batch.track || 'No Track'}>{batch.track || 'No Track'}</span>
         </div>
         <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-550 dark:text-slate-400">
           <span>Students</span>

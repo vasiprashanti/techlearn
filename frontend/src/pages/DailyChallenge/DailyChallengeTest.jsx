@@ -74,7 +74,7 @@ export default function DailyChallengeTest() {
   }, []);
 
   const isMcq = problem?.categoryType === "MCQ";
-  const mcqOptions = problem?.content?.options || [];
+  const mcqOptions = problem?.content?.options || problem?.options || [];
 
   // Reset or load code for active problem
   useEffect(() => {
@@ -376,7 +376,7 @@ export default function DailyChallengeTest() {
   const isDone = submittedProblems.has(activeProblemIndex);
 
   return (
-    <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#f5f8ff] via-[#e6efff] to-[#dbebff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+    <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           {theme === "dark" ? (
@@ -401,7 +401,7 @@ export default function DailyChallengeTest() {
 
       <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
         {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
-        <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+        <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
           <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
             {challenge?.problems?.length > 1 && (
               <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
@@ -460,7 +460,7 @@ export default function DailyChallengeTest() {
         {/* Right Panel - MCQ Choices or Monaco Code Space */}
         {isMcq ? (
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
-            <section className="flex-grow flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-5 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <section className="flex-grow flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-5">
               <div className="mb-4 flex items-center justify-between shrink-0 border-b border-black/5 dark:border-white/5 pb-3">
                 <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Select the Correct Option</span>
                 <button
@@ -475,12 +475,15 @@ export default function DailyChallengeTest() {
               </div>
 
               <div className="flex-grow overflow-y-auto pr-1 space-y-3">
-                {mcqOptions.map((opt) => {
-                  const isSelected = code === opt.label;
+                {mcqOptions.map((opt, index) => {
+                  const optLabel = opt.label || opt.optionLabel || String(index);
+                  const optText = opt.text || opt.optionText || opt;
+                  const isSelected = code === optLabel;
                   return (
                     <button
-                      key={opt.label}
-                      onClick={() => handleCodeChange(opt.label)}
+                      key={optLabel + index}
+                      type="button"
+                      onClick={() => handleCodeChange(optLabel)}
                       disabled={isDone || submitting}
                       className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
                         isSelected
@@ -493,10 +496,10 @@ export default function DailyChallengeTest() {
                           ? "bg-[#2563eb] text-white dark:bg-[#8fd9ff] dark:text-[#020b23]"
                           : "bg-black/10 dark:bg-white/10 text-gray-700 dark:text-gray-300"
                       }`}>
-                        {opt.label}
+                        {optLabel}
                       </span>
                       <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        {opt.text}
+                        {optText}
                       </span>
                     </button>
                   );
@@ -507,7 +510,7 @@ export default function DailyChallengeTest() {
         ) : (
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
             {/* Card 1: Coding Space */}
-            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3">
               <div className="mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                 <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
@@ -551,7 +554,21 @@ export default function DailyChallengeTest() {
 
               <div className="flex-1 overflow-hidden rounded-none border border-gray-300 dark:border-gray-700">
                 <Editor
-                  onMount={(editor) => {
+                  onMount={(editor, monaco) => {
+                    monaco.editor.defineTheme('custom-light', {
+                      base: 'vs',
+                      inherit: true,
+                      rules: [
+                        { token: '', foreground: '1e293b', background: 'daf0fa' },
+                      ],
+                      colors: {
+                        'editor.background': '#daf0fa',
+                        'editor.foreground': '#1e293b',
+                        'editorLineNumber.foreground': '#94a3b8',
+                        'editorLineNumber.activeForeground': '#475569',
+                      }
+                    });
+
                     if (typeof editorCleanupRef.current === "function") {
                       editorCleanupRef.current();
                     }
@@ -606,7 +623,7 @@ export default function DailyChallengeTest() {
                   language={LANGUAGES[selectedLanguage].monacoLanguage}
                   value={code}
                   onChange={handleCodeChange}
-                  theme={theme === "dark" ? "vs-dark" : "light"}
+                  theme={theme === "dark" ? "vs-dark" : "custom-light"}
                   options={{
                     readOnly: isDone,
                     contextmenu: false,
@@ -620,7 +637,7 @@ export default function DailyChallengeTest() {
             </section>
 
             {/* Card 2: Terminal Output */}
-            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3">
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
                 Terminal
               </div>
