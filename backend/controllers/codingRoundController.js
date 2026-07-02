@@ -1597,6 +1597,7 @@ export const endCodingRound = async (req, res) => {
         problemIndex: index,
         problemTitle: problem.problemTitle,
         difficulty: problem.difficulty,
+        categoryType: problem.categoryType || "Coding",
         attempted: score > 0,
         score: score,
         maxScore: 100,
@@ -1749,6 +1750,8 @@ export const autoSubmitRound = async (req, res) => {
       return {
         problemIndex: index,
         problemTitle: problem.problemTitle,
+        difficulty: problem.difficulty,
+        categoryType: problem.categoryType || "Coding",
         attempted: score > 0,
         score: score,
         isCorrect: score === 100,
