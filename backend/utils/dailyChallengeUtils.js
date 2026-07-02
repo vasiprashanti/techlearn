@@ -58,6 +58,10 @@ export const mapQuestionToProblem = (question) => ({
   difficulty: question.difficulty || "Medium",
   inputDescription: question.inputFormat || "Refer to the prompt for input details.",
   outputDescription: question.outputFormat || "Return the expected output for the given input.",
+  categoryType: question.categoryType || "Coding",
+  content: {
+    options: question.content?.options || question.options || [],
+  },
   visibleTestCases: (question.visibleTestCases || []).map((testCase) => ({
     input: testCase.input || "",
     expectedOutput: testCase.output || "",
@@ -263,9 +267,11 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   });
 
   if (trackTemplate) {
+    const totalTemplateDays = trackTemplate.totalDays || trackTemplate.dayAssignments?.length || 1;
     const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const lookupDay = ((dayNumber - 1) % totalTemplateDays) + 1;
     const dayAssignment = (trackTemplate.dayAssignments || []).find(
-      (assignment) => Number(assignment.dayNumber) === Number(dayNumber)
+      (assignment) => Number(assignment.dayNumber) === Number(lookupDay)
     );
     const templateQuestionIds = dayAssignment?.tasks?.length
       ? dayAssignment.tasks.map((task) => task.questionId).filter(Boolean)
@@ -336,7 +342,9 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     const trackTemplate = await mongoose.model("TrackTemplate")
       .findById(batch.assignedDailyChallengeTrack)
       .lean();
-    const dayAssignment = trackTemplate?.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+    const totalTemplateDays = trackTemplate?.totalDays || trackTemplate?.dayAssignments?.length || 1;
+    const lookupDay = ((dayNumber - 1) % totalTemplateDays) + 1;
+    const dayAssignment = trackTemplate?.dayAssignments?.find((d) => d.dayNumber === lookupDay);
     if (dayAssignment) {
       if (dayAssignment.tasks && dayAssignment.tasks.length > 0) {
         resolvedQuestionIds = dayAssignment.tasks.map((t) => t.questionId).filter(Boolean);

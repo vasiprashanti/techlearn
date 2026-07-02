@@ -37,8 +37,6 @@ const BatchDetails = () => {
   const [colleges, setColleges] = useState([]);
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
-  const [trackTemplates, setTrackTemplates] = useState([]);
-  const [courses, setCourses] = useState([]);
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
   const [studentSortOrder, setStudentSortOrder] = useState('rank-asc');
@@ -59,18 +57,8 @@ const BatchDetails = () => {
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isRemovingStudent, setIsRemovingStudent] = useState(false);
-  const [isTrackFormOpen, setIsTrackFormOpen] = useState(false);
-  const [trackForm, setTrackForm] = useState({
-    assignedTrackTemplateId: '',
-    startDate: '',
-    endDate: '',
-  });
-  const [trackFormError, setTrackFormError] = useState('');
-  const [isSavingTrack, setIsSavingTrack] = useState(false);
-  const [isCourseFormOpen, setIsCourseFormOpen] = useState(false);
-  const [courseForm, setCourseForm] = useState({ attachedCourseId: '' });
-  const [courseFormError, setCourseFormError] = useState('');
-  const [isSavingCourse, setIsSavingCourse] = useState(false);
+  const [activeScoreTooltip, setActiveScoreTooltip] = useState(null);
+  const [activeDayScoreTooltip, setActiveDayScoreTooltip] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -83,29 +71,12 @@ const BatchDetails = () => {
     ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
-      const normalizedTrackTemplates = preferRemoteData(remoteTracks, [])
-        .map((track) => ({ ...track, id: String(track.id || track._id) }))
-        .filter((track) => track.id && track.name);
-      const normalizedTracks = normalizedTrackTemplates.map((track) => track.name).filter(Boolean);
+      const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
       const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
-      setTrackTemplates(normalizedTrackTemplates);
       setTracks(uniqueTracks);
     }).catch(() => {});
-
-    adminAPI.getCourses()
-      .then((coursesResponse) => {
-        const normalizedCourses = preferRemoteData(coursesResponse?.courses || coursesResponse, [])
-          .map((course) => ({
-            ...course,
-            id: String(course.id || course._id),
-            title: course.title || 'Untitled Course',
-          }))
-          .filter((course) => course.id);
-        setCourses(normalizedCourses);
-      })
-      .catch(() => setCourses([]));
   }, []);
 
   const batch = useMemo(() => {
@@ -313,97 +284,6 @@ const BatchDetails = () => {
     }
   };
 
-  const openTrackForm = () => {
-    const assignedIds = Array.isArray(batch.assignedTrackTemplateIds)
-      ? batch.assignedTrackTemplateIds.map(String)
-      : (batch.assignedTrackTemplateId ? [String(batch.assignedTrackTemplateId)] : []);
-    setTrackForm({
-      assignedTrackTemplateId: assignedIds[0] || '',
-      startDate: batch.startDateValue || '',
-      endDate: batch.expiryDateValue || '',
-    });
-    setTrackFormError('');
-    setIsTrackFormOpen(true);
-  };
-
-  const saveTrackAssignment = async (confirmTrackReplacement = false) => {
-    if (!trackForm.assignedTrackTemplateId) {
-      setTrackFormError('Select a track template.');
-      return;
-    }
-
-    setTrackFormError('');
-    setIsSavingTrack(true);
-    try {
-      const selectedTemplate = trackTemplates.find((template) => String(template.id) === String(trackForm.assignedTrackTemplateId));
-      await adminAPI.updateBatch(batch.id || batchId, {
-        collegeId: batch.collegeId,
-        name: batch.name,
-        startDate: trackForm.startDate || batch.startDateValue,
-        expiryDate: trackForm.endDate || batch.expiryDateValue,
-        releaseTime: batch.releaseTime || '00:00',
-        status: batch.status || 'Active',
-        assignedTrack: selectedTemplate?.name || batch.assignedTrack || '',
-        assignedTrackTemplateId: trackForm.assignedTrackTemplateId,
-        assignedTrackTemplateIds: [trackForm.assignedTrackTemplateId],
-        batchSize: batch.batchSize,
-        confirmTrackReplacement,
-      });
-      const remoteBatch = await adminAPI.getBatch(batchId);
-      setBatchDetail(preferRemoteData(remoteBatch, null));
-      setIsTrackFormOpen(false);
-    } catch (error) {
-      if (error.message?.includes('Confirm replacing') && !confirmTrackReplacement) {
-        const confirmed = window.confirm('This batch already has an active track. The existing active track will become Draft and the new track will become Active for all students. Continue?');
-        if (confirmed) {
-          await saveTrackAssignment(true);
-          return;
-        }
-      }
-      setTrackFormError(error.message || 'Failed to update active track.');
-    } finally {
-      setIsSavingTrack(false);
-    }
-  };
-
-  const buildBatchUpdatePayload = (extra = {}) => {
-    return {
-      collegeId: batch.collegeId,
-      name: batch.name,
-      startDate: batch.startDateValue,
-      expiryDate: batch.expiryDateValue,
-      releaseTime: batch.releaseTime || '00:00',
-      status: batch.status || 'Active',
-      batchSize: batch.batchSize,
-      programSelection: batch.programSelection || 'Placement Sprint',
-      ...extra,
-    };
-  };
-
-  const openCourseForm = () => {
-    setCourseForm({ attachedCourseId: batch.attachedCourse?.id ? String(batch.attachedCourse.id) : '' });
-    setCourseFormError('');
-    setIsCourseFormOpen(true);
-  };
-
-  const saveCourseAttachment = async (attachedCourseId = courseForm.attachedCourseId) => {
-    setCourseFormError('');
-    setIsSavingCourse(true);
-    try {
-      await adminAPI.updateBatch(
-        batch.id || batchId,
-        buildBatchUpdatePayload({ attachedCourseId: attachedCourseId || null })
-      );
-      const remoteBatch = await adminAPI.getBatch(batchId);
-      setBatchDetail(preferRemoteData(remoteBatch, null));
-      setIsCourseFormOpen(false);
-    } catch (error) {
-      setCourseFormError(error.message || 'Failed to update attached course.');
-    } finally {
-      setIsSavingCourse(false);
-    }
-  };
-
   const filteredStudents = useMemo(() => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
@@ -468,24 +348,24 @@ const BatchDetails = () => {
     return `Day ${dayNum} - ${targetDate.toLocaleDateString('en-US', options)}`;
   }, [batch.startDateValue]);
 
-  const getAttemptedCountForDay = useCallback((dayNum) => {
+  const getAttemptedCountForDay = useCallback((dayNum, historyKey = 'dayWiseHistoryTasks') => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     if (isPlaceholder) return 0;
     return table.filter(student => {
-      const score = student.dayWiseHistory?.[dayNum];
+      const score = student[historyKey]?.[dayNum];
       return score && score !== 'NIL' && score !== 'NA' && score !== '—';
     }).length;
   }, [batch.studentsTable]);
 
-  const getAverageScoreForDay = useCallback((dayNum) => {
+  const getAverageScoreForDay = useCallback((dayNum, historyKey = 'dayWiseHistoryTasks') => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     if (isPlaceholder) return '—';
     const scores = [];
     let maxDen = 0;
     table.forEach(student => {
-      const score = student.dayWiseHistory?.[dayNum];
+      const score = student[historyKey]?.[dayNum];
       if (score && score !== 'NIL' && score !== 'NA' && score !== '—') {
         const parts = score.split('/');
         if (parts.length === 2) {
@@ -521,13 +401,19 @@ const BatchDetails = () => {
     const today = batchDetail?.dayNumber || 1;
     if (reportStatusFilter === 'Attempted Today') {
       list = list.filter(student => {
-        const score = student.dayWiseHistory?.[today];
-        return score && score !== 'NIL' && score !== 'NA' && score !== '—';
+        const scoreT = student.dayWiseHistoryTasks?.[today];
+        const scoreC = student.dayWiseHistoryChallenges?.[today];
+        const attemptedT = scoreT && scoreT !== 'NIL' && scoreT !== 'NA' && scoreT !== '—';
+        const attemptedC = scoreC && scoreC !== 'NIL' && scoreC !== 'NA' && scoreC !== '—';
+        return attemptedT || attemptedC;
       });
     } else if (reportStatusFilter === 'Not Attempted Today') {
       list = list.filter(student => {
-        const score = student.dayWiseHistory?.[today];
-        return !score || score === 'NIL' || score === 'NA' || score === '—';
+        const scoreT = student.dayWiseHistoryTasks?.[today];
+        const scoreC = student.dayWiseHistoryChallenges?.[today];
+        const attemptedT = scoreT && scoreT !== 'NIL' && scoreT !== 'NA' && scoreT !== '—';
+        const attemptedC = scoreC && scoreC !== 'NIL' && scoreC !== 'NA' && scoreC !== '—';
+        return !attemptedT && !attemptedC;
       });
     } else if (reportStatusFilter === 'Completed') {
       list = list.filter(student => student.status === 'Completed');
@@ -540,40 +426,32 @@ const BatchDetails = () => {
     // 3. Sorting
     if (reportSortOrder !== 'default') {
       list.sort((a, b) => {
-        let scoreA = 0;
-        let countA = 0;
-        Object.keys(a.dayWiseHistory || {}).forEach(k => {
-          const val = a.dayWiseHistory[k];
-          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
-            const parts = val.split('/');
-            if (parts.length === 2) {
-              scoreA += parseFloat(parts[0]) / parseFloat(parts[1]);
-              countA++;
+        const getAvg = (student, key) => {
+          let scoreSum = 0;
+          let count = 0;
+          Object.keys(student[key] || {}).forEach(k => {
+            const val = student[key][k];
+            if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
+              const parts = val.split('/');
+              if (parts.length === 2) {
+                scoreSum += parseFloat(parts[0]) / parseFloat(parts[1]);
+                count++;
+              }
             }
-          }
-        });
-        
-        let scoreB = 0;
-        let countB = 0;
-        Object.keys(b.dayWiseHistory || {}).forEach(k => {
-          const val = b.dayWiseHistory[k];
-          if (val && val !== 'NIL' && val !== 'NA' && val !== '—') {
-            const parts = val.split('/');
-            if (parts.length === 2) {
-              scoreB += parseFloat(parts[0]) / parseFloat(parts[1]);
-              countB++;
-            }
-          }
-        });
-        
-        const avgA = countA > 0 ? scoreA / countA : 0;
-        const avgB = countB > 0 ? scoreB / countB : 0;
-        
-        if (reportSortOrder === 'low-to-high') {
-          return avgA - avgB;
-        } else {
-          return avgB - avgA;
+          });
+          return count > 0 ? scoreSum / count : 0;
+        };
+
+        if (reportSortOrder === 'tasks-low-to-high') {
+          return getAvg(a, 'dayWiseHistoryTasks') - getAvg(b, 'dayWiseHistoryTasks');
+        } else if (reportSortOrder === 'tasks-high-to-low') {
+          return getAvg(b, 'dayWiseHistoryTasks') - getAvg(a, 'dayWiseHistoryTasks');
+        } else if (reportSortOrder === 'challenge-low-to-high') {
+          return getAvg(a, 'dayWiseHistoryChallenges') - getAvg(b, 'dayWiseHistoryChallenges');
+        } else if (reportSortOrder === 'challenge-high-to-low') {
+          return getAvg(b, 'dayWiseHistoryChallenges') - getAvg(a, 'dayWiseHistoryChallenges');
         }
+        return 0;
       });
     }
     
@@ -739,139 +617,61 @@ const BatchDetails = () => {
               </div>
               <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
                 <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
-                <div className="flex items-start justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={openTrackForm}
-                    className="text-left text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words hover:text-[#3C83F6] dark:hover:text-[#8fd9ff] transition-colors"
-                    title="Edit active track"
-                  >
-                    {batch.currentActiveTrack || batch.assignedTrack || 'None'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openTrackForm}
-                    className="shrink-0 rounded-lg border border-[#3C83F6]/20 px-2 py-1 text-[10px] font-semibold text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:text-[#8fd9ff]"
-                  >
-                    Edit
-                  </button>
+                <div className="text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words">
+                  {batch.currentActiveTrack || batch.assignedTrack || 'None'}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-              <div className="space-y-3">
-                <h3 className="admin-section-heading">Attached Tracks</h3>
-                {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                    {batch.tracks.map((track, trackIdx) => {
-                      const trackId = track.id || track._id || `track-${trackIdx}`;
-                      const isExpanded = !!expandedTracks[trackId];
-                      return (
-                        <div key={trackId} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-all duration-300 col-span-1">
-                          <button
-                            onClick={() => toggleTrack(trackId)}
-                            className="w-full flex items-center justify-between px-3 py-2 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02]"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-[10px] select-none">
-                                {isExpanded ? '▼' : '▶'}
-                              </span>
-                              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">{track.name}</span>
-                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">({track.questionsAssigned} questions)</span>
+            <div className="space-y-3">
+              <h3 className="admin-section-heading">Attached Tracks</h3>
+              {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-start">
+                  {batch.tracks.map((track, trackIdx) => {
+                    const trackId = track.id || track._id || `track-${trackIdx}`;
+                    const isExpanded = !!expandedTracks[trackId];
+                    return (
+                      <div key={trackId} className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden shadow-sm hover:shadow transition-all duration-300 col-span-1">
+                        <button
+                          onClick={() => toggleTrack(trackId)}
+                          className="w-full flex items-center justify-between px-3 py-2 text-left focus:outline-none hover:bg-slate-50/50 dark:hover:bg-white/[0.02] min-w-0"
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-[#3C83F6] dark:text-[#3C83F6] font-bold text-[10px] select-none shrink-0">
+                              {isExpanded ? '▼' : '▶'}
+                            </span>
+                            <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate flex-1 min-w-0" title={track.name}>{track.name}</span>
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium shrink-0">({track.questionsAssigned})</span>
+                          </div>
+                        </button>
+                        {isExpanded && (
+                          <div className="px-3 pb-3 pt-1 border-t border-black/5 dark:border-white/5 bg-slate-50/[0.15] dark:bg-[#0c1836]/10">
+                            <div className="flex flex-col gap-2 mt-2 max-h-64 overflow-y-auto pr-1 no-scrollbar-custom">
+                              {track.days.length === 0 ? (
+                                <p className="text-xs text-black/45 dark:text-white/50 py-2">No day assignments yet.</p>
+                              ) : (
+                                track.days.map((dayItem, index) => {
+                                  const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
+                                  return (
+                                    <div key={`${trackId}-${index}`} className="bg-white dark:bg-[#122247]/30 rounded-xl p-2.5 border border-black/5 dark:border-white/10 space-y-1.5 shadow-sm min-h-[100px] max-h-32 overflow-y-auto pr-1 flex flex-col scrollbar-thin shrink-0">
+                                      <span className="font-bold text-xs text-slate-700 dark:text-slate-300">Day {dayNum}</span>
+                                      {renderDaySections(dayItem)}
+                                    </div>
+                                  );
+                                })
+                              )}
                             </div>
-                          </button>
-                          {isExpanded && (
-                            <div className="px-3 pb-3 pt-1 border-t border-black/5 dark:border-white/5 bg-slate-50/[0.15] dark:bg-[#0c1836]/10">
-                              <div className="flex flex-col gap-2 mt-2 max-h-64 overflow-y-auto pr-1 no-scrollbar-custom">
-                                {track.days.length === 0 ? (
-                                  <p className="text-xs text-black/45 dark:text-white/50 py-2">No day assignments yet.</p>
-                                ) : (
-                                  track.days.map((dayItem, index) => {
-                                    const dayNum = typeof dayItem === 'object' ? dayItem.dayNumber : index + 1;
-                                    return (
-                                      <div key={`${trackId}-${index}`} className="bg-white dark:bg-[#122247]/30 rounded-xl p-2.5 border border-black/5 dark:border-white/10 space-y-1.5 shadow-sm min-h-[100px] max-h-32 overflow-y-auto pr-1 flex flex-col scrollbar-thin shrink-0">
-                                        <span className="font-bold text-xs text-slate-700 dark:text-slate-300">Day {dayNum}</span>
-                                        {renderDaySections(dayItem)}
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
-                    No tracks are attached to this batch yet.
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="admin-section-heading">Attached Courses</h3>
-                  {batch.attachedCourse && (
-                    <button
-                      type="button"
-                      onClick={openCourseForm}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-[#3C83F6]/20 px-3 py-2 text-xs font-semibold text-[#3C83F6] hover:bg-[#3C83F6]/10 dark:text-[#8fd9ff]"
-                    >
-                      <FiBookOpen className="h-3.5 w-3.5" />
-                      Change Course
-                    </button>
-                  )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {batch.attachedCourse ? (
-                  <div className="rounded-2xl border border-black/5 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#0f1f43]">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                          {batch.attachedCourse.title}
-                        </p>
-                        <p className="mt-1 text-xs text-black/50 dark:text-white/55">
-                          {batch.attachedCourse.numTopics || 0} topics available for day-wise notes
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/admin/topics/${batch.attachedCourse.id}`)}
-                          className="rounded-xl border border-black/10 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-black/5 dark:border-white/15 dark:text-white/70 dark:hover:bg-white/5"
-                        >
-                          Open Course
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => saveCourseAttachment(null)}
-                          disabled={isSavingCourse}
-                          className="rounded-xl border border-red-500/20 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-500/10 disabled:opacity-60 dark:text-red-300"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center">
-                    <p className="text-xs sm:text-sm text-black/45 dark:text-white/45">
-                      No course is attached to this batch yet. Attach a course only when this batch should receive day-wise notes.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={openCourseForm}
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-[#3C83F6] px-4 py-2 text-xs font-semibold text-white hover:bg-[#2f73e0]"
-                    >
-                      <FiPlus className="h-3.5 w-3.5" />
-                      Attach Course
-                    </button>
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
+                  No tracks are attached to this batch yet.
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -949,15 +749,17 @@ const BatchDetails = () => {
 
                   <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[1200px] table-auto">
+                      <table className="w-full min-w-[1400px] table-auto">
                         <thead>
                           <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-32 whitespace-nowrap">Student Name</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's Score</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Today's XP</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Total XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap font-bold">Total XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Last Attempt Date/Time</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
@@ -973,7 +775,7 @@ const BatchDetails = () => {
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={9} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={12} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
@@ -984,15 +786,81 @@ const BatchDetails = () => {
                                     <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                       {formatEmail(student.email)}
                                     </td>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
+                                      {student.todayChallengeScore === 'View Scores' ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-challenge` ? null : `${student.email}-challenge`)}
+                                            className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                          >
+                                            View score
+                                          </button>
+                                          {activeScoreTooltip === `${student.email}-challenge` && (
+                                            <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
+                                              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
+                                              {Object.entries(student.todayChallengeScoresDetail || {}).map(([key, scoreVal]) => {
+                                                if (!scoreVal || scoreVal === '—') return null;
+                                                const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
+                                                return (
+                                                  <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
+                                                    <span>{label}</span>
+                                                    <span>{scoreVal}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                          {student.todayChallengeScore || '—'}
+                                        </span>
+                                      )}
+                                    </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <span className="text-[11px] sm:text-xs font-semibold text-[#0b1b38] dark:text-[#bceaff]">
-                                        {formatScore(student)}
+                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                        {student.todayChallengeXp ? `+${student.todayChallengeXp} XP` : '—'}
                                       </span>
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                      {(student.status === 'Completed' || student.status === 'In Progress') ? `+${student.todayXp || 0} XP` : '—'}
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
+                                      {student.todayScore === 'View Scores' ? (
+                                        <>
+                                          <button
+                                            type="button"
+                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-task` ? null : `${student.email}-task`)}
+                                            className="text-[11px] sm:text-xs font-semibold text-emerald-600 hover:text-emerald-700 underline dark:text-emerald-300 dark:hover:text-emerald-200"
+                                          >
+                                            View score
+                                          </button>
+                                          {activeScoreTooltip === `${student.email}-task` && (
+                                            <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
+                                              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
+                                              {Object.entries(student.todayScoresDetail || {}).map(([key, scoreVal]) => {
+                                                if (!scoreVal || scoreVal === '—') return null;
+                                                const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
+                                                return (
+                                                  <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
+                                                    <span>{label}</span>
+                                                    <span>{scoreVal}</span>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                          {student.todayScore || '—'}
+                                        </span>
+                                      )}
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-300">
+                                        {student.todayTaskXp ? `+${student.todayTaskXp} XP` : '—'}
+                                      </span>
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                       {student.totalXp || 0} XP
                                     </td>
                                     <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
@@ -1027,7 +895,7 @@ const BatchDetails = () => {
                           })}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={10} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                              <td colSpan={13} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                                 No students match your search query.
                               </td>
                             </tr>
@@ -1067,15 +935,17 @@ const BatchDetails = () => {
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                       </div>
-                      <div className="relative w-32 sm:w-36 md:w-40">
+                      <div className="relative w-40 sm:w-48 md:w-56">
                         <select
                           value={reportSortOrder}
                           onChange={(e) => setReportSortOrder(e.target.value)}
                           className="appearance-none w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
                         >
                           <option className={dropdownOptionClass} value="default">Default Sort</option>
-                          <option className={dropdownOptionClass} value="low-to-high">Score: Low to High</option>
-                          <option className={dropdownOptionClass} value="high-to-low">Score: High to Low</option>
+                          <option className={dropdownOptionClass} value="tasks-low-to-high">Daily Tasks: Low to High</option>
+                          <option className={dropdownOptionClass} value="tasks-high-to-low">Daily Tasks: High to Low</option>
+                          <option className={dropdownOptionClass} value="challenge-low-to-high">Daily Challenges: Low to High</option>
+                          <option className={dropdownOptionClass} value="challenge-high-to-low">Daily Challenges: High to Low</option>
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                       </div>
@@ -1089,10 +959,10 @@ const BatchDetails = () => {
                         <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Day-wise Summary</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                        <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[168px] min-w-[168px] border-r border-black/5 dark:border-white/5">
+                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[220px] min-w-[220px] border-r border-black/5 dark:border-white/5">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
@@ -1103,13 +973,14 @@ const BatchDetails = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            <tr className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
-                                Attempted Students
+                            {/* Daily Tasks Metrics */}
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Attempted (Daily Tasks)
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
-                                const count = getAttemptedCountForDay(dayNum);
+                                const count = getAttemptedCountForDay(dayNum, 'dayWiseHistoryTasks');
                                 return (
                                   <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                     {count}
@@ -1117,15 +988,44 @@ const BatchDetails = () => {
                                 );
                               })}
                             </tr>
-                            <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
-                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[168px] min-w-[168px]">
-                                Average Score
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Average Score (Daily Tasks)
                               </td>
                               {Array.from({ length: maxTrackDays }).map((_, index) => {
                                 const dayNum = index + 1;
-                                const avg = getAverageScoreForDay(dayNum);
+                                const avg = getAverageScoreForDay(dayNum, 'dayWiseHistoryTasks');
                                 return (
                                   <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                    {avg}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            {/* Daily Challenges Metrics */}
+                            <tr className="border-b border-black/5 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Attempted (Daily Challenges)
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const count = getAttemptedCountForDay(dayNum, 'dayWiseHistoryChallenges');
+                                return (
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                                    {count}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                            <tr className="hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                              <td className="sticky left-0 bg-white dark:bg-[#0f1f43] z-10 px-2.5 py-2 text-left text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 border-r border-black/5 dark:border-white/5 w-[220px] min-w-[220px]">
+                                Average Score (Daily Challenges)
+                              </td>
+                              {Array.from({ length: maxTrackDays }).map((_, index) => {
+                                const dayNum = index + 1;
+                                const avg = getAverageScoreForDay(dayNum, 'dayWiseHistoryChallenges');
+                                return (
+                                  <td key={index} className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300 whitespace-nowrap">
                                     {avg}
                                   </td>
                                 );
@@ -1142,11 +1042,12 @@ const BatchDetails = () => {
                         <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Student-wise Report</h4>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px] table-auto border-collapse">
+                        <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
                               <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-1 py-2 w-6 whitespace-nowrap shadow-[6px_0_10px_-10px_rgba(15,23,42,0.45)]">#</th>
                               <th className="sticky left-6 bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-36 min-w-[125px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]">Student Name</th>
+                              <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
                                   {getFormattedDayHeader(index + 1)}
@@ -1163,7 +1064,7 @@ const BatchDetails = () => {
                                     {isPlaceholder ? '-' : index + 1}
                                   </td>
                                   {isPlaceholder ? (
-                                    <td colSpan={maxTrackDays + 1} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
+                                    <td colSpan={maxTrackDays + 2} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
                                       No enrolled students
                                     </td>
                                   ) : (
@@ -1171,20 +1072,93 @@ const BatchDetails = () => {
                                       <td className="sticky left-6 bg-white dark:bg-[#0f1f43] z-20 px-2 py-2 text-left text-[11px] sm:text-xs font-medium text-[#000]/85 dark:text-white/85 whitespace-nowrap border-r border-black/5 dark:border-white/5 overflow-hidden text-ellipsis max-w-[125px] shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" title={student.name}>
                                         {student.name}
                                       </td>
+                                      <td className="px-2 py-2 text-left text-[11px] sm:text-xs font-semibold whitespace-nowrap">
+                                        <div className="text-slate-500 dark:text-slate-400">Daily Tasks</div>
+                                        <div className="text-blue-600 dark:text-blue-400 mt-2">Daily Challenge</div>
+                                      </td>
                                       {Array.from({ length: maxTrackDays }).map((_, dIndex) => {
                                         const dayNum = dIndex + 1;
-                                        const score = student.dayWiseHistory?.[dayNum] || 'NA';
+                                        const scoreTasks = student.dayWiseHistoryTasks?.[dayNum] || 'NA';
+                                        const scoreChallenge = student.dayWiseHistoryChallenges?.[dayNum] || 'NA';
                                         
-                                        let scoreClass = "text-slate-500 dark:text-slate-400";
-                                        if (score === 'NIL') scoreClass = "text-amber-500 dark:text-amber-400 font-semibold";
-                                        else if (score === 'NA') scoreClass = "text-slate-300 dark:text-slate-600";
-                                        else scoreClass = "text-[#3C83F6] dark:text-blue-400 font-semibold";
+                                        let classT = "text-slate-500 dark:text-slate-400";
+                                        if (scoreTasks === 'NIL') classT = "text-amber-500 dark:text-amber-400 font-semibold";
+                                        else if (scoreTasks === 'NA') classT = "text-slate-300 dark:text-slate-650";
+                                        else classT = "text-emerald-600 dark:text-emerald-400 font-semibold";
+
+                                        let classC = "text-slate-550 dark:text-slate-450";
+                                        if (scoreChallenge === 'NIL') classC = "text-amber-500 dark:text-amber-400 font-semibold";
+                                        else if (scoreChallenge === 'NA') classC = "text-slate-300 dark:text-slate-650";
+                                        else classC = "text-blue-600 dark:text-blue-400 font-semibold";
 
                                         return (
-                                          <td key={dIndex} className="px-2 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap">
-                                            <span className={scoreClass}>
-                                              {score}
-                                            </span>
+                                          <td key={dIndex} className="px-2 py-2 text-center text-[11px] sm:text-xs whitespace-nowrap relative">
+                                            <div>
+                                              {scoreTasks === 'View Scores' ? (
+                                                <>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      const key = `${student.email}-${dayNum}`;
+                                                      setActiveDayScoreTooltip(activeDayScoreTooltip === key ? null : key);
+                                                    }}
+                                                    className="text-[11px] sm:text-xs font-semibold text-emerald-600 hover:text-emerald-700 underline dark:text-emerald-300 dark:hover:text-emerald-200"
+                                                  >
+                                                    View score
+                                                  </button>
+                                                  {activeDayScoreTooltip === `${student.email}-${dayNum}` && (
+                                                    <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
+                                                      <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
+                                                      {Object.entries(student.dayWiseHistoryTasksDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
+                                                        if (!scoreVal || scoreVal === '—') return null;
+                                                        const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
+                                                        return (
+                                                          <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
+                                                            <span>{label}</span>
+                                                            <span>{scoreVal}</span>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              ) : (
+                                                <span className={classT}>{scoreTasks}</span>
+                                              )}
+                                            </div>
+                                            <div className={`${classC} mt-2`}>
+                                              {scoreChallenge === 'View Scores' ? (
+                                                <>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                      const key = `${student.email}-${dayNum}-challenge`;
+                                                      setActiveDayScoreTooltip(activeDayScoreTooltip === key ? null : key);
+                                                    }}
+                                                    className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                                  >
+                                                    View score
+                                                  </button>
+                                                  {activeDayScoreTooltip === `${student.email}-${dayNum}-challenge` && (
+                                                    <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
+                                                      <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
+                                                      {Object.entries(student.dayWiseHistoryChallengesDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
+                                                        if (!scoreVal || scoreVal === '—') return null;
+                                                        const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
+                                                        return (
+                                                          <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
+                                                            <span>{label}</span>
+                                                            <span>{scoreVal}</span>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              ) : (
+                                                <span>{scoreChallenge}</span>
+                                              )}
+                                            </div>
                                           </td>
                                         );
                                       })}
@@ -1240,145 +1214,6 @@ const BatchDetails = () => {
               >
                 {isRemovingStudent ? 'Removing...' : 'Remove Student'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isCourseFormOpen && (
-        <div className="fixed inset-0 z-[131] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => !isSavingCourse && setIsCourseFormOpen(false)} />
-          <div className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Attach Course</h2>
-                <p className="mt-1 text-xs text-black/45 dark:text-white/45">Used only for day-wise notes on the student dashboard.</p>
-              </div>
-              <button onClick={() => setIsCourseFormOpen(false)} disabled={isSavingCourse} className="text-sm text-black/40 dark:text-white/40 disabled:opacity-60">Close</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="admin-micro-label text-black/45 dark:text-white/45">Course</label>
-                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={courseForm.attachedCourseId}
-                    onChange={(e) => setCourseForm({ attachedCourseId: e.target.value })}
-                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                  >
-                    <option className={dropdownOptionClass} value="">No course attached</option>
-                    {courses.map((course) => (
-                      <option className={dropdownOptionClass} key={course.id} value={course.id}>
-                        {course.title}
-                      </option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#3C83F6]/15 bg-[#3C83F6]/5 px-3 py-2 text-xs leading-relaxed text-black/55 dark:text-white/60">
-                Course attachment does not change the active track, daily challenge, or daily task assignment.
-              </div>
-
-              {courseFormError && <p className="text-xs text-red-500">{courseFormError}</p>}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsCourseFormOpen(false)}
-                  disabled={isSavingCourse}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveCourseAttachment()}
-                  disabled={isSavingCourse}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70"
-                >
-                  {isSavingCourse ? 'Saving...' : 'Save Course'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isTrackFormOpen && (
-        <div className="fixed inset-0 z-[131] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => !isSavingTrack && setIsTrackFormOpen(false)} />
-          <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Edit Active Track</h2>
-                <p className="mt-1 text-xs text-black/45 dark:text-white/45">Updates apply to all students in this batch.</p>
-              </div>
-              <button onClick={() => setIsTrackFormOpen(false)} disabled={isSavingTrack} className="text-sm text-black/40 dark:text-white/40 disabled:opacity-60">Close</button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="admin-micro-label text-black/45 dark:text-white/45">Track Template*</label>
-                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={trackForm.assignedTrackTemplateId}
-                    onChange={(e) => setTrackForm((prev) => ({ ...prev, assignedTrackTemplateId: e.target.value }))}
-                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                  >
-                    <option className={dropdownOptionClass} value="">Select track template</option>
-                    {trackTemplates.map((template) => (
-                      <option className={dropdownOptionClass} key={template.id} value={template.id}>
-                        {template.name} {template.trackType ? `(${template.trackType})` : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date*</label>
-                  <input
-                    type="date"
-                    value={trackForm.startDate}
-                    onChange={(e) => setTrackForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    className={`mt-1 ${studentFormInputClass}`}
-                  />
-                </div>
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">End Date*</label>
-                  <input
-                    type="date"
-                    value={trackForm.endDate}
-                    onChange={(e) => setTrackForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    className={`mt-1 ${studentFormInputClass}`}
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#3C83F6]/15 bg-[#3C83F6]/5 px-3 py-2 text-xs leading-relaxed text-black/55 dark:text-white/60">
-                If another active track already exists, it will be moved to Draft and this track will become Active for the full batch.
-              </div>
-
-              {trackFormError && <p className="text-xs text-red-500">{trackFormError}</p>}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsTrackFormOpen(false)}
-                  disabled={isSavingTrack}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-60"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveTrackAssignment(false)}
-                  disabled={isSavingTrack}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70"
-                >
-                  {isSavingTrack ? 'Saving...' : 'Save Track'}
-                </button>
-              </div>
             </div>
           </div>
         </div>

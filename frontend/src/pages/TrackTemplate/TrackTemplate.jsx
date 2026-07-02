@@ -216,7 +216,7 @@ export default function TrackTemplate() {
       const next = { ...prev, [field]: value };
       if (field === 'trackType' && value === 'Daily Task') {
         next.category = 'Daily Task';
-      } else if (field === 'trackType' && value === 'Daily Challenge') {
+      } else if (field === 'trackType' && prev.trackType === 'Daily Task' && value !== 'Daily Task') {
         next.category = '';
       }
       return next;
@@ -465,14 +465,10 @@ export default function TrackTemplate() {
               <div>
                 {createTemplateForm.trackType === 'Daily Task' || createTemplateForm.trackType === 'Daily Challenge' ? (
                   <div>
-                    <label className="admin-micro-label text-black/50 dark:text-white/50">
-                      {createTemplateForm.trackType === 'Daily Challenge'
-                        ? 'Select Challenge Categories* (Multiple allowed)'
-                        : 'Select Categories to Include* (Multiple allowed)'}
-                    </label>
+                    <label className="admin-micro-label text-black/50 dark:text-white/50">Select Categories to Include* (Multiple allowed)</label>
                     <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto">
                       {questionCategories.map((cat) => {
-                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task'
+                        const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task' && createTemplateForm.category !== 'Daily Challenge'
                           ? createTemplateForm.category.split(',').map((c) => c.trim())
                           : [];
                         const isChecked = selectedList.includes(cat);
@@ -490,9 +486,7 @@ export default function TrackTemplate() {
                                 } else {
                                   nextList = nextList.filter((c) => c !== cat);
                                 }
-                                const nextCategoryVal = nextList.length > 0
-                                  ? nextList.join(', ')
-                                  : (createTemplateForm.trackType === 'Daily Task' ? 'Daily Task' : '');
+                                const nextCategoryVal = nextList.length > 0 ? nextList.join(', ') : createTemplateForm.trackType;
                                 updateCreateTemplateField('category', nextCategoryVal);
                               }}
                               className="rounded border-black/10 text-[#3C83F6] focus:ring-[#3C83F6]"
@@ -503,9 +497,7 @@ export default function TrackTemplate() {
                       })}
                     </div>
                     <p className="mt-1.5 text-[11px] text-black/45 dark:text-white/45">
-                      {createTemplateForm.trackType === 'Daily Challenge'
-                        ? 'All selected categories share the same release time and submission deadline for that day.'
-                        : 'If no categories are selected, it defaults to including all categories.'}
+                      If no categories are selected, it defaults to including all categories.
                     </p>
                   </div>
                 ) : (
