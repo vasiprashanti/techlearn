@@ -86,6 +86,12 @@ export const QuestionBankAdminPage = () => {
       list.sort((a, b) => (b.total || 0) - (a.total || 0));
     } else if (sortOrder === 'count-asc') {
       list.sort((a, b) => (a.total || 0) - (b.total || 0));
+    } else if (sortOrder === 'oldest') {
+      list.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    } else if (sortOrder === 'newest') {
+      list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    } else if (sortOrder === 'last-opened') {
+      list.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
     }
 
     return list;
@@ -339,6 +345,7 @@ export const QuestionBankAdminPage = () => {
                     <option className={dropdownOptionClass} value="All">All Statuses</option>
                     <option className={dropdownOptionClass} value="Active">Active</option>
                     <option className={dropdownOptionClass} value="Draft">Draft</option>
+                    <option className={dropdownOptionClass} value="Archived">Archived</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
@@ -351,9 +358,9 @@ export const QuestionBankAdminPage = () => {
                     className="appearance-none h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 pl-2.5 pr-7 text-[11px] font-bold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 cursor-pointer"
                   >
                     <option className={dropdownOptionClass} value="All">All Types</option>
-                    <option className={dropdownOptionClass} value="Coding">Coding</option>
                     <option className={dropdownOptionClass} value="MCQ">MCQ</option>
-                    <option className={dropdownOptionClass} value="Notes">Notes</option>
+                    <option className={dropdownOptionClass} value="Coding">Coding</option>
+                    <option className={dropdownOptionClass} value="Query">Query</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>
@@ -370,6 +377,9 @@ export const QuestionBankAdminPage = () => {
                     <option className={dropdownOptionClass} value="name-desc">Name: Z-A</option>
                     <option className={dropdownOptionClass} value="count-desc">High to Low</option>
                     <option className={dropdownOptionClass} value="count-asc">Low to High</option>
+                    <option className={dropdownOptionClass} value="oldest">Oldest First</option>
+                    <option className={dropdownOptionClass} value="newest">Newest First</option>
+                    <option className={dropdownOptionClass} value="last-opened">Last Opened</option>
                   </select>
                   <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/45 dark:text-white/60" />
                 </div>

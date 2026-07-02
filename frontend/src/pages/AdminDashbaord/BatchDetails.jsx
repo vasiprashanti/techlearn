@@ -674,6 +674,37 @@ const BatchDetails = () => {
               )}
             </div>
 
+            {/* Attached Course */}
+            <div className="space-y-3">
+              <h3 className="admin-section-heading">Attached Course</h3>
+              {batch.attachedCourse ? (
+                <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
+                    <FiBookOpen className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{batch.attachedCourse.title}</p>
+                    {batch.attachedCourse.description && (
+                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{batch.attachedCourse.description}</p>
+                    )}
+                    <p className="mt-1 text-[11px] font-medium text-[#3C83F6] dark:text-[#bceaff]">
+                      {batch.attachedCourse.numTopics} {batch.attachedCourse.numTopics === 1 ? 'Topic' : 'Topics'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/admin/courses/${batch.attachedCourse.id}`)}
+                    className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#3C83F6]/30 dark:border-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] text-xs font-semibold hover:bg-[#3C83F6]/5 dark:hover:bg-[#bceaff]/5 transition-colors"
+                  >
+                    View Course
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
+                  No course is attached to this batch yet.
+                </div>
+              )}
+            </div>
+
             <div className="space-y-4">
               <div className="flex border-b border-black/10 dark:border-white/10 mt-2">
                 <button

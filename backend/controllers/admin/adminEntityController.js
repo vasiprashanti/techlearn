@@ -2019,6 +2019,14 @@ todayXp = todayChallengeXp + todayTaskXp;
         tracks: resolvedTracks,
         maxTrackDays: maxTrackDays || 30,
         studentsTable: computedStudentsTable,
+        attachedCourse: batch.attachedCourse
+          ? {
+              id: batch.attachedCourse._id,
+              title: batch.attachedCourse.title,
+              description: batch.attachedCourse.description,
+              numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
+            }
+          : null,
       },
     });
   } catch (error) {
