@@ -142,6 +142,16 @@ export default function DailyChallengeTest() {
         const attemptPayload = response?.data?.attempt || null;
         const savedAnswers = response?.data?.savedAnswers || null;
 
+        if (responseChallenge?.linkId && responseChallenge.linkId !== linkId) {
+          setDailyChallengeSession(responseChallenge.linkId, {
+            ...session,
+            challenge: responseChallenge,
+            attempt: attemptPayload,
+          });
+          navigate(`/daily-challenge/${responseChallenge.linkId}/test`, { replace: true });
+          return;
+        }
+
         setChallenge(responseChallenge);
         setAttempt(attemptPayload);
         setTimeLeft(Math.max(0, Number(attemptPayload?.secondsRemaining || 0)));

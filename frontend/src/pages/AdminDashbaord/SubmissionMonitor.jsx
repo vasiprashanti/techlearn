@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -60,34 +60,30 @@ export default function SubmissionMonitor() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => {
-    let cancelled = false;
-
-    adminAPI
-      .getSubmissions()
-      .then((remoteData) => {
-        if (!cancelled) {
-          setSubmissionEntries(preferRemoteData(remoteData?.submissions, emptySubmissionState.submissions));
-          setSubmissionKpis(preferRemoteData(remoteData?.kpis, emptySubmissionState.kpis));
-          setPendingStudents(preferRemoteData(remoteData?.pendingStudents, []));
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSubmissionEntries(emptySubmissionState.submissions);
-          setSubmissionKpis(emptySubmissionState.kpis);
-          setPendingStudents([]);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
+  const loadSubmissions = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const remoteData = await adminAPI.getSubmissions();
+      setSubmissionEntries(preferRemoteData(remoteData?.submissions, emptySubmissionState.submissions));
+      setSubmissionKpis(preferRemoteData(remoteData?.kpis, emptySubmissionState.kpis));
+      setPendingStudents(preferRemoteData(remoteData?.pendingStudents, []));
+    } catch {
+      setSubmissionEntries(emptySubmissionState.submissions);
+      setSubmissionKpis(emptySubmissionState.kpis);
+      setPendingStudents([]);
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadSubmissions();
+  }, [loadSubmissions]);
   useEffect(() => {
     const down = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setIsSearchOpen(p => !p); }
@@ -256,11 +252,15 @@ export default function SubmissionMonitor() {
                   className="dashboard-input-surface h-10 rounded-full pl-11 pr-4 text-[13px] sm:text-sm leading-none" />
               </div>
               <button
-                onClick={() => setTableSearch('')}
+                onClick={() => {
+                  setTableSearch('');
+                  loadSubmissions();
+                }}
+                disabled={isRefreshing}
                 className="dashboard-secondary-btn w-full sm:w-auto h-10 shrink-0 px-3.5 text-xs"
               >
                 <FiRefreshCw className="w-3.5 h-3.5" />
-                Refresh
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
               </button>
             </div>
 

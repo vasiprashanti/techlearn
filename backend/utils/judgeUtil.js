@@ -121,15 +121,20 @@ const testCodeWithJudge0 = async (
     };
   } catch (error) {
     console.error("Judge0 API Error:", error.message);
+    const statusCode = error.response?.status;
+    const apiMessage = error.response?.data?.message || error.message;
+    const isRateLimited = statusCode === 429;
     return {
       success: false,
       passed: false, // Always false on error
       outputMatches: false,
       actualOutput: "",
       expectedOutput,
-      error: `API Error: ${error.message}`,
+      error: isRateLimited
+        ? "Compiler service is rate limited right now. Please wait a minute and try again."
+        : `API Error: ${apiMessage}`,
       statusId: null,
-      statusDescription: "API Error",
+      statusDescription: isRateLimited ? "Compiler Rate Limited" : "API Error",
       executionTime: null,
     };
   }

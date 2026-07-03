@@ -19,8 +19,10 @@ import {
   getAttemptTimeRemainingSeconds,
   getDailyChallengeAttempt,
   isAttemptExpired,
+  resolveDailyChallengeContext,
   resolveDailyChallengeParticipant,
   startOfDay,
+  upsertDailyChallengeRound,
 } from "../utils/dailyChallengeUtils.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import UserProgress from "../models/UserProgress.js";
@@ -177,6 +179,18 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       totalProblems,
     },
   };
+};
+
+const refreshCurrentDailyChallengeRound = async ({ codingRound, user, email }) => {
+  if (codingRound?.challengeType !== "daily_challenge") return codingRound;
+
+  const context = await resolveDailyChallengeContext({
+    user,
+    email,
+    trackType: codingRound.trackType,
+  });
+
+  return upsertDailyChallengeRound(context);
 };
 
 const buildAttemptPayload = (attempt) => ({
@@ -615,11 +629,19 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       });
     }
 
-    const codingRound = await CodingRound.findOne({ linkId }).populate("questionId");
+    let codingRound = await CodingRound.findOne({ linkId }).populate("questionId");
     if (!codingRound) {
       return res.status(404).json({
         success: false,
         message: "Coding round not found",
+      });
+    }
+
+    if (codingRound.challengeType === "daily_challenge") {
+      codingRound = await refreshCurrentDailyChallengeRound({
+        codingRound,
+        user: req.user,
+        email: normalizedEmail,
       });
     }
 
@@ -728,7 +750,7 @@ export const startDailyChallengeAttempt = async (req, res) => {
       });
     }
 
-    const codingRound = await CodingRound.findOne({
+    let codingRound = await CodingRound.findOne({
       linkId,
       challengeType: "daily_challenge",
       isActive: true,
@@ -740,6 +762,12 @@ export const startDailyChallengeAttempt = async (req, res) => {
         message: "Daily Challenge not found.",
       });
     }
+
+    codingRound = await refreshCurrentDailyChallengeRound({
+      codingRound,
+      user: req.user,
+      email: normalizedEmail,
+    });
 
     const participant = await resolveDailyChallengeParticipant({
       codingRound,

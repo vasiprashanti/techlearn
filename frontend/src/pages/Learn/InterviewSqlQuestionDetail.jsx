@@ -124,10 +124,28 @@ export default function InterviewSqlQuestionDetail() {
     }
     setIsRunning(true);
     setOutput('Executing SQL query...');
-    setTimeout(() => {
-      setOutput('Query executed successfully.\n\nFetched 0 rows.');
+    try {
+      const res = await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'SQL',
+        isCorrect: false,
+        code,
+        language: selectedLanguage,
+        finalize: false,
+      });
+
+      if (res?.isCorrect) {
+        setOutput('Query executed successfully. Output matched the expected answer.');
+        setIsLastSubmissionCorrect(true);
+      } else {
+        setOutput('Query executed, but the answer does not match the expected result yet.');
+        setIsLastSubmissionCorrect(false);
+      }
+    } catch (error) {
+      setOutput(`Execution failed: ${error?.message || 'Unknown error occurred'}`);
+    } finally {
       setIsRunning(false);
-    }, 1000);
+    }
   };
 
   const [question, setQuestion] = useState(null);

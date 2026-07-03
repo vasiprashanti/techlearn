@@ -153,6 +153,30 @@ export default function InterviewAptitudeQuestionDetail() {
     }
   };
 
+  const handleNext = () => {
+    const nextTask = dailySequence[currentTaskIndex + 1];
+    if (!nextTask) {
+      navigate('/dashboard');
+      return;
+    }
+    navigate(`/dashboard/practice/aptitude/${nextTask.questionId}?mode=daily`);
+  };
+
+  const handleFinish = async () => {
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'Aptitude',
+        isCorrect: true,
+        finalize: true,
+      });
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
+    } catch (error) {
+      console.error("Failed to finalize aptitude daily task:", error);
+    }
+    navigate('/dashboard');
+  };
+
   if (loading) {
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
@@ -216,7 +240,7 @@ export default function InterviewAptitudeQuestionDetail() {
               {currentTaskIndex < dailySequence.length - 1 ? (
                 <button
                   type="button"
-                  onClick={() => navigate(`/dashboard/practice/aptitude/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`)}
+                  onClick={handleNext}
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
                 >
                   Next Question
@@ -224,7 +248,7 @@ export default function InterviewAptitudeQuestionDetail() {
               ) : (
                 <button
                   type="button"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={handleFinish}
                   className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
                 >
                   Finish Daily Task

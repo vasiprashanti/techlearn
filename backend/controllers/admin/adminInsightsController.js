@@ -361,7 +361,6 @@ export const listSubmissionsPage = async (req, res) => {
       StudentCodingSubmission.find({
         ...(filter.batchId ? { batchId: filter.batchId } : {}),
         ...(filter.studentId ? { studentId: filter.studentId } : {}),
-        isRoundEnded: { $ne: true },
         problemSubmitted: { $exists: true },
       })
         .sort({ lastSubmissionAt: -1 })
