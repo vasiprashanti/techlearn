@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, X } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
 import { practiceAPI } from '../../services/practiceApi';
 
-const aptitudeNotesById = {
-  'iq-25': `## Notes\n\n### Ratio setup\n- Convert all ratios to a common base before comparing.\n- Keep units consistent while solving word problems.\n\n### Tip\nUse a small table to avoid arithmetic mistakes.`,
+const difficultyPillClass = {
+  Easy: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
+  Medium: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
+  Hard: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-800',
 };
 
 export default function InterviewAptitudeQuestionDetail() {
@@ -16,21 +16,114 @@ export default function InterviewAptitudeQuestionDetail() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const isDailyMode = searchParams.get('mode') === 'daily';
+  const sourceParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const isDailyMode = sourceParams.get('mode') === 'daily';
   const isDashboardContext = location.pathname.startsWith('/dashboard/practice/aptitude/');
-  const aptitudeSourcePath = searchParams.get('from');
+  const sourcePath = sourceParams.get('from');
   const backPath = isDailyMode
     ? '/dashboard'
     : isDashboardContext
-      ? aptitudeSourcePath === '/dashboard/practice' || aptitudeSourcePath === '/dashboard/practice/aptitude'
-        ? aptitudeSourcePath
+      ? sourcePath === '/dashboard/practice' || sourcePath === '/dashboard/practice/aptitude'
+        ? sourcePath
         : '/dashboard/practice/aptitude'
       : '/learn/interview-questions/aptitude';
 
-  const [liveQuestions, setLiveQuestions] = useState([]);
+  const [question, setQuestion] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [dailyTasksList, setDailyTasksList] = useState([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+
+    const localQ = interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'Aptitude');
+    if (localQ) {
+      setQuestion(localQ);
+      setLoading(false);
+      return;
+    }
+
+    practiceAPI.getQuestionById(questionId)
+      .then((data) => {
+        if (!cancelled && data) {
+          let options = [];
+          if (data.content?.options && data.content.options.length > 0) {
+            options = data.content.options.map(opt => opt.text);
+          } else if (data.options && data.options.length > 0) {
+            options = data.options.map(opt => opt.optionText || opt.text || opt);
+          } else {
+            options = ['A', 'B', 'C', 'D'];
+          }
+
+          let correctIndex = 0;
+          if (data.content?.correctOption) {
+            const letter = data.content.correctOption.toUpperCase();
+            correctIndex = ['A', 'B', 'C', 'D'].indexOf(letter);
+            if (correctIndex === -1) correctIndex = 0;
+          } else if (data.options && data.options.length > 0) {
+            const foundIndex = data.options.findIndex(opt => opt.isCorrect);
+            if (foundIndex !== -1) correctIndex = foundIndex;
+          }
+
+          setQuestion({
+            id: String(data._id),
+            title: data.title,
+            subtitle: data.categoryTitle || 'Aptitude',
+            difficulty: data.difficulty || 'Easy',
+            description: data.description || '',
+            topic: 'Aptitude',
+            options,
+            correctIndex,
+            explanation: data.content?.explanation || data.explanation || data.editorial || 'No explanation provided.'
+          });
+        }
+        if (!cancelled) setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load Aptitude question details:", err);
+        if (!cancelled) {
+          setQuestion(null);
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, [questionId]);
+
+  const dailySequence = useMemo(() => {
+    if (!isDailyMode) return [];
+    return dailyTasksList.filter(t => t.taskType === 'Aptitude');
+  }, [dailyTasksList, isDailyMode]);
+
+  const currentTaskIndex = useMemo(() => {
+    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
+  }, [dailySequence, questionId]);
+
+  const currentTask = useMemo(() => {
+    if (currentTaskIndex !== -1 && dailySequence[currentTaskIndex]) {
+      return dailySequence[currentTaskIndex];
+    }
+    return null;
+  }, [dailySequence, currentTaskIndex]);
+
+  useEffect(() => {
+    if (isDailyMode && currentTask && currentTask.attempted && question) {
+      const optionLetter = currentTask.selectedOption;
+      const optIndex = ['A', 'B', 'C', 'D'].indexOf(optionLetter);
+      if (optIndex !== -1) {
+        setSelectedOption(optIndex);
+        setShowFeedback(true);
+        setIsLastSubmissionCorrect(currentTask.isCorrect === true);
+        setSubmissionMessage('');
+      }
+    } else {
+      setSelectedOption(null);
+      setShowFeedback(false);
+      setSubmissionMessage('');
+      setIsLastSubmissionCorrect(false);
+    }
+  }, [questionId, currentTask, question, isDailyMode]);
 
   const fetchDailyTasks = async () => {
     try {
@@ -62,14 +155,10 @@ export default function InterviewAptitudeQuestionDetail() {
     }
   }, [questionId, isDailyMode]);
 
-  const dailySequence = useMemo(() => {
-    if (!isDailyMode) return [];
-    return dailyTasksList.filter(t => t.taskType === 'Aptitude');
-  }, [dailyTasksList, isDailyMode]);
-
-  const currentTaskIndex = useMemo(() => {
-    return dailySequence.findIndex(t => String(t.questionId) === String(questionId));
-  }, [dailySequence, questionId]);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [submissionMessage, setSubmissionMessage] = useState('');
+  const [isLastSubmissionCorrect, setIsLastSubmissionCorrect] = useState(false);
 
   const isCurrentQuestionCompleted = useMemo(() => {
     if (isSubmitted) return true;
@@ -79,109 +168,50 @@ export default function InterviewAptitudeQuestionDetail() {
     return false;
   }, [dailySequence, currentTaskIndex, isSubmitted]);
 
-  useEffect(() => {
-    let cancelled = false;
-    practiceAPI.getQuestions('Aptitude')
-      .then((data) => {
-        if (!cancelled && Array.isArray(data)) setLiveQuestions(data);
-      })
-      .catch(() => {
-        if (!cancelled) setLiveQuestions([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const isCorrect = showFeedback && selectedOption === question?.correctIndex;
 
-  const [question, setQuestion] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const handleMarkSolved = async () => {
+    if (selectedOption === null) return;
+    const correct = selectedOption === question.correctIndex;
+    setShowFeedback(true);
+    setIsLastSubmissionCorrect(correct);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-
-    const localQ = interviewQuestionsCatalog.find((q) => q.id === questionId && q.topic === 'Aptitude');
-    if (localQ) {
-      setQuestion(localQ);
-      setLoading(false);
-      return;
-    }
-
-    practiceAPI.getQuestionById(questionId)
-      .then((data) => {
-        if (!cancelled && data) {
-          setQuestion({
-            id: String(data._id),
-            title: data.title,
-            subtitle: data.categoryTitle || 'Aptitude',
-            difficulty: data.difficulty || 'Easy',
-            description: data.description || '',
-            topic: 'Aptitude'
-          });
-        }
-        if (!cancelled) setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load Aptitude question details:", err);
-        if (!cancelled) {
-          setQuestion(null);
-          setLoading(false);
-        }
-      });
-
-    return () => { cancelled = true; };
-  }, [questionId]);
-
-  const notes = useMemo(() => {
-    if (!question) return '';
-    return (
-      aptitudeNotesById[question.id] ||
-      question.description ||
-      `## Explanation\n\n**${question.title}** (Topic: ${question.subtitle})\n\nAptitude notes/explanation will be added here.`
-    );
-  }, [question]);
-  const [submissionMessage, setSubmissionMessage] = useState('');
-
-  const markSolved = async () => {
     try {
-      await practiceAPI.recordSubmission({ questionId: question.id, track: 'Aptitude', isCorrect: true });
-      setSubmissionMessage('Practice progress saved.');
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'Aptitude',
+        isCorrect: correct,
+        selectedAnswer: String.fromCharCode(65 + selectedOption),
+      });
+      setSubmissionMessage('Answer submitted successfully!');
       setIsSubmitted(true);
       window.dispatchEvent(new CustomEvent('xpUpdated'));
+      
+      if (isDailyMode) {
+        await fetchDailyTasks();
+      }
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
   };
 
   const handleNext = () => {
-    const nextTask = dailySequence[currentTaskIndex + 1];
-    if (!nextTask) {
-      navigate('/dashboard');
-      return;
+    if (currentTaskIndex < dailySequence.length - 1) {
+      navigate(`/dashboard/practice/aptitude/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
     }
-    navigate(`/dashboard/practice/aptitude/${nextTask.questionId}?mode=daily`);
-  };
-
-  const handleFinish = async () => {
-    try {
-      await practiceAPI.recordSubmission({
-        questionId: question.id,
-        track: 'Aptitude',
-        isCorrect: true,
-        finalize: true,
-      });
-      window.dispatchEvent(new CustomEvent('xpUpdated'));
-    } catch (error) {
-      console.error("Failed to finalize aptitude daily task:", error);
-    }
-    navigate('/dashboard');
   };
 
   if (loading) {
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="flex h-64 items-center justify-center">
-          <div className="text-gray-900 dark:text-white">Loading question...</div>
+        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
+          <div className="relative flex items-center justify-center">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-500/20 border-t-blue-500"></div>
+            <div className="absolute h-10 w-10 animate-ping rounded-full border-2 border-blue-400/30"></div>
+          </div>
+          <div className="text-sm font-semibold tracking-wide text-blue-700/80 dark:text-blue-300/80 animate-pulse">
+            Loading assessment challenge...
+          </div>
         </div>
       </UserSidebarLayout>
     );
@@ -190,16 +220,22 @@ export default function InterviewAptitudeQuestionDetail() {
   if (!question) {
     return (
       <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
+        <div className="rounded-2xl border border-red-200/30 bg-gradient-to-br from-red-50/90 to-red-100/80 p-8 text-center shadow-xl backdrop-blur-xl dark:border-red-900/30 dark:from-red-950/40 dark:to-red-900/20">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mb-4">
+            <span className="text-xl font-bold">!</span>
+          </div>
+          <h2 className="text-lg font-bold text-red-900 dark:text-red-200 mb-2">Question Not Found</h2>
+          <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-6 max-w-md mx-auto">
+            The requested assessment was not found or has been moved. Please return to the practice page.
+          </p>
           <button
             type="button"
             onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg hover:brightness-105 transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back
+            Back to Practice
           </button>
-          <div className="mt-4 text-[#0d2a57] dark:text-[#8fd9ff]">Question not found.</div>
         </div>
       </UserSidebarLayout>
     );
@@ -207,64 +243,175 @@ export default function InterviewAptitudeQuestionDetail() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-5 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <button
-            type="button"
-            onClick={() => navigate(backPath)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
-            {question.title}
-          </h1>
-          <div className="mt-1 text-sm text-[#4c6f9a] dark:text-[#7fb8e2]">
-            {question.subtitle} • {question.difficulty}
-          </div>
-          {isDashboardContext ? (
+      <div className="mx-auto max-w-[800px] flex flex-col items-center justify-center px-4 py-8">
+        <div className="w-full flex flex-col items-start rounded-2xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 p-6 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+          
+          {/* Header Action Button */}
+          <div className="relative w-full flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
             <button
               type="button"
-              onClick={markSolved}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"
+              onClick={() => navigate(backPath)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-black/50 transition-all duration-200"
             >
-              <CheckCircle className="h-4 w-4" />
-              Mark solved
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
             </button>
-          ) : null}
-
-          {isDailyMode && isCurrentQuestionCompleted && (
-            <div className="mt-4">
-              {currentTaskIndex < dailySequence.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
-                >
-                  Next Question
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleFinish}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:brightness-105 transition"
-                >
-                  Finish Daily Task
-                </button>
-              )}
-            </div>
-          )}
-          {submissionMessage ? (
-            <p className="mt-2 text-xs text-[#4c6f9a] dark:text-[#7fb8e2]">{submissionMessage}</p>
-          ) : null}
-        </div>
-
-        <div className="rounded-2xl border border-[#86c4ff]/40 bg-gradient-to-br from-[#e7f6ff]/90 to-[#d9efff]/85 p-6 shadow-[0_12px_34px_rgba(60,131,246,0.12)] backdrop-blur-xl dark:border-[#6fbfff]/30 dark:from-[#052152]/75 dark:to-[#072b63]/70">
-          <div className="prose prose-slate max-w-none dark:prose-invert">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes}</ReactMarkdown>
+            <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
+              {question.difficulty}
+            </span>
           </div>
+
+          {/* Question text card */}
+          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-center mb-6 mt-3">
+            {isDailyMode && (
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
+                Question {currentTaskIndex + 1} of {dailySequence.length}
+              </div>
+            )}
+            <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
+              {question.title}
+            </h2>
+            {question.description && (
+              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-center border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
+                {question.description}
+              </p>
+            )}
+          </div>
+
+          {/* Options Grid (2x2 options layout) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            {question.options.map((opt, idx) => {
+              const optionClass = !showFeedback
+                ? selectedOption === idx
+                  ? 'border-[#2563eb] bg-[#2563eb]/10 dark:bg-[#2563eb]/20 text-[#2563eb] dark:text-[#a0baff]'
+                  : 'border-[#2563eb]/20 dark:border-gray-600/70 bg-[#e5f3ff]/35 dark:bg-[#091b40]/50 text-gray-800 dark:text-gray-200 hover:border-[#2563eb] dark:hover:border-blue-400 hover:bg-[#e5f3ff]/60 dark:hover:bg-[#091b40]/75'
+                : idx === question.correctIndex
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                  : selectedOption === idx
+                    ? 'border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                    : 'border-[#2563eb]/10 dark:border-gray-700/30 bg-[#e5f3ff]/10 dark:bg-[#091b40]/20 text-gray-600/60 dark:text-gray-400/60';
+
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  disabled={currentTask?.attempted || showFeedback}
+                  onClick={() => {
+                    setSelectedOption(idx);
+                    setShowFeedback(false);
+                    setIsLastSubmissionCorrect(false);
+                    setSubmissionMessage('');
+                  }}
+                  className={`relative w-full rounded-xl border-2 p-4 text-center font-semibold text-sm transition min-h-[60px] flex items-center justify-center ${optionClass} ${
+                    (currentTask?.attempted || showFeedback) ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                  }`}
+                >
+                  <span className="leading-tight px-6">{opt}</span>
+                  {showFeedback && idx === question.correctIndex ? (
+                    <CheckCircle className="absolute right-3.5 h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                  ) : showFeedback && selectedOption === idx && selectedOption !== question.correctIndex ? (
+                    <X className="absolute right-3.5 h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Feedback Section */}
+          {showFeedback && question.explanation && question.explanation !== 'No explanation provided.' && question.explanation !== 'No explanation provided' ? (
+            <div
+              className={`mt-5 w-full rounded-xl border p-4 text-left ${
+                isCorrect
+                  ? 'border-green-200 bg-green-50 dark:border-green-800/40 dark:bg-green-900/20'
+                  : 'border-red-200 bg-red-50 dark:border-red-800/40 dark:bg-red-900/20'
+              }`}
+            >
+              <div className={`font-semibold ${isCorrect ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
+                {isCorrect ? 'Correct!' : 'Incorrect'}
+              </div>
+              <div className={`mt-1 text-sm leading-relaxed ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                {question.explanation}
+              </div>
+            </div>
+          ) : null}
+
+          {submissionMessage ? (
+            <p className="mt-4 text-xs font-semibold text-[#2563eb] dark:text-blue-400 w-full text-center">{submissionMessage}</p>
+          ) : null}
+
+          {/* Action Row - Submit Answer or Next/Finish controls */}
+          <div className="mt-8 flex items-center justify-center gap-4 w-full">
+            {isDailyMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentTaskIndex <= 0 || !dailySequence[currentTaskIndex - 1]) {
+                      navigate('/dashboard');
+                    } else {
+                      const prevTask = dailySequence[currentTaskIndex - 1];
+                      navigate(`/dashboard/practice/aptitude/${prevTask.questionId}?mode=daily`);
+                    }
+                  }}
+                  className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-[#2563eb]/20 dark:border-gray-700 bg-[#2563eb]/5 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-black/50 shadow-sm transition-all duration-200"
+                >
+                  Back
+                </button>
+
+                {!showFeedback && !isCurrentQuestionCompleted ? (
+                  <button
+                    type="button"
+                    disabled={selectedOption === null}
+                    onClick={handleMarkSolved}
+                    className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    Submit Answer
+                  </button>
+                ) : (
+                  currentTaskIndex < dailySequence.length - 1 ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                    >
+                      Next
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition-all duration-200"
+                    >
+                      Finish Daily Task
+                    </button>
+                  )
+                )}
+              </>
+            ) : (
+              // Non-daily mode (Practice Hub direct navigation)
+              <>
+                {!showFeedback ? (
+                  <button
+                    type="button"
+                    disabled={selectedOption === null}
+                    onClick={handleMarkSolved}
+                    className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-5 py-3 text-sm font-bold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                  >
+                    Submit Answer
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate(backPath)}
+                    className="inline-flex w-44 justify-center items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 px-5 py-3 text-sm font-bold text-gray-700 dark:text-gray-300 shadow-sm transition-all duration-200"
+                  >
+                    Back to Practice
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
         </div>
       </div>
     </UserSidebarLayout>

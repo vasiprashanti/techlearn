@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import CodingRound from "../models/CodingRound.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 import Student from "../models/Student.js";
@@ -136,6 +137,8 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
   const endedAt = attempt?.endedAt || submission.roundEndedAt || new Date();
   const timeTakenSeconds = Math.max(0, Math.round((endedAt.getTime() - new Date(startedAt).getTime()) / 1000));
   let calculatedXpGained = 0;
+  let totalMarks = 0;
+  let maxMarksPossible = 0;
   if (codingRound && codingRound.problems) {
     for (let i = 0; i < codingRound.problems.length; i++) {
       const problem = codingRound.problems[i];
@@ -147,6 +150,19 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
         firstAttempt: true,
       });
       calculatedXpGained += Math.round((score / 100) * baseXP);
+
+      const qType = String(problem.categoryType || "").toLowerCase();
+      const difficulty = problem.difficulty || "Easy";
+      let maxMarks = 10;
+      if (qType === "mcq" || qType === "aptitude") {
+        maxMarks = 1;
+      } else {
+        if (difficulty === "Easy") maxMarks = 10;
+        else if (difficulty === "Medium") maxMarks = 20;
+        else if (difficulty === "Hard") maxMarks = 30;
+      }
+      maxMarksPossible += maxMarks;
+      totalMarks += maxMarks * (score / 100);
     }
   }
 
@@ -164,8 +180,8 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       streak,
       timeTakenSeconds,
       timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
-      accuracy: Math.round((actualCorrect / totalProblems) * 100),
-      score: `${actualCorrect}/${totalProblems}`,
+      accuracy: maxMarksPossible > 0 ? Math.round((totalMarks / maxMarksPossible) * 100) : 0,
+      score: `${Number(totalMarks.toFixed(1))}/${maxMarksPossible}`,
       evaluationStatus: submission.autoEnded
         ? "Timeout"
         : submission.isRoundEnded
@@ -206,7 +222,36 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
     return null;
   }
 
-  const totalScore = Number(submission.totalScore || 0);
+  let totalMarks = 0;
+  let totalXP = 0;
+  
+  if (codingRound && codingRound.problems) {
+    codingRound.problems.forEach((problem, index) => {
+      const accuracy = submission.problemScores ? (submission.problemScores.get(index.toString()) || 0) : 0;
+      const qType = String(problem.categoryType || "").toLowerCase();
+      const difficulty = problem.difficulty || "Easy";
+      
+      let maxMarks = 10;
+      if (qType === "mcq" || qType === "aptitude") {
+        maxMarks = 1;
+      } else {
+        if (difficulty === "Easy") maxMarks = 10;
+        else if (difficulty === "Medium") maxMarks = 20;
+        else if (difficulty === "Hard") maxMarks = 30;
+      }
+      
+      const marks = maxMarks * (accuracy / 100);
+      totalMarks += marks;
+      
+      const baseXP = calculateChallengeXP({ difficulty, accuracy: 100 });
+      const xp = baseXP * (accuracy / 100);
+      totalXP += xp;
+    });
+  }
+
+  const finalTotalScore = Number(totalMarks.toFixed(2));
+  const finalXpEarned = Math.max(0, Math.round(totalXP));
+
   const problemScores = Array.from(submission.problemScores?.values?.() || []).map((score) => Number(score || 0));
   const allSubmittedProblemsPassed = problemScores.length > 0 && problemScores.every((score) => score >= 100);
   const allTestCaseDetails = Array.from(submission.problemTestCaseResults?.entries?.() || [])
@@ -224,7 +269,7 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
       ? "Timeout"
       : allSubmittedProblemsPassed
         ? "Passed"
-        : totalScore > 0
+        : finalTotalScore > 0
           ? "PartialPass"
           : hasSubmittedProblems
             ? "Failed"
@@ -243,9 +288,9 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
         challengeType: "daily_challenge",
         workingDay: codingRound.dayNumber,
         runCount: Array.from(submission.problemRuns?.values?.() || []).reduce((sum, value) => sum + Number(value || 0), 0),
-        accuracyScore: totalScore,
-        totalScore,
-        xpEarned: Math.max(0, Math.round(totalScore)),
+        accuracyScore: finalTotalScore,
+        totalScore: finalTotalScore,
+        xpEarned: finalXpEarned,
         status: nextStatus,
         submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
         executionTime: 0,
@@ -1678,17 +1723,35 @@ export const endCodingRound = async (req, res) => {
       await submission.save();
     }
 
+    let maxPossibleScore = 0;
+    let computedTotalScore = 0;
+
     const problemResults = codingRound.problems.map((problem, index) => {
-      const score = submission.problemScores.get(index.toString()) || 0;
+      const accuracy = submission.problemScores.get(index.toString()) || 0;
+      const qType = String(problem.categoryType || "").toLowerCase();
+      const difficulty = problem.difficulty || "Easy";
+      
+      let maxMarks = 10;
+      if (qType === "mcq" || qType === "aptitude") {
+        maxMarks = 1;
+      } else {
+        if (difficulty === "Easy") maxMarks = 10;
+        else if (difficulty === "Medium") maxMarks = 20;
+        else if (difficulty === "Hard") maxMarks = 30;
+      }
+      maxPossibleScore += maxMarks;
+      const marks = maxMarks * (accuracy / 100);
+      computedTotalScore += marks;
+
       return {
         problemIndex: index,
         problemTitle: problem.problemTitle,
         difficulty: problem.difficulty,
         categoryType: problem.categoryType || "Coding",
-        attempted: score > 0,
-        score: score,
-        maxScore: 100,
-        isCorrect: score === 100,
+        attempted: accuracy > 0,
+        score: Number(marks.toFixed(1)),
+        maxScore: maxMarks,
+        isCorrect: accuracy === 100,
       };
     });
 
@@ -1704,6 +1767,8 @@ export const endCodingRound = async (req, res) => {
       correctSolutions,
     });
 
+    const finalTotalScore = Number(computedTotalScore.toFixed(1));
+
     res.status(200).json({
       success: true,
       message: "Coding round ended successfully",
@@ -1713,10 +1778,10 @@ export const endCodingRound = async (req, res) => {
         linkedSubmissionId: linkedSubmission?._id || null,
         roundEndedAt: submission.roundEndedAt,
         problemResults,
-        accuracy: submission.totalScore,
-        evaluationStatus: linkedSubmission?.status || (correctSolutions === codingRound.problems.length ? "Passed" : (submission.totalScore > 0 ? "PartialPass" : "Pending")),
-        totalScore: submission.totalScore,
-        maxPossibleScore: codingRound.problems.length * 100,
+        accuracy: finalTotalScore,
+        evaluationStatus: linkedSubmission?.status || (correctSolutions === codingRound.problems.length ? "Passed" : (finalTotalScore > 0 ? "PartialPass" : "Pending")),
+        totalScore: finalTotalScore,
+        maxPossibleScore,
         totalProblems: codingRound.problems.length,
         attempted: totalProblemsAttempted,
         correctSolutions: correctSolutions,

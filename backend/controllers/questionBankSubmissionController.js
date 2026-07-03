@@ -110,26 +110,24 @@ const globalRunRateLimiter = rateLimit({
 /**
  * Calculate scoring based on test case results
  */
-const calculateScores = (passedTestCases, totalTestCases, executionTime, timeLimit) => {
-  // Accuracy: percentage of test cases passed
+const calculateScores = (passedTestCases, totalTestCases, executionTime, timeLimit, difficulty = "Easy", categoryType = "Coding") => {
   const accuracyScore = (passedTestCases / totalTestCases) * 100;
-
-  // Efficiency: based on execution time vs time limit
-  // Penalize if closer to timeout
-  const efficiencyScore = Math.max(0, 100 - (executionTime / timeLimit) * 100);
-
-  // Discipline: simplified code quality (can be extended)
-  const disciplineScore = 85; // Placeholder for future implementation
-
-  // Total score: weighted average
-  const totalScore =
-    accuracyScore * 0.5 + efficiencyScore * 0.3 + disciplineScore * 0.2;
+  const qType = String(categoryType || "").toLowerCase();
+  let maxMarks = 10;
+  if (qType === "mcq" || qType === "aptitude") {
+    maxMarks = 1;
+  } else {
+    if (difficulty === "Easy") maxMarks = 10;
+    else if (difficulty === "Medium") maxMarks = 20;
+    else if (difficulty === "Hard") maxMarks = 30;
+  }
+  const totalScore = maxMarks * (passedTestCases / totalTestCases);
 
   return {
     accuracyScore: Math.round(accuracyScore),
-    efficiencyScore: Math.round(efficiencyScore),
-    disciplineScore: Math.round(disciplineScore),
-    totalScore: Math.round(totalScore),
+    efficiencyScore: null,
+    disciplineScore: null,
+    totalScore: Number(totalScore.toFixed(2)),
   };
 };
 
@@ -506,7 +504,9 @@ export const submitSolution = [
         passedCount,
         allTestCases.length,
         totalExecutionTime,
-        submission.snapshotTimeLimit * allTestCases.length
+        submission.snapshotTimeLimit * allTestCases.length,
+        question.difficulty,
+        question.categoryType
       );
 
       // Update submission with final results

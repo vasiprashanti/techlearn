@@ -800,7 +800,7 @@ export const getBatchDetail = async (req, res) => {
         ? UserProgress.find({ userId: { $in: userIds } }).select("userId courseXP exerciseXP projectXP").lean()
         : Promise.resolve([]),
       studentEmails.length
-        ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
+        ? DailyChallengeAttempt.find({ studentEmail: { $in: studentEmails }, batchId }).populate("codingRoundId").lean()
         : Promise.resolve([]),
             studentEmails.length
         ? StudentCodingSubmission.find({ studentEmail: { $in: studentEmails }, batchId }).lean()
@@ -862,13 +862,20 @@ export const getBatchDetail = async (req, res) => {
       return d;
     };
 
+    const batchReleaseStart = localCombineDateAndTime(batch.startDate, batch.releaseTime || "00:00");
+
+    const getISTDateParts = (date) => {
+      const d = new Date(date);
+      const istDate = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+      return {
+        year: istDate.getUTCFullYear(),
+        month: istDate.getUTCMonth(),
+        date: istDate.getUTCDate(),
+      };
+    };
+
     const now = new Date();
-    const utcOffset = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const istTime = utcOffset + (3600000 * 5.5);
-    const istDate = new Date(istTime);
-    const year = istDate.getUTCFullYear();
-    const month = istDate.getUTCMonth();
-    const day = istDate.getUTCDate();
+    const { year, month, date: day } = getISTDateParts(now);
 
     const todayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - 5.5 * 60 * 60 * 1000);
     const todayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - 5.5 * 60 * 60 * 1000);
@@ -1054,15 +1061,18 @@ export const getBatchDetail = async (req, res) => {
         const matchesStudent = String(submission.studentId) === String(student._id);
         const matchesBatchDirectly = submission.batchId && String(submission.batchId) === String(batch._id);
         const matchesBatchQuestion = submission.questionId && batchQuestionIds.has(String(submission.questionId._id || submission.questionId));
-        return matchesStudent && (matchesBatchDirectly || matchesBatchQuestion);
+        const isAfterStart = new Date(submission.submittedAt || submission.createdAt) >= batchReleaseStart;
+        return matchesStudent && (matchesBatchDirectly || matchesBatchQuestion) && isAfterStart;
       });
       const studentMcqSubsAllTime = mcqSubmissions.filter(
-        (sub) => String(sub.studentEmail || "").trim().toLowerCase() === studentEmail
+        (sub) => String(sub.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                 new Date(sub.submittedAt) >= batchReleaseStart
       );
       const studentPracticeSubsAllTime = practiceSubmissions.filter((sub) => {
         const matchesStudent = studentUserId && String(sub.userId) === String(studentUserId);
         const matchesBatchQuestion = sub.questionBankId && batchQuestionIds.has(String(sub.questionBankId));
-        return matchesStudent && matchesBatchQuestion;
+        const isAfterStart = new Date(sub.submittedAt) >= batchReleaseStart;
+        return matchesStudent && matchesBatchQuestion && isAfterStart;
       });
       const canonicalChallengeAttemptIds = new Set(
         studentSubsAllTime.map((submission) => String(submission.attemptId || "")).filter(Boolean)
@@ -1070,7 +1080,8 @@ export const getBatchDetail = async (req, res) => {
       const studentCodingChallengeSubsAllTime = codingChallengeSubmissions.filter((sub) => {
         const matchesStudent = String(sub.studentEmail || "").trim().toLowerCase() === studentEmail;
         const alreadyLinked = sub.attemptId && canonicalChallengeAttemptIds.has(String(sub.attemptId));
-        return matchesStudent && !alreadyLinked;
+        const isAfterStart = new Date(sub.lastSubmissionAt || sub.submittedAt || sub.createdAt) >= batchReleaseStart;
+        return matchesStudent && !alreadyLinked && isAfterStart;
       });
 
       const allCombinedSubs = [
@@ -1100,7 +1111,7 @@ export const getBatchDetail = async (req, res) => {
             new Date(att.createdAt || att.updatedAt) >= todayStart && 
             new Date(att.createdAt || att.updatedAt) <= todayEnd
           )
-        )
+        ) && new Date(att.createdAt) >= batchReleaseStart
       );
 
       let studentDayNumber = dayNumber;
@@ -1265,27 +1276,65 @@ export const getBatchDetail = async (req, res) => {
               todayScoresDetail.coding = `—/100`;
             }
           }
-
         }
 
         let totalCorrect = 0;
         let totalAssigned = 0;
 
         if (todayAttempt) {
-          const mcqTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
-          const correctMcq = mcqTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          const totalMcq = mcqTasks.length;
-          
-          const sqlTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "SQL");
-          const correctSql = sqlTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          const totalSql = sqlTasks.length;
+          let earnedTaskMarks = 0;
+          let maxTaskMarks = 0;
+          let earnedMcqMarks = 0;
+          let maxMcqMarks = 0;
+          let earnedSqlMarks = 0;
+          let maxSqlMarks = 0;
+          let earnedCodingMarks = 0;
+          let maxCodingMarks = 0;
 
-          const codingTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "Coding" || t.taskType === "Debugging");
-          const correctCoding = codingTasks.filter(t => t.status === "Completed" && t.isCorrect).length;
-          const totalCoding = codingTasks.length;
+          todayAttempt.tasksProgress.forEach(t => {
+            const qType = String(t.taskType || "").toLowerCase();
+            const isMcq = qType === "mcq" || qType === "aptitude" || qType === "core cs";
+            const isSql = qType === "sql";
+            const isCoding = qType === "coding" || qType === "debugging";
+            
+            let difficulty = "Easy";
+            const templateTask = activeDailyTaskTemplate?.dayAssignments
+              ?.find(da => da.dayNumber === day)
+              ?.tasks?.find(tsk => String(tsk.questionId?._id || tsk.questionId) === String(t.questionId));
+            if (templateTask && templateTask.questionId?.difficulty) {
+              difficulty = templateTask.questionId.difficulty;
+            }
+            
+            let maxMarks = 10;
+            if (isMcq) {
+              maxMarks = 1;
+            } else {
+              if (difficulty === "Easy") maxMarks = 10;
+              else if (difficulty === "Medium") maxMarks = 20;
+              else if (difficulty === "Hard") maxMarks = 30;
+            }
+            
+            maxTaskMarks += maxMarks;
+            if (isMcq) maxMcqMarks += maxMarks;
+            else if (isSql) maxSqlMarks += maxMarks;
+            else if (isCoding) maxCodingMarks += maxMarks;
+            
+            if (t.status === "Completed") {
+              const accuracyVal = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
+              const marks = maxMarks * (accuracyVal / 100);
+              earnedTaskMarks += marks;
+              if (isMcq) earnedMcqMarks += marks;
+              else if (isSql) earnedSqlMarks += marks;
+              else if (isCoding) earnedCodingMarks += marks;
+            }
+          });
 
-          totalCorrect = correctMcq + correctSql + correctCoding;
-          totalAssigned = totalMcq + totalSql + totalCoding;
+          totalCorrect = Number(earnedTaskMarks.toFixed(1));
+          totalAssigned = maxTaskMarks;
+
+          if (maxMcqMarks > 0) todayScoresDetail.mcq = `${Number(earnedMcqMarks.toFixed(1))}/${maxMcqMarks}`;
+          if (maxSqlMarks > 0) todayScoresDetail.sql = `${Number(earnedSqlMarks.toFixed(1))}/${maxSqlMarks}`;
+          if (maxCodingMarks > 0) todayScoresDetail.coding = `${Number(earnedCodingMarks.toFixed(1))}/${maxCodingMarks}`;
         }
 
         if (totalAssigned === 0 && todayCombinedSubs.length > 0) {
@@ -1322,8 +1371,6 @@ export const getBatchDetail = async (req, res) => {
             .reduce((sum, s) => sum + (s.xpEarned || s.totalScore || 0), 0);
         }
 
-        todayScore = totalAssigned > 0 ? `${totalCorrect}/${totalAssigned}` : "—";
-
         if (dailyTaskHasMultiple) {
           todayScore = "View Scores";
           if (totalMCQsInTemplateToday > 0 && (!todayScoresDetail.mcq || todayScoresDetail.mcq === "—")) {
@@ -1351,7 +1398,9 @@ export const getBatchDetail = async (req, res) => {
 
       const studentChallengeAttemptToday = dailyChallengeAttempts.find(
         (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                 String(att.batchId || "") === String(batchId)
+                 String(att.batchId || "") === String(batchId) &&
+                 (att.codingRoundId?.dayNumber === dayNumber || (att.codingRoundId && String(att.codingRoundId.dayNumber) === String(dayNumber))) &&
+                 (new Date(att.createdAt || att.startedAt || new Date()) >= todayStart && new Date(att.createdAt || att.startedAt || new Date()) <= todayEnd)
       );
       const allChallengeSubs = studentChallengeAttemptToday
         ? [
@@ -1369,11 +1418,13 @@ export const getBatchDetail = async (req, res) => {
       const studentChallengeSubToday = challengeSubmissions.find(
         (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
                 ((String(cs.trackId || "") === String(dailyChallengeTemplate?._id || "") && cs.workingDay === dayNumber) ||
-                 (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId)))
+                 (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId._id || studentChallengeAttemptToday.codingRoundId)))
       );
 
       if (studentChallengeAttemptToday) {
         let maxChallengeXpToday = 0;
+        let maxChallengeMarksToday = 0;
+        let todayChallengeMarks = 0;
         let activeDailyChallengeTemplate = dailyChallengeTemplate;
         if (activeDailyChallengeTemplate) {
           const dayAssignment = activeDailyChallengeTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
@@ -1387,6 +1438,18 @@ export const getBatchDetail = async (req, res) => {
               if (q) {
                 const difficulty = q.difficulty || "Easy";
                 maxChallengeXpToday += (CHALLENGE_XP[difficulty] || 25);
+                
+                const qType = String(t.taskType || q.trackType || q.categoryType || "").toLowerCase();
+                const isMcq = qType === "mcq" || qType === "aptitude";
+                let maxMarks = 10;
+                if (isMcq) {
+                  maxMarks = 1;
+                } else {
+                  if (difficulty === "Easy") maxMarks = 10;
+                  else if (difficulty === "Medium") maxMarks = 20;
+                  else if (difficulty === "Hard") maxMarks = 30;
+                }
+                maxChallengeMarksToday += maxMarks;
               }
             });
 
@@ -1397,6 +1460,10 @@ export const getBatchDetail = async (req, res) => {
               let sqlCorrect = 0;
               let codingCount = 0;
               let codingTotalAccuracy = 0;
+              
+              let maxMcqMarks = 0;
+              let maxSqlMarks = 0;
+              let maxCodingMarks = 0;
 
               tasksList.forEach((t, idx) => {
                 const q = t.questionId;
@@ -1425,8 +1492,32 @@ export const getBatchDetail = async (req, res) => {
                   earnedXP = Math.round((score / 100) * baseXP);
                 }
 
+                let maxMarks = 10;
+                if (isMcq) {
+                  maxMarks = 1;
+                  maxMcqMarks += maxMarks;
+                } else if (isSql) {
+                  if (difficulty === "Easy") maxMarks = 10;
+                  else if (difficulty === "Medium") maxMarks = 20;
+                  else if (difficulty === "Hard") maxMarks = 30;
+                  maxSqlMarks += maxMarks;
+                } else {
+                  if (difficulty === "Easy") maxMarks = 10;
+                  else if (difficulty === "Medium") maxMarks = 20;
+                  else if (difficulty === "Hard") maxMarks = 30;
+                  maxCodingMarks += maxMarks;
+                }
+
+                let earnedMarks = 0;
+                if (isMcq) {
+                  earnedMarks = score >= 100 ? 1 : 0;
+                } else {
+                  earnedMarks = maxMarks * (score / 100);
+                }
+
                 if (isSubmitted) {
                   todayChallengeXp += earnedXP;
+                  todayChallengeMarks += earnedMarks;
                 }
 
                 if (isMcq) {
@@ -1434,21 +1525,21 @@ export const getBatchDetail = async (req, res) => {
                   if (score >= 100 && isSubmitted) mcqCorrect++;
                 } else if (isSql) {
                   sqlCount++;
-                  if (score >= 100 && isSubmitted) sqlCorrect++;
+                  if (isSubmitted) sqlCorrect += earnedMarks;
                 } else {
                   codingCount++;
-                  codingTotalAccuracy += score;
+                  if (isSubmitted) codingTotalAccuracy += earnedMarks;
                 }
               });
 
-              if (mcqCount > 0) {
-                todayChallengeScoresDetail.mcq = `${mcqCorrect}/${mcqCount}`;
+              if (maxMcqMarks > 0) {
+                todayChallengeScoresDetail.mcq = `${mcqCorrect}/${maxMcqMarks}`;
               }
-              if (sqlCount > 0) {
-                todayChallengeScoresDetail.sql = `${sqlCorrect}/${sqlCount}`;
+              if (maxSqlMarks > 0) {
+                todayChallengeScoresDetail.sql = `${Number(sqlCorrect.toFixed(1))}/${maxSqlMarks}`;
               }
-              if (codingCount > 0) {
-                todayChallengeScoresDetail.coding = `${Math.round(codingTotalAccuracy / codingCount)}/100`;
+              if (maxCodingMarks > 0) {
+                todayChallengeScoresDetail.coding = `${Number(codingTotalAccuracy.toFixed(1))}/${maxCodingMarks}`;
               }
             }
           }
@@ -1456,6 +1547,9 @@ export const getBatchDetail = async (req, res) => {
 
         if (maxChallengeXpToday === 0) {
           maxChallengeXpToday = 70;
+        }
+        if (maxChallengeMarksToday === 0) {
+          maxChallengeMarksToday = 30;
         }
 
         if (dailyChallengeHasMultiple) {
@@ -1489,44 +1583,64 @@ export const getBatchDetail = async (req, res) => {
           let totalMcqToday = 0;
           let totalSqlToday = 0;
           let totalCodingToday = 0;
+          
+          let maxMcqMarksToday = 0;
+          let maxSqlMarksToday = 0;
+          let maxCodingMarksToday = 0;
+
           challengeTemplateTodayQuestions.forEach((q) => {
             const type = questionIdToTypeMap.get(String(q._id || q));
-            if (type === "mcq") totalMcqToday++;
-            else if (type === "sql") totalSqlToday++;
-            else totalCodingToday++;
+            const difficulty = q.difficulty || "Easy";
+            let maxMarks = 10;
+            if (type === "mcq") {
+              maxMcqMarksToday += 1;
+              totalMcqToday++;
+            } else if (type === "sql") {
+              if (difficulty === "Easy") maxMarks = 10;
+              else if (difficulty === "Medium") maxMarks = 20;
+              else if (difficulty === "Hard") maxMarks = 30;
+              maxSqlMarksToday += maxMarks;
+              totalSqlToday++;
+            } else {
+              if (difficulty === "Easy") maxMarks = 10;
+              else if (difficulty === "Medium") maxMarks = 20;
+              else if (difficulty === "Hard") maxMarks = 30;
+              maxCodingMarksToday += maxMarks;
+              totalCodingToday++;
+            }
           });
 
           if (mcqSubs.length > 0) {
             const totalCorrect = mcqSubs.filter((s) => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
-            todayChallengeScoresDetail.mcq = `${totalCorrect}/${totalMcqToday}`;
+            todayChallengeScoresDetail.mcq = `${totalCorrect}/${maxMcqMarksToday}`;
           } else if (totalMcqToday > 0) {
-            todayChallengeScoresDetail.mcq = `—/${totalMcqToday}`;
+            todayChallengeScoresDetail.mcq = `—/${maxMcqMarksToday}`;
           }
 
           if (sqlSubs.length > 0) {
-            const totalCorrect = sqlSubs.filter((s) => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
-            todayChallengeScoresDetail.sql = `${totalCorrect}/${totalSqlToday}`;
+            const sumMarks = sqlSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0);
+            todayChallengeScoresDetail.sql = `${Number(sumMarks.toFixed(1))}/${maxSqlMarksToday}`;
           } else if (totalSqlToday > 0) {
-            todayChallengeScoresDetail.sql = `—/${totalSqlToday}`;
+            todayChallengeScoresDetail.sql = `—/${maxSqlMarksToday}`;
           }
 
           if (codingSubs.length > 0) {
-            const totalAccuracy = codingSubs.reduce((sum, s) => sum + (s.accuracyScore ?? s.totalScore ?? 0), 0);
-            const avgAccuracy = Math.round(totalAccuracy / codingSubs.length);
-            todayChallengeScoresDetail.coding = `${avgAccuracy}/100`;
+            const sumMarks = codingSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0);
+            todayChallengeScoresDetail.coding = `${Number(sumMarks.toFixed(1))}/${maxCodingMarksToday}`;
           } else if (totalCodingToday > 0) {
-            todayChallengeScoresDetail.coding = `—/100`;
+            todayChallengeScoresDetail.coding = `—/${maxCodingMarksToday}`;
           }
 
           const primarySub = allChallengeSubs[0];
           if (primarySub) {
-            todayChallengeXp = primarySub.xpEarned || primarySub.totalScore || 0;
+            todayChallengeXp = primarySub.xpEarned || 0;
+            todayChallengeMarks = primarySub.totalScore || 0;
           }
 
           if (studentChallengeSubToday) {
-            todayChallengeScore = `${todayChallengeXp}/${maxChallengeXpToday}`;
+            todayChallengeScore = `${Number(todayChallengeMarks.toFixed(1))}/${maxChallengeMarksToday}`;
           } else {
-            todayChallengeScore = `0/${maxChallengeXpToday}`;
+            todayChallengeScore = `0/${maxChallengeMarksToday}`;
           }
         }
       }
@@ -1617,7 +1731,8 @@ todayXp = todayChallengeXp + todayTaskXp;
         if (totalCodingInTemplate > 0) dayTasksDetail.coding = `—/100`;
 
         const dayAttempt = dailyTaskAttempts.find(
-          (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === day
+          (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === day &&
+                  new Date(att.createdAt) >= batchReleaseStart
         );
         if (dayAttempt) {
           const mcqTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
@@ -1822,7 +1937,8 @@ todayXp = todayChallengeXp + todayTaskXp;
         const dayChallengeAttempt = dailyChallengeAttempts.find(
           (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
                   String(att.batchId || "") === String(batchId) &&
-                  assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId))
+                  assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId)) &&
+                  new Date(att.createdAt || att.startedAt) >= batchReleaseStart
         );
 
         const studentChallengeSub = challengeSubmissions.find(

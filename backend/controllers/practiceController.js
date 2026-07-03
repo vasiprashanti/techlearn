@@ -53,7 +53,7 @@ const normalizePracticeTrack = (value = "") => {
   if (normalized.includes("core") || normalized.includes("cs")) return "Core CS";
   if (normalized.includes("sql") || normalized.includes("database")) return "SQL";
   if (normalized.includes("aptitude")) return "Aptitude";
-  if (normalized.includes("company")) return "Company Based";
+  if (normalized.includes("company")) return "Company";
   return "";
 };
 
