@@ -397,7 +397,8 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
 };
 
 export const upsertDailyChallengeRound = async ({ batch, track, questions, dayNumber, durationMinutes }) => {
-  const linkId = `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}`;
+  const dateStr = new Date(batch.startDate).toISOString().slice(0, 10).replace(/[^0-9]/g, "");
+  const linkId = `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}-${dateStr}`;
   const resolvedQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
 
   const problems = resolvedQuestions.map((q) => mapQuestionToProblem(q));

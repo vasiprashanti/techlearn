@@ -263,7 +263,15 @@ export default function InterviewCoreCsQuestionDetail() {
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
         <div className="border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
           {/* Header row with heading centered and difficulty pill absolute on the right */}
-          <div className="relative flex items-center justify-center w-full mb-6 select-none">
+          <div className="relative flex items-center justify-between w-full mb-6 select-none border-b border-slate-100 dark:border-slate-800 pb-4">
+            <button
+              type="button"
+              onClick={() => navigate(backPath)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-black/50 transition-all duration-200"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back
+            </button>
             <h1 className="text-[10px] md:text-xs font-press-start text-[#2563eb] dark:text-[#8fd9ff] uppercase">
               TECHNICAL MCQ
             </h1>
