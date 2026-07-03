@@ -37,6 +37,11 @@ const BatchDetails = () => {
   const [colleges, setColleges] = useState([]);
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [selectedAttachedCourseId, setSelectedAttachedCourseId] = useState('');
+  const [isSavingAttachedCourse, setIsSavingAttachedCourse] = useState(false);
+  const [attachedCourseError, setAttachedCourseError] = useState('');
+  const [attachedCourseMessage, setAttachedCourseMessage] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [studentStatusFilter, setStudentStatusFilter] = useState('All Status');
   const [studentSortOrder, setStudentSortOrder] = useState('rank-asc');
@@ -68,14 +73,24 @@ const BatchDetails = () => {
       adminAPI.getColleges().catch(() => []),
       adminAPI.getBatches().catch(() => []),
       adminAPI.getTrackTemplates().catch(() => []),
-    ]).then(([remoteColleges, remoteBatches, remoteTracks]) => {
+      adminAPI.getCourses().catch(() => ({ courses: [] })),
+    ]).then(([remoteColleges, remoteBatches, remoteTracks, remoteCourses]) => {
       const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
       const normalizedBatches = preferRemoteData(remoteBatches, []).map((b) => ({ id: b.id || b._id, name: b.name || b.id || 'Untitled Batch', college: b.college || '' }));
       const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
+      const normalizedCourses = (Array.isArray(remoteCourses?.courses) ? remoteCourses.courses : [])
+        .map((course) => ({
+          id: String(course._id || course.courseId || course.id || ''),
+          title: String(course.title || 'Untitled Course'),
+          description: String(course.description || ''),
+          numTopics: Number(course.numTopics || course.topicIds?.length || 0),
+        }))
+        .filter((course) => course.id);
       const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
       setColleges(normalizedColleges);
       setBatches(normalizedBatches);
       setTracks(uniqueTracks);
+      setCourses(normalizedCourses);
     }).catch(() => {});
   }, []);
 
@@ -108,6 +123,10 @@ const BatchDetails = () => {
       ],
     };
   }, [batchDetail, location.state, batchId]);
+
+  useEffect(() => {
+    setSelectedAttachedCourseId(batch?.attachedCourse?.id ? String(batch.attachedCourse.id) : '');
+  }, [batch?.attachedCourse?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,6 +300,31 @@ const BatchDetails = () => {
       setFormError(error.message || 'Failed to remove student from batch.');
     } finally {
       setIsRemovingStudent(false);
+    }
+  };
+
+  const updateAttachedCourse = async (nextCourseId = selectedAttachedCourseId) => {
+    setAttachedCourseError('');
+    setAttachedCourseMessage('');
+    setIsSavingAttachedCourse(true);
+    try {
+      await adminAPI.updateBatch(batch.id || batchId, {
+        name: batch.name,
+        status: batch.status,
+        startDate: batch.startDateValue,
+        expiryDate: batch.expiryDateValue,
+        batchSize: batch.batchSize,
+        programSelection: batch.programSelection || 'Placement Sprint',
+        assignedTrackTemplateIds: batch.assignedTrackTemplateIds || [],
+        attachedCourse: nextCourseId || null,
+      });
+      const remoteBatch = await adminAPI.getBatch(batchId);
+      setBatchDetail(preferRemoteData(remoteBatch, null));
+      setAttachedCourseMessage(nextCourseId ? 'Course attached to this batch.' : 'Course removed from this batch.');
+    } catch (error) {
+      setAttachedCourseError(error.message || 'Failed to update attached course.');
+    } finally {
+      setIsSavingAttachedCourse(false);
     }
   };
 
@@ -623,10 +667,11 @@ const BatchDetails = () => {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
             <div className="space-y-3">
               <h3 className="admin-section-heading">Attached Tracks</h3>
               {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                   {batch.tracks.map((track, trackIdx) => {
                     const trackId = track.id || track._id || `track-${trackIdx}`;
                     const isExpanded = !!expandedTracks[trackId];
@@ -674,35 +719,69 @@ const BatchDetails = () => {
               )}
             </div>
 
-            {/* Attached Course */}
             <div className="space-y-3">
-              <h3 className="admin-section-heading">Attached Course</h3>
-              {batch.attachedCourse ? (
-                <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 dark:bg-[#bceaff]/15 text-[#3C83F6] dark:text-[#bceaff] flex items-center justify-center shrink-0">
+              <h3 className="admin-section-heading">Attached Courses</h3>
+              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 shadow-sm space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 dark:bg-[#3C83F6]/15 text-[#3C83F6] flex items-center justify-center shrink-0">
                     <FiBookOpen className="w-5 h-5" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{batch.attachedCourse.title}</p>
-                    {batch.attachedCourse.description && (
-                      <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{batch.attachedCourse.description}</p>
-                    )}
-                    <p className="mt-1 text-[11px] font-medium text-[#3C83F6] dark:text-[#bceaff]">
-                      {batch.attachedCourse.numTopics} {batch.attachedCourse.numTopics === 1 ? 'Topic' : 'Topics'}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                      {batch.attachedCourse?.title || 'No course attached'}
+                    </p>
+                    <p className="mt-1 text-xs text-black/50 dark:text-white/50 leading-relaxed">
+                      {batch.attachedCourse
+                        ? `${batch.attachedCourse.numTopics || 0} topics available for day-wise notes.`
+                        : 'Attach a Placement Sprint course so Today’s Notes can open the correct topic for each batch day.'}
                     </p>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
+                  <div className="relative">
+                    <select
+                      value={selectedAttachedCourseId}
+                      onChange={(e) => {
+                        setSelectedAttachedCourseId(e.target.value);
+                        setAttachedCourseError('');
+                        setAttachedCourseMessage('');
+                      }}
+                      className="appearance-none w-full h-11 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#12285a] px-3 pr-9 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
+                    >
+                      <option className={dropdownOptionClass} value="">No course attached</option>
+                      {courses.map((course) => (
+                        <option key={course.id} className={dropdownOptionClass} value={course.id}>
+                          {course.title}
+                        </option>
+                      ))}
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
+                  </div>
                   <button
-                    onClick={() => navigate(`/admin/courses/${batch.attachedCourse.id}`)}
-                    className="shrink-0 inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-[#3C83F6]/30 dark:border-[#bceaff]/20 text-[#3C83F6] dark:text-[#bceaff] text-xs font-semibold hover:bg-[#3C83F6]/5 dark:hover:bg-[#bceaff]/5 transition-colors"
+                    type="button"
+                    onClick={() => updateAttachedCourse()}
+                    disabled={isSavingAttachedCourse}
+                    className="h-11 px-4 rounded-xl bg-[#061846] text-white text-sm font-semibold hover:bg-[#0b2465] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                   >
-                    View Course
+                    {isSavingAttachedCourse ? 'Saving...' : batch.attachedCourse ? 'Change Course' : 'Attach Course'}
                   </button>
                 </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
-                  No course is attached to this batch yet.
-                </div>
-              )}
+
+                {batch.attachedCourse && (
+                  <button
+                    type="button"
+                    onClick={() => updateAttachedCourse('')}
+                    disabled={isSavingAttachedCourse}
+                    className="text-xs font-semibold text-rose-500 hover:text-rose-600 disabled:opacity-60"
+                  >
+                    Remove attached course
+                  </button>
+                )}
+                {attachedCourseMessage && <p className="text-xs font-medium text-emerald-500">{attachedCourseMessage}</p>}
+                {attachedCourseError && <p className="text-xs font-medium text-rose-500">{attachedCourseError}</p>}
+              </div>
+            </div>
             </div>
 
             <div className="space-y-4">

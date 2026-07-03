@@ -88,6 +88,16 @@ export default function DailyChallengeInstructions() {
         attempt,
       });
 
+      if (challengePayload?.linkId && challengePayload.linkId !== linkId) {
+        setDailyChallengeSession(challengePayload.linkId, {
+          ...session,
+          challenge: challengePayload,
+          attempt,
+        });
+        navigate(`/daily-challenge/${challengePayload.linkId}/test`, { replace: true });
+        return;
+      }
+
       navigate(`/daily-challenge/${linkId}/test`);
     } catch (err) {
       setError(err.message || "Unable to start the Daily Challenge.");
