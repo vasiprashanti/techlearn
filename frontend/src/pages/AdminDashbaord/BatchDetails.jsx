@@ -65,6 +65,33 @@ const BatchDetails = () => {
   const [activeScoreTooltip, setActiveScoreTooltip] = useState(null);
   const [activeDayScoreTooltip, setActiveDayScoreTooltip] = useState(null);
 
+  const [selectedChallengeScore, setSelectedChallengeScore] = useState(null);
+
+  const [reviewSubmission, setReviewSubmission] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+
+  const handleReviewSubmission = async (submissionId, studentName) => {
+    try {
+      setReviewLoading(true);
+      if (!submissionId) {
+        setReviewSubmission({ student: studentName, isChallenge: true, problems: [], loading: false });
+        return;
+      }
+      setReviewSubmission({ id: submissionId, student: studentName, loading: true });
+      const response = await adminAPI.getSubmission(submissionId);
+      if (response?.success && response?.data) {
+        setReviewSubmission(response.data);
+      } else {
+        setReviewSubmission({ student: studentName, isChallenge: true, problems: [], loading: false });
+      }
+    } catch (err) {
+      console.error(err);
+      setReviewSubmission({ student: studentName, isChallenge: true, problems: [], loading: false });
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
     
@@ -421,7 +448,8 @@ const BatchDetails = () => {
     });
     if (scores.length === 0) return '—';
     const sum = scores.reduce((s, v) => s + v, 0);
-    const avg = (sum / scores.length).toFixed(1);
+    const avgVal = sum / scores.length;
+    const avg = avgVal % 1 === 0 ? avgVal.toString() : avgVal.toFixed(1);
     return `${avg}/${maxDen}`;
   }, [batch.studentsTable]);
 
@@ -897,35 +925,21 @@ const BatchDetails = () => {
                                       {formatEmail(student.email)}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
-                                      {student.todayChallengeScore === 'View Scores' ? (
-                                        <>
-                                          <button
-                                            type="button"
-                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-challenge` ? null : `${student.email}-challenge`)}
-                                            className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
-                                          >
-                                            View score
-                                          </button>
-                                          {activeScoreTooltip === `${student.email}-challenge` && (
-                                            <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
-                                              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
-                                              {Object.entries(student.todayChallengeScoresDetail || {}).map(([key, scoreVal]) => {
-                                                if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
-                                                const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
-                                                return (
-                                                  <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
-                                                    <span>{label}</span>
-                                                    <span>{scoreVal}</span>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-                                        </>
+                                      {student.todayChallengeScore !== '—' && student.todayChallengeScore !== 'NA' && student.todayChallengeScore !== null ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedChallengeScore({
+                                            studentName: student.name,
+                                            email: student.email,
+                                            submissionId: student.todayChallengeSubmissionId,
+                                            scoresDetail: student.todayChallengeScoresDetail,
+                                          })}
+                                          className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                        >
+                                          View score
+                                        </button>
                                       ) : (
-                                        <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
-                                          {student.todayChallengeScore || '—'}
-                                        </span>
+                                        <span className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500">—</span>
                                       )}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
@@ -1237,36 +1251,21 @@ const BatchDetails = () => {
                                               )}
                                             </div>
                                             <div className={`${classC} mt-2`}>
-                                              {scoreChallenge === 'View Scores' ? (
-                                                <>
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                      const key = `${student.email}-${dayNum}-challenge`;
-                                                      setActiveDayScoreTooltip(activeDayScoreTooltip === key ? null : key);
-                                                    }}
-                                                    className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
-                                                  >
-                                                    View score
-                                                  </button>
-                                                  {activeDayScoreTooltip === `${student.email}-${dayNum}-challenge` && (
-                                                    <div className={`absolute z-[100] ${index === 0 ? 'top-full mt-1' : 'bottom-full mb-1'} right-1/2 translate-x-1/2 bg-white dark:bg-[#0b1329] border border-black/10 dark:border-white/10 p-2.5 rounded-lg shadow-xl text-left min-w-[130px]`}>
-                                                      <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 border-b border-black/5 dark:border-white/5 pb-1">Scores breakdown</div>
-                                                      {Object.entries(student.dayWiseHistoryChallengesDetail?.[dayNum] || {}).map(([key, scoreVal]) => {
-                                                        if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
-                                                        const label = key === 'mcq' ? 'MCQ' : key === 'sql' ? 'SQL' : 'Coding';
-                                                        return (
-                                                          <div key={key} className="flex justify-between gap-4 text-[11px] font-semibold py-0.5 text-slate-700 dark:text-slate-300">
-                                                            <span>{label}</span>
-                                                            <span>{scoreVal}</span>
-                                                          </div>
-                                                        );
-                                                      })}
-                                                    </div>
-                                                  )}
-                                                </>
+                                              {scoreChallenge !== '—' && scoreChallenge !== 'NA' && scoreChallenge !== null ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setSelectedChallengeScore({
+                                                    studentName: student.name,
+                                                    email: student.email,
+                                                    submissionId: student.dayWiseHistoryChallengesSubmissionIds?.[dayNum],
+                                                    scoresDetail: student.dayWiseHistoryChallengesDetail?.[dayNum],
+                                                  })}
+                                                  className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                                >
+                                                  View score
+                                                </button>
                                               ) : (
-                                                <span>{scoreChallenge}</span>
+                                                <span className="text-slate-300 dark:text-slate-650">—</span>
                                               )}
                                             </div>
                                           </td>
@@ -1528,6 +1527,171 @@ const BatchDetails = () => {
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
                 <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reviewSubmission && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setReviewSubmission(null)} />
+          <div className="relative w-full max-w-3xl bg-white dark:bg-[#0a1737] border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">Review Submission</h2>
+                <p className="text-xs text-black/45 dark:text-white/40 mt-0.5">{reviewSubmission.student} • {reviewSubmission.email || reviewSubmission.batch}</p>
+              </div>
+              <button onClick={() => setReviewSubmission(null)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70">Close</button>
+            </div>
+            
+            {reviewSubmission.loading ? (
+              <div className="p-12 text-center text-sm text-gray-500">Loading details...</div>
+            ) : (
+              <>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Assessment</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{reviewSubmission.question || "_"}</p>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Submitted At</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">
+                      {reviewSubmission.when && !isNaN(new Date(reviewSubmission.when).getTime())
+                        ? new Date(reviewSubmission.when).toLocaleString()
+                        : "_"}
+                    </p>
+                  </div>
+                </div>
+
+                {reviewSubmission.isChallenge ? (
+                  <div className="px-6 pb-6 max-h-[400px] overflow-y-auto space-y-4">
+                    <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold mb-2">Student Solutions</p>
+                    {(!reviewSubmission.problems || reviewSubmission.problems.length === 0) ? (
+                      <div className="text-center py-10 border border-dashed border-black/10 dark:border-white/10 rounded-xl bg-black/5 dark:bg-black/25">
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No attempts to review.</p>
+                      </div>
+                    ) : (
+                      reviewSubmission.problems.map((prob, idx) => (
+                        <div key={idx} className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5 space-y-2">
+                          <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2">
+                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{prob.title}</span>
+                            <div className="flex gap-2 text-xs">
+                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{prob.language || 'N/A'}</span>
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">Score: {prob.score}</span>
+                            </div>
+                          </div>
+                          {prob.code ? (
+                            <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[200px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
+                          ) : (
+                            <p className="text-xs italic text-gray-400">No code submitted / MCQ Option selected</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  reviewSubmission.code && (
+                    <div className="px-6 pb-6">
+                      <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                        <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold mb-2">Submitted Code</p>
+                        <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[300px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{reviewSubmission.code}</pre>
+                      </div>
+                    </div>
+                  )
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedChallengeScore && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setSelectedChallengeScore(null)} />
+          <div className="relative w-full max-w-lg bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Scores Breakdown</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{selectedChallengeScore.studentName} ({selectedChallengeScore.email})</p>
+              </div>
+              <button onClick={() => setSelectedChallengeScore(null)} className="text-sm font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Close</button>
+            </div>
+
+            <div className="p-6 space-y-6 bg-white dark:bg-slate-900">
+              {/* MCQ Section */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-850 pb-1">MCQ Section</h3>
+                {selectedChallengeScore.scoresDetail?.mcq ? (
+                  Object.entries(selectedChallengeScore.scoresDetail.mcq).map(([key, scoreVal]) => {
+                    if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
+                    const labelMap = {
+                      java: 'Java MCQ',
+                      dsa: 'DSA MCQ',
+                      sql: 'SQL MCQ',
+                      aptitude: 'Aptitude MCQ',
+                      technical: 'Technical MCQ'
+                    };
+                    const label = labelMap[key] || `${key.toUpperCase()} MCQ`;
+                    return (
+                      <div key={key} className="flex justify-between items-center text-sm font-semibold py-1 text-slate-800 dark:text-slate-200">
+                        <span>{label}</span>
+                        <span className="font-bold text-[#3C83F6] dark:text-blue-400">{scoreVal}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs italic text-slate-400">No MCQ questions assigned/attempted.</p>
+                )}
+                {selectedChallengeScore.scoresDetail?.mcq && Object.values(selectedChallengeScore.scoresDetail.mcq).every(v => v === '—') && (
+                  <p className="text-xs italic text-slate-400">No MCQ questions assigned/attempted.</p>
+                )}
+              </div>
+
+              {/* Coding Section */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-850 pb-1">
+                  <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Coding Section</h3>
+                </div>
+                {selectedChallengeScore.scoresDetail?.coding ? (
+                  Object.entries(selectedChallengeScore.scoresDetail.coding).map(([key, scoreVal]) => {
+                    if (scoreVal === '—' || scoreVal === undefined || scoreVal === null) return null;
+                    const labelMap = {
+                      java: 'Java Coding',
+                      dsa: 'DSA Coding',
+                      sql: 'SQL Coding',
+                      aptitude: 'Aptitude Coding',
+                      technical: 'Technical Coding'
+                    };
+                    const label = labelMap[key] || `${key.toUpperCase()} Coding`;
+                    const hasSubmission = scoreVal && !scoreVal.startsWith('—');
+                    return (
+                      <div key={key} className="flex justify-between items-center text-sm font-semibold py-1 text-slate-800 dark:text-slate-200">
+                        <span>{label}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-[#3C83F6] dark:text-blue-400">{scoreVal}</span>
+                          {hasSubmission && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleReviewSubmission(selectedChallengeScore.submissionId, selectedChallengeScore.studentName);
+                                setSelectedChallengeScore(null);
+                              }}
+                              className="text-[11px] font-bold text-[#3C83F6] hover:underline dark:text-blue-400"
+                            >
+                              Review Code
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs italic text-slate-400">No coding questions assigned/attempted.</p>
+                )}
+                {selectedChallengeScore.scoresDetail?.coding && Object.values(selectedChallengeScore.scoresDetail.coding).every(v => v === '—') && (
+                  <p className="text-xs italic text-slate-400">No coding questions assigned/attempted.</p>
+                )}
               </div>
             </div>
           </div>

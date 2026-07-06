@@ -1035,13 +1035,21 @@ export const submitCodingRoundAnswers = async (req, res) => {
     }
 
     const question = await Question.findById(targetQuestionId || codingRound.questionId).select("+content.correctOption").lean();
-    const isMcq = question?.categoryType === "MCQ";
+    const isMcq = String(question?.categoryType || "").toUpperCase() === "MCQ" || String(question?.categoryType || "").toUpperCase() === "APTITUDE";
 
     if (isMcq) {
       totalTests = 1;
-      const studentAns = String(submittedCode || "").trim().toUpperCase();
-      const correctAns = String(question?.content?.correctOption || "").trim().toUpperCase();
-      if (studentAns === correctAns) {
+      const MCQ_LABELS = ["A", "B", "C", "D"];
+      const normalizeMcqAns = (val) => {
+        if (typeof val === "number" || /^\d+$/.test(String(val || ""))) {
+          return MCQ_LABELS[Number(val)] || "";
+        }
+        return String(val || "").trim().toUpperCase();
+      };
+
+      const studentAns = normalizeMcqAns(submittedCode);
+      const correctAns = normalizeMcqAns(question?.content?.correctOption);
+      if (studentAns && correctAns && studentAns === correctAns) {
         testsPassed = 1;
       } else {
         testsFailed = 1;

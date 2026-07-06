@@ -452,12 +452,12 @@ export default function DailyChallengeTest() {
         </div>
       </header>
 
-      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
-        {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
-        <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
-          <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
+      {isMcq ? (
+        <div className="flex-grow flex-1 overflow-y-auto p-4 md:p-6 flex flex-col items-center justify-center">
+          <div className="w-full max-w-4xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-5 md:p-6 rounded-xl flex flex-col items-center space-y-4 my-auto">
+            {/* Question tabs if multiple questions */}
             {challenge?.problems?.length > 1 && (
-              <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
+              <div className="flex border-b border-black/5 dark:border-white/5 pb-2 w-full gap-2 overflow-x-auto select-none">
                 {challenge.problems.map((p, idx) => {
                   const isActive = idx === activeProblemIndex;
                   const isSubmitted = submittedProblems.has(idx);
@@ -478,24 +478,118 @@ export default function DailyChallengeTest() {
               </div>
             )}
 
-            <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
-            
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                {isMcq ? "Multiple Choice" : "Coding Round"}
+            {/* Header row with type and difficulty tags in opposite corners */}
+            <div className="relative flex items-center justify-between w-full pb-3 border-b border-slate-100 dark:border-slate-800 select-none">
+              <span className="rounded-full border border-blue-500/15 bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-blue-200">
+                Multiple Choice
               </span>
-              {!isMcq && (
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
+              {problem.difficulty && (
+                <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                  problem.difficulty === 'Easy'
+                    ? 'border-emerald-500/15 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                    : problem.difficulty === 'Medium'
+                    ? 'border-amber-500/15 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                    : 'border-rose-500/15 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                }`}>
+                  {problem.difficulty}
                 </span>
               )}
             </div>
+
+            {/* Question prompt / description card styled like the practice details question view */}
+            <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-4 md:p-5 shadow-md shadow-[#2563eb]/5 text-center">
+              <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-relaxed select-none">
+                {problem.problemTitle}
+              </h2>
+              {problem.description && (
+                <p className="mt-3 text-xs md:text-sm text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-center border-t border-black/5 dark:border-white/5 pt-3 leading-relaxed font-medium">
+                  {problem.description}
+                </p>
+              )}
+            </div>
+
+            {/* MCQ Options Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full">
+              {mcqOptions.map((opt, index) => {
+                const optLabel = opt.label || opt.optionLabel || String(index);
+                const optText = opt.text || opt.optionText || opt;
+                const isSelected = code === optLabel;
+                const optionClass = isSelected
+                  ? 'border-[#2563eb] bg-[#2563eb]/10 dark:border-[#8fd9ff] dark:bg-[#8fd9ff]/15 text-[#2563eb] dark:text-[#a0baff]'
+                  : 'border-[#2563eb]/20 dark:border-gray-600/70 bg-[#e5f3ff]/35 dark:bg-[#091b40]/50 text-gray-800 dark:text-gray-200 hover:border-[#2563eb] dark:hover:border-blue-400 hover:bg-[#e5f3ff]/60 dark:hover:bg-[#091b40]/75';
+
+                return (
+                  <button
+                    key={optLabel + index}
+                    type="button"
+                    onClick={() => handleCodeChange(optLabel)}
+                    disabled={submitting}
+                    className={`relative w-full rounded-xl border-2 p-3.5 text-center font-semibold text-sm transition min-h-[50px] flex items-center justify-center ${optionClass} ${
+                      submitting ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                    }`}
+                  >
+                    <span className="leading-tight px-6">{optText}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Actions: Submit Button */}
+            <div className="flex items-center justify-center gap-4 w-full pt-4 border-t border-black/5 dark:border-white/5">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!code || submitting}
+                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+              >
+                <SendHorizontal className="h-4 w-4" />
+                {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
+              </button>
+            </div>
           </div>
+        </div>
+      ) : (
+        <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
+          {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
+          <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+            <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
+              {challenge?.problems?.length > 1 && (
+                <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
+                  {challenge.problems.map((p, idx) => {
+                    const isActive = idx === activeProblemIndex;
+                    const isSubmitted = submittedProblems.has(idx);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveProblemIndex(idx)}
+                        className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-200 ${
+                          isActive
+                            ? "bg-[#2563eb] text-white border-[#2563eb]"
+                            : "bg-white/30 text-gray-700 border-black/5 hover:bg-white/50 dark:bg-white/5 dark:text-gray-300 dark:border-white/5 dark:hover:bg-white/10"
+                        }`}
+                      >
+                        Question {idx + 1} {isSubmitted && "✓"}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{problem.description}</p>
+              <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
+              
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                  Coding Round
+                </span>
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                  Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
+                </span>
+              </div>
+            </div>
 
-            {!isMcq && (
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{problem.description}</p>
+
               <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300 border-t border-gray-300/30 dark:border-gray-700/30 pt-3">
                 <div>
                   <h3 className="font-semibold text-gray-950 dark:text-white">Input Format</h3>
@@ -506,61 +600,9 @@ export default function DailyChallengeTest() {
                   <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.outputDescription || "Return expected output."}</p>
                 </div>
               </div>
-            )}
-          </div>
-        </section>
+            </div>
+          </section>
 
-        {/* Right Panel - MCQ Choices or Monaco Code Space */}
-        {isMcq ? (
-          <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
-            <section className="flex-grow flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-5">
-              <div className="mb-4 flex items-center justify-between shrink-0 border-b border-black/5 dark:border-white/5 pb-3">
-                <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Select the Correct Option</span>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!code || submitting}
-                  className="justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-4 py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
-                >
-                  <SendHorizontal className="h-3.5 w-3.5" />
-                  {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
-                </button>
-              </div>
-
-              <div className="flex-grow overflow-y-auto pr-1 space-y-3">
-                {mcqOptions.map((opt, index) => {
-                  const optLabel = opt.label || opt.optionLabel || String(index);
-                  const optText = opt.text || opt.optionText || opt;
-                  const isSelected = code === optLabel;
-                  return (
-                    <button
-                      key={optLabel + index}
-                      type="button"
-                      onClick={() => handleCodeChange(optLabel)}
-                      disabled={submitting}
-                      className={`w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-200 ${
-                        isSelected
-                          ? "border-[#2563eb] bg-[#2563eb]/10 dark:border-[#8fd9ff] dark:bg-[#8fd9ff]/15"
-                          : "border-black/5 bg-white/30 hover:bg-white/50 dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                        isSelected
-                          ? "bg-[#2563eb] text-white dark:bg-[#8fd9ff] dark:text-[#020b23]"
-                          : "bg-black/10 dark:bg-white/10 text-gray-700 dark:text-gray-300"
-                      }`}>
-                        {optLabel}
-                      </span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                        {optText}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          </div>
-        ) : (
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
             {/* Card 1: Coding Space */}
             <section className="h-[450px] lg:h-auto lg:flex-[2] flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3">
@@ -699,8 +741,8 @@ export default function DailyChallengeTest() {
               </pre>
             </section>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Fixed Footer Action Bar */}
       <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">

@@ -36,6 +36,35 @@ const deleteStudentProjectProgress = async (studentIds) => {
 
 const DEFAULT_BATCH_TRACK_TYPES = ["Core", "DSA", "SQL"];
 
+const getQuestionSection = (q, taskType) => {
+  if (!q) return "technical";
+
+  const type = String(taskType || q.trackType || q.categoryType || "").toLowerCase();
+  const slug = String(q.categorySlug || "").toLowerCase();
+  const title = String(q.title || "").toLowerCase();
+  const tags = (q.tags || []).map(t => String(t || "").toLowerCase());
+
+  if (slug.includes("java") || title.includes("java") || tags.includes("java")) {
+    return "java";
+  }
+  if (slug.includes("dsa") || title.includes("dsa") || tags.includes("dsa") || slug.includes("data structure") || tags.includes("data structure") || title.includes("binary tree") || title.includes("array") || title.includes("linked list") || title.includes("stack") || title.includes("queue") || title.includes("graph")) {
+    return "dsa";
+  }
+  if (type === "sql" || slug.includes("sql") || title.includes("sql") || tags.includes("sql") || tags.includes("database") || slug.includes("dbms")) {
+    return "sql";
+  }
+  if (type === "aptitude" || slug.includes("aptitude") || title.includes("aptitude") || tags.includes("aptitude") || tags.includes("quant") || tags.includes("reasoning")) {
+    return "aptitude";
+  }
+  if (slug.includes("technical") || title.includes("technical") || tags.includes("technical") || type === "mcq" || type === "core cs" || type === "debugging" || tags.includes("core cs")) {
+    return "technical";
+  }
+
+  if (type === "sql") return "sql";
+  if (type === "aptitude") return "aptitude";
+  return "technical";
+};
+
 const toUtcDayKey = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -1091,6 +1120,8 @@ export const getBatchDetail = async (req, res) => {
         ...studentCodingChallengeSubsAllTime.map(s => ({ ...s, type: "StudentCodingSubmission", date: new Date(s.lastSubmissionAt || s.submittedAt || s.createdAt) }))
       ].sort((a, b) => b.date - a.date);
 
+      const dayWiseHistoryChallengesSubmissionIds = {};
+
       const getCodingSubmissionTestStats = (submission) => {
         const details = Object.values(submission.problemTestCaseResults || {})
           .flatMap((results) => Array.isArray(results) ? results : []);
@@ -1392,7 +1423,7 @@ export const getBatchDetail = async (req, res) => {
 
       // Calculate challenge score and challenge XP for today
       let todayChallengeScore = "—";
-      let todayChallengeScoresDetail = { mcq: "—", coding: "—", sql: "—" };
+      let todayChallengeScoresDetail = { java: "—", dsa: "—", sql: "—", aptitude: "—", technical: "—" };
       let todayChallengeXp = 0;
       let todayTaskXp = 0;
 
@@ -1421,6 +1452,8 @@ export const getBatchDetail = async (req, res) => {
                  (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId._id || studentChallengeAttemptToday.codingRoundId)))
       );
 
+      const todayChallengeSubmissionId = studentChallengeSubToday ? `coding-${studentChallengeSubToday._id}` : null;
+
       if (studentChallengeAttemptToday) {
         let maxChallengeXpToday = 0;
         let maxChallengeMarksToday = 0;
@@ -1433,6 +1466,23 @@ export const getBatchDetail = async (req, res) => {
             const tasksList = tasks.length > 0 ? tasks : (dayAssignment.questionId ? [dayAssignment] : []);
             
             const CHALLENGE_XP = { Easy: 25, Medium: 50, Hard: 90 };
+            const sectionScores = {
+              mcq: {
+                java: { earned: 0, max: 0, hasQuestions: false },
+                dsa: { earned: 0, max: 0, hasQuestions: false },
+                sql: { earned: 0, max: 0, hasQuestions: false },
+                aptitude: { earned: 0, max: 0, hasQuestions: false },
+                technical: { earned: 0, max: 0, hasQuestions: false },
+              },
+              coding: {
+                java: { earned: 0, max: 0, hasQuestions: false },
+                dsa: { earned: 0, max: 0, hasQuestions: false },
+                sql: { earned: 0, max: 0, hasQuestions: false },
+                aptitude: { earned: 0, max: 0, hasQuestions: false },
+                technical: { earned: 0, max: 0, hasQuestions: false },
+              }
+            };
+
             tasksList.forEach(t => {
               const q = t.questionId;
               if (q) {
@@ -1450,21 +1500,15 @@ export const getBatchDetail = async (req, res) => {
                   else if (difficulty === "Hard") maxMarks = 30;
                 }
                 maxChallengeMarksToday += maxMarks;
+
+                const section = getQuestionSection(q, t.taskType);
+                const subType = isMcq ? "mcq" : "coding";
+                sectionScores[subType][section].hasQuestions = true;
+                sectionScores[subType][section].max += maxMarks;
               }
             });
 
             if (studentChallengeSubToday) {
-              let mcqCount = 0;
-              let mcqCorrect = 0;
-              let sqlCount = 0;
-              let sqlCorrect = 0;
-              let codingCount = 0;
-              let codingTotalAccuracy = 0;
-              
-              let maxMcqMarks = 0;
-              let maxSqlMarks = 0;
-              let maxCodingMarks = 0;
-
               tasksList.forEach((t, idx) => {
                 const q = t.questionId;
                 if (!q) return;
@@ -1483,7 +1527,6 @@ export const getBatchDetail = async (req, res) => {
                 
                 const qType = String(t.taskType || q.trackType || q.categoryType || "").toLowerCase();
                 const isMcq = qType === "mcq" || qType === "aptitude";
-                const isSql = qType === "sql";
 
                 let earnedXP = 0;
                 if (isMcq) {
@@ -1495,24 +1538,17 @@ export const getBatchDetail = async (req, res) => {
                 let maxMarks = 10;
                 if (isMcq) {
                   maxMarks = 1;
-                  maxMcqMarks += maxMarks;
-                } else if (isSql) {
-                  if (difficulty === "Easy") maxMarks = 10;
-                  else if (difficulty === "Medium") maxMarks = 20;
-                  else if (difficulty === "Hard") maxMarks = 30;
-                  maxSqlMarks += maxMarks;
                 } else {
                   if (difficulty === "Easy") maxMarks = 10;
                   else if (difficulty === "Medium") maxMarks = 20;
                   else if (difficulty === "Hard") maxMarks = 30;
-                  maxCodingMarks += maxMarks;
                 }
 
                 let earnedMarks = 0;
                 if (isMcq) {
-                  earnedMarks = score >= 100 ? 1 : 0;
+                  earnedMarks = (score >= 100 && isSubmitted) ? 1 : 0;
                 } else {
-                  earnedMarks = maxMarks * (score / 100);
+                  earnedMarks = isSubmitted ? (maxMarks * (score / 100)) : 0;
                 }
 
                 if (isSubmitted) {
@@ -1520,27 +1556,44 @@ export const getBatchDetail = async (req, res) => {
                   todayChallengeMarks += earnedMarks;
                 }
 
-                if (isMcq) {
-                  mcqCount++;
-                  if (score >= 100 && isSubmitted) mcqCorrect++;
-                } else if (isSql) {
-                  sqlCount++;
-                  if (isSubmitted) sqlCorrect += earnedMarks;
-                } else {
-                  codingCount++;
-                  if (isSubmitted) codingTotalAccuracy += earnedMarks;
-                }
+                const section = getQuestionSection(q, t.taskType);
+                const subType = isMcq ? "mcq" : "coding";
+                sectionScores[subType][section].earned += earnedMarks;
               });
 
-              if (maxMcqMarks > 0) {
-                todayChallengeScoresDetail.mcq = `${mcqCorrect}/${maxMcqMarks}`;
-              }
-              if (maxSqlMarks > 0) {
-                todayChallengeScoresDetail.sql = `${Number(sqlCorrect.toFixed(1))}/${maxSqlMarks}`;
-              }
-              if (maxCodingMarks > 0) {
-                todayChallengeScoresDetail.coding = `${Number(codingTotalAccuracy.toFixed(1))}/${maxCodingMarks}`;
-              }
+              todayChallengeScoresDetail = {
+                mcq: {
+                  java: sectionScores.mcq.java.hasQuestions ? `${Number(sectionScores.mcq.java.earned.toFixed(1))}/${sectionScores.mcq.java.max}` : "—",
+                  dsa: sectionScores.mcq.dsa.hasQuestions ? `${Number(sectionScores.mcq.dsa.earned.toFixed(1))}/${sectionScores.mcq.dsa.max}` : "—",
+                  sql: sectionScores.mcq.sql.hasQuestions ? `${Number(sectionScores.mcq.sql.earned.toFixed(1))}/${sectionScores.mcq.sql.max}` : "—",
+                  aptitude: sectionScores.mcq.aptitude.hasQuestions ? `${Number(sectionScores.mcq.aptitude.earned.toFixed(1))}/${sectionScores.mcq.aptitude.max}` : "—",
+                  technical: sectionScores.mcq.technical.hasQuestions ? `${Number(sectionScores.mcq.technical.earned.toFixed(1))}/${sectionScores.mcq.technical.max}` : "—",
+                },
+                coding: {
+                  java: sectionScores.coding.java.hasQuestions ? `${Number(sectionScores.coding.java.earned.toFixed(1))}/${sectionScores.coding.java.max}` : "—",
+                  dsa: sectionScores.coding.dsa.hasQuestions ? `${Number(sectionScores.coding.dsa.earned.toFixed(1))}/${sectionScores.coding.dsa.max}` : "—",
+                  sql: sectionScores.coding.sql.hasQuestions ? `${Number(sectionScores.coding.sql.earned.toFixed(1))}/${sectionScores.coding.sql.max}` : "—",
+                  aptitude: sectionScores.coding.aptitude.hasQuestions ? `${Number(sectionScores.coding.aptitude.earned.toFixed(1))}/${sectionScores.coding.aptitude.max}` : "—",
+                  technical: sectionScores.coding.technical.hasQuestions ? `${Number(sectionScores.coding.technical.earned.toFixed(1))}/${sectionScores.coding.technical.max}` : "—",
+                }
+              };
+            } else {
+              todayChallengeScoresDetail = {
+                mcq: {
+                  java: sectionScores.mcq.java.hasQuestions ? `—/${sectionScores.mcq.java.max}` : "—",
+                  dsa: sectionScores.mcq.dsa.hasQuestions ? `—/${sectionScores.mcq.dsa.max}` : "—",
+                  sql: sectionScores.mcq.sql.hasQuestions ? `—/${sectionScores.mcq.sql.max}` : "—",
+                  aptitude: sectionScores.mcq.aptitude.hasQuestions ? `—/${sectionScores.mcq.aptitude.max}` : "—",
+                  technical: sectionScores.mcq.technical.hasQuestions ? `—/${sectionScores.mcq.technical.max}` : "—",
+                },
+                coding: {
+                  java: sectionScores.coding.java.hasQuestions ? `—/${sectionScores.coding.java.max}` : "—",
+                  dsa: sectionScores.coding.dsa.hasQuestions ? `—/${sectionScores.coding.dsa.max}` : "—",
+                  sql: sectionScores.coding.sql.hasQuestions ? `—/${sectionScores.coding.sql.max}` : "—",
+                  aptitude: sectionScores.coding.aptitude.hasQuestions ? `—/${sectionScores.coding.aptitude.max}` : "—",
+                  technical: sectionScores.coding.technical.hasQuestions ? `—/${sectionScores.coding.technical.max}` : "—",
+                }
+              };
             }
           }
         }
@@ -1555,82 +1608,6 @@ export const getBatchDetail = async (req, res) => {
         if (dailyChallengeHasMultiple) {
           todayChallengeScore = "View Scores";
         } else {
-          // Group scores by category type
-          const mcqSubs = allChallengeSubs.filter((sub) => questionIdToTypeMap.get(String(sub.questionId)) === "mcq");
-          const sqlSubs = allChallengeSubs.filter((sub) => questionIdToTypeMap.get(String(sub.questionId)) === "sql");
-          const codingSubs = allChallengeSubs.filter(
-            (sub) =>
-              sub.type === "StudentCodingSubmission" ||
-              questionIdToTypeMap.get(String(sub.questionId)) === "coding" ||
-              !questionIdToTypeMap.has(String(sub.questionId))
-          );
-
-          // Calculate challenge template questions for today
-          const challengeTemplateTodayQuestions = [];
-          if (dailyChallengeTemplate) {
-            const dayAssignment = dailyChallengeTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
-            if (dayAssignment) {
-              if (dayAssignment.tasks && dayAssignment.tasks.length > 0) {
-                dayAssignment.tasks.forEach((t) => {
-                  if (t.questionId) challengeTemplateTodayQuestions.push(t.questionId);
-                });
-              } else if (dayAssignment.questionId) {
-                challengeTemplateTodayQuestions.push(dayAssignment.questionId);
-              }
-            }
-          }
-
-          let totalMcqToday = 0;
-          let totalSqlToday = 0;
-          let totalCodingToday = 0;
-          
-          let maxMcqMarksToday = 0;
-          let maxSqlMarksToday = 0;
-          let maxCodingMarksToday = 0;
-
-          challengeTemplateTodayQuestions.forEach((q) => {
-            const type = questionIdToTypeMap.get(String(q._id || q));
-            const difficulty = q.difficulty || "Easy";
-            let maxMarks = 10;
-            if (type === "mcq") {
-              maxMcqMarksToday += 1;
-              totalMcqToday++;
-            } else if (type === "sql") {
-              if (difficulty === "Easy") maxMarks = 10;
-              else if (difficulty === "Medium") maxMarks = 20;
-              else if (difficulty === "Hard") maxMarks = 30;
-              maxSqlMarksToday += maxMarks;
-              totalSqlToday++;
-            } else {
-              if (difficulty === "Easy") maxMarks = 10;
-              else if (difficulty === "Medium") maxMarks = 20;
-              else if (difficulty === "Hard") maxMarks = 30;
-              maxCodingMarksToday += maxMarks;
-              totalCodingToday++;
-            }
-          });
-
-          if (mcqSubs.length > 0) {
-            const totalCorrect = mcqSubs.filter((s) => s.status === "Passed" || s.isCorrect === true || s.totalScore > 0).length;
-            todayChallengeScoresDetail.mcq = `${totalCorrect}/${maxMcqMarksToday}`;
-          } else if (totalMcqToday > 0) {
-            todayChallengeScoresDetail.mcq = `—/${maxMcqMarksToday}`;
-          }
-
-          if (sqlSubs.length > 0) {
-            const sumMarks = sqlSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0);
-            todayChallengeScoresDetail.sql = `${Number(sumMarks.toFixed(1))}/${maxSqlMarksToday}`;
-          } else if (totalSqlToday > 0) {
-            todayChallengeScoresDetail.sql = `—/${maxSqlMarksToday}`;
-          }
-
-          if (codingSubs.length > 0) {
-            const sumMarks = codingSubs.reduce((sum, s) => sum + (s.totalScore || 0), 0);
-            todayChallengeScoresDetail.coding = `${Number(sumMarks.toFixed(1))}/${maxCodingMarksToday}`;
-          } else if (totalCodingToday > 0) {
-            todayChallengeScoresDetail.coding = `—/${maxCodingMarksToday}`;
-          }
-
           const primarySub = allChallengeSubs[0];
           if (primarySub) {
             todayChallengeXp = primarySub.xpEarned || 0;
@@ -1949,52 +1926,77 @@ todayXp = todayChallengeXp + todayTaskXp;
 
         let correctChallenges = 0;
         let totalChallenges = 0;
+        let correctChallengeMarks = 0;
+        let totalChallengeMarks = 0;
         let dayChallengeHasMultiple = false;
-        let dayChallengesDetail = { mcq: "—", sql: "—", coding: "—" };
+        let dayChallengesDetail = {
+          mcq: { java: "—", dsa: "—", sql: "—", aptitude: "—", technical: "—" },
+          coding: { java: "—", dsa: "—", sql: "—", aptitude: "—", technical: "—" }
+        };
 
         if (activeDailyChallengeTemplate) {
           const dayAssignment = activeDailyChallengeTemplate.dayAssignments?.find((d) => d.dayNumber === day);
           if (dayAssignment) {
             const dayTypes = new Set();
             const tasks = dayAssignment.tasks || [];
-            if (tasks.length > 0) {
-              tasks.forEach(t => {
-                const type = String(t.taskType || t.questionId?.trackType || t.questionId?.categoryType || "").toLowerCase();
-                if (type === "mcq" || type === "aptitude") dayTypes.add("mcq");
-                else if (type === "sql") dayTypes.add("sql");
-                else dayTypes.add("coding");
-              });
-            } else if (dayAssignment.questionId) {
-              const type = String(dayAssignment.questionId.trackType || dayAssignment.questionId.categoryType || "").toLowerCase();
+            const tasksList = tasks.length > 0 ? tasks : (dayAssignment.questionId ? [dayAssignment] : []);
+            
+            tasksList.forEach(t => {
+              const type = String(t.taskType || t.questionId?.trackType || t.questionId?.categoryType || "").toLowerCase();
               if (type === "mcq" || type === "aptitude") dayTypes.add("mcq");
               else if (type === "sql") dayTypes.add("sql");
               else dayTypes.add("coding");
-            }
+            });
             if (dayTypes.size > 1) {
               dayChallengeHasMultiple = true;
             }
 
             // Calculate max challenges possible XP using CHALLENGE_XP difficulties
             const CHALLENGE_XP = { Easy: 25, Medium: 50, Hard: 90 };
-            const tasksList = tasks.length > 0 ? tasks : (dayAssignment.questionId ? [dayAssignment] : []);
-            
+            const sectionScores = {
+              mcq: {
+                java: { earned: 0, max: 0, hasQuestions: false },
+                dsa: { earned: 0, max: 0, hasQuestions: false },
+                sql: { earned: 0, max: 0, hasQuestions: false },
+                aptitude: { earned: 0, max: 0, hasQuestions: false },
+                technical: { earned: 0, max: 0, hasQuestions: false },
+              },
+              coding: {
+                java: { earned: 0, max: 0, hasQuestions: false },
+                dsa: { earned: 0, max: 0, hasQuestions: false },
+                sql: { earned: 0, max: 0, hasQuestions: false },
+                aptitude: { earned: 0, max: 0, hasQuestions: false },
+                technical: { earned: 0, max: 0, hasQuestions: false },
+              }
+            };
+
             tasksList.forEach(t => {
               const q = t.questionId;
               if (q) {
                 const difficulty = q.difficulty || "Easy";
                 totalChallenges += (CHALLENGE_XP[difficulty] || 25);
+
+                const qType = String(t.taskType || q.trackType || q.categoryType || "").toLowerCase();
+                const isMcq = qType === "mcq" || qType === "aptitude";
+                let maxMarks = 10;
+                if (isMcq) {
+                  maxMarks = 1;
+                } else {
+                  if (difficulty === "Easy") maxMarks = 10;
+                  else if (difficulty === "Medium") maxMarks = 20;
+                  else if (difficulty === "Hard") maxMarks = 30;
+                }
+                totalChallengeMarks += maxMarks;
+
+                const section = getQuestionSection(q, t.taskType);
+                const subType = isMcq ? "mcq" : "coding";
+                sectionScores[subType][section].hasQuestions = true;
+                sectionScores[subType][section].max += maxMarks;
               }
             });
 
             // Calculate actual earned XP from StudentCodingSubmission
             if (studentChallengeSub) {
-              let mcqCount = 0;
-              let mcqCorrect = 0;
-              let sqlCount = 0;
-              let sqlCorrect = 0;
-              let codingCount = 0;
-              let codingTotalAccuracy = 0;
-
               tasksList.forEach((t, idx) => {
                 const q = t.questionId;
                 if (!q) return;
@@ -2013,7 +2015,6 @@ todayXp = todayChallengeXp + todayTaskXp;
                 
                 const qType = String(t.taskType || q.trackType || q.categoryType || "").toLowerCase();
                 const isMcq = qType === "mcq" || qType === "aptitude";
-                const isSql = qType === "sql";
 
                 let earnedXP = 0;
                 if (isMcq) {
@@ -2022,31 +2023,65 @@ todayXp = todayChallengeXp + todayTaskXp;
                   earnedXP = Math.round((score / 100) * baseXP);
                 }
 
+                let maxMarks = 10;
+                if (isMcq) {
+                  maxMarks = 1;
+                } else {
+                  if (difficulty === "Easy") maxMarks = 10;
+                  else if (difficulty === "Medium") maxMarks = 20;
+                  else if (difficulty === "Hard") maxMarks = 30;
+                }
+
+                let earnedMarks = 0;
+                if (isMcq) {
+                  earnedMarks = (score >= 100 && isSubmitted) ? 1 : 0;
+                } else {
+                  earnedMarks = isSubmitted ? (maxMarks * (score / 100)) : 0;
+                }
+
                 if (isSubmitted) {
                   correctChallenges += earnedXP;
+                  correctChallengeMarks += earnedMarks;
                 }
 
-                if (isMcq) {
-                  mcqCount++;
-                  if (score >= 100 && isSubmitted) mcqCorrect++;
-                } else if (isSql) {
-                  sqlCount++;
-                  if (score >= 100 && isSubmitted) sqlCorrect++;
-                } else {
-                  codingCount++;
-                  codingTotalAccuracy += score;
-                }
+                const section = getQuestionSection(q, t.taskType);
+                const subType = isMcq ? "mcq" : "coding";
+                sectionScores[subType][section].earned += earnedMarks;
               });
 
-              if (mcqCount > 0) {
-                dayChallengesDetail.mcq = `${mcqCorrect}/${mcqCount}`;
-              }
-              if (sqlCount > 0) {
-                dayChallengesDetail.sql = `${sqlCorrect}/${sqlCount}`;
-              }
-              if (codingCount > 0) {
-                dayChallengesDetail.coding = `${Math.round(codingTotalAccuracy / codingCount)}/100`;
-              }
+              dayChallengesDetail = {
+                mcq: {
+                  java: sectionScores.mcq.java.hasQuestions ? `${Number(sectionScores.mcq.java.earned.toFixed(1))}/${sectionScores.mcq.java.max}` : "—",
+                  dsa: sectionScores.mcq.dsa.hasQuestions ? `${Number(sectionScores.mcq.dsa.earned.toFixed(1))}/${sectionScores.mcq.dsa.max}` : "—",
+                  sql: sectionScores.mcq.sql.hasQuestions ? `${Number(sectionScores.mcq.sql.earned.toFixed(1))}/${sectionScores.mcq.sql.max}` : "—",
+                  aptitude: sectionScores.mcq.aptitude.hasQuestions ? `${Number(sectionScores.mcq.aptitude.earned.toFixed(1))}/${sectionScores.mcq.aptitude.max}` : "—",
+                  technical: sectionScores.mcq.technical.hasQuestions ? `${Number(sectionScores.mcq.technical.earned.toFixed(1))}/${sectionScores.mcq.technical.max}` : "—",
+                },
+                coding: {
+                  java: sectionScores.coding.java.hasQuestions ? `${Number(sectionScores.coding.java.earned.toFixed(1))}/${sectionScores.coding.java.max}` : "—",
+                  dsa: sectionScores.coding.dsa.hasQuestions ? `${Number(sectionScores.coding.dsa.earned.toFixed(1))}/${sectionScores.coding.dsa.max}` : "—",
+                  sql: sectionScores.coding.sql.hasQuestions ? `${Number(sectionScores.coding.sql.earned.toFixed(1))}/${sectionScores.coding.sql.max}` : "—",
+                  aptitude: sectionScores.coding.aptitude.hasQuestions ? `${Number(sectionScores.coding.aptitude.earned.toFixed(1))}/${sectionScores.coding.aptitude.max}` : "—",
+                  technical: sectionScores.coding.technical.hasQuestions ? `${Number(sectionScores.coding.technical.earned.toFixed(1))}/${sectionScores.coding.technical.max}` : "—",
+                }
+              };
+            } else {
+              dayChallengesDetail = {
+                mcq: {
+                  java: sectionScores.mcq.java.hasQuestions ? `—/${sectionScores.mcq.java.max}` : "—",
+                  dsa: sectionScores.mcq.dsa.hasQuestions ? `—/${sectionScores.mcq.dsa.max}` : "—",
+                  sql: sectionScores.mcq.sql.hasQuestions ? `—/${sectionScores.mcq.sql.max}` : "—",
+                  aptitude: sectionScores.mcq.aptitude.hasQuestions ? `—/${sectionScores.mcq.aptitude.max}` : "—",
+                  technical: sectionScores.mcq.technical.hasQuestions ? `—/${sectionScores.mcq.technical.max}` : "—",
+                },
+                coding: {
+                  java: sectionScores.coding.java.hasQuestions ? `—/${sectionScores.coding.java.max}` : "—",
+                  dsa: sectionScores.coding.dsa.hasQuestions ? `—/${sectionScores.coding.dsa.max}` : "—",
+                  sql: sectionScores.coding.sql.hasQuestions ? `—/${sectionScores.coding.sql.max}` : "—",
+                  aptitude: sectionScores.coding.aptitude.hasQuestions ? `—/${sectionScores.coding.aptitude.max}` : "—",
+                  technical: sectionScores.coding.technical.hasQuestions ? `—/${sectionScores.coding.technical.max}` : "—",
+                }
+              };
             }
           }
         }
@@ -2059,10 +2094,12 @@ todayXp = todayChallengeXp + todayTaskXp;
           if (dayChallengeHasMultiple) {
             dayWiseHistoryChallenges[day] = "View Scores";
           } else {
-            dayWiseHistoryChallenges[day] = `${correctChallenges}/${totalChallenges}`;
+            dayWiseHistoryChallenges[day] = `${Number(correctChallengeMarks.toFixed(1))}/${totalChallengeMarks}`;
           }
+          dayWiseHistoryChallengesSubmissionIds[day] = `coding-${studentChallengeSub._id}`;
         } else {
           dayWiseHistoryChallenges[day] = "NA";
+          dayWiseHistoryChallengesSubmissionIds[day] = null;
         }
         dayWiseHistoryChallengesDetail[day] = dayChallengesDetail;
       }
@@ -2085,6 +2122,8 @@ todayXp = todayChallengeXp + todayTaskXp;
         dayWiseHistoryTasksDetail,
         dayWiseHistoryChallenges,
         dayWiseHistoryChallengesDetail,
+        todayChallengeSubmissionId,
+        dayWiseHistoryChallengesSubmissionIds,
         lastAttemptAt,
         status,
       };
