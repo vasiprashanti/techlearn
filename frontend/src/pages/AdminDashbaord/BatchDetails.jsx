@@ -925,7 +925,7 @@ const BatchDetails = () => {
                                       {formatEmail(student.email)}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
-                                      {student.todayChallengeScore !== '—' && student.todayChallengeScore !== 'NA' && student.todayChallengeScore !== null ? (
+                                      {student.todayChallengeSubmissionId ? (
                                         <button
                                           type="button"
                                           onClick={() => setSelectedChallengeScore({
@@ -1251,7 +1251,7 @@ const BatchDetails = () => {
                                               )}
                                             </div>
                                             <div className={`${classC} mt-2`}>
-                                              {scoreChallenge !== '—' && scoreChallenge !== 'NA' && scoreChallenge !== null ? (
+                                              {student.dayWiseHistoryChallengesSubmissionIds?.[dayNum] ? (
                                                 <button
                                                   type="button"
                                                   onClick={() => setSelectedChallengeScore({

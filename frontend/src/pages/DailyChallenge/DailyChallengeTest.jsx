@@ -57,7 +57,7 @@ export default function DailyChallengeTest() {
   const [submitting, setSubmitting] = useState(false);
   const [runsLeft, setRunsLeft] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30 * 60);
+  const [timeLeft, setTimeLeft] = useState(60 * 60);
   const [timerWarning, setTimerWarning] = useState(false);
 
   const [activeProblemIndex, setActiveProblemIndex] = useState(0);
@@ -68,6 +68,7 @@ export default function DailyChallengeTest() {
 
   const autoSubmitTriggered = useRef(false);
   const editorCleanupRef = useRef(null);
+  const tabSwitchCount = useRef(0);
 
   const problem = challenge?.problems?.[activeProblemIndex];
 
@@ -227,10 +228,23 @@ export default function DailyChallengeTest() {
     return () => clearInterval(timer);
   }, [timeLeft, timerWarning]);
 
+  const handleAutoSubmitRef = useRef(handleAutoSubmit);
+  useEffect(() => {
+    handleAutoSubmitRef.current = handleAutoSubmit;
+  }, [handleAutoSubmit]);
+
   useEffect(() => {
     const visibilityHandler = () => {
       if (document.hidden) {
-        alert("Tab switch detected. Please stay on the Daily Challenge test page.");
+        tabSwitchCount.current += 1;
+        if (tabSwitchCount.current >= 3) {
+          alert("Tab switch limit exceeded! The test is being auto-submitted.");
+          if (typeof handleAutoSubmitRef.current === "function") {
+            handleAutoSubmitRef.current();
+          }
+        } else {
+          alert(`Warning: Tab switch detected (${tabSwitchCount.current}/3). Exceeding this limit will auto-submit the test.`);
+        }
       }
     };
 
@@ -539,11 +553,10 @@ export default function DailyChallengeTest() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!code || submitting}
-                className="inline-flex w-44 justify-center items-center gap-2 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
+                disabled={isDone || !code || submitting}
+                className="inline-flex w-44 justify-center items-center rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
               >
-                <SendHorizontal className="h-4 w-4" />
-                {isDone ? (submitting ? "Resubmitting..." : "Resubmit Answer") : (submitting ? "Submitting..." : "Submit Answer")}
+                {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit & Next"}
               </button>
             </div>
           </div>
@@ -639,10 +652,9 @@ export default function DailyChallengeTest() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isDone || running || submitting}
-                    className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                    className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                   >
-                    <SendHorizontal className="h-3.5 w-3.5" />
-                    {isDone ? "Submitted" : submitting ? "Submit" : "Submit"}
+                    {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit & Next"}
                   </button>
                 </div>
               </div>

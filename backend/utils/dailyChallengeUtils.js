@@ -9,7 +9,7 @@ import Track from "../models/Track.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 
 export const DAILY_CHALLENGE_RULES = {
-  timerLimitMinutes: 30,
+  timerLimitMinutes: 60,
   runLimitPerQuestion: 5,
   submitLimitPerQuestion: 1,
   antiCheatRules: [
