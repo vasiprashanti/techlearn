@@ -1145,6 +1145,19 @@ export const getBatchDetail = async (req, res) => {
         ) && new Date(att.createdAt) >= batchReleaseStart
       );
 
+      const studentChallengeAttemptToday = dailyChallengeAttempts.find(
+        (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                 String(att.batchId || "") === String(batchId) &&
+                 (att.codingRoundId?.dayNumber === dayNumber || (att.codingRoundId && String(att.codingRoundId.dayNumber) === String(dayNumber))) &&
+                 (new Date(att.createdAt || att.startedAt || new Date()) >= todayStart && new Date(att.createdAt || att.startedAt || new Date()) <= todayEnd)
+      );
+
+      const studentChallengeSubToday = challengeSubmissions.find(
+        (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                ((String(cs.trackId || "") === String(dailyChallengeTemplate?._id || "") && cs.workingDay === dayNumber) ||
+                 (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId._id || studentChallengeAttemptToday.codingRoundId)))
+      );
+
       let studentDayNumber = dayNumber;
       if (todayAttempt) {
         studentDayNumber = todayAttempt.dayNumber;
@@ -1187,10 +1200,27 @@ export const getBatchDetail = async (req, res) => {
       const isBatchClosed = batch.status === "Completed" || batch.status === "Expired" || batch.status === "Archived" || (batch.expiryDate && new Date(batch.expiryDate) < now);
 
       const hasRealAttemptToday = (todayAttempt && todayAttempt.tasksProgress.some(t => t.status !== "Not Started")) ||
-                                 (todayCombinedSubs.length > 0);
+                                 (todayCombinedSubs.length > 0) ||
+                                 (!!studentChallengeAttemptToday);
+
+      let isDailyTaskCompleted = true;
+      if (activeTrackTemplate) {
+        const dayAssignment = activeTrackTemplate.dayAssignments?.find((d) => d.dayNumber === studentDayNumber);
+        if (dayAssignment && (dayAssignment.questionId || (dayAssignment.tasks && dayAssignment.tasks.length > 0))) {
+          isDailyTaskCompleted = !!(todayAttempt && todayAttempt.isFullyCompleted);
+        }
+      }
+
+      let isDailyChallengeCompleted = true;
+      if (dailyChallengeTemplate) {
+        const dayAssignment = dailyChallengeTemplate.dayAssignments?.find((d) => d.dayNumber === dayNumber);
+        if (dayAssignment && (dayAssignment.questionId || (dayAssignment.tasks && dayAssignment.tasks.length > 0))) {
+          isDailyChallengeCompleted = !!(studentChallengeAttemptToday && ["submitted", "ended", "auto_submitted"].includes(studentChallengeAttemptToday.status));
+        }
+      }
 
       if (hasRealAttemptToday) {
-        status = (todayAttempt && todayAttempt.isFullyCompleted) ? "Completed" : "In Progress";
+        status = (isDailyTaskCompleted && isDailyChallengeCompleted) ? "Completed" : "In Progress";
 
         if (todayAttempt) {
           const mcqTasks = todayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
@@ -1435,12 +1465,6 @@ export const getBatchDetail = async (req, res) => {
       let todayChallengeXp = 0;
       let todayTaskXp = 0;
 
-      const studentChallengeAttemptToday = dailyChallengeAttempts.find(
-        (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                 String(att.batchId || "") === String(batchId) &&
-                 (att.codingRoundId?.dayNumber === dayNumber || (att.codingRoundId && String(att.codingRoundId.dayNumber) === String(dayNumber))) &&
-                 (new Date(att.createdAt || att.startedAt || new Date()) >= todayStart && new Date(att.createdAt || att.startedAt || new Date()) <= todayEnd)
-      );
       const allChallengeSubs = studentChallengeAttemptToday
         ? [
             ...submissions.filter(
@@ -1453,12 +1477,6 @@ export const getBatchDetail = async (req, res) => {
               .map((sub) => ({ ...sub, type: "StudentCodingSubmission" })),
           ]
         : [];
-
-      const studentChallengeSubToday = challengeSubmissions.find(
-        (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                ((String(cs.trackId || "") === String(dailyChallengeTemplate?._id || "") && cs.workingDay === dayNumber) ||
-                 (studentChallengeAttemptToday && String(cs.codingRoundId) === String(studentChallengeAttemptToday.codingRoundId._id || studentChallengeAttemptToday.codingRoundId)))
-      );
 
       const todayChallengeSubmissionId = studentChallengeSubToday ? `coding-${studentChallengeSubToday._id}` : null;
 
