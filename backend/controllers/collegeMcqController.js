@@ -4,21 +4,7 @@ import Student from "../models/Student.js";
 import { sendMail } from "../utils/mailer.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
-
-// Optimized in-memory OTP store with automatic cleanup
-const otpStore = new Map();
-
-// Clean expired OTPs every 2 minutes for efficiency
-setInterval(() => {
-  const now = Date.now();
-  let cleanedCount = 0;
-  for (const [key, data] of otpStore.entries()) {
-    if (now > data.expiresAt) {
-      otpStore.delete(key);
-      cleanedCount++;
-    }
-  }
-}, 2 * 60 * 1000);
+import OTP from "../models/OTP.js";
 
 // Helper function to check if MCQ is still active based on duration
 const isMcqActive = (mcq) => {
@@ -314,14 +300,13 @@ export const sendCollegeMcqOTP = async (req, res) => {
     // Hash the OTP for secure storage
     const otpHash = await bcrypt.hash(otp, 10);
 
-    // Store hashed OTP in memory with expiration
+    // Store hashed OTP in database with expiration
     const otpKey = `${email}-${linkId}`;
-    otpStore.set(otpKey, {
-      hash: otpHash,
-      email: email,
-      collegeMcqId: collegeMcq._id,
-      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
-    });
+    await OTP.findOneAndUpdate(
+      { key: otpKey },
+      { otp: otpHash, expiresAt: new Date(Date.now() + 10 * 60 * 1000) }, // 10 minutes
+      { upsert: true, new: true }
+    );
 
     // Send OTP via email with try-catch for email service
     try {
@@ -346,8 +331,8 @@ Do not share this OTP with anyone.
         message: "OTP sent successfully to your email",
       });
     } catch (emailError) {
-      // Remove OTP from store if email fails
-      otpStore.delete(otpKey);
+      // Remove OTP from database if email fails
+      await OTP.deleteOne({ key: otpKey });
       console.error("Email service error:", emailError);
 
       res.status(503).json({
@@ -413,9 +398,9 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
       }
     }
 
-    // Verify OTP from memory store
+    // Verify OTP from database
     const otpKey = `${email}-${linkId}`;
-    const otpRecord = otpStore.get(otpKey);
+    const otpRecord = await OTP.findOne({ key: otpKey });
 
     if (!otpRecord) {
       return res.status(404).json({
@@ -424,9 +409,9 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
       });
     }
 
-    if (Date.now() > otpRecord.expiresAt) {
+    if (new Date() > otpRecord.expiresAt) {
       // Clean up expired OTP
-      otpStore.delete(otpKey);
+      await OTP.deleteOne({ key: otpKey });
       return res.status(410).json({
         success: false,
         message: "OTP has expired. Please request a new OTP.",
@@ -434,7 +419,7 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
     }
 
     // Verify OTP using bcrypt.compare for security
-    const isOtpValid = await bcrypt.compare(sanitizedOtp, otpRecord.hash);
+    const isOtpValid = await bcrypt.compare(sanitizedOtp, otpRecord.otp);
     if (!isOtpValid) {
       return res.status(401).json({
         success: false,
@@ -443,7 +428,7 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
     }
 
     // Remove OTP from store after successful verification (consume OTP)
-    otpStore.delete(otpKey);
+    await OTP.deleteOne({ key: otpKey });
 
     // Return college MCQ data without correct answers
     const mcqData = {
