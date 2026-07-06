@@ -69,7 +69,15 @@ export default function DailyChallengeTest() {
 
   const autoSubmitTriggered = useRef(false);
   const editorCleanupRef = useRef(null);
-  const tabSwitchCount = useRef(0);
+  const tabSwitchCount = useRef(
+    parseInt(localStorage.getItem(`daily-challenge-switches-${linkId}`) || "0")
+  );
+
+  const [modalAlert, setModalAlert] = useState({ show: false, title: "", message: "", onConfirm: null });
+  const [runProblems, setRunProblems] = useState(() => {
+    const saved = localStorage.getItem(`daily-challenge-run-${linkId}`);
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
 
   const problem = challenge?.problems?.[activeProblemIndex];
 
@@ -148,7 +156,12 @@ export default function DailyChallengeTest() {
     return challenge.problems.map((p, idx) => {
       const isActive = idx === activeProblemIndex;
       const isSubmitted = submittedProblems.has(idx);
-      const hasDraftSelection = !isSubmitted && solutions[idx] && solutions[idx].code;
+      const isMcqQuestion = p.categoryType === "MCQ";
+      const hasDraftSelection = !isSubmitted && (
+        isMcqQuestion 
+          ? (solutions[idx] && solutions[idx].code)
+          : runProblems.has(idx)
+      );
       const isVisited = visitedProblems.has(idx);
 
       let tabClass = "";
@@ -289,21 +302,38 @@ export default function DailyChallengeTest() {
   useEffect(() => {
     const visibilityHandler = () => {
       if (document.hidden) {
-        tabSwitchCount.current += 1;
-        if (tabSwitchCount.current >= 3) {
-          alert("Tab switch limit exceeded! The test is being auto-submitted.");
-          if (typeof handleAutoSubmitRef.current === "function") {
-            handleAutoSubmitRef.current();
-          }
+        const nextCount = (parseInt(localStorage.getItem(`daily-challenge-switches-${linkId}`) || "0")) + 1;
+        localStorage.setItem(`daily-challenge-switches-${linkId}`, nextCount.toString());
+        tabSwitchCount.current = nextCount;
+
+        if (nextCount >= 3) {
+          setModalAlert({
+            show: true,
+            title: "Test Terminated",
+            message: "Tab switch limit exceeded! The test is being immediately terminated due to an anti-cheat violation.",
+            onConfirm: () => {
+              setModalAlert({ show: false, title: "", message: "", onConfirm: null });
+              if (typeof handleAutoSubmitRef.current === "function") {
+                handleAutoSubmitRef.current(true);
+              }
+            }
+          });
         } else {
-          alert(`Warning: Tab switch detected (${tabSwitchCount.current}/3). Exceeding this limit will auto-submit the test.`);
+          setModalAlert({
+            show: true,
+            title: "Tab Switch Warning",
+            message: `Warning: Tab switch detected (${nextCount}/3). Exceeding this limit will auto-submit the test.`,
+            onConfirm: () => {
+              setModalAlert({ show: false, title: "", message: "", onConfirm: null });
+            }
+          });
         }
       }
     };
 
     document.addEventListener("visibilitychange", visibilityHandler);
     return () => document.removeEventListener("visibilitychange", visibilityHandler);
-  }, []);
+  }, [linkId]);
 
   useEffect(() => () => {
     if (typeof editorCleanupRef.current === "function") {
@@ -327,6 +357,13 @@ export default function DailyChallengeTest() {
       setOutput("Please write code before running.");
       return;
     }
+
+    setRunProblems(prev => {
+      const next = new Set(prev);
+      next.add(activeProblemIndex);
+      localStorage.setItem(`daily-challenge-run-${linkId}`, JSON.stringify(Array.from(next)));
+      return next;
+    });
 
     setRunning(true);
     setOutput("Running your code...");
@@ -401,7 +438,21 @@ export default function DailyChallengeTest() {
     if (isMcq) {
       // Async submit in background (instant transition for MCQ UX!)
       if (challenge) {
-        const nextIdx = challenge.problems.findIndex((_, idx) => !nextSubmitted.has(idx));
+        let nextIdx = -1;
+        for (let i = currentIdx + 1; i < challenge.problems.length; i++) {
+          if (!nextSubmitted.has(i)) {
+            nextIdx = i;
+            break;
+          }
+        }
+        if (nextIdx === -1) {
+          for (let i = 0; i < currentIdx; i++) {
+            if (!nextSubmitted.has(i)) {
+              nextIdx = i;
+              break;
+            }
+          }
+        }
         if (nextIdx !== -1) {
           setActiveProblemIndex(nextIdx);
         }
@@ -922,6 +973,29 @@ export default function DailyChallengeTest() {
                 className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all shadow-md active:scale-[0.98]"
               >
                 Yes, End Challenge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAlert.show && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-[#edf3f9] dark:bg-[#0f274f] p-6 shadow-2xl backdrop-blur-xl text-center z-[210]">
+            <h3 className="text-sm font-bold text-[#0d2a57] dark:text-[#8fd9ff] uppercase tracking-wider font-press-start text-[10px]">
+              {modalAlert.title}
+            </h3>
+            <p className="mt-4 text-sm text-gray-700 dark:text-slate-300 leading-relaxed font-semibold">
+              {modalAlert.message}
+            </p>
+            <div className="mt-6 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={modalAlert.onConfirm || (() => setModalAlert({ show: false, title: "", message: "", onConfirm: null }))}
+                className="h-10 px-6 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold transition-all shadow-md active:scale-[0.98]"
+              >
+                Okay
               </button>
             </div>
           </div>

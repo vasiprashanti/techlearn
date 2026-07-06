@@ -180,7 +180,7 @@ const buildDailyChallengeOutcome = async ({ codingRound, submission, attempt, to
       streak,
       timeTakenSeconds,
       timeTakenMinutes: Number((timeTakenSeconds / 60).toFixed(1)),
-      accuracy: maxMarksPossible > 0 ? Math.round((totalMarks / maxMarksPossible) * 100) : 0,
+      accuracy: totalProblems > 0 ? Math.round((actualCorrect / totalProblems) * 100) : 0,
       score: `${Number(totalMarks.toFixed(1))}/${maxMarksPossible}`,
       evaluationStatus: submission.autoEnded
         ? "Timeout"
@@ -913,18 +913,20 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
     const problem = codingRound.problems[problemIndex];
     if (!problem) continue;
 
-    let targetQuestionId = problem.questionId;
+    let targetQuestionId = problem.questionId || problem._doc?.questionId;
     if (!targetQuestionId && codingRound.challengeType === "daily_challenge") {
-      const TrackTemplate = mongoose.model("TrackTemplate");
-      const template = await TrackTemplate.findById(codingRound.trackId).lean();
-      if (template) {
-        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
-        if (dayAssignment) {
-          const tasks = dayAssignment.tasks || [];
-          if (tasks.length > 0) {
-            targetQuestionId = tasks[problemIndex]?.questionId;
-          } else if (dayAssignment.questionId && problemIndex === 0) {
-            targetQuestionId = dayAssignment.questionId;
+      if (mongoose.modelNames().includes("TrackTemplate")) {
+        const TrackTemplate = mongoose.model("TrackTemplate");
+        const template = await TrackTemplate.findById(codingRound.trackId).lean();
+        if (template) {
+          const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
+          if (dayAssignment) {
+            const tasks = dayAssignment.tasks || [];
+            if (tasks.length > 0) {
+              targetQuestionId = tasks[problemIndex]?.questionId;
+            } else if (dayAssignment.questionId && problemIndex === 0) {
+              targetQuestionId = dayAssignment.questionId;
+            }
           }
         }
       }
@@ -953,6 +955,19 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
         testsPassed = 1;
       }
     } else {
+      const isStarter = !submittedCode || !submittedCode.trim() ||
+        submittedCode === "def solve():\n    pass" ||
+        submittedCode.trim() === "def solve():" ||
+        (submittedCode.includes("pass") && submittedCode.length < 50);
+
+      if (isStarter) {
+        submission.problemScores.set(idxStr, 0);
+        submission.problemSubmitted.set(idxStr, true);
+        submission.problemCodes.set(idxStr, submittedCode || "");
+        submission.problemLanguages.set(idxStr, language || "python");
+        continue;
+      }
+
       const languageId = LANGUAGE_IDS[language?.toLowerCase()];
       if (languageId) {
         const allTestCases = [

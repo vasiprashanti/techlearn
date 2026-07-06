@@ -463,19 +463,25 @@ export const listSubmissionsPage = async (req, res) => {
 export const getSubmissionDetailPage = async (req, res) => {
   try {
     const submissionId = req.params.submissionId;
+    let isChallenge = false;
+    let dbId = submissionId;
+
     if (submissionId && submissionId.startsWith("coding-")) {
-      const dbId = submissionId.replace("coding-", "");
-      const challengeSub = await StudentCodingSubmission.findById(dbId)
+      dbId = submissionId.replace("coding-", "");
+      isChallenge = true;
+    }
+
+    let challengeSub = null;
+    if (isChallenge || (dbId && mongoose.Types.ObjectId.isValid(dbId))) {
+      challengeSub = await StudentCodingSubmission.findById(dbId)
         .populate("studentId", "name email")
         .populate("batchId", "name")
         .populate("codingRoundId")
         .populate("questionId")
         .lean();
-      
-      if (!challengeSub) {
-        return res.status(404).json({ success: false, message: "Submission not found." });
-      }
+    }
 
+    if (challengeSub) {
       const getObjectFromMap = (val) => {
         if (!val) return {};
         if (val instanceof Map) return Object.fromEntries(val);
@@ -516,7 +522,7 @@ export const getSubmissionDetailPage = async (req, res) => {
       });
     }
 
-    const submission = await Submission.findById(submissionId)
+    const submission = await Submission.findById(dbId)
       .populate("studentId", "name email")
       .populate("batchId", "name")
       .populate("questionId", "title categoryType")
