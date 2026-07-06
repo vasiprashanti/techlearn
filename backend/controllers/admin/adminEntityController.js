@@ -1321,6 +1321,7 @@ export const getBatchDetail = async (req, res) => {
           let maxSqlMarks = 0;
           let earnedCodingMarks = 0;
           let maxCodingMarks = 0;
+          let hasCompletedAny = false;
 
           todayAttempt.tasksProgress.forEach(t => {
             const qType = String(t.taskType || "").toLowerCase();
@@ -1351,6 +1352,7 @@ export const getBatchDetail = async (req, res) => {
             else if (isCoding) maxCodingMarks += maxMarks;
             
             if (t.status === "Completed") {
+              hasCompletedAny = true;
               const accuracyVal = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
               const marks = maxMarks * (accuracyVal / 100);
               earnedTaskMarks += marks;
@@ -1360,12 +1362,18 @@ export const getBatchDetail = async (req, res) => {
             }
           });
 
-          totalCorrect = Number(earnedTaskMarks.toFixed(1));
-          totalAssigned = maxTaskMarks;
+          if (hasCompletedAny) {
+            totalCorrect = Number(earnedTaskMarks.toFixed(1));
+            totalAssigned = maxTaskMarks;
 
-          if (maxMcqMarks > 0) todayScoresDetail.mcq = `${Number(earnedMcqMarks.toFixed(1))}/${maxMcqMarks}`;
-          if (maxSqlMarks > 0) todayScoresDetail.sql = `${Number(earnedSqlMarks.toFixed(1))}/${maxSqlMarks}`;
-          if (maxCodingMarks > 0) todayScoresDetail.coding = `${Number(earnedCodingMarks.toFixed(1))}/${maxCodingMarks}`;
+            if (maxMcqMarks > 0) todayScoresDetail.mcq = `${Number(earnedMcqMarks.toFixed(1))}/${maxMcqMarks}`;
+            if (maxSqlMarks > 0) todayScoresDetail.sql = `${Number(earnedSqlMarks.toFixed(1))}/${maxSqlMarks}`;
+            if (maxCodingMarks > 0) todayScoresDetail.coding = `${Number(earnedCodingMarks.toFixed(1))}/${maxCodingMarks}`;
+          } else {
+            totalCorrect = 0;
+            totalAssigned = 0;
+            todayScoresDetail = { mcq: "—", coding: "—", sql: "—" };
+          }
         }
 
         if (totalAssigned === 0 && todayCombinedSubs.length > 0) {
