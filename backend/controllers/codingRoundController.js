@@ -727,11 +727,22 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
         alreadyAttempted: true,
       });
     }
-    const valid = await verifyOTP(`${linkId}:${normalizedEmail}`, otp);
+    const isLoggedInStudentForEmail =
+      codingRound.challengeType === "daily_challenge" &&
+      req.user?.email &&
+      String(req.user.email).trim().toLowerCase() === normalizedEmail;
+    const alreadyVerifiedAttempt =
+      codingRound.challengeType === "daily_challenge" &&
+      existingAttempt &&
+      ["otp_verified", "started"].includes(existingAttempt.status);
+
+    const valid = isLoggedInStudentForEmail ||
+      alreadyVerifiedAttempt ||
+      (await verifyOTP(`${linkId}:${normalizedEmail}`, otp));
     if (!valid) {
       return res.status(400).json({
         success: false,
-        message: "Invalid or expired OTP",
+        message: "Invalid or expired OTP. Please request a fresh OTP and try again.",
       });
     }
 
