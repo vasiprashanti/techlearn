@@ -27,7 +27,9 @@ export default function DailyChallengeAccess() {
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (existingSession?.isVerified) {
@@ -69,6 +71,7 @@ export default function DailyChallengeAccess() {
 
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       await dailyChallengeAPI.sendOtp(linkId, email.trim().toLowerCase());
@@ -76,6 +79,7 @@ export default function DailyChallengeAccess() {
       setDailyChallengeSession(linkId, {
         studentEmail: email.trim().toLowerCase(),
       });
+      setNotice("OTP sent. You can use any recent OTP from your email.");
     } catch (err) {
       setError(err.message || "Failed to send OTP.");
     } finally {
@@ -83,31 +87,66 @@ export default function DailyChallengeAccess() {
     }
   };
 
+  const resendOtp = async () => {
+    if (!email || resending) return;
+    setResending(true);
+    setError("");
+    setNotice("");
+
+    try {
+      await dailyChallengeAPI.sendOtp(linkId, email.trim().toLowerCase());
+      setOtpSent(true);
+      setNotice("New OTP sent. Your recent OTPs remain valid for a short time.");
+    } catch (err) {
+      setError(err.message || "Failed to resend OTP.");
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const normalizeOtp = (value) => String(value || "").replace(/\D/g, "").slice(0, 6);
+
   const verifyOtp = async () => {
-    if (!otp.trim()) {
+    const cleanOtp = normalizeOtp(otp);
+    if (!cleanOtp) {
       setError("Please enter OTP.");
       return;
     }
 
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const response = await dailyChallengeAPI.verifyOtp(
         linkId,
         email.trim().toLowerCase(),
-        otp.trim()
+        cleanOtp
       );
+
+      const responseChallenge = response?.codingRound || response?.data?.codingRound || existingSession?.challenge;
+      const responseAttempt = response?.attempt || response?.data?.attempt || null;
+      const nextLinkId = responseChallenge?.linkId || linkId;
 
       setDailyChallengeSession(linkId, {
         studentEmail: email.trim().toLowerCase(),
-        challenge: response?.codingRound || existingSession?.challenge,
-        attempt: response?.attempt || null,
+        challenge: responseChallenge,
+        attempt: responseAttempt,
         isVerified: true,
         verifiedAt: new Date().toISOString(),
       });
 
-      navigate(`/daily-challenge/${linkId}/instructions`, { replace: true });
+      if (nextLinkId !== linkId) {
+        setDailyChallengeSession(nextLinkId, {
+          studentEmail: email.trim().toLowerCase(),
+          challenge: responseChallenge,
+          attempt: responseAttempt,
+          isVerified: true,
+          verifiedAt: new Date().toISOString(),
+        });
+      }
+
+      navigate(`/daily-challenge/${nextLinkId}/instructions`, { replace: true });
     } catch (err) {
       setError(err.message || "OTP verification failed.");
     } finally {
@@ -158,13 +197,30 @@ export default function DailyChallengeAccess() {
             {otpSent && (
               <input
                 type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
                 value={otp}
-                onChange={(event) => setOtp(event.target.value)}
+                onChange={(event) => setOtp(normalizeOtp(event.target.value))}
+                onPaste={(event) => {
+                  event.preventDefault();
+                  const pastedOtp = normalizeOtp(event.clipboardData.getData("text"));
+                  setOtp(pastedOtp);
+                  setError("");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !loading) {
+                    event.preventDefault();
+                    verifyOtp();
+                  }
+                }}
                 placeholder="Enter OTP"
                 className="w-full rounded-md border border-[#86c4ff]/40 bg-[#f2faff]/90 px-3 py-2 text-sm text-[#001862] outline-none transition placeholder:text-[#6f8fb7] focus:border-[#2d7fe8]/70 focus:ring-4 focus:ring-[#76c7ff]/20 dark:border-[#6bb8ec]/25 dark:bg-[#0a2f6f]/60 dark:text-[#9cd6ff] dark:placeholder:text-[#77afd8] dark:focus:border-[#8fd9ff]/70"
               />
             )}
 
+            {notice && <p className="text-xs font-semibold text-emerald-500 md:text-sm">{notice}</p>}
             {error && <p className="text-xs font-semibold text-red-500 md:text-sm">{error}</p>}
 
             {!otpSent ? (
@@ -177,14 +233,24 @@ export default function DailyChallengeAccess() {
                 {loading ? "Sending OTP..." : "Get OTP"}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={verifyOtp}
-                disabled={loading}
-                className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
-              >
-                {loading ? "Verifying..." : "Verify OTP"}
-              </button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={verifyOtp}
+                  disabled={loading}
+                  className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resendOtp}
+                  disabled={loading || resending}
+                  className="text-xs font-semibold text-[#00113b]/70 underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#8fd9ff]"
+                >
+                  {resending ? "Resending OTP..." : "Resend OTP"}
+                </button>
+              </div>
             )}
           </div>
         </div>
