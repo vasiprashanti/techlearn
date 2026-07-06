@@ -546,6 +546,17 @@ export default function DailyChallengeTest() {
               })}
             </div>
 
+
+            {output && (
+              <div className={`text-center text-xs font-semibold px-4 py-2.5 rounded-xl border ${
+                output.startsWith("❌") || output.includes("failed") || output.includes("Error") || output.includes("Limit") || output.includes("required")
+                  ? "bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400"
+                  : "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 dark:text-emerald-400"
+              } max-w-md w-full`}>
+                {output}
+              </div>
+            )}
+
             {/* Actions: Submit Button */}
             <div className="flex items-center justify-center gap-4 w-full pt-4 border-t border-black/5 dark:border-white/5">
               <button

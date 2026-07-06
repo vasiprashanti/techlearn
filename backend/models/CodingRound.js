@@ -46,6 +46,11 @@ const codingRoundSchema = new mongoose.Schema(
         categoryType: { type: String, default: "Coding" },
         content: { type: mongoose.Schema.Types.Mixed },
         fileUrl: { type: String }, // For optional file upload
+        questionId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Question",
+          default: null,
+        },
       },
     ],
     isActive: {
