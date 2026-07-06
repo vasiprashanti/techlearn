@@ -229,9 +229,6 @@ export default function DailyChallengeTest() {
   }, [timeLeft, timerWarning]);
 
   const handleAutoSubmitRef = useRef(null);
-  useEffect(() => {
-    handleAutoSubmitRef.current = handleAutoSubmit;
-  }, [handleAutoSubmit]);
 
   useEffect(() => {
     const visibilityHandler = () => {
@@ -429,6 +426,7 @@ export default function DailyChallengeTest() {
       navigate(`/daily-challenge/${linkId}/result`, { replace: true });
     }
   };
+  handleAutoSubmitRef.current = handleAutoSubmit;
 
   if (!problem) {
     return (
