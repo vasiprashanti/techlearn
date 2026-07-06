@@ -79,6 +79,7 @@ export default function DailyChallengeInstructions() {
     setError("");
 
     try {
+      localStorage.setItem(`daily-challenge-switches-${linkId}`, "0");
       const response = await dailyChallengeAPI.start(linkId, session?.studentEmail);
       const challengePayload = response?.data?.codingRound || challenge;
       const attempt = response?.data?.attempt || null;

@@ -194,6 +194,9 @@ export default function DailyChallengeAccess() {
           </p>
 
           <div className="space-y-3 pt-2">
+            {notice && <p className="text-xs font-semibold text-emerald-500 md:text-sm mb-2">{notice}</p>}
+            {error && <p className="text-xs font-semibold text-red-500 md:text-sm mb-2">{error}</p>}
+
             {otpSent && (
               <input
                 type="text"
@@ -220,9 +223,6 @@ export default function DailyChallengeAccess() {
               />
             )}
 
-            {notice && <p className="text-xs font-semibold text-emerald-500 md:text-sm">{notice}</p>}
-            {error && <p className="text-xs font-semibold text-red-500 md:text-sm">{error}</p>}
-
             {!otpSent ? (
               <button
                 type="button"
@@ -246,7 +246,7 @@ export default function DailyChallengeAccess() {
                   type="button"
                   onClick={resendOtp}
                   disabled={loading || resending}
-                  className="text-xs font-semibold text-[#00113b]/70 underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#8fd9ff]"
+                  className="flex w-full items-center justify-center rounded-md bg-white px-4 py-2.5 font-press-start text-[9px] font-bold text-[#0a1128] shadow-md transition-all hover:-translate-y-0.5 hover:bg-slate-100 active:translate-y-0 active:bg-slate-200 disabled:opacity-60"
                 >
                   {resending ? "Resending OTP..." : "Resend OTP"}
                 </button>

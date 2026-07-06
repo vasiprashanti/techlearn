@@ -463,19 +463,26 @@ export const listSubmissionsPage = async (req, res) => {
 export const getSubmissionDetailPage = async (req, res) => {
   try {
     const submissionId = req.params.submissionId;
+    let isChallenge = false;
+    let dbId = submissionId;
+
     if (submissionId && submissionId.startsWith("coding-")) {
-      const dbId = submissionId.replace("coding-", "");
-      const challengeSub = await StudentCodingSubmission.findById(dbId)
+      dbId = submissionId.replace("coding-", "");
+      isChallenge = true;
+    }
+
+    let challengeSub = null;
+    if (isChallenge || (dbId && mongoose.Types.ObjectId.isValid(dbId))) {
+      challengeSub = await StudentCodingSubmission.findById(dbId)
         .populate("studentId", "name email")
         .populate("batchId", "name")
         .populate("codingRoundId")
         .populate("questionId")
+        .populate("attemptId")
         .lean();
-      
-      if (!challengeSub) {
-        return res.status(404).json({ success: false, message: "Submission not found." });
-      }
+    }
 
+    if (challengeSub) {
       const getObjectFromMap = (val) => {
         if (!val) return {};
         if (val instanceof Map) return Object.fromEntries(val);
@@ -488,6 +495,7 @@ export const getSubmissionDetailPage = async (req, res) => {
       const scores = getObjectFromMap(challengeSub.problemScores);
       const submitted = getObjectFromMap(challengeSub.problemSubmitted);
       const testCases = getObjectFromMap(challengeSub.problemTestCaseResults);
+      const runCounts = getObjectFromMap(challengeSub.problemRuns);
 
       const problems = challengeSub.codingRoundId?.problems || [];
 
@@ -503,20 +511,33 @@ export const getSubmissionDetailPage = async (req, res) => {
           exec: "-",
           when: challengeSub.lastSubmissionAt || challengeSub.submittedAt,
           isChallenge: true,
-          problems: problems.map((prob, idx) => ({
-            title: prob.problemTitle || prob.title || `Question ${idx + 1}`,
-            categoryType: prob.categoryType || "Coding",
-            code: codes[idx.toString()] || "",
-            language: languages[idx.toString()] || "",
-            score: scores[idx.toString()] || 0,
-            submitted: submitted[idx.toString()] || false,
-            testCases: testCases[idx.toString()] || [],
-          }))
+          startedAt: challengeSub.attemptId?.startedAt || challengeSub.createdAt,
+          submittedAt: challengeSub.submittedAt || challengeSub.createdAt,
+          dayNumber: challengeSub.codingRoundId?.dayNumber,
+          challengeTitle: challengeSub.codingRoundId?.title || "Daily Challenge",
+          problems: problems.map((prob, idx) => {
+            const codeStr = codes[idx.toString()] || "";
+            const isStarter = !codeStr || !codeStr.trim() ||
+              codeStr === "def solve():\n    pass" ||
+              codeStr.trim() === "def solve():" ||
+              (codeStr.includes("pass") && codeStr.length < 50);
+
+            return {
+              title: prob.problemTitle || prob.title || `Question ${idx + 1}`,
+              categoryType: prob.categoryType || "Coding",
+              code: codeStr,
+              language: languages[idx.toString()] || "",
+              score: scores[idx.toString()] || 0,
+              submitted: submitted[idx.toString()] || false,
+              hasRun: (runCounts[idx.toString()] > 0) && !isStarter,
+              testCases: testCases[idx.toString()] || [],
+            };
+          })
         }
       });
     }
 
-    const submission = await Submission.findById(submissionId)
+    const submission = await Submission.findById(dbId)
       .populate("studentId", "name email")
       .populate("batchId", "name")
       .populate("questionId", "title categoryType")

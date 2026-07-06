@@ -69,9 +69,11 @@ const BatchDetails = () => {
 
   const [reviewSubmission, setReviewSubmission] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [activeReviewProblemIdx, setActiveReviewProblemIdx] = useState(null);
 
   const handleReviewSubmission = async (submissionId, studentName) => {
     try {
+      setActiveReviewProblemIdx(null);
       setReviewLoading(true);
       if (!submissionId) {
         setReviewSubmission({ student: studentName, isChallenge: true, problems: [], loading: false });
@@ -1552,14 +1554,29 @@ const BatchDetails = () => {
                 <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
                     <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Assessment</p>
-                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{reviewSubmission.question || "_"}</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">
+                      {reviewSubmission.isChallenge 
+                        ? `${reviewSubmission.challengeTitle || "Daily Challenge"} ${reviewSubmission.dayNumber ? `(Day ${reviewSubmission.dayNumber})` : ""}`
+                        : (reviewSubmission.question || "_")
+                      }
+                    </p>
                   </div>
                   <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
                     <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Submitted At</p>
                     <p className="text-sm mt-1 text-black/75 dark:text-white/80">
-                      {reviewSubmission.when && !isNaN(new Date(reviewSubmission.when).getTime())
-                        ? new Date(reviewSubmission.when).toLocaleString()
-                        : "_"}
+                      {(() => {
+                        if (reviewSubmission.isChallenge && reviewSubmission.startedAt && reviewSubmission.submittedAt) {
+                          const started = new Date(reviewSubmission.startedAt);
+                          const submitted = new Date(reviewSubmission.submittedAt);
+                          const elapsedSec = Math.max(0, Math.floor((submitted.getTime() - started.getTime()) / 1000));
+                          const mins = Math.floor(elapsedSec / 60);
+                          const secs = elapsedSec % 60;
+                          return `${mins}m ${secs}s after start`;
+                        }
+                        return reviewSubmission.when && !isNaN(new Date(reviewSubmission.when).getTime())
+                          ? new Date(reviewSubmission.when).toLocaleString()
+                          : "_";
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -1572,22 +1589,44 @@ const BatchDetails = () => {
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No attempts to review.</p>
                       </div>
                     ) : (
-                      reviewSubmission.problems.map((prob, idx) => (
-                        <div key={idx} className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5 space-y-2">
-                          <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2">
-                            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{prob.title}</span>
-                            <div className="flex gap-2 text-xs">
-                              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{prob.language || 'N/A'}</span>
-                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">Score: {prob.score}</span>
-                            </div>
+                      reviewSubmission.problems.map((prob, idx) => {
+                        const isExpanded = activeReviewProblemIdx === idx;
+                        const statusLabel = prob.submitted 
+                          ? "Submitted" 
+                          : (prob.hasRun ? "Not submitted (State after final run)" : "User did not attempt it");
+
+                        return (
+                          <div key={idx} className="rounded-xl border border-black/10 dark:border-white/10 overflow-hidden bg-white/60 dark:bg-white/5">
+                            <button
+                              type="button"
+                              onClick={() => setActiveReviewProblemIdx(isExpanded ? null : idx)}
+                              className="w-full text-left px-4 py-3 flex justify-between items-center bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 transition-all hover:bg-black/[0.05] dark:hover:bg-white/[0.05]"
+                            >
+                              <div>
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{prob.title}</p>
+                                <p className="text-[11px] font-medium text-slate-500 mt-0.5">{statusLabel}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{prob.language || 'python'}</span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">Score: {prob.score}</span>
+                                <span className="text-xs text-slate-400 font-bold ml-1">{isExpanded ? "▲" : "▼"}</span>
+                              </div>
+                            </button>
+                            {isExpanded && (
+                              <div className="p-4 bg-white/40 dark:bg-black/15">
+                                {prob.hasRun || prob.submitted ? (
+                                  <div>
+                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Compiler State:</p>
+                                    <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[220px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs italic text-gray-500 py-2">User did not attempt it</p>
+                                )}
+                              </div>
+                            )}
                           </div>
-                          {prob.code ? (
-                            <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[200px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
-                          ) : (
-                            <p className="text-xs italic text-gray-400">No code submitted / MCQ Option selected</p>
-                          )}
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 ) : (
