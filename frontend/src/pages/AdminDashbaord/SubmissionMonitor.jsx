@@ -81,6 +81,21 @@ export default function SubmissionMonitor() {
     }
   }, []);
 
+  const handleSelectSubmission = async (s) => {
+    try {
+      setSelectedSubmission({ ...s, loading: true });
+      const response = await adminAPI.getSubmission(s.id);
+      if (response?.success && response?.data) {
+        setSelectedSubmission(response.data);
+      } else {
+        setSelectedSubmission(s);
+      }
+    } catch (err) {
+      console.error(err);
+      setSelectedSubmission(s);
+    }
+  };
+
   useEffect(() => {
     loadSubmissions();
   }, [loadSubmissions]);
@@ -166,7 +181,7 @@ export default function SubmissionMonitor() {
       {selectedSubmission && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setSelectedSubmission(null)} />
-          <div className="relative w-full max-w-3xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-3xl bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden text-left">
             <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-[#3C83F6] dark:text-white">Submission Detail</h2>
@@ -174,34 +189,73 @@ export default function SubmissionMonitor() {
               </div>
               <button onClick={() => setSelectedSubmission(null)} className="text-sm text-black/40 dark:text-white/40 hover:text-black/70 dark:hover:text-white/70">Close</button>
             </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Question</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.question}</p>
-              </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Language</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.lang}</p>
-              </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Execution Time</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.exec}</p>
-              </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">Submitted</p>
-                <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.when}</p>
-              </div>
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40">XP Earned</p>
-                <p className="text-sm mt-1 font-semibold text-[#3C83F6] dark:text-blue-300">{Number(selectedSubmission.xpEarned || 0)} XP</p>
-              </div>
-            </div>
-            <div className="px-6 pb-6">
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Output Preview</p>
-                <pre className="text-xs text-black/65 dark:text-white/65 whitespace-pre-wrap">Status: {selectedSubmission.status}\nResult: {selectedSubmission.outputPreview || 'Submission evaluated'}</pre>
-              </div>
-            </div>
+            
+            {selectedSubmission.loading ? (
+              <div className="p-12 text-center text-sm text-gray-500">Loading details...</div>
+            ) : (
+              <>
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40">Question</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.question}</p>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40">Language</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.lang}</p>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40">Execution Time</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.exec}</p>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40">Submitted</p>
+                    <p className="text-sm mt-1 text-black/75 dark:text-white/80">{selectedSubmission.when ? new Date(selectedSubmission.when).toLocaleString() : '-'}</p>
+                  </div>
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40">XP Earned</p>
+                    <p className="text-sm mt-1 font-semibold text-[#3C83F6] dark:text-blue-300">{Number(selectedSubmission.xpEarned || 0)} XP</p>
+                  </div>
+                </div>
+                
+                <div className="px-6 pb-6">
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Output Preview</p>
+                    <pre className="text-xs text-black/65 dark:text-white/65 whitespace-pre-wrap">Status: {selectedSubmission.status}\nResult: {selectedSubmission.outputPreview || 'Submission evaluated'}</pre>
+                  </div>
+                </div>
+
+                {selectedSubmission.isChallenge ? (
+                  <div className="px-6 pb-6 max-h-[300px] overflow-y-auto space-y-4">
+                    <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Student Solutions</p>
+                    {selectedSubmission.problems && selectedSubmission.problems.map((prob, idx) => (
+                      <div key={idx} className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5 space-y-2">
+                        <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-2">
+                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{prob.title}</span>
+                          <div className="flex gap-2 text-xs">
+                            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">{prob.language || 'N/A'}</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">Score: {prob.score}</span>
+                          </div>
+                        </div>
+                        {prob.code ? (
+                          <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[150px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
+                        ) : (
+                          <p className="text-xs italic text-gray-400">No code submitted / MCQ Option selected</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  selectedSubmission.code && (
+                    <div className="px-6 pb-6">
+                      <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                        <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Submitted Code</p>
+                        <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[300px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{selectedSubmission.code}</pre>
+                      </div>
+                    </div>
+                  )
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -272,7 +326,7 @@ export default function SubmissionMonitor() {
                 return (
                   <article
                     key={s.id}
-                    onClick={() => setSelectedSubmission(s)}
+                    onClick={() => handleSelectSubmission(s)}
                     className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] p-4 shadow-sm transition-colors cursor-pointer hover:bg-black/[0.015] dark:hover:bg-white/[0.03]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -402,7 +456,7 @@ export default function SubmissionMonitor() {
                     const sc = getSubmissionStatusConfig(s.status);
                     const StatusIcon = sc.Icon;
                     return (
-                      <tr onClick={() => setSelectedSubmission(s)} key={s.id} className="group hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer border-b border-black/10 dark:border-white/10 last:border-b-0">
+                      <tr onClick={() => handleSelectSubmission(s)} key={s.id} className="group hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors cursor-pointer border-b border-black/10 dark:border-white/10 last:border-b-0">
                         <td className="px-4 py-3">
                           <span className="text-base font-semibold text-[#1d3149] dark:text-white/90 truncate leading-none block">{s.student}</span>
                         </td>

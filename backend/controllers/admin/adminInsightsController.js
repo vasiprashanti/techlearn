@@ -462,10 +462,64 @@ export const listSubmissionsPage = async (req, res) => {
 
 export const getSubmissionDetailPage = async (req, res) => {
   try {
-    const submission = await Submission.findById(req.params.submissionId)
-      .populate("studentId", "name")
+    const submissionId = req.params.submissionId;
+    if (submissionId && submissionId.startsWith("coding-")) {
+      const dbId = submissionId.replace("coding-", "");
+      const challengeSub = await StudentCodingSubmission.findById(dbId)
+        .populate("studentId", "name email")
+        .populate("batchId", "name")
+        .populate("codingRoundId")
+        .populate("questionId")
+        .lean();
+      
+      if (!challengeSub) {
+        return res.status(404).json({ success: false, message: "Submission not found." });
+      }
+
+      const getObjectFromMap = (val) => {
+        if (!val) return {};
+        if (val instanceof Map) return Object.fromEntries(val);
+        if (typeof val.entries === "function") return Object.fromEntries(val);
+        return val;
+      };
+
+      const codes = getObjectFromMap(challengeSub.problemCodes);
+      const languages = getObjectFromMap(challengeSub.problemLanguages);
+      const scores = getObjectFromMap(challengeSub.problemScores);
+      const submitted = getObjectFromMap(challengeSub.problemSubmitted);
+      const testCases = getObjectFromMap(challengeSub.problemTestCaseResults);
+
+      const problems = challengeSub.codingRoundId?.problems || [];
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          id: submissionId,
+          student: challengeSub.studentId?.name || challengeSub.studentEmail || "Unknown Student",
+          email: challengeSub.studentId?.email || challengeSub.studentEmail || "",
+          batch: challengeSub.batchId?.name || "Unknown Batch",
+          question: challengeSub.questionId?.title || "Daily Challenge",
+          status: challengeSub.totalScore > 0 ? "Evaluated" : "Not Started",
+          exec: "-",
+          when: challengeSub.lastSubmissionAt || challengeSub.submittedAt,
+          isChallenge: true,
+          problems: problems.map((prob, idx) => ({
+            title: prob.problemTitle || prob.title || `Question ${idx + 1}`,
+            categoryType: prob.categoryType || "Coding",
+            code: codes[idx.toString()] || "",
+            language: languages[idx.toString()] || "",
+            score: scores[idx.toString()] || 0,
+            submitted: submitted[idx.toString()] || false,
+            testCases: testCases[idx.toString()] || [],
+          }))
+        }
+      });
+    }
+
+    const submission = await Submission.findById(submissionId)
+      .populate("studentId", "name email")
       .populate("batchId", "name")
-      .populate("questionId", "title")
+      .populate("questionId", "title categoryType")
       .lean();
 
     if (!submission) {
@@ -477,11 +531,15 @@ export const getSubmissionDetailPage = async (req, res) => {
       data: {
         id: submission._id,
         student: submission.studentId?.name || "Unknown Student",
+        email: submission.studentId?.email || "",
         batch: submission.batchId?.name || "Unknown Batch",
         question: submission.questionId?.title || "Untitled Question",
         status: normalizeSubmissionStatus(submission.status),
         exec: submission.executionTime ? `${submission.executionTime}ms` : "-",
         when: submission.submittedAt,
+        code: submission.submittedCode || "",
+        language: submission.language || "Code",
+        isChallenge: false,
       },
     });
   } catch (error) {
