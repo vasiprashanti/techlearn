@@ -30,6 +30,11 @@ async function run() {
       new mongoose.Schema({}, { strict: false })
     );
 
+    const UserProgress = mongoose.model(
+      "UserProgress",
+      new mongoose.Schema({}, { strict: false })
+    );
+
     // Delete all student MCQ submissions
     const mcqRes = await StudentMcqSubmission.deleteMany({});
     console.log(`Deleted ${mcqRes.deletedCount} Student MCQ submissions (Placement Readiness Assessment scores).`);
@@ -41,6 +46,21 @@ async function run() {
     // Delete all general student submissions associated with coding rounds
     const subRes = await Submission.deleteMany({ categoryType: "Coding" });
     console.log(`Deleted ${subRes.deletedCount} individual coding question submissions.`);
+
+    // Reset UserProgress XP records
+    const progressRes = await UserProgress.updateMany(
+      {},
+      {
+        $set: {
+          courseXP: {},
+          exerciseXP: {},
+          projectXP: {},
+          totalCourseXP: {},
+          totalExerciseXP: {},
+        },
+      }
+    );
+    console.log(`Reset XP maps to zero/empty in ${progressRes.modifiedCount} UserProgress profiles.`);
 
     console.log("\nPlacement Readiness Assessment leaderboard scores and XP successfully reset to zero!");
   } catch (error) {
