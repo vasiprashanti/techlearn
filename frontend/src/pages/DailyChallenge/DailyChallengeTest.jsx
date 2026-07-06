@@ -228,7 +228,7 @@ export default function DailyChallengeTest() {
     return () => clearInterval(timer);
   }, [timeLeft, timerWarning]);
 
-  const handleAutoSubmitRef = useRef(handleAutoSubmit);
+  const handleAutoSubmitRef = useRef(null);
   useEffect(() => {
     handleAutoSubmitRef.current = handleAutoSubmit;
   }, [handleAutoSubmit]);
