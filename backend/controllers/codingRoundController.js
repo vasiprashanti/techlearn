@@ -1184,7 +1184,9 @@ export const submitCodingRoundAnswers = async (req, res) => {
       const TrackTemplate = mongoose.model("TrackTemplate");
       const template = await TrackTemplate.findById(codingRound.trackId).lean();
       if (template) {
-        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
+        const totalTemplateDays = template.totalDays || template.dayAssignments?.length || 1;
+        const lookupDay = ((codingRound.dayNumber - 1) % totalTemplateDays) + 1;
+        const dayAssignment = template.dayAssignments?.find((d) => Number(d.dayNumber) === Number(lookupDay));
         if (dayAssignment) {
           const tasks = dayAssignment.tasks || [];
           if (tasks.length > 0) {
