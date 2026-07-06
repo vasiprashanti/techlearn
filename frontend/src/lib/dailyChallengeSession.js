@@ -10,12 +10,21 @@ export const getDailyChallengeSession = (linkId) => {
 };
 
 export const setDailyChallengeSession = (linkId, patch) => {
-  const current = getDailyChallengeSession(linkId) || {};
-  const next = { ...current, ...patch };
-  sessionStorage.setItem(buildKey(linkId), JSON.stringify(next));
-  return next;
+  try {
+    const current = getDailyChallengeSession(linkId) || {};
+    const next = { ...current, ...patch };
+    sessionStorage.setItem(buildKey(linkId), JSON.stringify(next));
+    return next;
+  } catch (err) {
+    console.error("sessionStorage write blocked:", err);
+    return patch;
+  }
 };
 
 export const clearDailyChallengeSession = (linkId) => {
-  sessionStorage.removeItem(buildKey(linkId));
+  try {
+    sessionStorage.removeItem(buildKey(linkId));
+  } catch (err) {
+    console.error("sessionStorage clear blocked:", err);
+  }
 };

@@ -1,38 +1,36 @@
-// Shared logic for MCQ and CodingRound verification, OTP, validation, and submission
-import crypto from "crypto";
-import { sendMail } from "./mailer.js";
-
-const otpStore = new Map();
-
-// Clean expired OTPs every 2 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, { expiresAt }] of otpStore.entries()) {
-    if (expiresAt < now) otpStore.delete(key);
-  }
-}, 2 * 60 * 1000);
+import OTP from "../models/OTP.js";
 
 export function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export function storeOTP(key, otp, expiresIn = 5 * 60 * 1000) {
-  otpStore.set(key, {
-    otp,
-    expiresAt: Date.now() + expiresIn,
-  });
+export async function storeOTP(key, otp, expiresIn = 5 * 60 * 1000) {
+  try {
+    await OTP.findOneAndUpdate(
+      { key },
+      { otp, expiresAt: new Date(Date.now() + expiresIn) },
+      { upsert: true, new: true }
+    );
+  } catch (err) {
+    console.error("Error storing OTP in DB:", err);
+  }
 }
 
-export function verifyOTP(key, otp) {
-  const entry = otpStore.get(key);
-  if (!entry) return false;
-  if (entry.otp !== otp) return false;
-  if (entry.expiresAt < Date.now()) {
-    otpStore.delete(key);
+export async function verifyOTP(key, otp) {
+  try {
+    const entry = await OTP.findOne({ key });
+    if (!entry) return false;
+    if (entry.otp !== otp) return false;
+    if (entry.expiresAt < new Date()) {
+      await OTP.deleteOne({ key });
+      return false;
+    }
+    await OTP.deleteOne({ key });
+    return true;
+  } catch (err) {
+    console.error("Error verifying OTP from DB:", err);
     return false;
   }
-  otpStore.delete(key);
-  return true;
 }
 
 export async function sendOTPEmail(email, otp, context = "MCQ/Coding Round") {

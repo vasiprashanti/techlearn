@@ -639,7 +639,7 @@ export const sendCodingRoundOTP = async (req, res) => {
     }
 
     const otp = generateOTP();
-    storeOTP(`${linkId}:${normalizedEmail}`, otp);
+    await storeOTP(`${linkId}:${normalizedEmail}`, otp);
     await sendOTPEmail(
       normalizedEmail,
       otp,
@@ -727,7 +727,7 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
         alreadyAttempted: true,
       });
     }
-    const valid = verifyOTP(`${linkId}:${normalizedEmail}`, otp);
+    const valid = await verifyOTP(`${linkId}:${normalizedEmail}`, otp);
     if (!valid) {
       return res.status(400).json({
         success: false,
