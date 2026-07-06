@@ -63,6 +63,7 @@ export default function DailyChallengeTest() {
   const [activeProblemIndex, setActiveProblemIndex] = useState(0);
   const [solutions, setSolutions] = useState({});
   const [submittedProblems, setSubmittedProblems] = useState(new Set());
+  const [visitedProblems, setVisitedProblems] = useState(new Set([0]));
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [endConfirmMessage, setEndConfirmMessage] = useState("");
 
@@ -82,6 +83,11 @@ export default function DailyChallengeTest() {
   // Reset or load code for active problem
   useEffect(() => {
     if (problem) {
+      setVisitedProblems((prev) => {
+        const next = new Set(prev);
+        next.add(activeProblemIndex);
+        return next;
+      });
       const isChallengeMcq = problem.categoryType === "MCQ";
       const currentSolution = solutions[activeProblemIndex];
       if (currentSolution) {
@@ -122,6 +128,52 @@ export default function DailyChallengeTest() {
         language: newLang,
       },
     }));
+  };
+
+  const handlePreviousQuestion = () => {
+    if (activeProblemIndex > 0) {
+      setActiveProblemIndex(activeProblemIndex - 1);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (challenge && activeProblemIndex < challenge.problems.length - 1) {
+      setActiveProblemIndex(activeProblemIndex + 1);
+    }
+  };
+
+  const renderQuestionTabs = () => {
+    if (!challenge || !challenge.problems || challenge.problems.length <= 1) return null;
+
+    return challenge.problems.map((p, idx) => {
+      const isActive = idx === activeProblemIndex;
+      const isSubmitted = submittedProblems.has(idx);
+      const hasDraftSelection = !isSubmitted && solutions[idx] && solutions[idx].code;
+      const isVisited = visitedProblems.has(idx);
+
+      let tabClass = "";
+      if (isActive) {
+        tabClass = "bg-[#2563eb] text-white border-[#2563eb] shadow-md shadow-blue-500/20";
+      } else if (isSubmitted) {
+        tabClass = "border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-500/40";
+      } else if (hasDraftSelection) {
+        tabClass = "border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 dark:border-amber-500/40";
+      } else if (isVisited) {
+        tabClass = "border-slate-400 bg-slate-100 text-slate-700 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-600";
+      } else {
+        tabClass = "bg-white/30 text-gray-500 border-black/5 hover:bg-white/50 dark:bg-white/5 dark:text-gray-500 dark:border-white/5 dark:hover:bg-white/10 opacity-70";
+      }
+
+      return (
+        <button
+          key={idx}
+          onClick={() => setActiveProblemIndex(idx)}
+          className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-200 ${tabClass}`}
+        >
+          Question {idx + 1} {isSubmitted && "✓"}
+        </button>
+      );
+    });
   };
 
   useEffect(() => {
@@ -212,7 +264,11 @@ export default function DailyChallengeTest() {
     if (timeLeft <= 0) {
       if (!autoSubmitTriggered.current) {
         autoSubmitTriggered.current = true;
-        handleAutoSubmit();
+        if (typeof handleAutoSubmitRef.current === "function") {
+          handleAutoSubmitRef.current();
+        } else {
+          handleAutoSubmit();
+        }
       }
       return;
     }
@@ -319,54 +375,108 @@ export default function DailyChallengeTest() {
   const handleSubmit = async () => {
     if (!problem || !studentEmail) return;
     if (!code.trim()) {
-      setOutput("Please write code or select an option before submitting.");
+      setOutput(isMcq ? "Please select an option before submitting." : "Please write code before submitting.");
       return;
     }
 
-    setSubmitting(true);
-    setOutput("Submitting your solution...");
+    if (submitting) return;
 
-    try {
-      const response = await dailyChallengeAPI.submit(linkId, {
-        studentEmail,
-        attemptId: attempt?.id,
-        solutions: [
-          {
-            problemIndex: activeProblemIndex,
-            language: selectedLanguage,
-            submittedCode: code,
-          },
-        ],
-      });
+    const currentIdx = activeProblemIndex;
+    const currentLang = selectedLanguage;
+    const currentCode = code;
 
-      const data = response?.data || {};
-      const finalAttempt = data.attempt || attempt;
-      if (data?.attempt) {
-        setAttempt(data.attempt);
-        setDailyChallengeSession(linkId, { attempt: data.attempt });
-      }
+    // Immediately mark as submitted locally
+    const nextSubmitted = new Set(submittedProblems);
+    nextSubmitted.add(currentIdx);
+    setSubmittedProblems(nextSubmitted);
 
-      const nextSubmitted = new Set(submittedProblems);
-      nextSubmitted.add(activeProblemIndex);
-      setSubmittedProblems(nextSubmitted);
+    // Save to solutions map and localStorage
+    const nextSolutions = {
+      ...solutions,
+      [currentIdx]: { code: currentCode, language: currentLang }
+    };
+    setSolutions(nextSolutions);
+    localStorage.setItem(`daily-challenge-draft-${linkId}`, JSON.stringify(nextSolutions));
 
-      setOutput(`✅ Question ${activeProblemIndex + 1} Submitted Successfully!\nScore: ${data.problemScore || 0}`);
-
-      // If all questions are submitted, end challenge and redirect
-      if (challenge && nextSubmitted.size === challenge.problems.length) {
-        const endResponse = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: finalAttempt?.id });
-        moveToResult(endResponse?.data || {});
-      } else {
-        // Automatically switch to the next uncompleted problem
+    if (isMcq) {
+      // Async submit in background (instant transition for MCQ UX!)
+      if (challenge) {
         const nextIdx = challenge.problems.findIndex((_, idx) => !nextSubmitted.has(idx));
         if (nextIdx !== -1) {
           setActiveProblemIndex(nextIdx);
         }
       }
-    } catch (error) {
-      setOutput(error.message || "Submission failed.");
-    } finally {
-      setSubmitting(false);
+
+      dailyChallengeAPI.submit(linkId, {
+        studentEmail,
+        attemptId: attempt?.id,
+        solutions: [
+          {
+            problemIndex: currentIdx,
+            language: currentLang,
+            submittedCode: currentCode,
+          },
+        ],
+      }).then(response => {
+        const data = response?.data || {};
+        if (data?.attempt) {
+          setAttempt(data.attempt);
+          setDailyChallengeSession(linkId, { attempt: data.attempt });
+        }
+      }).catch(err => {
+        console.error("Background MCQ submit failed:", err);
+      });
+
+    } else {
+      // Synchronous submit for coding
+      setSubmitting(true);
+      setOutput("Submitting your solution...");
+
+      try {
+        const response = await dailyChallengeAPI.submit(linkId, {
+          studentEmail,
+          attemptId: attempt?.id,
+          solutions: [
+            {
+              problemIndex: currentIdx,
+              language: currentLang,
+              submittedCode: currentCode,
+            },
+          ],
+        });
+
+        const data = response?.data || {};
+        const finalAttempt = data.attempt || attempt;
+        if (data?.attempt) {
+          setAttempt(data.attempt);
+          setDailyChallengeSession(linkId, { attempt: data.attempt });
+        }
+
+        setOutput(`✅ Question ${currentIdx + 1} Submitted Successfully!\nScore: ${data.problemScore || 0}`);
+
+        if (challenge && nextSubmitted.size === challenge.problems.length) {
+          const finalSolutions = Object.entries(nextSolutions).map(([idx, val]) => ({
+            problemIndex: parseInt(idx),
+            language: val.language,
+            submittedCode: val.code
+          }));
+          const endResponse = await dailyChallengeAPI.end(linkId, {
+            studentEmail,
+            attemptId: finalAttempt?.id,
+            solutions: finalSolutions
+          });
+          moveToResult(endResponse?.data || {});
+        } else {
+          const nextIdx = challenge.problems.findIndex((_, idx) => !nextSubmitted.has(idx));
+          if (nextIdx !== -1) {
+            setActiveProblemIndex(nextIdx);
+          }
+        }
+      } catch (error) {
+        setOutput(error.message || "Submission failed.");
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -391,7 +501,21 @@ export default function DailyChallengeTest() {
     setSubmitting(true);
 
     try {
-      const response = await dailyChallengeAPI.end(linkId, { studentEmail, attemptId: attempt?.id });
+      const finalSolutions = [];
+      challenge.problems.forEach((prob, idx) => {
+        const sol = solutions[idx] || {};
+        finalSolutions.push({
+          problemIndex: idx,
+          language: sol.language || "python",
+          submittedCode: idx === activeProblemIndex ? code : (sol.code || ""),
+        });
+      });
+
+      const response = await dailyChallengeAPI.end(linkId, {
+        studentEmail,
+        attemptId: attempt?.id,
+        solutions: finalSolutions,
+      });
       moveToResult(response?.data || {});
     } catch (error) {
       setOutput(error.message || "Unable to end challenge.");
@@ -400,11 +524,10 @@ export default function DailyChallengeTest() {
     }
   };
 
-  const handleAutoSubmit = async () => {
+  const handleAutoSubmit = async (isTerminated = false) => {
     if (!studentEmail) return;
 
     try {
-      // Gather all unsubmitted solutions or current state
       const finalSolutions = [];
       challenge.problems.forEach((prob, idx) => {
         const sol = solutions[idx] || {};
@@ -419,10 +542,23 @@ export default function DailyChallengeTest() {
         studentEmail,
         attemptId: attempt?.id,
         solutions: finalSolutions,
+        terminationReason: isTerminated ? "Tab-switch limit exceeded" : undefined,
       });
-      moveToResult(response?.data || {});
+
+      if (isTerminated) {
+        localStorage.removeItem(`daily-challenge-draft-${linkId}`);
+        setDailyChallengeSession(linkId, {
+          result: response?.data || {},
+          completedAt: new Date().toISOString(),
+          terminated: true,
+          terminationReason: "Tab-switch limit exceeded"
+        });
+        navigate(`/daily-challenge/${linkId}/result`, { replace: true });
+      } else {
+        moveToResult(response?.data || {});
+      }
     } catch (error) {
-      setOutput(error.message || "Auto-submit failed.");
+      console.error("Auto-submit failed:", error);
       navigate(`/daily-challenge/${linkId}/result`, { replace: true });
     }
   };
@@ -470,23 +606,7 @@ export default function DailyChallengeTest() {
             {/* Question tabs if multiple questions */}
             {challenge?.problems?.length > 1 && (
               <div className="flex border-b border-black/5 dark:border-white/5 pb-2 w-full gap-2 overflow-x-auto select-none">
-                {challenge.problems.map((p, idx) => {
-                  const isActive = idx === activeProblemIndex;
-                  const isSubmitted = submittedProblems.has(idx);
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveProblemIndex(idx)}
-                      className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-200 ${
-                        isActive
-                          ? "bg-[#2563eb] text-white border-[#2563eb]"
-                          : "bg-white/30 text-gray-700 border-black/5 hover:bg-white/50 dark:bg-white/5 dark:text-gray-300 dark:border-white/5 dark:hover:bg-white/10"
-                      }`}
-                    >
-                      Question {idx + 1} {isSubmitted && "✓"}
-                    </button>
-                  );
-                })}
+                {renderQuestionTabs()}
               </div>
             )}
 
@@ -546,8 +666,17 @@ export default function DailyChallengeTest() {
               })}
             </div>
 
-            {/* Actions: Submit Button */}
-            <div className="flex items-center justify-center gap-4 w-full pt-4 border-t border-black/5 dark:border-white/5">
+            {/* Actions: Previous, Submit & Next, Next Buttons */}
+            <div className="flex items-center justify-between w-full pt-4 border-t border-black/5 dark:border-white/5 gap-3">
+              <button
+                type="button"
+                onClick={handlePreviousQuestion}
+                disabled={activeProblemIndex === 0 || submitting}
+                className="inline-flex w-28 justify-center items-center rounded-xl border border-black/10 dark:border-white/10 bg-white/20 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none px-3 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-200 transition"
+              >
+                Previous
+              </button>
+
               <button
                 type="button"
                 onClick={handleSubmit}
@@ -555,6 +684,15 @@ export default function DailyChallengeTest() {
                 className="inline-flex w-44 justify-center items-center rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all duration-200"
               >
                 {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit & Next"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextQuestion}
+                disabled={activeProblemIndex === (challenge?.problems?.length - 1) || submitting}
+                className="inline-flex w-28 justify-center items-center rounded-xl border border-black/10 dark:border-white/10 bg-white/20 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 disabled:pointer-events-none px-3 py-2.5 text-sm font-semibold text-gray-800 dark:text-gray-200 transition"
+              >
+                Next
               </button>
             </div>
           </div>
@@ -566,23 +704,7 @@ export default function DailyChallengeTest() {
             <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
               {challenge?.problems?.length > 1 && (
                 <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
-                  {challenge.problems.map((p, idx) => {
-                    const isActive = idx === activeProblemIndex;
-                    const isSubmitted = submittedProblems.has(idx);
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => setActiveProblemIndex(idx)}
-                        className={`px-3 py-1 text-xs font-semibold rounded-md border transition-all duration-200 ${
-                          isActive
-                            ? "bg-[#2563eb] text-white border-[#2563eb]"
-                            : "bg-white/30 text-gray-700 border-black/5 hover:bg-white/50 dark:bg-white/5 dark:text-gray-300 dark:border-white/5 dark:hover:bg-white/10"
-                        }`}
-                      >
-                        Question {idx + 1} {isSubmitted && "✓"}
-                      </button>
-                    );
-                  })}
+                  {renderQuestionTabs()}
                 </div>
               )}
 

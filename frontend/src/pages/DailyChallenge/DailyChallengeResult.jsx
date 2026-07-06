@@ -97,7 +97,13 @@ export default function DailyChallengeResult() {
             DAILY CHALLENGE RESULT
           </h3>
           <p className="text-sm font-semibold leading-relaxed text-[#00113b] dark:text-white md:text-base">
-            You have completed the challenge!
+            {session?.terminated ? (
+              <span className="text-red-600 dark:text-red-400 font-bold">
+                Test Terminated: Exceeded tab switch limit!
+              </span>
+            ) : (
+              "You have completed the challenge!"
+            )}
           </p>
           <p className="text-xs leading-relaxed text-[#00113b]/70 dark:text-[#81bde6] md:text-sm">
             You’ll be redirected to the Dashboard shortly.

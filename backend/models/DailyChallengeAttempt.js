@@ -39,9 +39,13 @@ const dailyChallengeAttemptSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["otp_verified", "started", "submitted", "ended", "auto_submitted", "expired"],
+      enum: ["otp_verified", "started", "submitted", "ended", "auto_submitted", "expired", "terminated"],
       default: "otp_verified",
       index: true,
+    },
+    terminationReason: {
+      type: String,
+      default: null,
     },
     accessSource: {
       type: String,

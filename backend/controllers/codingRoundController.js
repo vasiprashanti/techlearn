@@ -897,6 +897,142 @@ export const startDailyChallengeAttempt = async (req, res) => {
   }
 };
 
+async function processUnsubmittedSolutions(codingRound, submission, solutions) {
+  if (!solutions || !Array.isArray(solutions)) return;
+
+  for (const sol of solutions) {
+    const { problemIndex, language, submittedCode } = sol;
+    if (problemIndex === undefined || !language || submittedCode === undefined || submittedCode === null) continue;
+
+    // Only save/grade if not already submitted
+    const idxStr = problemIndex.toString();
+    if (submission.problemSubmitted && submission.problemSubmitted.get(idxStr)) {
+      continue; // Skip if already submitted
+    }
+
+    const problem = codingRound.problems[problemIndex];
+    if (!problem) continue;
+
+    let targetQuestionId = problem.questionId;
+    if (!targetQuestionId && codingRound.challengeType === "daily_challenge") {
+      const TrackTemplate = mongoose.model("TrackTemplate");
+      const template = await TrackTemplate.findById(codingRound.trackId).lean();
+      if (template) {
+        const dayAssignment = template.dayAssignments?.find((d) => d.dayNumber === codingRound.dayNumber);
+        if (dayAssignment) {
+          const tasks = dayAssignment.tasks || [];
+          if (tasks.length > 0) {
+            targetQuestionId = tasks[problemIndex]?.questionId;
+          } else if (dayAssignment.questionId && problemIndex === 0) {
+            targetQuestionId = dayAssignment.questionId;
+          }
+        }
+      }
+    }
+
+    const question = await Question.findById(targetQuestionId || codingRound.questionId).select("+content.correctOption").lean();
+    const isMcq = String(question?.categoryType || "").toUpperCase() === "MCQ" || String(question?.categoryType || "").toUpperCase() === "APTITUDE";
+
+    let testsPassed = 0;
+    let totalTests = 0;
+    const testCaseDetails = [];
+
+    if (isMcq) {
+      totalTests = 1;
+      const MCQ_LABELS = ["A", "B", "C", "D"];
+      const normalizeMcqAns = (val) => {
+        if (typeof val === "number" || /^\d+$/.test(String(val || ""))) {
+          return MCQ_LABELS[Number(val)] || "";
+        }
+        return String(val || "").trim().toUpperCase();
+      };
+
+      const studentAns = normalizeMcqAns(submittedCode);
+      const correctAns = normalizeMcqAns(question?.content?.correctOption);
+      if (studentAns && correctAns && studentAns === correctAns) {
+        testsPassed = 1;
+      }
+    } else {
+      const languageId = LANGUAGE_IDS[language?.toLowerCase()];
+      if (languageId) {
+        const allTestCases = [
+          ...(problem.visibleTestCases || []).map((testCase, index) => ({ ...testCase, visible: true, index })),
+          ...(problem.hiddenTestCases || []).map((testCase, index) => ({
+            ...testCase,
+            visible: false,
+            index: (problem.visibleTestCases || []).length + index,
+          })),
+        ];
+        totalTests = allTestCases.length;
+
+        for (let i = 0; i < totalTests; i++) {
+          const testCase = allTestCases[i];
+          try {
+            const testResult = await testCodeWithJudge0(
+              submittedCode,
+              languageId,
+              testCase.input,
+              testCase.expectedOutput
+            );
+            const passed = testResult.success && testResult.outputMatches;
+            if (passed) {
+              testsPassed++;
+            }
+            testCaseDetails.push({
+              index: testCase.index,
+              visible: testCase.visible,
+              passed,
+              expectedOutput: testCase.expectedOutput || "",
+              actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
+              status: testResult.statusDescription || "",
+              executionTime: Number(testResult.executionTime || 0),
+            });
+          } catch (err) {
+            testCaseDetails.push({
+              index: testCase.index,
+              visible: testCase.visible,
+              passed: false,
+              expectedOutput: testCase.expectedOutput || "",
+              actualOutput: "",
+              status: err?.message || "Execution Error",
+              executionTime: 0,
+            });
+          }
+        }
+      }
+    }
+
+    const accuracy = totalTests > 0 ? Math.round((testsPassed / totalTests) * 100) : 0;
+    const problemScore = accuracy;
+
+    submission.problemScores.set(idxStr, problemScore);
+    submission.problemSubmitted.set(idxStr, true);
+    submission.problemTestCaseResults.set(idxStr, testCaseDetails);
+    submission.problemCodes.set(idxStr, submittedCode);
+    submission.problemLanguages.set(idxStr, language);
+  }
+
+  // Re-calculate totalScore
+  let computedTotalScore = 0;
+  codingRound.problems.forEach((problem, index) => {
+    const accuracy = submission.problemScores.get(index.toString()) || 0;
+    const qType = String(problem.categoryType || "").toLowerCase();
+    const difficulty = problem.difficulty || "Easy";
+    
+    let maxMarks = 10;
+    if (qType === "mcq" || qType === "aptitude") {
+      maxMarks = 1;
+    } else {
+      if (difficulty === "Easy") maxMarks = 10;
+      else if (difficulty === "Medium") maxMarks = 20;
+      else if (difficulty === "Hard") maxMarks = 30;
+    }
+    const marks = maxMarks * (accuracy / 100);
+    computedTotalScore += marks;
+  });
+  submission.totalScore = Number(computedTotalScore.toFixed(1));
+}
+
 // Submit coding round answers (hidden test cases) - validates and updates score only
 export const submitCodingRoundAnswers = async (req, res) => {
   try {
@@ -1726,6 +1862,11 @@ export const endCodingRound = async (req, res) => {
       submission.roundEndedAt = new Date();
     }
 
+    const { solutions } = req.body;
+    if (solutions && Array.isArray(solutions)) {
+      await processUnsubmittedSolutions(codingRound, submission, solutions);
+    }
+
     let linkedSubmission = null;
     if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
       const finalized = await finalizeDailyChallengeAttempt({
@@ -1823,7 +1964,7 @@ export const endCodingRound = async (req, res) => {
 export const autoSubmitRound = async (req, res) => {
   try {
     const { linkId } = req.params;
-    const { studentEmail, attemptId } = req.body;
+    const { studentEmail, attemptId, solutions, terminationReason } = req.body;
     const normalizedEmail = String(studentEmail || "").trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -1900,14 +2041,23 @@ export const autoSubmitRound = async (req, res) => {
       });
     }
 
+    if (solutions && Array.isArray(solutions)) {
+      await processUnsubmittedSolutions(codingRound, submission, solutions);
+    }
+
     let linkedSubmission = null;
     if (codingRound.challengeType === "daily_challenge" && challengeAttempt) {
+      const finalStatus = terminationReason ? "terminated" : "auto_submitted";
+      if (terminationReason) {
+        challengeAttempt.terminationReason = terminationReason;
+        submission.terminationReason = terminationReason;
+      }
       const finalized = await finalizeDailyChallengeAttempt({
         codingRound,
         student: participant.student,
         attempt: challengeAttempt,
         submission,
-        finalStatus: "auto_submitted",
+        finalStatus,
         autoEnded: true,
       });
       challengeAttempt = finalized.attempt;
