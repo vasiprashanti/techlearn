@@ -35,15 +35,48 @@ export default function Courses() {
   const [showForm, setShowForm] = useState(false);
   const navigate = useNavigate();
 
+  const [batchOptions, setBatchOptions] = useState([]);
+
   // Modal form states
   const [courseForm, setCourseForm] = useState({
     title: "",
     description: "",
     numTopics: 0,
     level: "Beginner",
+    assignedBatchIds: [],
   });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const toggleCourseBatch = (batchId) => {
+    setCourseForm((prev) => {
+      const alreadyChecked = prev.assignedBatchIds.map(String).includes(String(batchId));
+      const nextBatchIds = alreadyChecked
+        ? prev.assignedBatchIds.filter((id) => String(id) !== String(batchId))
+        : [...prev.assignedBatchIds, batchId];
+      return {
+        ...prev,
+        assignedBatchIds: nextBatchIds,
+      };
+    });
+  };
+
+  useEffect(() => {
+    async function loadBatches() {
+      try {
+        const res = await adminAPI.getBatches();
+        const formatted = (res.batches || res || []).map((b) => ({
+          id: b._id || b.id,
+          name: b.name,
+          college: b.collegeName || b.college || "",
+        }));
+        setBatchOptions(formatted);
+      } catch (err) {
+        console.error("Failed to load batches", err);
+      }
+    }
+    loadBatches();
+  }, []);
 
   // Search & Delete Confirm States
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,6 +147,7 @@ export default function Courses() {
       description: String(courseForm.description || ""),
       numTopics: Number(courseForm.numTopics) || 0,
       level: String(courseForm.level || "Beginner"),
+      assignedBatchIds: courseForm.assignedBatchIds,
     };
 
     try {
@@ -128,7 +162,7 @@ export default function Courses() {
 
       setCourses((prevCourses) => [newCourse, ...prevCourses]);
       setShowForm(false);
-      setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner" });
+      setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner", assignedBatchIds: [] });
     } catch (err) {
       console.error("Error creating course:", err);
       setFormError(`Could not create course: ${err.message}`);
@@ -237,7 +271,7 @@ export default function Courses() {
           <div className="relative w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">
-                Add New Track & Course
+                Add New Course
               </h2>
               <button onClick={() => setShowForm(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
@@ -264,30 +298,58 @@ export default function Courses() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
-                  <input
-                    type="number"
-                    value={courseForm.numTopics}
-                    onChange={(e) => setCourseForm(prev => ({ ...prev, numTopics: Number(e.target.value) }))}
-                    className={categoryFormInputClass}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3.5">
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
+                    <input
+                      type="number"
+                      value={courseForm.numTopics}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, numTopics: Number(e.target.value) }))}
+                      className={categoryFormInputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
+                    <div className="relative">
+                      <select
+                        value={courseForm.level}
+                        onChange={(e) => setCourseForm(prev => ({ ...prev, level: e.target.value }))}
+                        className={`${categoryFormInputClass} pr-10 appearance-none`}
+                      >
+                        <option className={dropdownOptionClass} value="Beginner">Beginner</option>
+                        <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
+                        <option className={dropdownOptionClass} value="Advanced">Advanced</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-sm transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={courseForm.level}
-                      onChange={(e) => setCourseForm(prev => ({ ...prev, level: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className={dropdownOptionClass} value="Beginner">Beginner</option>
-                      <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
-                      <option className={dropdownOptionClass} value="Advanced">Advanced</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
+                  <div className="mt-1 h-[126px] overflow-y-auto rounded-xl border border-black/10 dark:border-white/15 bg-[#f5f8fc] dark:bg-[#0f1f43] p-2 space-y-1 minimal-scrollbar">
+                    {batchOptions.map((batch) => {
+                      const checked = courseForm.assignedBatchIds.map(String).includes(String(batch.id));
+                      return (
+                        <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCourseBatch(batch.id)}
+                            className="mt-0.5"
+                          />
+                          <span>
+                            <span className="font-medium">{batch.name}</span>
+                            {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {batchOptions.length === 0 && (
+                      <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -410,25 +472,26 @@ export default function Courses() {
               <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40 mt-4">
                 No courses created yet. Click "Add Course" above to build your first track.
               </div>
-            ) :              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
-                <table className="w-full min-w-[900px] table-fixed">
+                        ) : (
+              <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
+                <table className="w-full min-w-full table-fixed">
                   <thead>
                     <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30 select-none">
-                      <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-12 whitespace-nowrap">#</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[180px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('title')}>
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[6%] whitespace-nowrap">#</th>
+                      <th className="px-2 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[20%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('title')}>
                         Course Title{courseSortField === 'title' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-24 whitespace-nowrap">Actions</th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[240px] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('description')}>
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[12%] whitespace-nowrap">Actions</th>
+                      <th className="px-2 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[24%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('description')}>
                         Description{courseSortField === 'description' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('level')}>
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[12%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('level')}>
                         Level{courseSortField === 'level' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('topics')}>
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[13%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('topics')}>
                         Total Topics{courseSortField === 'topics' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-44 cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('enrolledStudents')}>
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[13%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('enrolledStudents')}>
                         Total Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
                     </tr>
@@ -465,14 +528,14 @@ export default function Courses() {
                         : "No description provided.";
                       return (
                         <tr key={course._id} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
-                          <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                          <td className="px-2 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                             {index + 1}
                           </td>
-                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={course.title}>
+                          <td className="px-2 py-2.5 text-[11px] sm:text-xs font-semibold text-slate-800 dark:text-white/85 truncate" title={course.title}>
                             {course.title}
                           </td>
-                          <td className="px-4 py-2.5">
-                            <div className="flex items-center gap-1.5">
+                          <td className="px-2 py-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
                                 onClick={() => handleEdit(course)}
                                 className="w-8 h-8 rounded-lg inline-flex items-center justify-center hover:text-[#3C83F6] hover:bg-[#3C83F6]/10 text-slate-500 dark:text-slate-400"
@@ -489,18 +552,18 @@ export default function Courses() {
                               </button>
                             </div>
                           </td>
-                          <td className="px-4 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
+                          <td className="px-2 py-2.5 text-[11px] sm:text-xs text-slate-500 dark:text-white/60 truncate" title={course.description}>
                             {truncatedDesc}
                           </td>
-                          <td className="px-4 py-2.5">
+                          <td className="px-2 py-2.5 text-center">
                             <span className="shrink-0 rounded-full bg-[#d6e6f4] dark:bg-[#21446f] px-2.5 py-0.5 text-[10px] font-semibold text-[#0f2b54] dark:text-blue-200">
                               {course.level || "Beginner"}
                             </span>
                           </td>
-                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
+                          <td className="px-2 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60 text-center">
                             {course.topics}
                           </td>
-                          <td className="px-4 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60">
+                          <td className="px-2 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60 text-center">
                             {course.enrolledStudents || 0}
                           </td>
                         </tr>
@@ -509,7 +572,7 @@ export default function Courses() {
                   </tbody>
                 </table>
               </div>
-            }
+            )}
           </section>
         </div>
       </main>

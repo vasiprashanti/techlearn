@@ -35,6 +35,12 @@ const courseSchema = new mongoose.Schema(
         ref: "Exercise",
       },
     ],
+    assignedBatchIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Batch",
+      },
+    ],
   },
   { timestamps: true }
 );

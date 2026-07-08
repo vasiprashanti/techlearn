@@ -226,7 +226,7 @@ export default function Courses() {
 
   const handleWhatsAppClick = (courseTitle) => {
     const message = `Hi! I'd like to join the waitlist for ${courseTitle}. Can you share more details?`;
-    const whatsappUrl = `https://wa.me/919676663136?text=${encodeURIComponent(message)}`;
+    const whatsappUrl = `https://wa.me/919000663666?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
@@ -280,11 +280,10 @@ export default function Courses() {
           <section className="pt-6 space-y-10">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
               <div>
-                <h1 className="mt-8 font-poppins tracking-tight leading-[0.92]">
-                  <span className="block italic text-4xl sm:text-5xl md:text-6xl brand-heading-primary">COURSES</span>
+                <h1 className="mt-8 font-poppins text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight leading-[1.1] overflow-visible">
+                  <span className="brand-heading-secondary hover-gradient-text block">COURSES</span>
                 </h1>
-                <p className="text-sm sm:text-base md:text-lg text-[#00113b] dark:text-[#84c7f2] mt-4 font-light max-w-2xl leading-relaxed">Fundamentals first. Brilliance next.</p>
-                <p className="text-[10px] sm:text-xs tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-2">Pick a track and start building skills</p>
+                <p className="text-sm sm:text-base md:text-lg tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold">Pick a track and start building skills</p>
               </div>
             </header>
 
@@ -303,7 +302,7 @@ export default function Courses() {
               <div className="relative px-2 group">
                 <Carousel
                   setApi={setSelfPacedApi}
-                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: false }}
+                  opts={{ align: "start", loop: false, dragFree: true, slidesToScroll: 1, watchDrag: true }}
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
@@ -365,7 +364,7 @@ export default function Courses() {
               <div className="relative px-2 group">
                 <Carousel
                   setApi={setExpertLedApi}
-                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: false }}
+                  opts={{ align: "start", loop: false, dragFree: true, slidesToScroll: 1, watchDrag: true }}
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">

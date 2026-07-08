@@ -236,152 +236,177 @@ export default function Resources() {
       {isRoadmapModalOpen && (
         <div className="fixed inset-0 z-[135] flex items-center justify-center px-4 py-6">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeRoadmapModal} />
-          <div className="relative w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl p-6">
-            <button
-              onClick={closeRoadmapModal}
-              className="absolute right-4 top-4 text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white"
-              aria-label="Close roadmap form"
-            >
-              <FiX className="w-5 h-5" />
-            </button>
+          <div className="relative w-full max-w-4xl max-h-[88vh] flex flex-col rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 flex justify-between items-center border-b border-black/15 dark:border-white/15 shrink-0">
+              <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">
+                {editingRoadmapId ? 'Edit Roadmap' : 'Create Roadmap'}
+              </h2>
+              <button
+                onClick={closeRoadmapModal}
+                className="text-black/45 dark:text-white/55 hover:text-black dark:hover:text-white transition-colors"
+                aria-label="Close roadmap form"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
 
-            <h2 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">{editingRoadmapId ? 'Edit Roadmap' : 'Create Roadmap'}</h2>
-
-            <div className="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Roadmap Title*</label>
-                  <input
-                    value={roadmapForm.title}
-                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, title: e.target.value }))}
-                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Description</label>
-                  <input
-                    value={roadmapForm.description}
-                    onChange={(e) => setRoadmapForm((prev) => ({ ...prev, description: e.target.value }))}
-                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Markdown File (.md)*</label>
-                  <div className="mt-2 flex items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-white/40 dark:bg-[#122b52]/50 hover:bg-white/60 dark:hover:bg-[#122b52]/80 hover:border-[#3C83F6] dark:hover:border-blue-400 transition-all duration-200 py-20 px-6 text-center cursor-pointer relative">
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 minimal-scrollbar">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] items-stretch gap-6">
+                {/* Left Column (flex container that matches the height of the right column) */}
+                <div className="flex flex-col justify-between h-full gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Roadmap Title*</label>
                     <input
-                      type="file"
-                      accept=".md"
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (evt) => {
-                            setRoadmapForm((prev) => ({
-                              ...prev,
-                              markdownBody: evt.target?.result || '',
-                              fileName: file.name,
-                            }));
-                          };
-                          reader.readAsText(file);
-                        }
-                      }}
+                      value={roadmapForm.title}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, title: e.target.value }))}
+                      className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
                     />
-                    <div className="space-y-2">
-                      <div className="mx-auto w-12 h-12 rounded-xl bg-blue-500/10 dark:bg-blue-300/10 text-[#3C83F6] dark:text-blue-300 flex items-center justify-center">
-                        <FiUpload className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                          {roadmapForm.fileName ? roadmapForm.fileName : 'Click to upload Markdown file'}
-                        </p>
-                        <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
-                          Only Markdown (.md) files are supported
-                        </p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Description</label>
+                    <input
+                      value={roadmapForm.description}
+                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, description: e.target.value }))}
+                      className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#122b52] px-3 text-sm text-slate-800 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Stretches to fill the remaining height, aligning its bottom with the right column */}
+                  <div className="flex-grow flex flex-col">
+                    <label className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Markdown File (.md)*</label>
+                    <div className="mt-2 flex-grow flex flex-col items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl bg-white/40 dark:bg-[#122b52]/50 hover:bg-white/60 dark:hover:bg-[#122b52]/80 hover:border-[#3C83F6] dark:hover:border-blue-400 transition-all duration-200 py-6 px-6 text-center cursor-pointer relative min-h-[140px]">
+                      <input
+                        type="file"
+                        accept=".md"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (evt) => {
+                              setRoadmapForm((prev) => ({
+                                ...prev,
+                                markdownBody: evt.target?.result || '',
+                                fileName: file.name,
+                              }));
+                            };
+                            reader.readAsText(file);
+                          }
+                        }}
+                      />
+                      <div className="space-y-2 flex flex-col items-center justify-center">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 dark:bg-blue-300/10 text-[#3C83F6] dark:text-blue-300 flex items-center justify-center">
+                          <FiUpload className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                            {roadmapForm.fileName ? roadmapForm.fileName : 'Click to upload Markdown file'}
+                          </p>
+                          <p className="text-xs text-slate-400 dark:text-slate-400 mt-1">
+                            Only Markdown (.md) files are supported
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Status</label>
+                    <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
+                      <select
+                        value={roadmapForm.status}
+                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, status: e.target.value }))}
+                        className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                      >
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Active</option>
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Draft</option>
+                        <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
+                      </select>
+                      <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#122b52] p-3 space-y-3">
+                    <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Attach Resource to Note</p>
+                    <div>
+                      <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Note Title</label>
+                      <input
+                        value={roadmapForm.attachedNoteTitle}
+                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteTitle: e.target.value }))}
+                        placeholder="e.g. Day 3 Notes"
+                        className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Day Number</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={roadmapForm.attachedNoteDay}
+                        onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteDay: e.target.value }))}
+                        placeholder="Optional"
+                        className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Assign to Batches</p>
+                    <div className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
+                      {batchOptions.map((batch) => {
+                        const checked = roadmapForm.assignedBatchIds.map(String).includes(String(batch.id));
+                        return (
+                          <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleRoadmapBatch(batch.id)}
+                              className="mt-1"
+                            />
+                            <span>
+                              <span className="block font-medium">{batch.name}</span>
+                              {batch.college && <span className="block text-[11px] text-[#5f7592] dark:text-slate-300">{batch.college}</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                      {batchOptions.length === 0 && (
+                        <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-300">No batches available.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <aside className="space-y-4">
-                <div>
-                  <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Status</label>
-                  <div className="mt-1 relative rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43]">
-                    <select
-                      value={roadmapForm.status}
-                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, status: e.target.value }))}
-                      className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                    >
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Active</option>
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Draft</option>
-                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white">Archived</option>
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-black/10 dark:border-white/10 bg-white/55 dark:bg-[#122b52] p-3 space-y-3">
-                  <p className="text-xs font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Attach Resource to Note</p>
-                  <div>
-                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Note Title</label>
-                    <input
-                      value={roadmapForm.attachedNoteTitle}
-                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteTitle: e.target.value }))}
-                      placeholder="e.g. Day 3 Notes"
-                      className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Day Number</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={roadmapForm.attachedNoteDay}
-                      onChange={(e) => setRoadmapForm((prev) => ({ ...prev, attachedNoteDay: e.target.value }))}
-                      placeholder="Optional"
-                      className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-white/85 dark:bg-[#0f1f43] px-3 text-sm text-slate-800 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-medium text-[#5f7592] dark:text-slate-300">Assign to Batches</p>
-                  <div className="mt-2 max-h-72 overflow-y-auto rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-[#122b52] p-2 space-y-1">
-                    {batchOptions.map((batch) => {
-                      const checked = roadmapForm.assignedBatchIds.map(String).includes(String(batch.id));
-                      return (
-                        <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleRoadmapBatch(batch.id)}
-                            className="mt-1"
-                          />
-                          <span>
-                            <span className="block font-medium">{batch.name}</span>
-                            {batch.college && <span className="block text-[11px] text-[#5f7592] dark:text-slate-300">{batch.college}</span>}
-                          </span>
-                        </label>
-                      );
-                    })}
-                    {batchOptions.length === 0 && (
-                      <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-300">No batches available.</p>
-                    )}
-                  </div>
-                </div>
-
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-black/15 dark:border-white/15 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/50 dark:bg-slate-900/10 shrink-0">
+              <div className="flex-1 min-w-0">
+                {roadmapFormError && <p className="text-xs text-red-500">{roadmapFormError}</p>}
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto">
                 <button
+                  type="button"
+                  onClick={closeRoadmapModal}
+                  className="px-5 py-2.5 rounded-xl border border-black/10 dark:border-white/15 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all w-full sm:w-auto"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
                   onClick={saveRoadmap}
                   disabled={isSavingRoadmap}
-                  className="w-full h-10 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-70 text-white text-sm font-semibold"
+                  className="px-6 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-70 text-white text-sm font-semibold shadow-md transition-all w-full sm:w-auto"
                 >
                   {isSavingRoadmap ? 'Saving...' : editingRoadmapId ? 'Save Changes' : 'Create Roadmap'}
                 </button>
-                {roadmapFormError && <p className="text-xs text-red-500">{roadmapFormError}</p>}
-              </aside>
+              </div>
             </div>
           </div>
         </div>

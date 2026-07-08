@@ -112,6 +112,12 @@ export const getPlacementLearningDashboard = async (req, res) => {
       return acc;
     }, []);
 
+    // Fetch supporting courses directly from batch.supportingCourses field (source of truth)
+    const supportingCourseIds = batch.supportingCourses || [];
+    const supportingCourses = supportingCourseIds.length > 0
+      ? await Course.find({ _id: { $in: supportingCourseIds } }).select("title topicIds").lean()
+      : [];
+
     return res.status(200).json({
       success: true,
       hasPlacementLearning: true,
@@ -126,6 +132,11 @@ export const getPlacementLearningDashboard = async (req, res) => {
         title: course.title,
         description: course.description || "",
       },
+      supportingCourses: supportingCourses.map(c => ({
+        id: c._id,
+        title: c.title,
+        topicIds: c.topicIds || [],
+      })),
       todayTopic: currentTopic?.notesId
         ? buildTopicPayload(currentTopic, currentTopicIndex, currentDay, course._id)
         : null,
