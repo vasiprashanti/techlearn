@@ -49,7 +49,8 @@ export const getCourseTopicsForDashboard = async (req, res) => {
       courseTitle: course.title,
       numTopics: course.numTopics || 0,
       description: course.description || "",
-      level: course.level || "Beginner"
+      level: course.level || "Beginner",
+      assignedBatchIds: course.assignedBatchIds || [],
     });
   } catch (error) {
     return res.status(500).json({

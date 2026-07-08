@@ -3,6 +3,8 @@ import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Notes from "../models/Notes.js";
 import Exercise from "../models/Exercise.js";
+import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
 import {
   parseNotesMarkdownFile,
   parseMcqMarkdownFile,
@@ -11,7 +13,7 @@ import {
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
-    const { title, description, level, numTopics } = req.body;
+    const { title, description, level, numTopics, assignedBatchIds } = req.body;
 
     // Validate required fields
     if (!title || !numTopics) {
@@ -34,6 +36,7 @@ export const createCourseShell = async (req, res) => {
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
       exerciseIds: [], // Empty initially
+      assignedBatchIds: Array.isArray(assignedBatchIds) ? assignedBatchIds.filter(Boolean) : [],
     };
 
     const newCourse = new Course(courseData);
@@ -78,7 +81,6 @@ export const deleteCourse = async (req, res) => {
 
     // Find all topics for this course
     const topics = await Topic.find({ courseId });
-    const topicIds = topics.map((topic) => topic._id);
     const notesIds = topics.map((topic) => topic.notesId).filter(Boolean);
 
     const deletedExercises = await Exercise.deleteMany({ courseId });
@@ -86,6 +88,16 @@ export const deleteCourse = async (req, res) => {
     const deletedTopics = await Topic.deleteMany({ courseId });
 
     await Course.findByIdAndDelete(courseId);
+
+    // Cascade: clean up any Batch references to this course
+    await Batch.updateMany(
+      { attachedCourse: courseId },
+      { $set: { attachedCourse: null } }
+    );
+    await Batch.updateMany(
+      { supportingCourses: courseId },
+      { $pull: { supportingCourses: courseId } }
+    );
 
     res.status(200).json({
       success: true,
@@ -109,7 +121,7 @@ export const deleteCourse = async (req, res) => {
 export const updateCourseShell = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, level, numTopics } = req.body;
+    const { title, description, level, numTopics, assignedBatchIds } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -124,6 +136,9 @@ export const updateCourseShell = async (req, res) => {
     if (description !== undefined) update.description = String(description).trim();
     if (level !== undefined) update.level = level;
     if (numTopics !== undefined) update.numTopics = Number(numTopics);
+    if (assignedBatchIds !== undefined) {
+      update.assignedBatchIds = Array.isArray(assignedBatchIds) ? assignedBatchIds.filter(Boolean) : [];
+    }
 
     const course = await Course.findByIdAndUpdate(
       courseId,
@@ -263,7 +278,84 @@ export const addMultipleTopics = async (req, res) => {
 
 export const getAllCourses = async (req, res) => {
   try {
-    const courses = await Course.find();
+    let filter = {};
+    let isAdmin = false;
+
+    if (req.user) {
+      if (req.user.role === "admin") {
+        isAdmin = true;
+      } else {
+        // Look up the student's batch
+        const email = String(req.user.email || "").trim().toLowerCase();
+        const student = await Student.findOne({
+          $or: [
+            { userId: req.user._id },
+            ...(email ? [{ email }] : []),
+          ],
+        }).lean();
+
+        if (student?.batchId) {
+          // Fetch the batch to get primary + supporting course IDs
+          const batch = await Batch.findById(student.batchId)
+            .select("attachedCourse supportingCourses status")
+            .lean();
+
+          if (batch && batch.status === "Active") {
+            const primaryCourseId = batch.attachedCourse;
+            const supportingCourseIds = (batch.supportingCourses || []).map(id => id.toString());
+
+            // Build filter:
+            // Show: courses with no batch assignment (public) OR the primary course
+            // Hide: supporting courses (even though they're assigned to this batch)
+            const conditions = [
+              { assignedBatchIds: { $size: 0 } },
+              { assignedBatchIds: { $exists: false } },
+            ];
+
+            // Include primary course if it exists
+            if (primaryCourseId) {
+              conditions.push({ _id: primaryCourseId });
+            }
+
+            filter = {
+              $and: [
+                { $or: conditions },
+                // Explicitly exclude all supporting courses
+                ...(supportingCourseIds.length > 0
+                  ? [{ _id: { $nin: supportingCourseIds } }]
+                  : []),
+              ],
+            };
+          } else {
+            // Batch inactive or not found — show only public courses
+            filter = {
+              $or: [
+                { assignedBatchIds: { $size: 0 } },
+                { assignedBatchIds: { $exists: false } },
+              ],
+            };
+          }
+        } else {
+          // Student has no batch — show only public courses
+          filter = {
+            $or: [
+              { assignedBatchIds: { $size: 0 } },
+              { assignedBatchIds: { $exists: false } },
+            ],
+          };
+        }
+      }
+    } else {
+      // Unauthenticated — show only public courses
+      filter = {
+        $or: [
+          { assignedBatchIds: { $size: 0 } },
+          { assignedBatchIds: { $exists: false } },
+        ],
+      };
+    }
+
+    const courses = await Course.find(filter);
     res.status(200).json({ count: courses.length, courses });
   } catch (error) {
     return res
@@ -280,29 +372,84 @@ export const getCourseById = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
+    let studentBatchId = null;
+    if (req.user) {
+      if (req.user.role !== "admin") {
+        const email = String(req.user.email || "").trim().toLowerCase();
+        const student = await Student.findOne({
+          $or: [
+            { userId: req.user._id },
+            ...(email ? [{ email }] : []),
+          ],
+        }).lean();
+        if (student?.batchId) {
+          studentBatchId = student.batchId;
+        }
+      }
+    }
+
+    let currentDay = null;
+    let isBatchActive = false;
+    let isPlacementPrimary = false;
+
+    if (studentBatchId) {
+      const batch = await Batch.findById(studentBatchId).lean();
+      if (batch) {
+        const courseIdStr = String(courseId);
+        const primaryId = batch.attachedCourse ? String(batch.attachedCourse) : null;
+        const supportingIds = (batch.supportingCourses || []).map(String);
+        const assignedIds = (course.assignedBatchIds || []).map(String);
+
+        const isAttached =
+          primaryId === courseIdStr ||
+          supportingIds.includes(courseIdStr) ||
+          assignedIds.includes(String(batch._id));
+
+        if (batch.status === "Active" && isAttached) {
+          const assignmentDate = batch.startDate || new Date();
+          const releaseTime = batch.releaseTime || "00:00";
+          const [hours = "0", minutes = "0"] = releaseTime.split(":");
+          const releaseStart = new Date(assignmentDate);
+          releaseStart.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
+          const elapsedDays = Math.floor((Date.now() - releaseStart.getTime()) / (24 * 60 * 60 * 1000));
+          currentDay = Math.max(1, elapsedDays + 1);
+          isBatchActive = true;
+        }
+
+        // This course is the primary placement course if it's the batch's attachedCourse
+        isPlacementPrimary = primaryId === courseIdStr;
+      }
+    }
+
     // Fetch topics using topicIds array and populate notesId
     const topics = await Topic.find({ _id: { $in: course.topicIds } })
       .populate("notesId")
       .sort({ index: 1, createdAt: 1 });
 
-    const formattedTopics = topics.map((topic) => ({
-      topicId: topic._id,
-      title: topic.title,
-      notesId: topic.notesId ? topic.notesId._id : null,
-      notes:
-        topic.notesId && topic.notesId.parsedContent
-          ? topic.notesId.parsedContent
-          : null,
-      slug: topic.slug,
-      index: topic.index,
-    }));
+    const formattedTopics = topics.map((topic, idx) => {
+      const day = idx + 1;
+      const isLocked = isBatchActive && day > currentDay;
+      return {
+        topicId: topic._id,
+        title: topic.title,
+        notesId: topic.notesId ? topic.notesId._id : null,
+        notes:
+          topic.notesId && topic.notesId.parsedContent
+            ? topic.notesId.parsedContent
+            : null,
+        slug: topic.slug,
+        index: topic.index,
+        isLocked,
+      };
+    });
 
     res.status(200).json({
       _id: course._id,
       title: course.title,
       description: course.description,
       level: course.level,
-      exerciseIds: course.exerciseIds || [], // Include course-level exercise IDs
+      isPlacementPrimary,          // ← true only when this is the batch's primary course
+      exerciseIds: course.exerciseIds || [],
       topics: formattedTopics,
     });
   } catch (error) {

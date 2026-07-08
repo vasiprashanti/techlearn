@@ -4,13 +4,13 @@ import {
   getCourseById,
   // submitQuiz,
 } from "../controllers/courseController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, optionalProtect } from "../middleware/authMiddleware.js";
 
 const courseRouter = Router();
 
 // Public routes
-courseRouter.get("/", getAllCourses);
-courseRouter.get("/:courseId", getCourseById);
+courseRouter.get("/", optionalProtect, getAllCourses);
+courseRouter.get("/:courseId", optionalProtect, getCourseById);
 
 // Protected routes
 // courseRouter.post("/:courseId/quiz/submit", protect, submitQuiz);

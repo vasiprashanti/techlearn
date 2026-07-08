@@ -51,6 +51,8 @@ const AdminTopicsList = () => {
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(null);
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState("Beginner");
+  const [assignedBatchIds, setAssignedBatchIds] = useState([]);
+  const [batchOptions, setBatchOptions] = useState([]);
 
   // Theme & layout states
   const { theme } = useTheme();
@@ -62,7 +64,18 @@ const AdminTopicsList = () => {
     setMounted(true);
   }, []);
 
-  // Fetch topics + course info
+  const toggleCourseBatch = (batchId) => {
+    setAssignedBatchIds((prev) => {
+      const alreadyChecked = prev.map(String).includes(String(batchId));
+      if (alreadyChecked) {
+        return prev.filter((id) => String(id) !== String(batchId));
+      } else {
+        return [...prev, batchId];
+      }
+    });
+  };
+
+  // Fetch topics + course info + batches
   useEffect(() => {
     const fetchTopics = async () => {
       setLoading(true);
@@ -77,7 +90,24 @@ const AdminTopicsList = () => {
         setNumTopics(res.data.numTopics || 0);
         setDescription(res.data.description || "");
         setLevel(res.data.level || "Beginner");
+        setAssignedBatchIds(res.data.assignedBatchIds || []);
         setError(null);
+
+        // Fetch batch options for assignment checklist
+        try {
+          const batchesRes = await axios.get(
+            `${BASE_URL}/admin/batches`,
+            token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+          );
+          const formatted = (batchesRes.data.data || batchesRes.data.batches || batchesRes.data || []).map((b) => ({
+            id: b.id || b._id,
+            name: b.name,
+            college: b.college || b.collegeName || "",
+          }));
+          setBatchOptions(formatted);
+        } catch (bErr) {
+          console.error("Failed to load batch list options:", bErr);
+        }
       } catch (err) {
         setError("Failed to fetch topics.");
       }
@@ -306,6 +336,7 @@ const AdminTopicsList = () => {
           description: description,
           level: level,
           numTopics: numTopics,
+          assignedBatchIds: assignedBatchIds,
         },
         {
           headers: {
@@ -725,31 +756,59 @@ const AdminTopicsList = () => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={numTopics}
-                        onChange={(e) => setNumTopics(Number(e.target.value))}
-                        className={cardFormInputClass}
-                        required
-                      />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3.5">
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={numTopics}
+                          onChange={(e) => setNumTopics(Number(e.target.value))}
+                          className={cardFormInputClass}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
+                        <div className="relative">
+                          <select
+                            value={level}
+                            onChange={(e) => setLevel(e.target.value)}
+                            className={`${cardFormInputClass} pr-10 appearance-none`}
+                          >
+                            <option className={dropdownOptionClass} value="Beginner">Beginner</option>
+                            <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
+                            <option className={dropdownOptionClass} value="Advanced">Advanced</option>
+                          </select>
+                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                        </div>
+                      </div>
                     </div>
+
                     <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
-                      <div className="relative mt-1 rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                        <select
-                          value={level}
-                          onChange={(e) => setLevel(e.target.value)}
-                          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-lg border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                        >
-                          <option className={dropdownOptionClass} value="Beginner">Beginner</option>
-                          <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
-                          <option className={dropdownOptionClass} value="Advanced">Advanced</option>
-                        </select>
-                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
+                      <div className="mt-1 h-[126px] overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
+                        {batchOptions.map((batch) => {
+                          const checked = assignedBatchIds.map(String).includes(String(batch.id));
+                          return (
+                            <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCourseBatch(batch.id)}
+                                className="mt-0.5"
+                              />
+                              <span>
+                                <span className="font-medium">{batch.name}</span>
+                                {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
+                              </span>
+                            </label>
+                          );
+                        })}
+                        {batchOptions.length === 0 && (
+                          <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
+                        )}
                       </div>
                     </div>
                   </div>

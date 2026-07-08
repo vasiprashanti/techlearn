@@ -38,7 +38,14 @@ const BatchDetails = () => {
   const [batches, setBatches] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [courses, setCourses] = useState([]);
+  const attachedCourses = useMemo(() => {
+    return courses.filter((course) =>
+      Array.isArray(course.assignedBatchIds) &&
+      course.assignedBatchIds.map(String).includes(String(batchId))
+    );
+  }, [courses, batchId]);
   const [selectedAttachedCourseId, setSelectedAttachedCourseId] = useState('');
+  const [primaryCourseId, setPrimaryCourseId] = useState('');
   const [isSavingAttachedCourse, setIsSavingAttachedCourse] = useState(false);
   const [attachedCourseError, setAttachedCourseError] = useState('');
   const [attachedCourseMessage, setAttachedCourseMessage] = useState('');
@@ -113,6 +120,7 @@ const BatchDetails = () => {
           title: String(course.title || 'Untitled Course'),
           description: String(course.description || ''),
           numTopics: Number(course.numTopics || course.topicIds?.length || 0),
+          assignedBatchIds: Array.isArray(course.assignedBatchIds) ? course.assignedBatchIds.map(String) : [],
         }))
         .filter((course) => course.id);
       const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
@@ -155,6 +163,7 @@ const BatchDetails = () => {
 
   useEffect(() => {
     setSelectedAttachedCourseId(batch?.attachedCourse?.id ? String(batch.attachedCourse.id) : '');
+    setPrimaryCourseId(batch?.attachedCourse?.id ? String(batch.attachedCourse.id) : '');
   }, [batch?.attachedCourse?.id]);
 
   useEffect(() => {
@@ -352,6 +361,31 @@ const BatchDetails = () => {
       setAttachedCourseMessage(nextCourseId ? 'Course attached to this batch.' : 'Course removed from this batch.');
     } catch (error) {
       setAttachedCourseError(error.message || 'Failed to update attached course.');
+    } finally {
+      setIsSavingAttachedCourse(false);
+    }
+  };
+
+  const savePrimaryCourse = async (newPrimaryId) => {
+    setAttachedCourseError('');
+    setAttachedCourseMessage('');
+    setIsSavingAttachedCourse(true);
+    try {
+      await adminAPI.updateBatch(batch.id || batchId, {
+        name: batch.name,
+        status: batch.status,
+        startDate: batch.startDateValue,
+        expiryDate: batch.expiryDateValue,
+        batchSize: batch.batchSize,
+        programSelection: batch.programSelection || 'Placement Sprint',
+        assignedTrackTemplateIds: batch.assignedTrackTemplateIds || [],
+        primaryCourseId: newPrimaryId || null,
+      });
+      const remoteBatch = await adminAPI.getBatch(batchId);
+      setBatchDetail(preferRemoteData(remoteBatch, null));
+      setAttachedCourseMessage('Primary course updated successfully.');
+    } catch (error) {
+      setAttachedCourseError(error.message || 'Failed to update primary course.');
     } finally {
       setIsSavingAttachedCourse(false);
     }
@@ -697,11 +731,11 @@ const BatchDetails = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+            <div className="space-y-6">
             <div className="space-y-3">
               <h3 className="admin-section-heading">Attached Tracks</h3>
               {Array.isArray(batch.tracks) && batch.tracks.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
                   {batch.tracks.map((track, trackIdx) => {
                     const trackId = track.id || track._id || `track-${trackIdx}`;
                     const isExpanded = !!expandedTracks[trackId];
@@ -751,66 +785,68 @@ const BatchDetails = () => {
 
             <div className="space-y-3">
               <h3 className="admin-section-heading">Attached Courses</h3>
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-4 shadow-sm space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#3C83F6]/10 dark:bg-[#3C83F6]/15 text-[#3C83F6] flex items-center justify-center shrink-0">
-                    <FiBookOpen className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
-                      {batch.attachedCourse?.title || 'No course attached'}
-                    </p>
-                    <p className="mt-1 text-xs text-black/50 dark:text-white/50 leading-relaxed">
-                      {batch.attachedCourse
-                        ? `${batch.attachedCourse.numTopics || 0} topics available for day-wise notes.`
-                        : 'Attach a Placement Sprint course so Today’s Notes can open the correct topic for each batch day.'}
-                    </p>
-                  </div>
+              {attachedCourses.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-xs sm:text-sm text-black/40 dark:text-white/40">
+                  No courses are attached to this batch yet.
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-center">
-                  <div className="relative">
-                    <select
-                      value={selectedAttachedCourseId}
-                      onChange={(e) => {
-                        setSelectedAttachedCourseId(e.target.value);
-                        setAttachedCourseError('');
-                        setAttachedCourseMessage('');
-                      }}
-                      className="appearance-none w-full h-11 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#12285a] px-3 pr-9 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30"
-                    >
-                      <option className={dropdownOptionClass} value="">No course attached</option>
-                      {courses.map((course) => (
-                        <option key={course.id} className={dropdownOptionClass} value={course.id}>
-                          {course.title}
-                        </option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateAttachedCourse()}
-                    disabled={isSavingAttachedCourse}
-                    className="h-11 px-4 rounded-xl bg-[#061846] text-white text-sm font-semibold hover:bg-[#0b2465] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSavingAttachedCourse ? 'Saving...' : batch.attachedCourse ? 'Change Course' : 'Attach Course'}
-                  </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-black/40 dark:text-white/40 mb-3">
+                    Select the <span className="font-semibold text-[#3C83F6]">Primary Course</span> — this is what students see on the Learn page. All other attached courses become supporting courses accessible via sidebar quick links.
+                  </p>
+                  {attachedCourses.map((course) => {
+                    const isPrimary = String(primaryCourseId) === String(course.id);
+                    return (
+                      <div
+                        key={course.id}
+                        onClick={() => {
+                          if (!isPrimary) {
+                            setPrimaryCourseId(String(course.id));
+                            savePrimaryCourse(String(course.id));
+                          }
+                        }}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-all duration-200 ${
+                          isPrimary
+                            ? 'border-[#3C83F6]/50 bg-[#3C83F6]/8 dark:bg-[#3C83F6]/10 shadow-sm'
+                            : 'border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] hover:border-[#3C83F6]/30 hover:bg-black/2 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        {/* Radio indicator */}
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                          isPrimary ? 'border-[#3C83F6]' : 'border-black/20 dark:border-white/20'
+                        }`}>
+                          {isPrimary && <div className="w-2 h-2 rounded-full bg-[#3C83F6]" />}
+                        </div>
+                        <FiBookOpen className={`w-4 h-4 shrink-0 ${isPrimary ? 'text-[#3C83F6]' : 'text-slate-400'}`} />
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-xs font-semibold block truncate ${isPrimary ? 'text-[#3C83F6] dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
+                            {course.title}
+                          </span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{course.numTopics || 0} topics</span>
+                        </div>
+                        {isPrimary ? (
+                          <span className="shrink-0 text-[9px] uppercase tracking-widest font-bold px-2 py-1 rounded-full bg-[#3C83F6]/15 text-[#3C83F6] dark:text-blue-400">
+                            Primary
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-[9px] uppercase tracking-widest font-bold px-2 py-1 rounded-full bg-black/5 dark:bg-white/8 text-black/35 dark:text-white/35">
+                            Supporting
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {attachedCourseMessage && (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 pt-1">{attachedCourseMessage}</p>
+                  )}
+                  {attachedCourseError && (
+                    <p className="text-xs text-red-500 dark:text-red-400 pt-1">{attachedCourseError}</p>
+                  )}
+                  {isSavingAttachedCourse && (
+                    <p className="text-xs text-black/40 dark:text-white/40 pt-1">Saving...</p>
+                  )}
                 </div>
-
-                {batch.attachedCourse && (
-                  <button
-                    type="button"
-                    onClick={() => updateAttachedCourse('')}
-                    disabled={isSavingAttachedCourse}
-                    className="text-xs font-semibold text-rose-500 hover:text-rose-600 disabled:opacity-60"
-                  >
-                    Remove attached course
-                  </button>
-                )}
-                {attachedCourseMessage && <p className="text-xs font-medium text-emerald-500">{attachedCourseMessage}</p>}
-                {attachedCourseError && <p className="text-xs font-medium text-rose-500">{attachedCourseError}</p>}
-              </div>
+              )}
             </div>
             </div>
 

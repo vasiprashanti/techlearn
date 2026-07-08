@@ -776,6 +776,7 @@ export const getBatchDetail = async (req, res) => {
       .populate("assignedDailyTaskTrack", "name category trackType status")
       .populate("assignedDailyChallengeTrack", "name category trackType status")
       .populate("attachedCourse", "title description numTopics topicIds")
+      .populate("supportingCourses", "title description numTopics topicIds")
       .lean();
     if (!batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
@@ -2301,18 +2302,18 @@ todayXp = todayChallengeXp + todayTaskXp;
               numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
             }
           : null,
+        supportingCourses: Array.isArray(batch.supportingCourses)
+          ? batch.supportingCourses.map((c) => ({
+              id: c._id,
+              title: c.title || "Untitled Course",
+              description: c.description || "",
+              numTopics: c.numTopics || c.topicIds?.length || 0,
+            }))
+          : [],
         dayNumber: dayNumber || 1,
         tracks: resolvedTracks,
         maxTrackDays: maxTrackDays || 30,
         studentsTable: computedStudentsTable,
-        attachedCourse: batch.attachedCourse
-          ? {
-              id: batch.attachedCourse._id,
-              title: batch.attachedCourse.title,
-              description: batch.attachedCourse.description,
-              numTopics: batch.attachedCourse.numTopics || batch.attachedCourse.topicIds?.length || 0,
-            }
-          : null,
       },
     });
   } catch (error) {
@@ -2423,6 +2424,26 @@ export const updateBatchAdmin = async (req, res) => {
           return res.status(404).json({ success: false, message: "Attached course not found." });
         }
         update.attachedCourse = attachedCourseValue;
+      }
+    }
+
+    // Handle primaryCourseId: sets attachedCourse, remainder become supportingCourses
+    if (Object.prototype.hasOwnProperty.call(req.body, "primaryCourseId")) {
+      const primaryId = req.body.primaryCourseId;
+      if (!primaryId) {
+        update.attachedCourse = null;
+      } else {
+        if (!assertObjectId(primaryId, "primaryCourseId", res)) return;
+        const courseExists = await Course.exists({ _id: primaryId });
+        if (!courseExists) {
+          return res.status(404).json({ success: false, message: "Primary course not found." });
+        }
+        update.attachedCourse = primaryId;
+        // All other batch-assigned courses become supporting courses
+        const allAssignedCourses = await Course.find({ assignedBatchIds: existingBatch._id }).select("_id").lean();
+        update.supportingCourses = allAssignedCourses
+          .map((c) => c._id)
+          .filter((id) => String(id) !== String(primaryId));
       }
     }
 

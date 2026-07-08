@@ -1,8 +1,9 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { BookOpen, CheckCircle, ChevronLeft, ChevronRight, AlertCircle, Lock, Brain, Target, LayoutDashboard } from "lucide-react";
 import ScrollProgress from "../../components/ScrollProgress";
-import { courseAPI } from "../../services/api";
+import { courseAPI, placementLearningAPI } from "../../services/api";
+import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import { useTheme } from '../../context/ThemeContext';
 import { readCachedCourseDetails, writeCachedCourseDetails } from '../../utils/courseCache';
 
@@ -112,7 +113,8 @@ const CourseTopics = () => {
             completed: false,
             hasNotes: !!topic.notesId,
             notesContent: topic.notes,
-            content: { theory: topic.notes || `Theory content for ${cleanTitle}.` }
+            content: { theory: topic.notes || `Theory content for ${cleanTitle}.` },
+            isLocked: topic.isLocked || false
           };
         })
       };
@@ -125,13 +127,60 @@ const CourseTopics = () => {
   const isFirstTopic = selectedTopic === 0;
   const isLastTopic = selectedTopic === totalTopics - 1;
 
+  const isPlacementSprint = !!(backendCourse?.isPlacementPrimary);
+  const [placementData, setPlacementData] = useState(null);
+  const [activeChallenge, setActiveChallenge] = useState(null);
+
+  // Resolve supporting courses with keyword match + positional fallback
+  // so the sidebar works even if course names don't contain "aptitude"/"technical"
+  const { aptitudeCourse, technicalCourse, extraCourses } = useMemo(() => {
+    const supporting = placementData?.supportingCourses || [];
+    const findByKeyword = (kw) => supporting.find(c => String(c.title).toLowerCase().includes(kw));
+    let apt = findByKeyword('aptitude') || findByKeyword('quant') || null;
+    let tech = findByKeyword('technical') || findByKeyword('core') || findByKeyword('cs') || null;
+    // positional fallback: first unmapped course = aptitude, second = technical
+    const unmapped = supporting.filter(c => c !== apt && c !== tech);
+    if (!apt && unmapped.length > 0) { apt = unmapped.shift(); }
+    if (!tech && unmapped.length > 0) { tech = unmapped.shift(); }
+    return { aptitudeCourse: apt, technicalCourse: tech, extraCourses: unmapped };
+  }, [placementData]);
+
   useEffect(() => {
-    if (!totalTopics) return;
+    if (isPlacementSprint) {
+      placementLearningAPI.getDashboard()
+        .then((res) => {
+          if (res?.hasPlacementLearning) {
+            setPlacementData(res);
+          }
+        })
+        .catch(console.error);
+
+      dailyChallengeAPI.getActive()
+        .then((res) => {
+          const c = res?.challenge || res;
+          if (c && c.linkId) {
+            setActiveChallenge(c);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isPlacementSprint]);
+
+  useEffect(() => {
+    if (!totalTopics || !currentCourse) return;
     const requestedDay = Number(searchParams.get("day"));
     if (!Number.isFinite(requestedDay) || requestedDay <= 0) return;
-    const nextIndex = Math.min(Math.max(requestedDay - 1, 0), totalTopics - 1);
+    let nextIndex = Math.min(Math.max(requestedDay - 1, 0), totalTopics - 1);
+    
+    // Redirect/fallback if requested day is locked
+    if (currentCourse.topics[nextIndex]?.isLocked) {
+      const firstLockedIdx = currentCourse.topics.findIndex(t => t.isLocked);
+      if (firstLockedIdx !== -1) {
+        nextIndex = Math.max(0, firstLockedIdx - 1);
+      }
+    }
     setSelectedTopic(nextIndex);
-  }, [searchParams, totalTopics]);
+  }, [searchParams, totalTopics, currentCourse]);
 
   // Auto-scroll instantly to the top when navigating between topics
   useEffect(() => { 
@@ -213,16 +262,24 @@ const CourseTopics = () => {
                     return (
                       <button
                         key={topic.id}
-                        onClick={() => { setSelectedTopic(index); setIsSyllabusOpen(false); }}
-                        className={`group flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                        onClick={() => {
+                          if (topic.isLocked) return;
+                          setSelectedTopic(index);
+                          setIsSyllabusOpen(false);
+                        }}
+                        disabled={topic.isLocked}
+                        className={`group flex w-full items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                           isActive
                             ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#001862] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                            : topic.isLocked
+                            ? "border-transparent text-[#001862]/40 dark:text-white/30 cursor-not-allowed opacity-50"
                             : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                         }`}
                       >
                         <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
                           {topic.title}
                         </span>
+                        {topic.isLocked && <Lock className="w-3.5 h-3.5 shrink-0 text-[#001862]/30 dark:text-white/30" />}
                       </button>
                     );
                   })}
@@ -231,7 +288,11 @@ const CourseTopics = () => {
           </>
         )}
 
-        <div className="min-w-0 overflow-x-clip md:grid md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]">
+        <div className={`min-w-0 overflow-x-clip md:grid ${
+          isPlacementSprint
+            ? "md:grid-cols-[16rem_minmax(0,1fr)_16rem] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
+            : "md:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[minmax(16rem,1fr)_minmax(0,760px)_minmax(16rem,1fr)]"
+        }`}>
           <aside
             data-course-sidebar="true"
             className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-r-2xl border-y border-r border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
@@ -244,16 +305,23 @@ const CourseTopics = () => {
                   return (
                     <button
                       key={topic.id}
-                      onClick={() => setSelectedTopic(index)}
-                      className={`group flex w-full items-center gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
+                      onClick={() => {
+                        if (topic.isLocked) return;
+                        setSelectedTopic(index);
+                      }}
+                      disabled={topic.isLocked}
+                      className={`group flex w-full items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
                         isActive
                           ? "border-[#7ec9ff]/45 bg-[#e4f6ff]/75 text-[#001862] shadow-[0_8px_20px_rgba(60,131,246,0.12)] dark:border-white/10 dark:bg-[#1a2b6d] dark:text-white"
+                          : topic.isLocked
+                          ? "border-transparent text-[#001862]/40 dark:text-white/30 cursor-not-allowed opacity-50"
                           : "border-transparent text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white"
                       }`}
                     >
                       <span className="block min-w-0 flex-1 text-sm font-medium leading-tight line-clamp-2">
                         {topic.title}
                       </span>
+                      {topic.isLocked && <Lock className="w-3.5 h-3.5 shrink-0 text-[#001862]/30 dark:text-white/30" />}
                     </button>
                   );
                 })}
@@ -315,9 +383,13 @@ const CourseTopics = () => {
                 {selectedTopic + 1} / {totalTopics}
               </span>
 
-              {!isLastTopic ? (
+              {!isLastTopic && !currentCourse?.topics[selectedTopic + 1]?.isLocked ? (
                 <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
+                </button>
+              ) : !isLastTopic ? (
+                <button disabled className="flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-black/30 dark:text-white/30 text-[10px] uppercase tracking-widest font-bold rounded-xl cursor-not-allowed">
+                  Next (Locked) <Lock className="w-3.5 h-3.5 text-black/30 dark:text-white/30" />
                 </button>
               ) : (
                 <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
@@ -328,7 +400,95 @@ const CourseTopics = () => {
 
               </div>
           </div>
-          <div className="hidden xl:block" aria-hidden="true" />
+          {isPlacementSprint ? (
+            <aside
+              data-course-sidebar="true"
+              className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-l-2xl border-y border-l border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
+            >
+              <div className="px-3 py-4 md:mr-6 md:max-w-[13.5rem] md:px-0 md:py-14">
+                <div className="space-y-2">
+                  <div className="text-[10.5px] uppercase tracking-[0.2em] text-[#001862]/40 dark:text-white/35 font-bold mb-4 px-5">
+                    Quick Actions
+                  </div>
+
+                  {/* Today's Aptitude Notes — hidden when no supporting courses exist */}
+                  {(aptitudeCourse || (placementData?.supportingCourses?.length > 0)) && (
+                    <button
+                      onClick={() => {
+                        if (aptitudeCourse) {
+                          navigate(`/learn/courses/${aptitudeCourse.id}/topics?day=${selectedTopic + 1}`);
+                        } else {
+                          navigate('/dashboard/practice/aptitude');
+                        }
+                      }}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    >
+                      <span className="block min-w-0 flex-1 text-sm leading-tight">
+                        Go to Today's Aptitude Notes
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Today's Technical Notes — hidden when no supporting courses exist */}
+                  {(technicalCourse || (placementData?.supportingCourses?.length > 1)) && (
+                    <button
+                      onClick={() => {
+                        if (technicalCourse) {
+                          navigate(`/learn/courses/${technicalCourse.id}/topics?day=${selectedTopic + 1}`);
+                        } else {
+                          navigate('/dashboard');
+                        }
+                      }}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    >
+                      <span className="block min-w-0 flex-1 text-sm leading-tight">
+                        Go to Today's Technical Notes
+                      </span>
+                    </button>
+                  )}
+
+                  {/* Any extra supporting courses beyond aptitude + technical */}
+                  {extraCourses.map((course) => (
+                    <button
+                      key={course.id}
+                      onClick={() => navigate(`/learn/courses/${course.id}/topics?day=${selectedTopic + 1}`)}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    >
+                      <span className="block min-w-0 flex-1 text-sm leading-tight">
+                        {course.title}
+                      </span>
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => {
+                      if (activeChallenge?.linkId) {
+                        navigate(`/daily-challenge/${activeChallenge.linkId}`);
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
+                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                  >
+                    <span className="block min-w-0 flex-1 text-sm leading-tight">
+                      Go to Daily Challenge (OTP Verification Page)
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                  >
+                    <span className="block min-w-0 flex-1 text-sm leading-tight">
+                      Go to Daily Tasks (Dashboard)
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </aside>
+          ) : (
+            <div className="hidden xl:block" aria-hidden="true" />
+          )}
         </div>
       </main>
     </div>
