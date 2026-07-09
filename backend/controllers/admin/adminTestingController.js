@@ -1,12 +1,17 @@
 import Batch, { BATCH_STATUS } from "../../models/Batch.js";
+import CodingRound from "../../models/CodingRound.js";
 import College from "../../models/College.js";
+import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import Question from "../../models/Questions.js";
 import QuestionCategory from "../../models/QuestionCategory.js";
+import Submission from "../../models/Submission.js";
 import Student from "../../models/Student.js";
+import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import User from "../../models/User.js";
 import { resolveDailyChallengeContext, upsertDailyChallengeRound } from "../../utils/dailyChallengeUtils.js";
 
+const E2E_SETUP_KEY = process.env.E2E_SETUP_KEY || "tls-e2e-judge0-2026-07-09";
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const getTodayWindow = () => {
@@ -78,8 +83,40 @@ const upsertQuestion = async ({ category, payload }) => {
   return question;
 };
 
-export const seedDailyChallengeE2E = async (req, res) => {
-  if (process.env.NODE_ENV === "production" && process.env.ENABLE_ADMIN_TESTING_ROUTES !== "true") {
+const assertE2ESetupKey = (req) => {
+  const suppliedKey = req.get("x-e2e-setup-key") || req.query?.setupKey || req.body?.setupKey;
+  if (suppliedKey !== E2E_SETUP_KEY) {
+    const error = new Error("Invalid E2E setup key.");
+    error.statusCode = 403;
+    throw error;
+  }
+};
+
+const getMapValue = (value, key) => {
+  if (!value) return undefined;
+  if (value instanceof Map) return value.get(String(key));
+  return value[String(key)];
+};
+
+const normalizeMap = (value) => {
+  if (!value) return {};
+  if (value instanceof Map) return Object.fromEntries(value);
+  if (typeof value === "object") return value;
+  return {};
+};
+
+const clearPreviousE2ESubmissions = async ({ codingRoundId, studentEmail }) => {
+  const attempt = await DailyChallengeAttempt.findOne({ codingRoundId, studentEmail }).lean();
+  const attemptId = attempt?._id || null;
+  await Promise.all([
+    DailyChallengeAttempt.deleteMany({ codingRoundId, studentEmail }),
+    StudentCodingSubmission.deleteMany({ codingRoundId, studentEmail }),
+    attemptId ? Submission.deleteMany({ attemptId }) : Promise.resolve(),
+  ]);
+};
+
+const runSeedDailyChallengeE2E = async (req, res, { skipEnvGuard = false, resetAttempt = true } = {}) => {
+  if (!skipEnvGuard && process.env.NODE_ENV === "production" && process.env.ENABLE_ADMIN_TESTING_ROUTES !== "true") {
     return res.status(404).json({ success: false, message: "Testing routes are disabled." });
   }
 
@@ -219,6 +256,9 @@ export const seedDailyChallengeE2E = async (req, res) => {
 
     const context = await resolveDailyChallengeContext({ email });
     const codingRound = await upsertDailyChallengeRound(context);
+    if (resetAttempt) {
+      await clearPreviousE2ESubmissions({ codingRoundId: codingRound._id, studentEmail: email });
+    }
 
     return res.status(200).json({
       success: true,
@@ -248,6 +288,113 @@ export const seedDailyChallengeE2E = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || "Failed to seed Judge0 E2E Daily Challenge setup.",
+    });
+  }
+};
+
+export const seedDailyChallengeE2E = async (req, res) =>
+  runSeedDailyChallengeE2E(req, res);
+
+export const seedDailyChallengeE2ESelfServe = async (req, res) => {
+  try {
+    assertE2ESetupKey(req);
+    return runSeedDailyChallengeE2E(req, res, { skipEnvGuard: true, resetAttempt: true });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to prepare E2E setup.",
+    });
+  }
+};
+
+export const getDailyChallengeE2EReport = async (req, res) => {
+  try {
+    assertE2ESetupKey(req);
+    const email = String(req.query?.email || req.body?.email || "gillsdelhi@gmail.com").trim().toLowerCase();
+    const batch = await Batch.findOne({ name: "TLS E2E Judge0 Batch" }).lean();
+    const codingRound = await CodingRound.findOne({
+      ...(batch?._id ? { batchId: batch._id } : {}),
+      challengeType: "daily_challenge",
+      isActive: true,
+    })
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const student = await Student.findOne({ email }).lean();
+    const attempt = codingRound
+      ? await DailyChallengeAttempt.findOne({ codingRoundId: codingRound._id, studentEmail: email }).lean()
+      : null;
+    const codingSubmission = codingRound
+      ? await StudentCodingSubmission.findOne({ codingRoundId: codingRound._id, studentEmail: email }).lean()
+      : null;
+    const submission = attempt
+      ? await Submission.findOne({ attemptId: attempt._id }).lean()
+      : null;
+
+    const problems = (codingRound?.problems || []).map((problem, index) => ({
+      index,
+      title: problem.problemTitle,
+      difficulty: problem.difficulty,
+      submitted: Boolean(getMapValue(codingSubmission?.problemSubmitted, index)),
+      score: Number(getMapValue(codingSubmission?.problemScores, index) || 0),
+      runCount: Number(getMapValue(codingSubmission?.problemRuns, index) || 0),
+      testCaseResults: getMapValue(codingSubmission?.problemTestCaseResults, index) || [],
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        student: student ? { id: student._id, email: student.email, name: student.name, batchId: student.batchId } : null,
+        codingRound: codingRound
+          ? {
+              id: codingRound._id,
+              title: codingRound.title,
+              linkId: codingRound.linkId,
+              dayNumber: codingRound.dayNumber,
+              problemCount: codingRound.problems?.length || 0,
+            }
+          : null,
+        attempt: attempt
+          ? {
+              id: attempt._id,
+              status: attempt.status,
+              startedAt: attempt.startedAt,
+              submittedAt: attempt.submittedAt,
+              endedAt: attempt.endedAt,
+              finalSubmissionId: attempt.finalSubmissionId,
+            }
+          : null,
+        codingSubmission: codingSubmission
+          ? {
+              id: codingSubmission._id,
+              totalScore: codingSubmission.totalScore,
+              isRoundEnded: codingSubmission.isRoundEnded,
+              problemScores: normalizeMap(codingSubmission.problemScores),
+              problemRuns: normalizeMap(codingSubmission.problemRuns),
+              problemSubmitted: normalizeMap(codingSubmission.problemSubmitted),
+              lastSubmissionAt: codingSubmission.lastSubmissionAt,
+            }
+          : null,
+        adminSubmission: submission
+          ? {
+              id: submission._id,
+              status: submission.status,
+              totalScore: submission.totalScore,
+              xpEarned: submission.xpEarned,
+              runCount: submission.runCount,
+              executionTime: submission.executionTime,
+              memoryUsed: submission.memoryUsed,
+              submittedAt: submission.submittedAt,
+              finalSubmissionResults: submission.finalSubmissionResults,
+            }
+          : null,
+        problems,
+      },
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to fetch E2E report.",
     });
   }
 };
