@@ -17,10 +17,14 @@ const sumMapValues = (value) => {
 
 const buildAvatarUrl = (user) => user.avatar || "";
 
-const buildDisplayName = (user) =>
-  [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
-  user.email ||
-  "Learner";
+const buildDisplayName = (user) => {
+  const userFullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  if (userFullName) return userFullName;
+  
+  const emailUsername = String(user.email || "").split("@")[0];
+  if (user.name && user.name !== emailUsername) return user.name;
+  return emailUsername || "Learner";
+};
 
 export const getPublicLeaderboard = async (req, res) => {
   try {

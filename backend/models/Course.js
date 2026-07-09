@@ -41,6 +41,31 @@ const courseSchema = new mongoose.Schema(
         ref: "Batch",
       },
     ],
+    courseType: {
+      type: String,
+      enum: ["Self-paced", "Trainer-led"],
+      default: "Self-paced",
+    },
+    bannerImage: {
+      type: String,
+      default: "",
+    },
+    instructor: {
+      type: String,
+      default: "",
+    },
+    duration: {
+      type: String,
+      default: "",
+    },
+    schedule: {
+      type: String,
+      default: "",
+    },
+    startDate: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

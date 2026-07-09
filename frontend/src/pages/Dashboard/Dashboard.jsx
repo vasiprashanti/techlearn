@@ -496,8 +496,8 @@ export default function Dashboard() {
   }, []);
 
   const userDisplayName =
-    user?.name?.trim() ||
     [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() ||
+    (user?.name && user.name !== user.email?.split('@')[0] ? user.name.trim() : '') ||
     user?.email?.split('@')[0] ||
     'Student';
 

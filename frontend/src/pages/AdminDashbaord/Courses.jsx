@@ -36,6 +36,8 @@ export default function Courses() {
   const navigate = useNavigate();
 
   const [batchOptions, setBatchOptions] = useState([]);
+  const [activeTab, setActiveTab] = useState("Self-paced");
+  const [bannerFile, setBannerFile] = useState(null);
 
   // Modal form states
   const [courseForm, setCourseForm] = useState({
@@ -44,6 +46,10 @@ export default function Courses() {
     numTopics: 0,
     level: "Beginner",
     assignedBatchIds: [],
+    instructor: "",
+    duration: "",
+    schedule: "",
+    startDate: "",
   });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -104,31 +110,35 @@ export default function Courses() {
     setMounted(true);
   }, []);
 
+  const fetchCourses = async () => {
+    try {
+      setError(null);
+      const data = await adminAPI.getCourses();
+      const coursesArray = Array.isArray(data.courses) ? data.courses : [];
+
+      const validatedCourses = coursesArray.map((course) => ({
+        ...course,
+        title: String(course.title || "Untitled Course"),
+        description: String(course.description || ""),
+        level: String(course.level || ""),
+        topics: Number(course.numTopics || course.topics) || 0,
+        courseType: String(course.courseType || "Self-paced"),
+        bannerImage: String(course.bannerImage || ""),
+        instructor: String(course.instructor || ""),
+        _id: String(course._id || course.courseId || course.id || ""),
+      }));
+
+      setCourses(validatedCourses);
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setError(err.message);
+      setCourses([]);
+    }
+    setLoading(false);
+  };
+
   // Load all courses initially
   useEffect(() => {
-    async function fetchCourses() {
-      try {
-        setError(null);
-        const data = await adminAPI.getCourses();
-        const coursesArray = Array.isArray(data.courses) ? data.courses : [];
-
-        const validatedCourses = coursesArray.map((course) => ({
-          ...course,
-          title: String(course.title || "Untitled Course"),
-          description: String(course.description || ""),
-          level: String(course.level || ""),
-          topics: Number(course.numTopics || course.topics) || 0,
-          _id: String(course._id || course.courseId || course.id || ""),
-        }));
-
-        setCourses(validatedCourses);
-      } catch (err) {
-        console.error("Error fetching courses:", err);
-        setError(err.message);
-        setCourses([]);
-      }
-      setLoading(false);
-    }
     fetchCourses();
   }, []);
 
@@ -142,27 +152,31 @@ export default function Courses() {
     setSaving(true);
     setFormError("");
 
-    const validatedCourse = {
-      title: String(courseForm.title || ""),
-      description: String(courseForm.description || ""),
-      numTopics: Number(courseForm.numTopics) || 0,
-      level: String(courseForm.level || "Beginner"),
-      assignedBatchIds: courseForm.assignedBatchIds,
-    };
+    const formData = new FormData();
+    formData.append("title", courseForm.title.trim());
+    formData.append("description", courseForm.description.trim());
+    formData.append("numTopics", String(courseForm.numTopics));
+    formData.append("level", courseForm.level);
+    formData.append("courseType", activeTab);
+
+    if (activeTab === "Self-paced") {
+      formData.append("assignedBatchIds", JSON.stringify(courseForm.assignedBatchIds));
+    } else {
+      formData.append("instructor", courseForm.instructor.trim());
+      formData.append("duration", courseForm.duration.trim());
+      formData.append("schedule", courseForm.schedule.trim());
+      formData.append("startDate", courseForm.startDate.trim());
+      if (bannerFile) {
+        formData.append("bannerFile", bannerFile);
+      }
+    }
 
     try {
-      const responseData = await adminAPI.createCourse(validatedCourse);
-      const courseId = String(responseData.courseId || "");
-
-      const newCourse = {
-        ...validatedCourse,
-        _id: courseId,
-        topics: validatedCourse.numTopics,
-      };
-
-      setCourses((prevCourses) => [newCourse, ...prevCourses]);
+      await adminAPI.createCourse(formData);
+      await fetchCourses();
       setShowForm(false);
-      setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner", assignedBatchIds: [] });
+      setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner", assignedBatchIds: [], instructor: "", duration: "", schedule: "", startDate: "" });
+      setBannerFile(null);
     } catch (err) {
       console.error("Error creating course:", err);
       setFormError(`Could not create course: ${err.message}`);
@@ -192,12 +206,7 @@ export default function Courses() {
     const courseId = String(courseToDelete._id || courseToDelete.courseId || courseToDelete.id || "");
     try {
       await adminAPI.deleteCourse(courseId);
-      setCourses((prevCourses) =>
-        prevCourses.filter((c) => {
-          const id = String(c._id || c.courseId || c.id || "");
-          return id !== courseId;
-        })
-      );
+      await fetchCourses();
     } catch (err) {
       console.error("Error deleting course:", err);
       alert(`Deletion failed: ${err.message}`);
@@ -276,30 +285,30 @@ export default function Courses() {
               <button onClick={() => setShowForm(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
 
-            <form onSubmit={handleAddCourseSubmit} className="p-5 space-y-3.5">
-              <div>
-                <label className="admin-micro-label text-black/45 dark:text-white/45">Course Title*</label>
-                <input
-                  value={courseForm.title}
-                  onChange={(e) => setCourseForm(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Python Programming, DSA with Java"
-                  className={categoryFormInputClass}
-                />
-              </div>
+            <form onSubmit={handleAddCourseSubmit}>
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto minimal-scrollbar">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Course Title*</label>
+                    <input
+                      value={courseForm.title}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="e.g. Python Programming, DSA with Java"
+                      className={categoryFormInputClass}
+                    />
+                  </div>
 
-              <div>
-                <label className="admin-micro-label text-black/45 dark:text-white/45">Description</label>
-                <textarea
-                  value={courseForm.description}
-                  onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Summarize course goals and curriculum syllabus..."
-                  rows={3}
-                  className={`${categoryFormInputClass} resize-none`}
-                />
-              </div>
+                  <div className="col-span-2">
+                    <label className="admin-micro-label text-black/45 dark:text-white/45">Description</label>
+                    <textarea
+                      value={courseForm.description}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Summarize course goals and curriculum syllabus..."
+                      rows={2}
+                      className={`${categoryFormInputClass} resize-none`}
+                    />
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3.5">
                   <div>
                     <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
                     <input
@@ -325,51 +334,101 @@ export default function Courses() {
                       <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                     </div>
                   </div>
+
+                  {activeTab === "Self-paced" ? (
+                    <div className="col-span-2">
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
+                      <div className="mt-1 h-[126px] overflow-y-auto rounded-xl border border-black/10 dark:border-white/15 bg-[#f5f8fc] dark:bg-[#0f1f43] p-2 space-y-1 minimal-scrollbar">
+                        {batchOptions.map((batch) => {
+                          const checked = courseForm.assignedBatchIds.map(String).includes(String(batch.id));
+                          return (
+                            <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCourseBatch(batch.id)}
+                                className="mt-0.5"
+                              />
+                              <span>
+                                <span className="font-medium">{batch.name}</span>
+                                {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
+                              </span>
+                            </label>
+                          );
+                        })}
+                        {batchOptions.length === 0 && (
+                          <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Instructor Name</label>
+                        <input
+                          value={courseForm.instructor}
+                          onChange={(e) => setCourseForm(prev => ({ ...prev, instructor: e.target.value }))}
+                          placeholder="e.g. Prashanti Vasi"
+                          className={categoryFormInputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date</label>
+                        <input
+                          value={courseForm.startDate}
+                          onChange={(e) => setCourseForm(prev => ({ ...prev, startDate: e.target.value }))}
+                          placeholder="e.g. In Progress"
+                          className={categoryFormInputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Duration</label>
+                        <input
+                          value={courseForm.duration}
+                          onChange={(e) => setCourseForm(prev => ({ ...prev, duration: e.target.value }))}
+                          placeholder="e.g. 4 weeks"
+                          className={categoryFormInputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Schedule</label>
+                        <input
+                          value={courseForm.schedule}
+                          onChange={(e) => setCourseForm(prev => ({ ...prev, schedule: e.target.value }))}
+                          placeholder="e.g. Mon-Sat"
+                          className={categoryFormInputClass}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                          className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
-                  <div className="mt-1 h-[126px] overflow-y-auto rounded-xl border border-black/10 dark:border-white/15 bg-[#f5f8fc] dark:bg-[#0f1f43] p-2 space-y-1 minimal-scrollbar">
-                    {batchOptions.map((batch) => {
-                      const checked = courseForm.assignedBatchIds.map(String).includes(String(batch.id));
-                      return (
-                        <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleCourseBatch(batch.id)}
-                            className="mt-0.5"
-                          />
-                          <span>
-                            <span className="font-medium">{batch.name}</span>
-                            {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
-                          </span>
-                        </label>
-                      );
-                    })}
-                    {batchOptions.length === 0 && (
-                      <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
-                    )}
-                  </div>
-                </div>
+                {formError && (
+                  <p className="text-sm text-red-500">{formError}</p>
+                )}
               </div>
 
-              {formError && (
-                <p className="text-sm text-red-500">{formError}</p>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10 dark:border-white/10">
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                  className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition disabled:opacity-70"
+                  className="px-5 py-2 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition disabled:opacity-70"
                 >
                   {saving ? "Creating..." : "Create Course"}
                 </button>
@@ -463,16 +522,33 @@ export default function Courses() {
               </div>
             </div>
 
+            {/* Tab Selector */}
+            <div className="flex border-b border-black/10 dark:border-white/10 mt-2">
+              {["Self-paced", "Trainer-led"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                    activeTab === tab
+                      ? "border-[#3C83F6] text-[#3C83F6] dark:text-blue-400"
+                      : "border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
             {loading ? (
               <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 <p className="mt-2 text-sm font-medium">Loading course registry...</p>
               </div>
-            ) : courses.length === 0 ? (
+            ) : courses.filter((c) => (c.courseType || "Self-paced") === activeTab).length === 0 ? (
               <div className="rounded-xl border border-dashed border-black/10 dark:border-white/10 px-4 py-8 text-center text-sm text-black/40 dark:text-white/40 mt-4">
-                No courses created yet. Click "Add Course" above to build your first track.
+                No courses created yet under {activeTab}. Click "Add Course" above to build your first track.
               </div>
-                        ) : (
+            ) : (
               <div className="overflow-auto max-h-[78vh] bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl">
                 <table className="w-full min-w-full table-fixed">
                   <thead>
@@ -491,13 +567,14 @@ export default function Courses() {
                       <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[13%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('topics')}>
                         Total Topics{courseSortField === 'topics' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
                       </th>
-                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[13%] cursor-pointer hover:text-blue-500 transition-colors whitespace-nowrap" onClick={() => toggleCourseSort('enrolledStudents')}>
-                        Total Enrolled{courseSortField === 'enrolledStudents' && (courseSortDirection === 'asc' ? ' ▲' : ' ▼')}
+                      <th className="px-2 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-[13%] whitespace-nowrap">
+                        {activeTab === "Self-paced" ? "Assigned Batches" : "Instructor"}
                       </th>
                     </tr>
                   </thead>
                   <tbody className="border-t border-black/5 dark:border-white/10">
                     {courses.filter((course) => {
+                      if ((course.courseType || "Self-paced") !== activeTab) return false;
                       const query = searchQuery.toLowerCase();
                       return (
                         course.title.toLowerCase().includes(query) ||
@@ -508,10 +585,6 @@ export default function Courses() {
                       let aVal = courseSortField === 'topics' ? a.topics : a[courseSortField];
                       let bVal = courseSortField === 'topics' ? b.topics : b[courseSortField];
                       
-                      if (courseSortField === 'enrolledStudents') {
-                        aVal = a.enrolledStudents || 0;
-                        bVal = b.enrolledStudents || 0;
-                      }
 
                       if (typeof aVal === 'string') {
                         return courseSortDirection === 'asc'
@@ -564,7 +637,10 @@ export default function Courses() {
                             {course.topics}
                           </td>
                           <td className="px-2 py-2.5 text-[11px] sm:text-xs font-medium text-slate-500 dark:text-white/60 text-center">
-                            {course.enrolledStudents || 0}
+                            {activeTab === "Self-paced"
+                              ? (course.assignedBatchIds?.length || 0)
+                              : (course.instructor || <span className="text-black/30 dark:text-white/30 italic">—</span>)
+                            }
                           </td>
                         </tr>
                       );

@@ -406,8 +406,8 @@ export const adminAPI = {
   deleteRoadmap: (roadmapId) => request(`/admin/roadmaps/${roadmapId}`, { method: 'DELETE' }),
 
   getCourses: () => request('/courses'),
-  createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: JSON.stringify(body) }),
-  updateCourse: (courseId, body) => request(`/admin/${courseId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  createCourse: (body) => request('/admin/course-initiate', { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }),
+  updateCourse: (courseId, body) => request(`/admin/${courseId}`, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }),
   deleteCourse: (courseId) => request(`/admin/${courseId}`, { method: 'DELETE' }),
 
   getCertificates: () => request('/admin/certificates'),

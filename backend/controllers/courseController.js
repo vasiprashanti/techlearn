@@ -5,15 +5,48 @@ import Notes from "../models/Notes.js";
 import Exercise from "../models/Exercise.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import { v2 as cloudinary } from "cloudinary";
 import {
   parseNotesMarkdownFile,
   parseMcqMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 
+const uploadCourseBanner = async (file) => {
+  if (!file?.buffer) return null;
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    return {
+      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`,
+    };
+  }
+
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(
+        {
+          resource_type: "auto",
+          folder: "techlearn/courses",
+          use_filename: true,
+          unique_filename: true,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      )
+      .end(file.buffer);
+  });
+};
+
 // admin specific functions
 export const createCourseShell = async (req, res) => {
   try {
-    const { title, description, level, numTopics, assignedBatchIds } = req.body;
+    const { title, description, level, numTopics, assignedBatchIds, courseType, bannerImage, instructor, duration, schedule, startDate } = req.body;
 
     // Validate required fields
     if (!title || !numTopics) {
@@ -28,6 +61,23 @@ export const createCourseShell = async (req, res) => {
       });
     }
 
+    let parsedBatchIds = assignedBatchIds || [];
+    if (typeof assignedBatchIds === "string") {
+      try {
+        parsedBatchIds = JSON.parse(assignedBatchIds);
+      } catch (e) {
+        parsedBatchIds = assignedBatchIds.split(",").map(id => id.trim()).filter(Boolean);
+      }
+    }
+
+    let resolvedBannerImage = bannerImage || "";
+    if (req.file) {
+      const uploadRes = await uploadCourseBanner(req.file);
+      if (uploadRes?.secure_url) {
+        resolvedBannerImage = uploadRes.secure_url;
+      }
+    }
+
     // Create course shell with empty topicIds and exerciseIds arrays
     const courseData = {
       title: title.trim(),
@@ -36,7 +86,13 @@ export const createCourseShell = async (req, res) => {
       numTopics: parseInt(numTopics),
       topicIds: [], // Empty initially
       exerciseIds: [], // Empty initially
-      assignedBatchIds: Array.isArray(assignedBatchIds) ? assignedBatchIds.filter(Boolean) : [],
+      assignedBatchIds: parsedBatchIds,
+      courseType: courseType || "Self-paced",
+      bannerImage: resolvedBannerImage,
+      instructor: instructor || "",
+      duration: duration || "",
+      schedule: schedule || "",
+      startDate: startDate || "",
     };
 
     const newCourse = new Course(courseData);
@@ -121,7 +177,7 @@ export const deleteCourse = async (req, res) => {
 export const updateCourseShell = async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { title, description, level, numTopics, assignedBatchIds } = req.body;
+    const { title, description, level, numTopics, assignedBatchIds, courseType, bannerImage, instructor, duration, schedule, startDate } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({ message: "Invalid course ID" });
@@ -131,13 +187,36 @@ export const updateCourseShell = async (req, res) => {
       return res.status(400).json({ message: "Course title must be at least 1 character long" });
     }
 
+    let parsedBatchIds = assignedBatchIds;
+    if (typeof assignedBatchIds === "string") {
+      try {
+        parsedBatchIds = JSON.parse(assignedBatchIds);
+      } catch (e) {
+        parsedBatchIds = assignedBatchIds.split(",").map(id => id.trim()).filter(Boolean);
+      }
+    }
+
     const update = {};
     if (title !== undefined) update.title = String(title).trim();
     if (description !== undefined) update.description = String(description).trim();
     if (level !== undefined) update.level = level;
     if (numTopics !== undefined) update.numTopics = Number(numTopics);
-    if (assignedBatchIds !== undefined) {
-      update.assignedBatchIds = Array.isArray(assignedBatchIds) ? assignedBatchIds.filter(Boolean) : [];
+    if (parsedBatchIds !== undefined) {
+      update.assignedBatchIds = Array.isArray(parsedBatchIds) ? parsedBatchIds.filter(Boolean) : [];
+    }
+    if (courseType !== undefined) update.courseType = courseType;
+    if (instructor !== undefined) update.instructor = instructor;
+    if (duration !== undefined) update.duration = duration;
+    if (schedule !== undefined) update.schedule = schedule;
+    if (startDate !== undefined) update.startDate = startDate;
+
+    if (req.file) {
+      const uploadRes = await uploadCourseBanner(req.file);
+      if (uploadRes?.secure_url) {
+        update.bannerImage = uploadRes.secure_url;
+      }
+    } else if (bannerImage !== undefined) {
+      update.bannerImage = bannerImage;
     }
 
     const course = await Course.findByIdAndUpdate(
@@ -276,8 +355,29 @@ export const addMultipleTopics = async (req, res) => {
   }
 };
 
+const seedTrainerLedCoursesIfEmpty = async () => {
+  try {
+    const defaultCourses = [
+      { title: "Python Programming", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Beginner", courseType: "Trainer-led", description: "Learn Python programming from basics to advanced concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
+      { title: "DSA with Java", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Master DSA using Java concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
+      { title: "DSA with Python", instructor: "Prashanti Vasi", duration: "4 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Master DSA using Python concepts", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
+      { title: "Web Development", instructor: "Jyotsna", duration: "3 weeks", schedule: "Mon-Sat", startDate: "In Progress", level: "Beginner", courseType: "Trainer-led", description: "Master HTML, CSS, and modern web development stack", bannerImage: "/expert-led-banner.jpg", numTopics: 5 },
+      { title: "Java (Core)", instructor: "Prashanti Vasi", duration: "TBD", schedule: "Mon-Sat", startDate: "In Progress", level: "Intermediate", courseType: "Trainer-led", description: "Learn core Java object-oriented principles", bannerImage: "/expert-led-banner.jpg", numTopics: 5 }
+    ];
+    for (const c of defaultCourses) {
+      const exists = await Course.findOne({ title: c.title, courseType: "Trainer-led" });
+      if (!exists) {
+        await Course.create(c);
+      }
+    }
+  } catch (error) {
+    console.error("Error seeding trainer-led courses:", error);
+  }
+};
+
 export const getAllCourses = async (req, res) => {
   try {
+    await seedTrainerLedCoursesIfEmpty();
     let filter = {};
     let isAdmin = false;
 

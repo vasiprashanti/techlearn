@@ -422,6 +422,9 @@ export const dataAdapters = {
       })) || [],
       createdAt: backendCourse.createdAt,
       updatedAt: backendCourse.updatedAt,
+      courseType: backendCourse.courseType || "Self-paced",
+      bannerImage: backendCourse.bannerImage || "",
+      instructor: backendCourse.instructor || "",
     };
   },
 

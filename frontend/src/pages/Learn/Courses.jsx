@@ -95,15 +95,15 @@ export default function Courses() {
 
   // Embla API Instances for scroll control
   const [selfPacedApi, setSelfPacedApi] = useState(null);
-  const [expertLedApi, setExpertLedApi] = useState(null);
+  const [trainerLedApi, setTrainerLedApi] = useState(null);
 
   // Self-Paced Scroll Boundary States
   const [canScrollPrevSelf, setCanScrollPrevSelf] = useState(false);
   const [canScrollNextSelf, setCanScrollNextSelf] = useState(true);
 
-  // Expert-Led Scroll Boundary States
-  const [canScrollPrevExpert, setCanScrollPrevExpert] = useState(false);
-  const [canScrollNextExpert, setCanScrollNextExpert] = useState(true);
+  // Trainer-Led Scroll Boundary States
+  const [canScrollPrevTrainer, setCanScrollPrevTrainer] = useState(false);
+  const [canScrollNextTrainer, setCanScrollNextTrainer] = useState(true);
 
   const levelTagStyles = {
     Beginner: 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]',
@@ -204,25 +204,25 @@ export default function Courses() {
     };
   }, [selfPacedApi]);
 
-  // Hook scroll boundaries trackers for Expert-Led
+  // Hook scroll boundaries trackers for Trainer-Led
   useEffect(() => {
-    if (!expertLedApi) return;
+    if (!trainerLedApi) return;
     
     const onSelect = () => {
-      setCanScrollPrevExpert(expertLedApi.canScrollPrev());
-      setCanScrollNextExpert(expertLedApi.canScrollNext());
+      setCanScrollPrevTrainer(trainerLedApi.canScrollPrev());
+      setCanScrollNextTrainer(trainerLedApi.canScrollNext());
     };
 
-    expertLedApi.on("select", onSelect);
-    expertLedApi.on("reInit", onSelect);
+    trainerLedApi.on("select", onSelect);
+    trainerLedApi.on("reInit", onSelect);
     
     onSelect();
 
     return () => {
-      expertLedApi.off("select", onSelect);
-      expertLedApi.off("reInit", onSelect);
+      trainerLedApi.off("select", onSelect);
+      trainerLedApi.off("reInit", onSelect);
     };
-  }, [expertLedApi]);
+  }, [trainerLedApi]);
 
   const handleWhatsAppClick = (courseTitle) => {
     const message = `Hi! I'd like to join the waitlist for ${courseTitle}. Can you share more details?`;
@@ -306,7 +306,7 @@ export default function Courses() {
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
-                    {coursesData.map((course) => (
+                    {coursesData.filter(course => course.courseType !== 'Trainer-led').map((course) => (
                       <CarouselItem
                         key={course.id}
                         className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
@@ -352,43 +352,47 @@ export default function Courses() {
               </div>
             </div>
 
-            {/* Subsection 2: Expert-Led Courses */}
+            {/* Subsection 2: Trainer-Led Courses */}
             <div
               ref={onlineCoursesSectionRef}
               className="space-y-6 pt-4"
             >
               <h3 className="text-xl md:text-2xl font-press-start tracking-tight uppercase flex items-center gap-2 hover-gradient-text">
-                EXPERT-LED COURSES
+                TRAINER-LED COURSES
               </h3>
 
               <div className="relative px-2 group">
                 <Carousel
-                  setApi={setExpertLedApi}
+                  setApi={setTrainerLedApi}
                   opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: true, duration: 40 }}
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
-                    {onlineCourses.map((batch, index) => (
+                    {coursesData.filter(c => c.courseType === 'Trainer-led').map((batch, index) => (
                       <CarouselItem
-                        key={batch.id}
+                        key={batch.id || batch._id}
                         className="md:basis-1/2 lg:basis-1/3 xl:basis-1/3 px-3"
                       >
                         <div
-                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1 dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
+                          onClick={() => {
+                            prefetchCourseTopics(batch);
+                            navigate(getCourseTopicsPath(batch));
+                          }}
+                          className="dashboard-surface p-7 flex flex-col h-full transition-all duration-300 rounded-2xl group min-h-[320px] hover:-translate-y-1 dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] cursor-pointer"
                         >
                           <div className="flex justify-between items-center mb-6">
                             <span className={`text-[9px] uppercase tracking-widest px-3 py-1 rounded-full font-semibold ${levelTagStyles[batch.level] || 'bg-[#dff6e8] text-[#1f7d53] border border-[#b9e9c8]'}`}>
                               {batch.level}
                             </span>
                             <span className="text-[10px] uppercase tracking-widest text-[#00113b] dark:text-[#8ac7f3] transition-colors">
-                              By {batch.instructor}
+                              By {batch.instructor || "Trainer"}
                             </span>
                           </div>
 
                           <div className="mb-5 h-24 w-full rounded-xl border border-[#90c8ff]/40 dark:border-[#6cb7ec]/35 overflow-hidden shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
                             <img
-                              src="/expert-led-banner.jpg"
-                              alt="Expert-Led Course"
+                              src={batch.bannerImage || "/expert-led-banner.jpg"}
+                              alt="Trainer-Led Course"
                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                           </div>
@@ -401,19 +405,22 @@ export default function Courses() {
                             <div className="flex items-center gap-2.5">
                               <Clock className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
-                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration}</span>
+                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.duration || 'Self-paced'}</span>
                               </div>
                             </div>
                             <div className="flex items-center justify-end gap-2.5">
                               <Calendar className="w-4 h-4 text-[#00113b] dark:text-[#7cc3ee]" />
                               <div className="flex items-center">
-                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule}</span>
+                                <span className="text-[11px] font-semibold text-[#00113b] dark:text-[#8fd9ff] whitespace-nowrap">{batch.schedule || 'Flexible'}</span>
                               </div>
                             </div>
                           </div>
 
                           <button
-                            onClick={() => handleWhatsAppClick(batch.title)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleWhatsAppClick(batch.title);
+                            }}
                             className="mt-auto w-full py-2 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa]"
                           >
                             <span>Join Waitlist</span>
@@ -425,12 +432,12 @@ export default function Courses() {
                   </CarouselContent>
                 </Carousel>
 
-                {canScrollPrevExpert && (
-                  <NavArrow direction="left" onClick={() => expertLedApi?.scrollPrev()} />
+                {canScrollPrevTrainer && (
+                  <NavArrow direction="left" onClick={() => trainerLedApi?.scrollPrev()} />
                 )}
 
-                {canScrollNextExpert && (
-                  <NavArrow direction="right" onClick={() => expertLedApi?.scrollNext()} />
+                {canScrollNextTrainer && (
+                  <NavArrow direction="right" onClick={() => trainerLedApi?.scrollNext()} />
                 )}
               </div>
             </div>
