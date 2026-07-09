@@ -10,11 +10,10 @@ import {
 
 const defaultRules = {
   timerLimitMinutes: 30,
-  runLimitPerQuestion: 5,
   submitLimitPerQuestion: 1,
   antiCheatRules: [
     "Do not switch tabs or windows during the challenge.",
-    "Max 5 runs are allowed per question.",
+    "You can run code multiple times before final submission.",
     "Only one final submission is allowed.",
     "Challenge will auto-submit when timer ends.",
   ],
@@ -178,7 +177,7 @@ export default function DailyChallengeInstructions() {
                     </li>
                     <li className="flex gap-2">
                       <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />
-                      <span>Runs: Max {rules.runLimitPerQuestion || 5} per question.</span>
+                      <span>Runs: Unlimited compiler runs.</span>
                     </li>
                     <li className="flex gap-2">
                       <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#3C83F6] dark:bg-[#8fd9ff]" />

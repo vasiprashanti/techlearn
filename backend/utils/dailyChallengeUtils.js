@@ -10,11 +10,10 @@ import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
 
 export const DAILY_CHALLENGE_RULES = {
   timerLimitMinutes: 60,
-  runLimitPerQuestion: 5,
   submitLimitPerQuestion: 1,
   antiCheatRules: [
     "Do not switch tabs or windows during the challenge.",
-    "Code runs are limited to five attempts per question.",
+    "You can run code multiple times before final submission.",
     "Only one final submission is allowed per question.",
     "The challenge is auto-submitted when the timer ends.",
   ],

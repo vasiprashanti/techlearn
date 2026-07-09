@@ -58,6 +58,9 @@ export default function SubmissionMonitor() {
   const [submissionKpis, setSubmissionKpis] = useState(emptySubmissionState.kpis);
   const [pendingStudents, setPendingStudents] = useState([]);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [editScore, setEditScore] = useState('');
+  const [editXp, setEditXp] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -93,6 +96,63 @@ export default function SubmissionMonitor() {
     } catch (err) {
       console.error(err);
       setSelectedSubmission(s);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedSubmission || selectedSubmission.loading) return;
+    setEditScore(
+      selectedSubmission.score !== undefined && selectedSubmission.score !== null
+        ? String(selectedSubmission.score)
+        : ''
+    );
+    setEditXp(
+      selectedSubmission.xpEarned !== undefined && selectedSubmission.xpEarned !== null
+        ? String(selectedSubmission.xpEarned)
+        : ''
+    );
+  }, [selectedSubmission]);
+
+  const handleUpdateScore = async () => {
+    if (!selectedSubmission?.id) return;
+    const newScore = Number(editScore);
+    const newXp = editXp === '' ? undefined : Number(editXp);
+
+    if (!Number.isFinite(newScore) || newScore < 0 || newScore > 100) {
+      alert('Score must be between 0 and 100.');
+      return;
+    }
+    if (newXp !== undefined && (!Number.isFinite(newXp) || newXp < 0)) {
+      alert('XP cannot be negative.');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await adminAPI.updateSubmissionScore(selectedSubmission.id, { newScore, newXp });
+      await loadSubmissions();
+      const response = await adminAPI.getSubmission(selectedSubmission.id);
+      setSelectedSubmission(response?.success && response?.data ? response.data : null);
+    } catch (err) {
+      alert(err.message || 'Unable to update score.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResetAttempt = async () => {
+    if (!selectedSubmission?.id) return;
+    if (!window.confirm('Reset this submission and reopen the attempt?')) return;
+
+    try {
+      setActionLoading(true);
+      await adminAPI.updateSubmissionScore(selectedSubmission.id, { action: 'reset' });
+      setSelectedSubmission(null);
+      await loadSubmissions();
+    } catch (err) {
+      alert(err.message || 'Unable to reset submission.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -221,6 +281,56 @@ export default function SubmissionMonitor() {
                   <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
                     <p className="admin-micro-label text-black/40 dark:text-white/40 mb-2">Output Preview</p>
                     <pre className="text-xs text-black/65 dark:text-white/65 whitespace-pre-wrap">Status: {selectedSubmission.status}\nResult: {selectedSubmission.outputPreview || 'Submission evaluated'}</pre>
+                  </div>
+                </div>
+
+                <div className="px-6 pb-6">
+                  <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <p className="admin-micro-label text-black/40 dark:text-white/40">Maximum Score</p>
+                        <p className="mt-1 text-sm font-semibold text-[#1d3149] dark:text-white/80">100</p>
+                      </div>
+                      <label className="block">
+                        <span className="admin-micro-label text-black/40 dark:text-white/40">Assigned Score</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={editScore}
+                          onChange={(e) => setEditScore(e.target.value)}
+                          disabled={actionLoading}
+                          className="mt-1 h-9 w-24 rounded-lg border border-black/10 bg-white/80 px-3 text-sm font-semibold text-[#1d3149] outline-none focus:border-[#3C83F6] dark:border-white/10 dark:bg-white/10 dark:text-white"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="admin-micro-label text-black/40 dark:text-white/40">XP</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={editXp}
+                          onChange={(e) => setEditXp(e.target.value)}
+                          disabled={actionLoading}
+                          className="mt-1 h-9 w-24 rounded-lg border border-black/10 bg-white/80 px-3 text-sm font-semibold text-[#1d3149] outline-none focus:border-[#3C83F6] dark:border-white/10 dark:bg-white/10 dark:text-white"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleUpdateScore}
+                        disabled={actionLoading}
+                        className="h-9 rounded-lg bg-[#3C83F6] px-4 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-60"
+                      >
+                        {actionLoading ? 'Saving...' : 'Save Score'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleResetAttempt}
+                        disabled={actionLoading}
+                        className="h-9 rounded-lg border border-red-200 bg-red-50 px-4 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-60 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300 dark:hover:bg-red-900/30"
+                      >
+                        Reset Attempt
+                      </button>
+                    </div>
                   </div>
                 </div>
 
