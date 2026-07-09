@@ -4,7 +4,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
-import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, FiCalendar, FiBookOpen, FiPlus, FiSearch, FiChevronDown, FiUserMinus } from 'react-icons/fi';
+import { FiArrowLeft, FiUsers, FiActivity, FiTrendingUp, FiClock, FiBriefcase, FiCalendar, FiBookOpen, FiPlus, FiSearch, FiChevronDown, FiUserMinus, FiEye } from 'react-icons/fi';
+import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
 
 const fallbackBatchMap = {};
 
@@ -73,6 +74,7 @@ const BatchDetails = () => {
   const [activeDayScoreTooltip, setActiveDayScoreTooltip] = useState(null);
 
   const [selectedChallengeScore, setSelectedChallengeScore] = useState(null);
+  const [selectedReportStudent, setSelectedReportStudent] = useState(null);
 
   const [reviewSubmission, setReviewSubmission] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -1037,18 +1039,29 @@ const BatchDetails = () => {
                                       </span>
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setFormError('');
-                                          setStudentToRemove(student);
-                                        }}
-                                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/15 bg-red-500/5 text-red-600 transition-colors hover:bg-red-500 hover:text-white dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-500 dark:hover:text-white"
-                                        aria-label={`Remove ${student.name} from batch`}
-                                        title="Remove from batch"
-                                      >
-                                        <FiUserMinus className="h-4 w-4" />
-                                      </button>
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <button
+                                          type="button"
+                                          onClick={() => setSelectedReportStudent(student)}
+                                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/15 bg-blue-500/5 text-blue-600 transition-colors hover:bg-blue-500 hover:text-white dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-355 dark:hover:bg-blue-500 dark:hover:text-white"
+                                          aria-label={`View report for ${student.name}`}
+                                          title="View student report"
+                                        >
+                                          <FiEye className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setFormError('');
+                                            setStudentToRemove(student);
+                                          }}
+                                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/15 bg-red-500/5 text-red-600 transition-colors hover:bg-red-500 hover:text-white dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300 dark:hover:bg-red-500 dark:hover:text-white"
+                                          aria-label={`Remove ${student.name} from batch`}
+                                          title="Remove from batch"
+                                        >
+                                          <FiUserMinus className="h-4 w-4" />
+                                        </button>
+                                      </div>
                                     </td>
                                   </>
                                 )}
@@ -1891,6 +1904,15 @@ const BatchDetails = () => {
             </div>
           </div>
         </div>
+      )}
+      {selectedReportStudent && (
+        <StudentReportModal
+          studentId={selectedReportStudent.id || selectedReportStudent._id}
+          batchId={batchId}
+          studentBasic={selectedReportStudent}
+          onClose={() => setSelectedReportStudent(null)}
+          isOpen={!!selectedReportStudent}
+        />
       )}
     </div>
   );

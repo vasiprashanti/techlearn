@@ -425,6 +425,7 @@ export const adminAPI = {
   }),
 
   getSubmissions: () => request('/admin/submissions'),
+  getStudentSubmissions: (studentId) => request(`/admin/submissions?studentId=${studentId}`, { noCache: true }),
   getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
   updateSubmissionScore: (submissionId, body) => request(`/admin/submissions/${submissionId}/score`, { method: 'PUT', body: JSON.stringify(body) }),
   getNotifications: () => request('/admin/notifications'),
