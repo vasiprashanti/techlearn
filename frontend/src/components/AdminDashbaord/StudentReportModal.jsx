@@ -153,9 +153,9 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-4xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden flex flex-col">
         {/* Top Accent line */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+        <div className="h-1.5 w-full bg-blue-500" />
 
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-black/5 dark:border-white/10 flex items-center justify-between">
@@ -164,7 +164,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               {name.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <h2 className="text-xl font-bold truncate">{name}</h2>
+              <h2 className="text-lg font-bold truncate">{name}</h2>
               <p className="text-xs text-slate-500 dark:text-white/60 truncate mt-0.5">{email}</p>
             </div>
           </div>
@@ -174,57 +174,57 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
         </div>
 
         {loading ? (
-          <div className="flex-1 py-20 flex flex-col items-center justify-center gap-3">
+          <div className="py-20 flex flex-col items-center justify-center gap-3">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading student registry report...</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto minimal-scrollbar flex flex-col p-6 space-y-6">
+          <div className="flex flex-col p-6 space-y-5">
             
             {/* College, Batch, Track Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5">
               <div>
                 <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">College</span>
-                <span className="block mt-0.5 font-semibold text-sm truncate">{college}</span>
+                <span className="block mt-0.5 font-semibold text-xs truncate">{college}</span>
               </div>
               <div>
                 <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Batch</span>
-                <span className="block mt-0.5 font-semibold text-sm truncate">{batch}</span>
+                <span className="block mt-0.5 font-semibold text-xs truncate">{batch}</span>
               </div>
               <div>
                 <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Selected Track</span>
-                <span className="block mt-0.5 font-bold text-sm text-blue-600 dark:text-blue-400 truncate">{track}</span>
+                <span className="block mt-0.5 font-bold text-xs text-blue-600 dark:text-blue-400 truncate">{track}</span>
               </div>
             </div>
 
             {/* Quick KPI stats row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
-                <FiAward className="w-8 h-8 text-blue-600 dark:text-blue-400 shrink-0" />
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                <FiAward className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
                 <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Rank</span>
-                  <span className="block font-extrabold text-lg text-blue-700 dark:text-blue-300">#{rank}</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Rank</span>
+                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">#{rank}</span>
                 </div>
               </div>
-              <div className="bg-purple-50/50 dark:bg-purple-950/20 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30 flex items-center gap-3">
-                <FiTrendingUp className="w-8 h-8 text-purple-600 dark:text-purple-400 shrink-0" />
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                <FiTrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
                 <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Total XP</span>
-                  <span className="block font-extrabold text-lg text-purple-700 dark:text-purple-300">{totalXp} XP</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Total XP</span>
+                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{totalXp} XP</span>
                 </div>
               </div>
-              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30 flex items-center gap-3">
-                <FiTarget className="w-8 h-8 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                <FiTarget className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
                 <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Accuracy</span>
-                  <span className="block font-extrabold text-lg text-emerald-700 dark:text-emerald-300">{accuracy}%</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Accuracy</span>
+                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{accuracy}%</span>
                 </div>
               </div>
-              <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30 flex items-center gap-3">
-                <FiActivity className="w-8 h-8 text-amber-600 dark:text-amber-400 shrink-0" />
+              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                <FiActivity className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
                 <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Active Streak</span>
-                  <span className="block font-extrabold text-lg text-amber-700 dark:text-amber-300">{streak} Days</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Streak</span>
+                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{streak} Days</span>
                 </div>
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2.5 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                  className={`px-3 py-2 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
                     activeTab === tab
                       ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                       : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
@@ -247,7 +247,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             </div>
 
             {/* Tab content screens */}
-            <div className="flex-1 min-h-[300px]">
+            <div className="flex-1">
               
               {/* TAB 1: OVERVIEW */}
               {activeTab === 'Overview' && (
@@ -282,7 +282,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Strong Topics</span>
                           <div className="mt-2 space-y-1">
                             {strongTopics.slice(0, 3).map((t, i) => (
-                              <span key={i} className="inline-flex rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] px-2 py-0.5 mr-1 mb-1 font-semibold">{t}</span>
+                              <span key={i} className="inline-flex rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] px-2 py-0.5 mr-1 mb-1 font-semibold">{t}</span>
                             ))}
                             {strongTopics.length === 0 && <span className="text-xs italic text-slate-400">No data computed yet</span>}
                           </div>
@@ -291,7 +291,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                           <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Needs Improvement</span>
                           <div className="mt-2 space-y-1">
                             {weakTopics.slice(0, 3).map((t, i) => (
-                              <span key={i} className="inline-flex rounded-full bg-rose-500/10 text-rose-500 text-[10px] px-2 py-0.5 mr-1 mb-1 font-semibold">{t}</span>
+                              <span key={i} className="inline-flex rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 text-[10px] px-2 py-0.5 mr-1 mb-1 font-semibold">{t}</span>
                             ))}
                             {weakTopics.length === 0 && <span className="text-xs italic text-slate-400">Good progress overall</span>}
                           </div>
@@ -343,8 +343,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                             </div>
                           ))}
                           <div className="flex justify-between pt-2">
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400">Challenge XP Gained:</span>
-                            <span className="font-extrabold text-indigo-600 dark:text-indigo-400">+{batchStudentData.todayChallengeXp || 0} XP</span>
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">Challenge XP Gained:</span>
+                            <span className="font-extrabold text-blue-600 dark:text-blue-400">+{batchStudentData.todayChallengeXp || 0} XP</span>
                           </div>
                         </div>
                       ) : (
@@ -381,7 +381,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                               <td className="p-3 text-slate-500 dark:text-slate-400">{sub.track || 'Practice'}</td>
                               <td className="p-3 text-center">
                                 <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                  sub.status === 'Passed' || sub.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
+                                  sub.status === 'Passed' || sub.status === 'Accepted' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' : 'bg-slate-500/10 text-slate-650 dark:text-slate-400'
                                 }`}>{sub.status}</span>
                               </td>
                               <td className="p-3 text-center font-bold">
@@ -489,18 +489,18 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                         if (scoreStr.includes('/')) {
                           const [num, den] = scoreStr.split('/').map(Number);
                           const ratio = num / den;
-                          if (ratio >= 0.8) colorClass = 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/25';
-                          else if (ratio >= 0.5) colorClass = 'bg-amber-500/20 text-amber-600 border border-amber-500/25';
-                          else colorClass = 'bg-rose-500/20 text-rose-600 border border-rose-500/25';
+                          if (ratio >= 0.8) colorClass = 'bg-blue-600 text-white font-extrabold';
+                          else if (ratio >= 0.5) colorClass = 'bg-blue-500/20 text-[#3C83F6] border border-blue-500/25 font-bold';
+                          else colorClass = 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-350 border border-slate-300/30';
                         } else {
-                          colorClass = 'bg-emerald-500/20 text-emerald-600 border border-emerald-500/25';
+                          colorClass = 'bg-blue-600 text-white font-extrabold';
                         }
                       }
                       
                       return (
                         <div key={dayNum} className={`p-2.5 rounded-lg flex flex-col items-center justify-center gap-1 text-center ${colorClass}`}>
-                          <span className="text-[10px] font-bold uppercase">Day {dayNum}</span>
-                          <span className="text-xs font-extrabold">{scoreStr && scoreStr !== 'NIL' ? scoreStr : '—'}</span>
+                          <span className="text-[10px] uppercase font-bold">Day {dayNum}</span>
+                          <span className="text-xs">{scoreStr && scoreStr !== 'NIL' ? scoreStr : '—'}</span>
                         </div>
                       );
                     })}
