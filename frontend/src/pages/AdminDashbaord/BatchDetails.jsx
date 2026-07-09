@@ -1912,6 +1912,7 @@ const BatchDetails = () => {
           studentBasic={selectedReportStudent}
           onClose={() => setSelectedReportStudent(null)}
           isOpen={!!selectedReportStudent}
+          context="batch"
         />
       )}
     </div>

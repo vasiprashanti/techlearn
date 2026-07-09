@@ -520,6 +520,7 @@ const Students = () => {
         studentBasic={selectedStudent} 
         onClose={() => setSelectedStudent(null)} 
         isOpen={!!selectedStudent} 
+        context="students"
       />
 
       <input ref={bulkImportInputRef} type="file" accept=".csv" className="hidden" onChange={handleBulkImportSelection} />

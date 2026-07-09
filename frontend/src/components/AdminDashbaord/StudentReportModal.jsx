@@ -12,11 +12,12 @@ const formatDateValue = (value) => {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-export default function StudentReportModal({ studentId, batchId, studentBasic, onClose, isOpen }) {
+export default function StudentReportModal({ studentId, batchId, studentBasic, onClose, isOpen, context }) {
   const [activeTab, setActiveTab] = useState('Overview');
   const [loading, setLoading] = useState(true);
   const [studentDetails, setStudentDetails] = useState(null);
   const [batchStudentData, setBatchStudentData] = useState(null);
+  const [batchRank, setBatchRank] = useState('_');
   const [submissions, setSubmissions] = useState([]);
   const [editingSubmissionId, setEditingSubmissionId] = useState(null);
   const [editScore, setEditScore] = useState('');
@@ -53,6 +54,12 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             const match = table.find(s => String(s.id || s._id) === String(studentId));
             if (match) {
               setBatchStudentData(match);
+            }
+            // Sort batch table by totalXp to find student rank in batch
+            const sortedTable = [...table].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
+            const idxInBatch = sortedTable.findIndex(s => String(s.id || s._id) === String(studentId));
+            if (idxInBatch !== -1) {
+              setBatchRank(idxInBatch + 1);
             }
           } catch (batchErr) {
             console.error("Failed to load batch data for student", batchErr);
@@ -125,7 +132,9 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const streak = studentDetails?.streak || studentBasic?.streak || 0;
   const status = studentDetails?.status || studentBasic?.status || 'Active';
   const accuracy = studentDetails?.accuracy || studentBasic?.accuracy || 0;
-  const rank = batchStudentData?.leaderboardRank || '—';
+  const rank = context === 'batch'
+    ? (batchRank !== '_' ? batchRank : '_')
+    : (batchStudentData?.leaderboardRank || '_');
   const totalXp = batchStudentData?.totalXp || studentBasic?.score || 0;
   const track = studentDetails?.track || studentBasic?.track || 'General Track';
 
