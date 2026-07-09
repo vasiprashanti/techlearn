@@ -1,10 +1,22 @@
 import axios from "axios";
 import { LANGUAGE_IDS, getJudge0Config, isJudge0Configured } from "../utils/judgeUtil.js";
 
+const COMPILER_LANGUAGE_ALIASES = {
+  sql: 82,
+  sqlite: 82,
+  postgresql: 83,
+  postgres: 83,
+};
+
+const resolveCompilerLanguageId = (language) => {
+  const normalizedLanguage = String(language || "").trim().toLowerCase();
+  return LANGUAGE_IDS[normalizedLanguage] || COMPILER_LANGUAGE_ALIASES[normalizedLanguage];
+};
+
 export const compileCode = async (req, res) => {
   const { language, source_code, stdin } = req.body;
 
-  const language_id = LANGUAGE_IDS[language?.toLowerCase()];
+  const language_id = resolveCompilerLanguageId(language);
   if (!language_id)
     return res.status(400).json({ error: "Invalid language selected" });
 
