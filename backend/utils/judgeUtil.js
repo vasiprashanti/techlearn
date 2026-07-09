@@ -29,49 +29,68 @@ const executeCodeWithJudge0 = async ({
   pollIntervalMs = 1000,
 }) => {
   const { url, headers } = getJudge0Config();
-  const baseUrl = url.replace(/\/+$/, "");
-  const createEndpoint = `${baseUrl}/submissions?base64_encoded=false`;
+  const runAgainstJudge0 = async (judgeUrl, judgeHeaders) => {
+    const baseUrl = judgeUrl.replace(/\/+$/, "");
+    const createEndpoint = `${baseUrl}/submissions?base64_encoded=false`;
 
-  const createResponse = await axios.post(
-    createEndpoint,
-    {
-      source_code: sourceCode,
-      language_id: languageId,
-      stdin,
-    },
-    {
-      headers,
-      timeout: 15000,
+    const createResponse = await axios.post(
+      createEndpoint,
+      {
+        source_code: sourceCode,
+        language_id: languageId,
+        stdin,
+      },
+      {
+        headers: judgeHeaders,
+        timeout: 15000,
+      }
+    );
+
+    if (createResponse.data?.status?.id) {
+      return createResponse.data;
     }
-  );
 
-  if (createResponse.data?.status?.id) {
-    return createResponse.data;
-  }
+    const token = createResponse.data?.token;
+    if (!token) {
+      throw new Error("Judge0 did not return a submission token.");
+    }
 
-  const token = createResponse.data?.token;
-  if (!token) {
-    throw new Error("Judge0 did not return a submission token.");
-  }
+    const resultEndpoint = `${baseUrl}/submissions/${token}?base64_encoded=false`;
+    const deadline = Date.now() + timeoutMs;
 
-  const resultEndpoint = `${baseUrl}/submissions/${token}?base64_encoded=false`;
-  const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const resultResponse = await axios.get(resultEndpoint, {
+        headers: judgeHeaders,
+        timeout: 15000,
+      });
 
-  while (Date.now() < deadline) {
-    const resultResponse = await axios.get(resultEndpoint, {
-      headers,
-      timeout: 15000,
+      const statusId = resultResponse.data?.status?.id;
+      if (isJudge0TerminalStatus(statusId)) {
+        return resultResponse.data;
+      }
+
+      await sleep(pollIntervalMs);
+    }
+
+    throw new Error("Judge0 execution timed out before returning a final result.");
+  };
+
+  try {
+    return await runAgainstJudge0(url, headers);
+  } catch (error) {
+    const configuredHost = new URL(url).hostname;
+    const shouldRetryCeFallback =
+      configuredHost === "api.judge0.com" &&
+      (error.code === "ENOTFOUND" || String(error.message || "").includes("ENOTFOUND"));
+
+    if (!shouldRetryCeFallback) {
+      throw error;
+    }
+
+    return runAgainstJudge0("https://ce.judge0.com", {
+      "Content-Type": "application/json",
     });
-
-    const statusId = resultResponse.data?.status?.id;
-    if (isJudge0TerminalStatus(statusId)) {
-      return resultResponse.data;
-    }
-
-    await sleep(pollIntervalMs);
   }
-
-  throw new Error("Judge0 execution timed out before returning a final result.");
 };
 
 const LANGUAGE_IDS = {
