@@ -116,8 +116,8 @@ router.patch("/students/:studentId/remove-batch", removeStudentFromBatchAdmin);
 router.delete("/students/:studentId", deleteStudentAdmin);
 
 router.get("/questions/categories", listQuestionCategories);
-router.post("/questions/categories", createQuestionCategory);
-router.put("/questions/categories/:categoryId", updateQuestionCategory);
+router.post("/questions/categories", upload.single("bannerFile"), createQuestionCategory);
+router.put("/questions/categories/:categoryId", upload.single("bannerFile"), updateQuestionCategory);
 router.delete("/questions/categories/:categoryId", deleteQuestionCategory);
 router.get("/questions/categories/:categoryId/usage", getQuestionCategoryUsage);
 router.post("/questions/categories/bulk-delete", bulkDeleteQuestionCategoriesAdmin);

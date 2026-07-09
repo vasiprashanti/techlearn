@@ -151,6 +151,10 @@ export const listKnownQuestionCategories = async () => {
     categoryType: category.categoryType,
     status: category.status,
     visibility: category.visibility || "Both",
+    usage: category.usage || category.visibility || "Both",
+    batches: category.batches || [],
+    bannerImage: category.bannerImage || "",
+    defaultIcon: category.defaultIcon || "Code",
   }));
 };
 

@@ -224,7 +224,7 @@ async function request(path, options = {}) {
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await adminFetch(`${API_BASE}${path}`, {
-        headers: buildHeaders(options.headers),
+        headers: options.body instanceof FormData ? buildAuthHeaders(options.headers) : buildHeaders(options.headers),
         ...options,
       });
 
@@ -340,8 +340,8 @@ export const adminAPI = {
   },
 
   getQuestionCategories: () => request('/admin/questions/categories'),
-  createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: JSON.stringify(body) }),
-  updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }),
+  updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }),
   getQuestionCategoryUsage: (categoryId) => request(`/admin/questions/categories/${categoryId}/usage`),
   deleteQuestionCategory: (categoryId) => request(`/admin/questions/categories/${categoryId}`, { method: 'DELETE' }),
   bulkDeleteQuestionCategories: (categoryIds) => request('/admin/questions/categories/bulk-delete', { method: 'POST', body: JSON.stringify({ categoryIds }) }),

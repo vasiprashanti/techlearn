@@ -127,12 +127,7 @@ export const QuestionBankAdminPage = () => {
   const handleSaveCategory = async (formPayload) => {
     try {
       if (editingCategory) {
-        const editableFields = {
-          title: formPayload.title,
-          status: formPayload.status,
-          visibility: formPayload.visibility,
-        };
-        await questionBankApi.updateCategory(editingCategory.id || editingCategory._id, editableFields);
+        await questionBankApi.updateCategory(editingCategory.id || editingCategory._id, formPayload);
       } else {
         await questionBankApi.createCategory(formPayload);
       }

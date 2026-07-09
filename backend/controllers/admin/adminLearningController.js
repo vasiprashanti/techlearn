@@ -199,6 +199,10 @@ export const listQuestionCategories = async (req, res) => {
           categoryType: category.categoryType,
           status: category.status,
           visibility: category.visibility || "Both",
+          usage: category.usage || category.visibility || "Both",
+          batches: category.batches || [],
+          bannerImage: category.bannerImage || "",
+          defaultIcon: category.defaultIcon || "Code",
         };
       })
     );
@@ -221,7 +225,7 @@ const normalizeCategoryStatus = (status, fallback = "Draft") => {
 
 export const createQuestionCategory = async (req, res) => {
   try {
-    const { title, subtitle, icon, status, visibility } = req.body;
+    const { title, subtitle, icon, status, visibility, usage, batches, bannerImage, defaultIcon } = req.body;
     const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title?.trim()) {
@@ -242,14 +246,37 @@ export const createQuestionCategory = async (req, res) => {
       return res.status(409).json({ success: false, message: "A category with this title already exists." });
     }
 
+    const resolvedUsage = usage || visibility || "Both";
+
+    let parsedBatches = batches || [];
+    if (typeof batches === "string") {
+      try {
+        parsedBatches = JSON.parse(batches);
+      } catch (e) {
+        parsedBatches = batches.split(",").map(id => id.trim()).filter(Boolean);
+      }
+    }
+
+    let resolvedBannerImage = bannerImage || "";
+    if (req.file) {
+      const uploadRes = await uploadResourceFile(req.file);
+      if (uploadRes?.secure_url) {
+        resolvedBannerImage = uploadRes.secure_url;
+      }
+    }
+
     const category = await Category.create({
       slug,
       title: title.trim(),
-      description: "",
+      description: subtitle || "",
       icon: icon || "chart",
       categoryType,
       status: normalizeCategoryStatus(status),
-      visibility: visibility || "Both",
+      usage: resolvedUsage,
+      visibility: resolvedUsage,
+      batches: parsedBatches,
+      bannerImage: resolvedBannerImage,
+      defaultIcon: defaultIcon || "Code",
       createdBy: req.user?._id,
     });
 
@@ -275,6 +302,10 @@ export const createQuestionCategory = async (req, res) => {
         categoryType: category.categoryType,
         status: category.status,
         visibility: category.visibility,
+        usage: category.usage,
+        batches: category.batches,
+        bannerImage: category.bannerImage,
+        defaultIcon: category.defaultIcon,
       },
     });
   } catch (error) {
@@ -288,20 +319,20 @@ export const updateQuestionCategory = async (req, res) => {
     const { categoryId } = req.params;
     if (!assertObjectId(categoryId, "categoryId", res)) return;
 
-    if (req.body.categoryType) {
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Question category not found." });
+    }
+
+    if (req.body.categoryType && req.body.categoryType !== category.categoryType) {
       return res.status(400).json({
         success: false,
         message: "categoryType cannot be changed after category creation.",
       });
     }
 
-    const category = await Category.findById(categoryId);
-    if (!category) {
-      return res.status(404).json({ success: false, message: "Question category not found." });
-    }
-
     const nextTitle = req.body.title?.trim() || category.title;
-    const nextSubtitle = "";
+    const nextSubtitle = req.body.subtitle !== undefined ? req.body.subtitle : category.description;
     const nextIcon = req.body.icon || category.icon;
     const nextStatus = normalizeCategoryStatus(req.body.status, category.status);
 
@@ -327,7 +358,40 @@ export const updateQuestionCategory = async (req, res) => {
     category.description = nextSubtitle;
     category.icon = nextIcon;
     category.status = nextStatus;
-    category.visibility = req.body.visibility || category.visibility;
+
+    if (req.body.usage !== undefined) {
+      category.usage = req.body.usage;
+      category.visibility = req.body.usage;
+    } else if (req.body.visibility !== undefined) {
+      category.usage = req.body.visibility;
+      category.visibility = req.body.visibility;
+    }
+
+    if (req.body.batches !== undefined) {
+      let parsedBatches = req.body.batches;
+      if (typeof parsedBatches === "string") {
+        try {
+          parsedBatches = JSON.parse(parsedBatches);
+        } catch (e) {
+          parsedBatches = parsedBatches.split(",").map(id => id.trim()).filter(Boolean);
+        }
+      }
+      category.batches = parsedBatches;
+    }
+    
+    if (req.file) {
+      const uploadRes = await uploadResourceFile(req.file);
+      if (uploadRes?.secure_url) {
+        category.bannerImage = uploadRes.secure_url;
+      }
+    } else if (req.body.bannerImage !== undefined) {
+      category.bannerImage = req.body.bannerImage;
+    }
+
+    if (req.body.defaultIcon !== undefined) {
+      category.defaultIcon = req.body.defaultIcon;
+    }
+
     await category.save();
 
     await Question.updateMany(
@@ -365,6 +429,10 @@ export const updateQuestionCategory = async (req, res) => {
         categoryType: category.categoryType,
         status: category.status,
         visibility: category.visibility,
+        usage: category.usage,
+        batches: category.batches,
+        bannerImage: category.bannerImage,
+        defaultIcon: category.defaultIcon,
       },
     });
   } catch (error) {

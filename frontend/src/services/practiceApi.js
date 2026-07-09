@@ -36,6 +36,13 @@ export const practiceAPI = {
     return handleResponse(response);
   },
 
+  getCategories: async () => {
+    const response = await fetch(`${API_BASE}/practice/categories`, {
+      headers: buildHeaders(),
+    });
+    return handleResponse(response);
+  },
+
   recordSubmission: async ({ questionId, track, isCorrect, code, language, selectedAnswer, finalize }) => {
     const response = await fetch(`${API_BASE}/practice/submissions`, {
       method: 'POST',
