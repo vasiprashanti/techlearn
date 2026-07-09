@@ -59,6 +59,7 @@ const ExerciseDetail = lazy(() => import('./pages/Learn/ExerciseDetail'))
 const Certification = lazy(() => import('./pages/Learn/Certification'))
 const CertificationPayment = lazy(() => import('./pages/Learn/CertificationPayment'))
 const OnlineCompiler = lazy(() => import('./pages/Learn/OnlineCompiler'))
+const DynamicPracticeQuestions = lazy(() => import('./pages/Learn/DynamicPracticeQuestions'))
 
 const Roadmaps = lazy(() => import('./pages/Resources/Roadmaps'))
 const ResumeTemplates = lazy(() => import('./pages/Resources/ResumeTemplates'))
@@ -255,6 +256,7 @@ function LayoutWrapper() {
             <Route path="/dashboard/practice/company-based" element={<CompanyQuestions />} />
             <Route path="/dashboard/practice/company-based/:questionId" element={<InterviewCompanyQuestionDetail />} />
             <Route path="/dashboard/practice/company-based/mock/:company/:questionId" element={<CompanyMockQuestionDetail />} />
+            <Route path="/dashboard/practice/category/:categorySlug" element={<DynamicPracticeQuestions />} />
             <Route path="/dashboard/performance" element={<Performance />} />
             <Route path="/dashboard/leaderboard" element={<Leaderboard />} />
              <Route path="/dashboard/resources" element={<ResourcesHub />} />

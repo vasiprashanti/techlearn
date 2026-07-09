@@ -1,5 +1,6 @@
 import Question from "../models/Questions.js";
 import PracticeSubmission from "../models/PracticeSubmission.js";
+import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
@@ -48,13 +49,14 @@ const isCodeEmpty = (code, language) => {
 
 
 const normalizePracticeTrack = (value = "") => {
+  if (!value) return "";
   const normalized = String(value).trim().toLowerCase();
   if (normalized.includes("dsa") || normalized.includes("data structures")) return "DSA";
   if (normalized.includes("core") || normalized.includes("cs")) return "Core CS";
   if (normalized.includes("sql") || normalized.includes("database")) return "SQL";
   if (normalized.includes("aptitude")) return "Aptitude";
-  if (normalized.includes("company")) return "Company";
-  return "";
+  if (normalized.includes("company")) return "Company Based";
+  return String(value).trim();
 };
 
 const toDayKey = (date) => {
@@ -121,11 +123,20 @@ export const listPracticeQuestions = async (req, res) => {
   try {
     const requestedTrack = normalizePracticeTrack(req.query.track);
 
-    // 1. Fetch categories marked "Practice" or "Both"
+    // Fetch student's batchId to filter categories
+    const student = await Student.findOne({ userId: req.user?._id });
+    const studentBatchId = student?.batchId;
+
+    // 1. Fetch categories marked "Practice" or "Both" matching batch or global
     const Category = mongoose.model("Category");
     const activeCategories = await Category.find({
-      visibility: { $in: ["Practice", "Both"] },
       status: "Active",
+      usage: { $in: ["Practice", "Both"] },
+      $or: [
+        { batches: { $exists: false } },
+        { batches: { $size: 0 } },
+        ...(studentBatchId ? [{ batches: studentBatchId }] : [])
+      ]
     }).lean();
     const categoryIds = activeCategories.map((c) => c._id);
 
@@ -144,7 +155,11 @@ export const listPracticeQuestions = async (req, res) => {
     const data = questions
       .map(formatQuestion)
       .filter(Boolean)
-      .filter((question) => !requestedTrack || question.topic === requestedTrack);
+      .filter((question) => {
+        if (!requestedTrack) return true;
+        const slugify = (str) => String(str).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        return slugify(question.topic) === slugify(requestedTrack);
+      });
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -523,10 +538,18 @@ export const recordPracticeSubmission = async (req, res) => {
 
 export const getPracticeStats = async (req, res) => {
   try {
+    const student = await Student.findOne({ userId: req.user?._id });
+    const studentBatchId = student?.batchId;
+
     const Category = mongoose.model("Category");
     const activeCategories = await Category.find({
-      visibility: { $in: ["Practice", "Both"] },
       status: "Active",
+      usage: { $in: ["Practice", "Both"] },
+      $or: [
+        { batches: { $exists: false } },
+        { batches: { $size: 0 } },
+        ...(studentBatchId ? [{ batches: studentBatchId }] : [])
+      ]
     }).lean();
     const categoryIds = activeCategories.map((c) => c._id);
 
@@ -578,23 +601,64 @@ export const getPracticeStats = async (req, res) => {
           ? Number(((stats[track].correct / stats[track].attempted) * 100).toFixed(1))
           : 0;
 
-      const trackSubmissions = submissions.filter((s) => s.track === track);
-      const trackStreak = calculateStreak(trackSubmissions);
-      stats[track].streak = trackStreak.currentStreak;
+      stats[track].streak = 0;
     }
-
-    const streak = calculateStreak(submissions);
 
     return res.status(200).json({
       success: true,
       data: {
-        streak: streak.currentStreak,
-        lastActivityDate: streak.lastActivityDate,
+        streak: 0,
+        lastActivityDate: null,
         tracks: TRACKS.map((track) => stats[track]),
       },
     });
   } catch (error) {
     console.error("getPracticeStats error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch practice stats." });
+  }
+};
+
+export const listPracticeCategoriesForStudent = async (req, res) => {
+  try {
+    const student = await Student.findOne({ userId: req.user?._id });
+    const studentBatchId = student?.batchId;
+
+    const Category = mongoose.model("Category");
+    const categories = await Category.find({
+      status: "Active",
+      usage: { $in: ["Practice", "Both"] },
+      $or: [
+        { batches: { $exists: false } },
+        { batches: { $size: 0 } },
+        ...(studentBatchId ? [{ batches: studentBatchId }] : [])
+      ]
+    }).lean();
+
+    const Question = mongoose.model("Question");
+    const data = await Promise.all(
+      categories.map(async (cat) => {
+        const questionCount = await Question.countDocuments({
+          categoryId: cat._id,
+          status: "Active",
+          isActive: { $ne: false },
+        });
+        return {
+          id: cat._id,
+          title: cat.title,
+          slug: cat.slug,
+          description: cat.description,
+          categoryType: cat.categoryType,
+          bannerImage: cat.bannerImage || "",
+          defaultIcon: cat.defaultIcon || "Code",
+          icon: cat.icon || cat.defaultIcon || "Code",
+          questionCount,
+        };
+      })
+    );
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("listPracticeCategoriesForStudent error:", error);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

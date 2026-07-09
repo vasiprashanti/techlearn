@@ -4,11 +4,13 @@ import {
   getPracticeStats,
   listPracticeQuestions,
   recordPracticeSubmission,
+  listPracticeCategoriesForStudent,
 } from "../controllers/practiceController.js";
 
 const router = express.Router();
 
-router.get("/questions", listPracticeQuestions);
+router.get("/categories", protect, listPracticeCategoriesForStudent);
+router.get("/questions", protect, listPracticeQuestions);
 router.get("/stats", protect, requirePlacementProgram, getPracticeStats);
 router.post("/submissions", protect, requirePlacementProgram, recordPracticeSubmission);
 

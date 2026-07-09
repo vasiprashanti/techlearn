@@ -248,11 +248,11 @@ export default function Courses() {
       <button
         type="button"
         onClick={onClick}
-        className={`absolute z-30 top-1/2 -translate-y-1/2 p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#0a1128]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center ${
+        className={`absolute z-30 top-1/2 -translate-y-1/2 p-2 md:p-3.5 rounded-full border border-[#8ec8ff]/40 dark:border-[#6fbfff]/30 bg-white/95 dark:bg-[#0a1128]/95 text-[#3C83F6] dark:text-[#8fd9ff] shadow-[0_8px_30px_rgba(34,119,255,0.18)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] hover:bg-[#dbf1ff] dark:hover:bg-[#122b5e] transition-colors duration-300 flex items-center justify-center ${
           isLeft ? 'left-2 md:-left-5' : 'right-2 md:-right-5'
         }`}
       >
-        {isLeft ? <ArrowLeft className="w-5 h-5" /> : <ArrowRight className="w-5 h-5" />}
+        {isLeft ? <ArrowLeft className="w-4 h-4 md:w-5 md:h-5" /> : <ArrowRight className="w-4 h-4 md:w-5 md:h-5" />}
       </button>
     );
   };
@@ -280,10 +280,10 @@ export default function Courses() {
           <section className="pt-6 space-y-10">
             <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
               <div>
-                <h1 className="mt-8 font-poppins text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight leading-[1.1] overflow-visible">
-                  <span className="brand-heading-secondary hover-gradient-text block">COURSES</span>
+                <h1 className="mt-8 font-press-start text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight leading-[1.1] overflow-visible">
+                  <span className="hover-gradient-text block">COURSES</span>
                 </h1>
-                <p className="text-sm sm:text-base md:text-lg tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold">Pick a track and start building skills</p>
+                <p className="text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold">Pick a track and start building skills</p>
               </div>
             </header>
 
@@ -295,14 +295,14 @@ export default function Courses() {
 
             {/* Subsection 1: Self-Paced Courses */}
             <div className="space-y-6">
-              <h3 className="text-xl md:text-2xl font-poppins italic tracking-tight uppercase flex items-center gap-2 brand-heading-primary">
-                Self-Paced Courses
+              <h3 className="text-xl md:text-2xl font-press-start tracking-tight uppercase flex items-center gap-2 hover-gradient-text">
+                SELF-PACED COURSES
               </h3>
 
               <div className="relative px-2 group">
                 <Carousel
                   setApi={setSelfPacedApi}
-                  opts={{ align: "start", loop: false, dragFree: true, slidesToScroll: 1, watchDrag: true }}
+                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: true, duration: 40 }}
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
@@ -357,14 +357,14 @@ export default function Courses() {
               ref={onlineCoursesSectionRef}
               className="space-y-6 pt-4"
             >
-              <h3 className="text-xl md:text-2xl font-poppins italic tracking-tight uppercase flex items-center gap-2 brand-heading-primary">
-                Expert-Led Courses
+              <h3 className="text-xl md:text-2xl font-press-start tracking-tight uppercase flex items-center gap-2 hover-gradient-text">
+                EXPERT-LED COURSES
               </h3>
 
               <div className="relative px-2 group">
                 <Carousel
                   setApi={setExpertLedApi}
-                  opts={{ align: "start", loop: false, dragFree: true, slidesToScroll: 1, watchDrag: true }}
+                  opts={{ align: "start", loop: false, dragFree: false, slidesToScroll: 1, watchDrag: true, duration: 40 }}
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
@@ -414,10 +414,10 @@ export default function Courses() {
 
                           <button
                             onClick={() => handleWhatsAppClick(batch.title)}
-                            className="mt-auto w-full py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa]"
+                            className="mt-auto w-full py-2 sm:py-3 flex items-center justify-center gap-2 rounded-xl bg-[#00113b] text-white text-xs sm:text-sm font-semibold shadow-sm transition hover:bg-[#001b5c] dark:!bg-[#bceaff] dark:!text-[#020b23] dark:hover:!bg-[#daf0fa]"
                           >
                             <span>Join Waitlist</span>
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       </CarouselItem>
