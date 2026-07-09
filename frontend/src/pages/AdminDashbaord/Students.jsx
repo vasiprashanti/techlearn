@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
+import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
 import { adminAPI, hasMeaningfulAdminData, preferRemoteData, readAdminSessionCache, writeAdminSessionCache } from '../../services/adminApi';
 import { emptyStudents } from '../../data/adminEmptyStates';
 
@@ -30,7 +31,9 @@ const normalizeStudent = (student) => ({
   id: student.id || student._id || `${student.email || 'student'}-${student.batch || 'batch'}`,
   name: student.name || 'Unnamed Student',
   email: student.email || '',
+  collegeId: student.collegeId || '',
   college: student.college || '',
+  batchId: student.batchId || '',
   batch: student.batch || '',
   track: student.track || 'General Track',
   programSelection: student.programSelection || 'Placement Sprint',
@@ -511,7 +514,14 @@ const Students = () => {
   return (
     <>
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef} filteredRoutes={filteredRoutes} navigate={navigate} />
-      <StudentModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />
+      <StudentReportModal 
+        studentId={selectedStudent?.id} 
+        batchId={selectedStudent?.batchId} 
+        studentBasic={selectedStudent} 
+        onClose={() => setSelectedStudent(null)} 
+        isOpen={!!selectedStudent} 
+        context="students"
+      />
 
       <input ref={bulkImportInputRef} type="file" accept=".csv" className="hidden" onChange={handleBulkImportSelection} />
 
