@@ -14,11 +14,7 @@ export const getJudge0Config = () => {
 };
 
 export const isJudge0Configured = () => {
-  return !!(
-    process.env.JUDGE0_API_URL ||
-    process.env.JUDGE0_API_KEY ||
-    process.env.JUDGE0_AUTH_TOKEN
-  );
+  return !!getJudge0Config().url;
 };
 
 const LANGUAGE_IDS = {
