@@ -32,6 +32,14 @@ const LANGUAGES = {
     defaultCode: `// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        // your code here\n    }\n}\n`,
     monacoLanguage: "java",
   },
+  sql: {
+    id: "sql",
+    name: "SQL",
+    icon: "/sql.png",
+    extension: ".sql",
+    defaultCode: `-- Write your SQL query here\nSELECT * FROM users;\n`,
+    monacoLanguage: "sql",
+  },
 };
 
 const CodingCompiler = ({ user, contestData }) => {

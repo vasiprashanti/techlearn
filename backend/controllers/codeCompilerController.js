@@ -4,7 +4,7 @@ import { LANGUAGE_IDS, getJudge0Config, isJudge0Configured } from "../utils/judg
 export const compileCode = async (req, res) => {
   const { language, source_code, stdin } = req.body;
 
-  const language_id = LANGUAGE_IDS[language];
+  const language_id = LANGUAGE_IDS[language?.toLowerCase()];
   if (!language_id)
     return res.status(400).json({ error: "Invalid language selected" });
 

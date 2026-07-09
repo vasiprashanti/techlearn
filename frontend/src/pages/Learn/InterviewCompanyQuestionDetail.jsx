@@ -17,7 +17,8 @@ const difficultyPillClass = {
 const LANGUAGES = {
   python: { id: "python", name: "Python", monacoLanguage: "python", starter: "# Write your Python solution here\n" },
   javascript: { id: "javascript", name: "JavaScript", monacoLanguage: "javascript", starter: "// Write your JavaScript solution here\n" },
-  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" }
+  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" },
+  sql: { id: "sql", name: "SQL", monacoLanguage: "sql", starter: "-- Write your SQL query here\nSELECT * FROM users;\n" }
 };
 
 export default function InterviewCompanyQuestionDetail() {

@@ -98,6 +98,15 @@ public class Main {
     }
 }`,
     monacoLanguage: 'java'
+  },
+  sql: {
+    id: 'sql',
+    name: 'SQL',
+    icon: '/sql.png',
+    extension: '.sql',
+    defaultCode: `-- Welcome to SQL Online Compiler
+SELECT 'Hello, World!' AS message;`,
+    monacoLanguage: 'sql'
   }
 };
 

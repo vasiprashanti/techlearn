@@ -29,6 +29,12 @@ const LANGUAGES = {
     starter:
       "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n",
   },
+  sql: {
+    id: "sql",
+    name: "SQL",
+    monacoLanguage: "sql",
+    starter: "-- Write your SQL query here\nSELECT * FROM users;\n",
+  },
 };
 
 const formatTime = (seconds) => {
