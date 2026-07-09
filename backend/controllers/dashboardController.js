@@ -37,11 +37,21 @@ const setCachedDashboard = (userId, payload) => {
 };
 
 const buildDashboardUserPayload = (user, linkedStudent) => {
+  const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
   const studentName = String(linkedStudent?.name || "").trim();
-  const fullName = String(
-    user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(" ")
-  ).trim();
-  const displayName = studentName || fullName || String(user?.email || "").split("@")[0];
+  const legacyName = String(user?.name || "").trim();
+
+  let displayName = userFullName;
+  const emailUsername = String(user?.email || "").split("@")[0];
+  if (!displayName && studentName && studentName !== emailUsername) {
+    displayName = studentName;
+  }
+  if (!displayName && legacyName && legacyName !== emailUsername) {
+    displayName = legacyName;
+  }
+  if (!displayName) {
+    displayName = emailUsername || "Student";
+  }
 
   const [fallbackFirstName = "Student", ...remainingParts] = displayName
     .split(/\s+/)
@@ -52,7 +62,7 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     id: user?._id || null,
     firstName: String(user?.firstName || "").trim() || fallbackFirstName,
     lastName: String(user?.lastName || "").trim() || fallbackLastName,
-    name: displayName || "Student",
+    name: displayName,
     email: user?.email || "",
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",

@@ -201,8 +201,11 @@ export const assertObjectId = (value, fieldName, res) => {
   return true;
 };
 
-export const getActorName = (user) =>
-  [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || user?.email || "Admin User";
+export const getActorName = (user) => {
+  const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
+  if (userFullName) return userFullName;
+  return String(user?.email || "").split("@")[0] || "Admin User";
+};
 
 export const computeAdminMetrics = async () => {
   const now = new Date();

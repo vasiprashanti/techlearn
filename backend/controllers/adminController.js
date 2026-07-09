@@ -51,6 +51,12 @@ export const getCourseTopicsForDashboard = async (req, res) => {
       description: course.description || "",
       level: course.level || "Beginner",
       assignedBatchIds: course.assignedBatchIds || [],
+      courseType: course.courseType || "Self-paced",
+      bannerImage: course.bannerImage || "",
+      instructor: course.instructor || "",
+      duration: course.duration || "",
+      schedule: course.schedule || "",
+      startDate: course.startDate || "",
     });
   } catch (error) {
     return res.status(500).json({
@@ -543,5 +549,24 @@ export const getAdminMetrics = async (req, res) => {
   } catch (err) {
     console.error("Admin Metrics Error:", err);
     return res.status(500).json({ error: "Failed to fetch admin metrics" });
+  }
+};
+
+export const uploadTopicImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/temp/${req.file.filename}`;
+    return res.status(200).json({
+      success: true,
+      url: imageUrl,
+      markdown: `![Image](${imageUrl})`
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Error uploading image",
+      error: error.message
+    });
   }
 };

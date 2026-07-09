@@ -33,6 +33,50 @@ const AdminTopicsList = () => {
   const [editSuccess, setEditSuccess] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Image Upload states & handlers inside Edit Topic Modal
+  const [imageFile, setImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [uploadedImageMarkdown, setUploadedImageMarkdown] = useState("");
+  const [imageError, setImageError] = useState("");
+
+  const handleImageUpload = async () => {
+    if (!imageFile) {
+      setImageError("Please select an image file to upload.");
+      return;
+    }
+    setUploadingImage(true);
+    setImageError("");
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      const res = await axios.post(
+        `${BASE_URL}/admin/upload-image`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      setUploadedImageUrl(res.data.url);
+      setUploadedImageMarkdown(res.data.markdown);
+      setImageFile(null);
+    } catch (err) {
+      console.error(err);
+      setImageError(err.response?.data?.message || "Failed to upload image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
+  };
+
   // Delete topic modal states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [topicToDelete, setTopicToDelete] = useState(null);
@@ -53,6 +97,13 @@ const AdminTopicsList = () => {
   const [level, setLevel] = useState("Beginner");
   const [assignedBatchIds, setAssignedBatchIds] = useState([]);
   const [batchOptions, setBatchOptions] = useState([]);
+  const [courseType, setCourseType] = useState("Self-paced");
+  const [instructor, setInstructor] = useState("");
+  const [duration, setDuration] = useState("");
+  const [schedule, setSchedule] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [bannerImage, setBannerImage] = useState("");
+  const [bannerFile, setBannerFile] = useState(null);
 
   // Theme & layout states
   const { theme } = useTheme();
@@ -91,6 +142,12 @@ const AdminTopicsList = () => {
         setDescription(res.data.description || "");
         setLevel(res.data.level || "Beginner");
         setAssignedBatchIds(res.data.assignedBatchIds || []);
+        setCourseType(res.data.courseType || "Self-paced");
+        setInstructor(res.data.instructor || "");
+        setDuration(res.data.duration || "");
+        setSchedule(res.data.schedule || "");
+        setStartDate(res.data.startDate || "");
+        setBannerImage(res.data.bannerImage || "");
         setError(null);
 
         // Fetch batch options for assignment checklist
@@ -245,6 +302,11 @@ const AdminTopicsList = () => {
     });
     setEditError("");
     setEditSuccess("");
+    // Reset image upload state so previous topic's image doesn't bleed over
+    setImageFile(null);
+    setUploadedImageUrl("");
+    setUploadedImageMarkdown("");
+    setImageError("");
     setShowEditModal(true);
   };
 
@@ -329,23 +391,35 @@ const AdminTopicsList = () => {
     e && e.preventDefault && e.preventDefault();
     try {
       const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("title", courseTitle);
+      formData.append("description", description);
+      formData.append("level", level);
+      formData.append("numTopics", String(numTopics));
+
+      if (courseType === "Self-paced") {
+        formData.append("assignedBatchIds", JSON.stringify(assignedBatchIds));
+      } else {
+        formData.append("instructor", instructor);
+        formData.append("duration", duration);
+        formData.append("schedule", schedule);
+        formData.append("startDate", startDate);
+        if (bannerFile) {
+          formData.append("bannerFile", bannerFile);
+        }
+      }
+
       await axios.put(
         `${BASE_URL}/admin/${courseId}`,
-        {
-          title: courseTitle,
-          description: description,
-          level: level,
-          numTopics: numTopics,
-          assignedBatchIds: assignedBatchIds,
-        },
+        formData,
         {
           headers: {
-            "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
       alert("Course details updated successfully!");
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Failed to update course details.");
@@ -476,65 +550,67 @@ const AdminTopicsList = () => {
               <button onClick={() => setShowAddModal(false)} className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-white">Close</button>
             </div>
 
-            <form onSubmit={handleAddTopicSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Topic Name*</label>
-                <input
-                  value={addTopicForm.topicName}
-                  onChange={(e) => setAddTopicForm(prev => ({ ...prev, topicName: e.target.value }))}
-                  placeholder="e.g. Introduction to Python"
-                  className={categoryFormInputClass}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes File (.md)*</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                    <HiOutlineUpload className="text-sm" />
-                    <input
-                      type="file"
-                      accept=".md"
-                      className="hidden"
-                      onChange={(e) => setAddTopicForm(prev => ({ ...prev, notesFile: e.target.files?.[0] || null }))}
-                      required
-                    />
-                    Choose Notes
-                  </label>
-                  <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                    {addTopicForm.notesFile ? addTopicForm.notesFile.name : "No file chosen"}
-                  </span>
+            <form onSubmit={handleAddTopicSubmit}>
+              <div className="p-5 space-y-4 max-h-[50vh] overflow-y-auto minimal-scrollbar">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Topic Name*</label>
+                  <input
+                    value={addTopicForm.topicName}
+                    onChange={(e) => setAddTopicForm(prev => ({ ...prev, topicName: e.target.value }))}
+                    placeholder="e.g. Introduction to Python"
+                    className={categoryFormInputClass}
+                    required
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md) (Optional)</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                    <HiOutlineUpload className="text-sm" />
-                    <input
-                      type="file"
-                      accept=".csv,.md"
-                      className="hidden"
-                      onChange={(e) => setAddTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
-                    />
-                    Choose Quiz
-                  </label>
-                  <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                    {addTopicForm.mcqFile ? addTopicForm.mcqFile.name : "No file chosen"}
-                  </span>
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes File (.md)*</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept=".md"
+                        className="hidden"
+                        onChange={(e) => setAddTopicForm(prev => ({ ...prev, notesFile: e.target.files?.[0] || null }))}
+                        required
+                      />
+                      Choose Notes
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {addTopicForm.notesFile ? addTopicForm.notesFile.name : "No file chosen"}
+                    </span>
+                  </div>
                 </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md) (Optional)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept=".csv,.md"
+                        className="hidden"
+                        onChange={(e) => setAddTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
+                      />
+                      Choose Quiz
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {addTopicForm.mcqFile ? addTopicForm.mcqFile.name : "No file chosen"}
+                    </span>
+                  </div>
+                </div>
+
+                {addError && (
+                  <p className="text-xs text-red-500">{addError}</p>
+                )}
+                {addSuccess && (
+                  <p className="text-xs text-emerald-500">{addSuccess}</p>
+                )}
               </div>
 
-              {addError && (
-                <p className="text-xs text-red-500">{addError}</p>
-              )}
-              {addSuccess && (
-                <p className="text-xs text-emerald-500">{addSuccess}</p>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -567,77 +643,146 @@ const AdminTopicsList = () => {
               <button onClick={() => { setShowEditModal(false); setEditingTopic(null); }} className="text-sm text-slate-400 hover:text-slate-600 dark:hover:text-white">Close</button>
             </div>
 
-            <form onSubmit={handleEditTopicSubmit} className="p-5 space-y-4">
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Topic Name*</label>
-                <input
-                  value={editTopicForm.topicName}
-                  onChange={(e) => setEditTopicForm(prev => ({ ...prev, topicName: e.target.value }))}
-                  placeholder="e.g. Introduction to Python"
-                  className={categoryFormInputClass}
-                />
-              </div>
-
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes File (.md)</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                    <HiOutlineUpload className="text-sm" />
-                    <input
-                      type="file"
-                      accept=".md"
-                      className="hidden"
-                      onChange={(e) => setEditTopicForm(prev => ({ ...prev, notesFile: e.target.files?.[0] || null }))}
-                    />
-                    Choose Notes
-                  </label>
-                  <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                    {editTopicForm.notesFile ? editTopicForm.notesFile.name : "No file chosen"}
-                  </span>
+            <form onSubmit={handleEditTopicSubmit}>
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto minimal-scrollbar">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Topic Name*</label>
+                  <input
+                    value={editTopicForm.topicName}
+                    onChange={(e) => setEditTopicForm(prev => ({ ...prev, topicName: e.target.value }))}
+                    placeholder="e.g. Introduction to Python"
+                    className={categoryFormInputClass}
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes Markdown</label>
-                <textarea
-                  value={editTopicForm.notesBody}
-                  onChange={(e) => setEditTopicForm(prev => ({ ...prev, notesBody: e.target.value }))}
-                  rows={9}
-                  placeholder="Edit the markdown notes shown on the Learn page"
-                  className={`${categoryFormInputClass} min-h-[180px] resize-y font-mono text-xs leading-6`}
-                />
-                <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">
-                  Edit titles, subtitles, descriptions, lists, tables, and note content directly here.
-                </p>
-              </div>
-
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md)</label>
-                <div className="mt-1 flex items-center gap-3">
-                  <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                    <HiOutlineUpload className="text-sm" />
-                    <input
-                      type="file"
-                      accept=".csv,.md"
-                      className="hidden"
-                      onChange={(e) => setEditTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
-                    />
-                    Choose Quiz
-                  </label>
-                  <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                    {editTopicForm.mcqFile ? editTopicForm.mcqFile.name : "No file chosen"}
-                  </span>
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes File (.md)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept=".md"
+                        className="hidden"
+                        onChange={(e) => setEditTopicForm(prev => ({ ...prev, notesFile: e.target.files?.[0] || null }))}
+                      />
+                      Choose Notes
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {editTopicForm.notesFile ? editTopicForm.notesFile.name : "No file chosen"}
+                    </span>
+                  </div>
                 </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Study Notes Markdown</label>
+                  <textarea
+                    value={editTopicForm.notesBody}
+                    onChange={(e) => setEditTopicForm(prev => ({ ...prev, notesBody: e.target.value }))}
+                    rows={9}
+                    placeholder="Edit the markdown notes shown on the Learn page"
+                    className={`${categoryFormInputClass} min-h-[180px] resize-y font-mono text-xs leading-6`}
+                  />
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-300">
+                    Edit titles, subtitles, descriptions, lists, tables, and note content directly here.
+                  </p>
+                </div>
+
+                {/* Markdown Image Upload Panel inside Edit Topic Modal */}
+                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2 bg-[#f5f8fc]/40 dark:bg-[#122b52]/20 p-4 rounded-xl">
+                  <h3 className="admin-section-heading font-medium text-slate-800 dark:text-slate-200">Insert Image inside Notes</h3>
+                  <p className="text-[11px] text-slate-500">Upload images to generate URLs and copy markdown code to insert them into your notes.</p>
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label className="cursor-pointer bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      />
+                      Choose Image
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {imageFile ? imageFile.name : "No image chosen"}
+                    </span>
+                    {imageFile && (
+                      <button
+                        type="button"
+                        onClick={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="px-3.5 py-2 text-xs rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white font-medium disabled:opacity-75"
+                      >
+                        {uploadingImage ? "Uploading..." : "Upload Image"}
+                      </button>
+                    )}
+                  </div>
+
+                  {imageError && (
+                    <p className="text-xs text-red-500 mt-1">{imageError}</p>
+                  )}
+
+                  {uploadedImageUrl && (
+                    <div className="mt-3 space-y-2 border-t border-black/5 dark:border-white/10 pt-3">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Image uploaded successfully!</p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(uploadedImageUrl)}
+                          className="px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 text-xs text-slate-600 dark:text-slate-350 bg-white dark:bg-[#0f1f43] font-medium hover:bg-black/5 dark:hover:bg-white/5 transition"
+                        >
+                          Copy Image URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(uploadedImageMarkdown)}
+                          className="px-3 py-1.5 rounded-lg bg-[#3C83F6]/10 text-xs text-[#3C83F6] font-semibold hover:bg-[#3C83F6]/20 transition"
+                        >
+                          Copy Markdown Code
+                        </button>
+                      </div>
+
+                      <div className="mt-2 p-2 rounded-lg bg-black/5 dark:bg-black/20 border border-black/5 dark:border-white/5 font-mono text-[10px] text-slate-700 dark:text-slate-350 break-all select-all">
+                        {uploadedImageMarkdown}
+                      </div>
+
+                      <div className="mt-2 border border-black/5 dark:border-white/10 rounded-lg overflow-hidden max-w-[200px] max-h-[120px] bg-slate-100 dark:bg-slate-900">
+                        <img src={uploadedImageUrl} alt="Uploaded preview" className="w-full h-full object-contain" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md)</label>
+                  <div className="mt-1 flex items-center gap-3">
+                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept=".csv,.md"
+                        className="hidden"
+                        onChange={(e) => setEditTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
+                      />
+                      Choose Quiz
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {editTopicForm.mcqFile ? editTopicForm.mcqFile.name : "No file chosen"}
+                    </span>
+                  </div>
+                </div>
+
+                {editError && (
+                  <p className="text-xs text-red-500">{editError}</p>
+                )}
+                {editSuccess && (
+                  <p className="text-xs text-emerald-500">{editSuccess}</p>
+                )}
               </div>
 
-              {editError && (
-                <p className="text-xs text-red-500">{editError}</p>
-              )}
-              {editSuccess && (
-                <p className="text-xs text-emerald-500">{editSuccess}</p>
-              )}
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <div className="flex items-center justify-end gap-3 p-5 border-t border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5">
                 <button
                   type="button"
                   onClick={() => { setShowEditModal(false); setEditingTopic(null); }}
@@ -754,63 +899,118 @@ const AdminTopicsList = () => {
                       className={`${cardFormInputClass} resize-none`}
                       placeholder="Summarize course goals and curriculum syllabus..."
                     />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3.5">
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={numTopics}
-                          onChange={(e) => setNumTopics(Number(e.target.value))}
-                          className={cardFormInputClass}
-                          required
-                        />
+                  </div>                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={numTopics}
+                        onChange={(e) => setNumTopics(Number(e.target.value))}
+                        className={cardFormInputClass}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
+                      <div className="relative">
+                        <select
+                          value={level}
+                          onChange={(e) => setLevel(e.target.value)}
+                          className={`${cardFormInputClass} pr-10 appearance-none`}
+                        >
+                          <option className={dropdownOptionClass} value="Beginner">Beginner</option>
+                          <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
+                          <option className={dropdownOptionClass} value="Advanced">Advanced</option>
+                        </select>
+                        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                       </div>
-                      <div>
-                        <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty Level</label>
-                        <div className="relative">
-                          <select
-                            value={level}
-                            onChange={(e) => setLevel(e.target.value)}
-                            className={`${cardFormInputClass} pr-10 appearance-none`}
-                          >
-                            <option className={dropdownOptionClass} value="Beginner">Beginner</option>
-                            <option className={dropdownOptionClass} value="Intermediate">Intermediate</option>
-                            <option className={dropdownOptionClass} value="Advanced">Advanced</option>
-                          </select>
-                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                    </div>
+
+                    {courseType === "Self-paced" ? (
+                      <div className="col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
+                        <div className="mt-1 h-[126px] overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
+                          {batchOptions.map((batch) => {
+                            const checked = assignedBatchIds.map(String).includes(String(batch.id));
+                            return (
+                              <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleCourseBatch(batch.id)}
+                                  className="mt-0.5"
+                                />
+                                <span>
+                                  <span className="font-medium">{batch.name}</span>
+                                  {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
+                                </span>
+                              </label>
+                            );
+                          })}
+                          {batchOptions.length === 0 && (
+                            <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
+                          )}
                         </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="admin-micro-label text-black/45 dark:text-white/45">Assign to Batch(es)</label>
-                      <div className="mt-1 h-[126px] overflow-y-auto rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-2 space-y-1 minimal-scrollbar">
-                        {batchOptions.map((batch) => {
-                          const checked = assignedBatchIds.map(String).includes(String(batch.id));
-                          return (
-                            <label key={batch.id} className="flex items-start gap-2 rounded-lg px-2 py-1 text-xs text-slate-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleCourseBatch(batch.id)}
-                                className="mt-0.5"
-                              />
-                              <span>
-                                <span className="font-medium">{batch.name}</span>
-                                {batch.college && <span className="block text-[10px] text-[#5f7592] dark:text-slate-400">{batch.college}</span>}
-                              </span>
-                            </label>
-                          );
-                        })}
-                        {batchOptions.length === 0 && (
-                          <p className="px-2 py-3 text-xs text-[#5f7592] dark:text-slate-350">No batches available.</p>
-                        )}
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Instructor Name</label>
+                          <input
+                            type="text"
+                            value={instructor}
+                            onChange={(e) => setInstructor(e.target.value)}
+                            className={cardFormInputClass}
+                            placeholder="e.g. Prashanti Vasi"
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Start Date</label>
+                          <input
+                            type="text"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className={cardFormInputClass}
+                            placeholder="e.g. In Progress"
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Duration</label>
+                          <input
+                            type="text"
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            className={cardFormInputClass}
+                            placeholder="e.g. 4 weeks"
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-micro-label text-black/45 dark:text-white/45">Schedule</label>
+                          <input
+                            type="text"
+                            value={schedule}
+                            onChange={(e) => setSchedule(e.target.value)}
+                            className={cardFormInputClass}
+                            placeholder="e.g. Mon-Sat"
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
+                          {bannerImage && (
+                            <div className="mb-2 text-xs text-slate-500 truncate">
+                              Current: <a href={bannerImage} target="_blank" rel="noreferrer" className="text-[#3C83F6] underline">{bannerImage}</a>
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                            className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex justify-end pt-2 border-t border-black/5 dark:border-white/10">

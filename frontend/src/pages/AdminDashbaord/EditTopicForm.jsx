@@ -19,6 +19,50 @@ const EditTopicForm = () => {
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
 
+  // Image Upload states & handlers
+  const [imageFile, setImageFile] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
+  const [uploadedImageMarkdown, setUploadedImageMarkdown] = useState("");
+  const [imageError, setImageError] = useState("");
+
+  const handleImageUpload = async () => {
+    if (!imageFile) {
+      setImageError("Please select an image file to upload.");
+      return;
+    }
+    setUploadingImage(true);
+    setImageError("");
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      const res = await axios.post(
+        `${BASE_URL}/admin/upload-image`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
+      );
+      setUploadedImageUrl(res.data.url);
+      setUploadedImageMarkdown(res.data.markdown);
+      setImageFile(null);
+    } catch (err) {
+      console.error(err);
+      setImageError(err.response?.data?.message || "Failed to upload image.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert("Copied to clipboard!");
+  };
+
   // Theme & layout states
   const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -132,23 +176,23 @@ const EditTopicForm = () => {
             </button>
           </header>
 
-          <section className="space-y-6">
+          <section className="space-y-4">
             
             {/* Form wrapper in a beautiful premium card */}
-            <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-2xl p-6 sm:p-8 shadow-sm">
+            <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-5 shadow-sm">
               
               {error && (
-                <div className="mb-4 p-3 rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 text-xs sm:text-sm font-semibold">
+                <div className="mb-3 p-3 rounded-lg border border-red-500/20 bg-red-500/10 text-red-500 text-xs font-semibold">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="mb-4 p-3.5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-xs sm:text-sm">
+                <div className="mb-3 p-3.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold text-xs">
                   {success}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 
                 {/* Topic Name */}
                 <div>
@@ -164,11 +208,11 @@ const EditTopicForm = () => {
                 </div>
 
                 {/* Notes File upload */}
-                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2">
+                <div className="pt-3 border-t border-black/5 dark:border-white/10 space-y-1.5">
                   <h3 className="admin-section-heading">Study Notes File</h3>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-                      <HiOutlineUpload className="inline text-lg" />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label className="cursor-pointer font-semibold text-[#3C83F6] hover:underline inline-flex items-center gap-2 text-sm">
+                      <HiOutlineUpload className="inline text-base" />
                       <input
                         type="file"
                         accept=".md"
@@ -178,33 +222,100 @@ const EditTopicForm = () => {
                       Upload Notes File (.md)
                     </label>
                     {notesFile && (
-                      <p className="text-xs sm:text-sm text-slate-500 max-w-xs truncate" title={notesFile.name}>
+                      <p className="text-xs text-slate-500 max-w-xs truncate" title={notesFile.name}>
                         {notesFile.name}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2">
+                <div className="pt-3 border-t border-black/5 dark:border-white/10 space-y-1.5">
                   <h3 className="admin-section-heading">Study Notes Markdown</h3>
                   <textarea
                     value={notesBody}
                     onChange={(e) => setNotesBody(e.target.value)}
-                    rows={12}
+                    rows={5}
                     placeholder="Edit the markdown notes shown on the Learn page"
-                    className={`${categoryFormInputClass} min-h-[240px] resize-y font-mono text-xs leading-6`}
+                    className={`${categoryFormInputClass} min-h-[120px] resize-y font-mono text-xs leading-6`}
                   />
-                  <p className="text-xs text-slate-500 dark:text-slate-300">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-350">
                     Edit titles, subtitles, descriptions, lists, tables, and note content directly here.
                   </p>
                 </div>
 
+                {/* Insert Image Section */}
+                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2 bg-[#f5f8fc]/40 dark:bg-[#122b52]/20 p-4 rounded-xl">
+                  <h3 className="admin-section-heading font-medium text-slate-800 dark:text-slate-200">Insert Image inside Notes</h3>
+                  <p className="text-[11px] text-slate-500">Upload images to generate URLs and copy markdown code to insert them into your notes.</p>
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label className="cursor-pointer bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
+                      <HiOutlineUpload className="text-sm" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                      />
+                      Choose Image
+                    </label>
+                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
+                      {imageFile ? imageFile.name : "No image chosen"}
+                    </span>
+                    {imageFile && (
+                      <button
+                        type="button"
+                        onClick={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="px-3.5 py-2 text-xs rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white font-medium disabled:opacity-75"
+                      >
+                        {uploadingImage ? "Uploading..." : "Upload Image"}
+                      </button>
+                    )}
+                  </div>
+
+                  {imageError && (
+                    <p className="text-xs text-red-500 mt-1">{imageError}</p>
+                  )}
+
+                  {uploadedImageUrl && (
+                    <div className="mt-3 space-y-2 border-t border-black/5 dark:border-white/10 pt-3">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">✓ Image uploaded successfully!</p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(uploadedImageUrl)}
+                          className="px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/15 text-xs text-slate-600 dark:text-slate-350 bg-white dark:bg-[#0f1f43] font-medium hover:bg-black/5 dark:hover:bg-white/5 transition"
+                        >
+                          Copy Image URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(uploadedImageMarkdown)}
+                          className="px-3 py-1.5 rounded-lg bg-[#3C83F6]/10 text-xs text-[#3C83F6] font-semibold hover:bg-[#3C83F6]/20 transition"
+                        >
+                          Copy Markdown Code
+                        </button>
+                      </div>
+
+                      <div className="mt-2 p-2 rounded-lg bg-black/5 dark:bg-black/20 border border-black/5 dark:border-white/5 font-mono text-[10px] text-slate-700 dark:text-slate-350 break-all select-all">
+                        {uploadedImageMarkdown}
+                      </div>
+
+                      <div className="mt-2 border border-black/5 dark:border-white/10 rounded-lg overflow-hidden max-w-[200px] max-h-[120px] bg-slate-100 dark:bg-slate-900">
+                        <img src={uploadedImageUrl} alt="Uploaded preview" className="w-full h-full object-contain" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* MCQ File upload */}
-                <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2">
+                <div className="pt-3 border-t border-black/5 dark:border-white/10 space-y-1.5">
                   <h3 className="admin-section-heading">MCQ Quiz File</h3>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <label className="cursor-pointer font-semibold text-green-600 dark:text-green-400 hover:underline inline-flex items-center gap-2 text-sm sm:text-base">
-                      <HiOutlineUpload className="inline text-lg" />
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label className="cursor-pointer font-semibold text-green-600 dark:text-green-400 hover:underline inline-flex items-center gap-2 text-sm">
+                      <HiOutlineUpload className="inline text-base" />
                       <input
                         type="file"
                         accept=".md"
@@ -214,7 +325,7 @@ const EditTopicForm = () => {
                       Upload MCQ File (.md)
                     </label>
                     {mcqFile && (
-                      <p className="text-xs sm:text-sm text-slate-500 max-w-xs truncate" title={mcqFile.name}>
+                      <p className="text-xs text-slate-500 max-w-xs truncate" title={mcqFile.name}>
                         {mcqFile.name}
                       </p>
                     )}
@@ -222,17 +333,17 @@ const EditTopicForm = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-6 border-t border-black/5 dark:border-white/10 mt-6">
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/5 dark:border-white/10 mt-4">
                   <button
                     type="button"
                     onClick={() => navigate(`/admin/topics/${courseId}`)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
+                    className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 py-2.5 text-sm font-semibold shadow transition shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-70 w-full sm:w-auto"
+                    className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-5 py-2 text-sm font-semibold shadow transition shrink-0 flex items-center justify-center gap-1.5 disabled:opacity-70 w-full sm:w-auto"
                     disabled={loading}
                   >
                     <FiSave className="w-4 h-4" />

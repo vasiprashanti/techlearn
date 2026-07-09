@@ -4,6 +4,7 @@ import {
   getCourseTopicsForDashboard,
   editTopicDetails,
   editCourseExercises,
+  uploadTopicImage,
 } from "../controllers/adminController.js";
 import { isAdmin, protect } from "../middleware/authMiddleware.js";
 import upload from "../config/multerConfig.js";
@@ -29,18 +30,18 @@ adminRouter.get("/dashboard/stats", protect, isAdmin, getAdminMetrics);
 adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
 
 // Edit topic details (with file upload)
-adminRouter.put("/topic/:topicId", protect, upload.any(), editTopicDetails);
+adminRouter.put("/topic/:topicId", protect, isAdmin, upload.any(), editTopicDetails);
 adminRouter.delete("/topic/:topicId", protect, isAdmin, deleteTopic);
 
-adminRouter.post("/course-initiate", protect, createCourseShell);
-adminRouter.put("/:courseId", protect, isAdmin, updateCourseShell);
+adminRouter.post("/course-initiate", protect, isAdmin, upload.single("bannerFile"), createCourseShell);
+adminRouter.put("/:courseId", protect, isAdmin, upload.single("bannerFile"), updateCourseShell);
 
 adminRouter.post("/:courseId/topics", protect, isAdmin, addMultipleTopics);
 
 adminRouter.delete("/:courseId", protect, isAdmin, deleteCourse);
 
 // Admin route to upload files
-adminRouter.post("/files", protect, upload.any(), uploadFiles);
+adminRouter.post("/files", protect, isAdmin, upload.any(), uploadFiles);
 
 // Admin route to edit exercises for a course
 adminRouter.put(
@@ -66,6 +67,15 @@ adminRouter.delete(
   protect,
   isAdmin,
   cleanupTempFiles,
+);
+
+// Admin route to upload image inside markdown notes
+adminRouter.post(
+  "/upload-image",
+  protect,
+  isAdmin,
+  upload.single("image"),
+  uploadTopicImage,
 );
 
 export default adminRouter;

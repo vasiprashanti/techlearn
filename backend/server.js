@@ -85,12 +85,10 @@ app.use(express.urlencoded({ extended: false }));
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// app.use(
-//   "/CoreJava_Images",
-//   express.static(
-//     path.join(__dirname, "markdown-content/CoreJava/CoreJava_Images")
-//   )
-// );
+// 🖼️ Uploaded images — served from the same directory multer writes to
+const uploadsServePath = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "uploads/temp");
+app.use("/uploads/temp", express.static(uploadsServePath));
+
 
 app.get("/", (req, res) => {
   res.send("Techlearn Backend API is running!");
