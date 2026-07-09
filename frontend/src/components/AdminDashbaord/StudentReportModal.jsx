@@ -38,7 +38,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
         // Fetch submissions
         try {
           const subs = await adminAPI.getStudentSubmissions(studentId);
-          setSubmissions(subs || []);
+          const submissionsList = Array.isArray(subs) ? subs : (subs?.submissions || []);
+          setSubmissions(submissionsList);
         } catch (subErr) {
           console.error("Failed to load student submissions", subErr);
         }
