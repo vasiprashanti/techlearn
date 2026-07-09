@@ -17,6 +17,63 @@ export const isJudge0Configured = () => {
   return !!getJudge0Config().url;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isJudge0TerminalStatus = (statusId) => Number(statusId) > 2;
+
+const executeCodeWithJudge0 = async ({
+  sourceCode,
+  languageId,
+  stdin = "",
+  timeoutMs = 45000,
+  pollIntervalMs = 1000,
+}) => {
+  const { url, headers } = getJudge0Config();
+  const baseUrl = url.replace(/\/+$/, "");
+  const createEndpoint = `${baseUrl}/submissions?base64_encoded=false`;
+
+  const createResponse = await axios.post(
+    createEndpoint,
+    {
+      source_code: sourceCode,
+      language_id: languageId,
+      stdin,
+    },
+    {
+      headers,
+      timeout: 15000,
+    }
+  );
+
+  if (createResponse.data?.status?.id) {
+    return createResponse.data;
+  }
+
+  const token = createResponse.data?.token;
+  if (!token) {
+    throw new Error("Judge0 did not return a submission token.");
+  }
+
+  const resultEndpoint = `${baseUrl}/submissions/${token}?base64_encoded=false`;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const resultResponse = await axios.get(resultEndpoint, {
+      headers,
+      timeout: 15000,
+    });
+
+    const statusId = resultResponse.data?.status?.id;
+    if (isJudge0TerminalStatus(statusId)) {
+      return resultResponse.data;
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  throw new Error("Judge0 execution timed out before returning a final result.");
+};
+
 const LANGUAGE_IDS = {
   html: 43,
   css: 44,
@@ -46,73 +103,14 @@ const testCodeWithJudge0 = async (
   input,
   expectedOutput
 ) => {
-  if (!isJudge0Configured()) {
-    console.warn("WARNING: Paid Judge0 configuration (JUDGE0_API_URL/KEY) is missing. Using mock test case verification with brace checks.");
-    
-    // Perform basic brace matching validation
-    const braces = { '(': ')', '{': '}', '[': ']' };
-    const stack = [];
-    let isBalanced = true;
-    for (const char of (sourceCode || "")) {
-      if (braces[char]) {
-        stack.push(char);
-      } else if (Object.values(braces).includes(char)) {
-        const last = stack.pop();
-        if (braces[last] !== char) {
-          isBalanced = false;
-          break;
-        }
-      }
-    }
-    if (stack.length > 0) isBalanced = false;
-
-    if (!isBalanced) {
-      return {
-        success: false,
-        passed: false,
-        outputMatches: false,
-        actualOutput: "",
-        expectedOutput,
-        error: "Compile Error: Unbalanced brackets, braces, or parentheses detected.",
-        statusId: 6,
-        statusDescription: "Compilation Error",
-        executionTime: 0.1,
-        memory: 1024,
-      };
-    }
-
-    return {
-      success: true,
-      passed: true,
-      outputMatches: true,
-      actualOutput: expectedOutput || "",
-      expectedOutput,
-      error: "",
-      statusId: 3,
-      statusDescription: "Accepted",
-      executionTime: 0.1,
-      memory: 1024,
-    };
-  }
-
-  const { url, headers } = getJudge0Config();
-  const judge0Endpoint = `${url}/submissions?base64_encoded=false&wait=true`;
-
   try {
-    const response = await axios.post(
-      judge0Endpoint,
-      {
-        source_code: sourceCode,
-        language_id: languageId,
-        stdin: input || "",
-      },
-      {
-        headers,
-        timeout: 30000, // 30 second timeout
-      }
-    );
+    const result = await executeCodeWithJudge0({
+      sourceCode,
+      languageId,
+      stdin: input || "",
+    });
 
-    const { stdout, stderr, status, compile_output } = response.data;
+    const { stdout, stderr, status, compile_output } = result;
 
     // Check if execution was successful
     const isAccepted = status.id === 3; // Status 3 = Accepted
@@ -133,8 +131,8 @@ const testCodeWithJudge0 = async (
       error: stderr || compile_output || "",
       statusId: status.id,
       statusDescription: status.description,
-      executionTime: response.data.time || null, // Add execution time if available
-      memory: response.data.memory || null, // Add execution memory if available
+      executionTime: result.time || null, // Add execution time if available
+      memory: result.memory || null, // Add execution memory if available
     };
   } catch (error) {
     console.error("Judge0 API Error:", error.message);
@@ -158,5 +156,5 @@ const testCodeWithJudge0 = async (
   }
 };
 
-export { testCodeWithJudge0, normalizeOutput, LANGUAGE_IDS };
+export { testCodeWithJudge0, executeCodeWithJudge0, normalizeOutput, LANGUAGE_IDS };
 
