@@ -74,6 +74,7 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
           actualOutput: String,
           status: String,
           executionTime: Number,
+          memoryUsed: Number,
         },
       ],
       default: {},

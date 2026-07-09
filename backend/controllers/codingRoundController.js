@@ -257,7 +257,7 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
   const allTestCaseDetails = Array.from(submission.problemTestCaseResults?.entries?.() || [])
     .flatMap(([problemIndex, results = []]) =>
       (results || []).map((result) => ({
-        ...result,
+        ...(result.toObject ? result.toObject() : result),
         problemIndex: Number(problemIndex),
       }))
     );
@@ -274,6 +274,9 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
           : hasSubmittedProblems
             ? "Failed"
             : "Pending";
+
+  const maxExecutionTime = allTestCaseDetails.reduce((max, tc) => Math.max(max, Number(tc.executionTime || 0)), 0);
+  const maxMemoryUsed = allTestCaseDetails.reduce((max, tc) => Math.max(max, Number(tc.memoryUsed || tc.memory || 0)), 0);
 
   return Submission.findOneAndUpdate(
     { attemptId: attempt._id },
@@ -293,7 +296,8 @@ const upsertChallengeSubmissionRecord = async ({ codingRound, student, attempt, 
         xpEarned: finalXpEarned,
         status: nextStatus,
         submittedAt: submission.roundEndedAt || submission.lastSubmissionAt || new Date(),
-        executionTime: 0,
+        executionTime: maxExecutionTime,
+        memoryUsed: maxMemoryUsed,
         submittedCode: attempt.finalCode || null,
         language: attempt.finalLanguage || null,
         submissionType: "daily_challenge",
@@ -1174,6 +1178,42 @@ export const submitCodingRoundAnswers = async (req, res) => {
       });
     }
 
+    // Initialize or retrieve submission, and SAVE CODE FIRST
+    if (!submission) {
+      const problemCodes = new Map();
+      problemCodes.set(problemIndex.toString(), submittedCode);
+      const problemLanguages = new Map();
+      problemLanguages.set(problemIndex.toString(), language);
+
+      submission = new StudentCodingSubmission({
+        codingRoundId: codingRound._id,
+        studentId: participant?.student?._id || null,
+        batchId: challengeAttempt?.batchId || codingRound.batchId || null,
+        trackId: challengeAttempt?.trackId || codingRound.trackId || null,
+        questionId: codingRound.questionId || null,
+        attemptId: challengeAttempt?._id || null,
+        studentEmail: normalizedEmail,
+        problemCodes,
+        problemLanguages,
+        totalScore: 0,
+        lastSubmissionAt: new Date(),
+      });
+    } else {
+      if (!submission.problemCodes) submission.problemCodes = new Map();
+      if (!submission.problemLanguages) submission.problemLanguages = new Map();
+
+      submission.problemCodes.set(problemIndex.toString(), submittedCode);
+      submission.problemLanguages.set(problemIndex.toString(), language);
+
+      submission.studentId = submission.studentId || participant?.student?._id || null;
+      submission.batchId = submission.batchId || challengeAttempt?.batchId || codingRound.batchId || null;
+      submission.trackId = submission.trackId || challengeAttempt?.trackId || codingRound.trackId || null;
+      submission.questionId = submission.questionId || codingRound.questionId || null;
+      submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
+      submission.lastSubmissionAt = new Date();
+    }
+    await submission.save();
+
     let testsPassed = 0;
     let testsFailed = 0;
     let totalTests = 0;
@@ -1220,9 +1260,13 @@ export const submitCodingRoundAnswers = async (req, res) => {
       }
     } else {
       const allTestCases = [
-        ...(problem.visibleTestCases || []).map((testCase, index) => ({ ...testCase, visible: true, index })),
+        ...(problem.visibleTestCases || []).map((testCase, index) => ({
+          ...(testCase.toObject ? testCase.toObject() : testCase),
+          visible: true,
+          index,
+        })),
         ...(problem.hiddenTestCases || []).map((testCase, index) => ({
-          ...testCase,
+          ...(testCase.toObject ? testCase.toObject() : testCase),
           visible: false,
           index: (problem.visibleTestCases || []).length + index,
         })),
@@ -1254,6 +1298,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
             actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
             status: testResult.statusDescription || "",
             executionTime: Number(testResult.executionTime || 0),
+            memoryUsed: Number(testResult.memory || 0),
           });
         } catch (error) {
           testsFailed++;
@@ -1265,6 +1310,7 @@ export const submitCodingRoundAnswers = async (req, res) => {
             actualOutput: "",
             status: error?.message || "Execution Error",
             executionTime: 0,
+            memoryUsed: 0,
           });
         }
       }
@@ -1274,60 +1320,20 @@ export const submitCodingRoundAnswers = async (req, res) => {
     const problemScore = accuracy;
     const isCorrect = testsPassed === totalTests;
 
-    if (!submission) {
-      const problemScores = new Map();
-      problemScores.set(problemIndex.toString(), problemScore);
+    if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
+    if (!submission.problemScores) submission.problemScores = new Map();
+    if (!submission.problemTestCaseResults) submission.problemTestCaseResults = new Map();
 
-      const problemSubmitted = new Map();
-      problemSubmitted.set(problemIndex.toString(), true);
-      const problemTestCaseResults = new Map();
-      problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
-      const problemCodes = new Map();
-      problemCodes.set(problemIndex.toString(), submittedCode);
-      const problemLanguages = new Map();
-      problemLanguages.set(problemIndex.toString(), language);
+    submission.problemSubmitted.set(problemIndex.toString(), true);
+    submission.problemScores.set(problemIndex.toString(), problemScore);
+    submission.problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
 
-      submission = new StudentCodingSubmission({
-        codingRoundId: codingRound._id,
-        studentId: participant?.student?._id || null,
-        batchId: challengeAttempt?.batchId || codingRound.batchId || null,
-        trackId: challengeAttempt?.trackId || codingRound.trackId || null,
-        questionId: codingRound.questionId || null,
-        attemptId: challengeAttempt?._id || null,
-        studentEmail: normalizedEmail,
-        problemScores,
-        problemSubmitted,
-        problemTestCaseResults,
-        problemCodes,
-        problemLanguages,
-        totalScore: problemScore,
-        lastSubmissionAt: new Date(),
-      });
-    } else {
-      if (!submission.problemSubmitted) submission.problemSubmitted = new Map();
-      if (!submission.problemTestCaseResults) submission.problemTestCaseResults = new Map();
-      if (!submission.problemCodes) submission.problemCodes = new Map();
-      if (!submission.problemLanguages) submission.problemLanguages = new Map();
-
-      submission.problemSubmitted.set(problemIndex.toString(), true);
-      submission.problemScores.set(problemIndex.toString(), problemScore);
-      submission.problemTestCaseResults.set(problemIndex.toString(), testCaseDetails);
-      submission.problemCodes.set(problemIndex.toString(), submittedCode);
-      submission.problemLanguages.set(problemIndex.toString(), language);
-
-      submission.studentId = submission.studentId || participant?.student?._id || null;
-      submission.batchId = submission.batchId || challengeAttempt?.batchId || codingRound.batchId || null;
-      submission.trackId = submission.trackId || challengeAttempt?.trackId || codingRound.trackId || null;
-      submission.questionId = submission.questionId || codingRound.questionId || null;
-      submission.attemptId = submission.attemptId || challengeAttempt?._id || null;
-
-      let totalScore = 0;
-      for (const score of submission.problemScores.values()) {
-        totalScore += score;
-      }
-      submission.totalScore = totalScore;
-      submission.lastSubmissionAt = new Date();
+    let totalScore = 0;
+    for (const score of submission.problemScores.values()) {
+      totalScore += score;
     }
+    submission.totalScore = totalScore;
+    submission.lastSubmissionAt = new Date();
 
     await submission.save();
 
@@ -1680,7 +1686,7 @@ export const runCodingRoundAnswers = async (req, res) => {
     const runResults = [];
 
     for (const solution of solutions) {
-      const { problemIndex, language, submittedCode } = solution;
+      const { problemIndex, language, submittedCode, customInput } = solution;
 
       if (problemIndex === undefined || !language || !submittedCode) {
         return res.status(400).json({
@@ -1721,24 +1727,12 @@ export const runCodingRoundAnswers = async (req, res) => {
       }
 
       const runsCount = submission.problemRuns ? (submission.problemRuns.get(problemIndex.toString()) || 0) : 0;
-      const maxRuns = codingRound.challengeType === "daily_challenge"
-        ? DAILY_CHALLENGE_RULES.runLimitPerQuestion
-        : 5;
-      if (runsCount >= maxRuns) {
-        runResults.push({
-          problemIndex,
-          language,
-          success: false,
-          compileSuccess: false,
-          feedback: `Max runs exhausted (${maxRuns}/${maxRuns}) for this problem. Please submit.`
-        });
-        continue;
-      }
-
       if (!submission.problemRuns) submission.problemRuns = new Map();
       submission.problemRuns.set(problemIndex.toString(), runsCount + 1);
 
-      const simpleInput = problem.visibleTestCases?.length > 0 ? problem.visibleTestCases[0].input : "";
+      // Support customInput falling back to first visible test case input
+      const visibleTestCases = problem.visibleTestCases || question?.visibleTestCases || question?.content?.visibleTestCases || [];
+      const simpleInput = customInput !== undefined ? customInput : (visibleTestCases.length > 0 ? visibleTestCases[0].input : "");
       
       try {
         const result = await testCodeWithJudge0(
@@ -1748,19 +1742,22 @@ export const runCodingRoundAnswers = async (req, res) => {
           "" // No expected output check needed
         );
 
-        const compileSuccess = result.statusId === 3;
+        // Compile success means status is not Compilation Error (6)
+        const compileSuccess = result.statusId !== 6;
 
         runResults.push({
           problemIndex,
           language,
-          runsLeft: maxRuns - (runsCount + 1),
+          runsLeft: 999, // Unlimited runs support
           compileSuccess,
           actualOutput: result.actualOutput,
           error: result.error,
           executionTime: result.executionTime,
+          memory: result.memory,
+          statusDescription: result.statusDescription,
           feedback: compileSuccess 
-            ? "Code compiled successfully! You can now Submit." 
-            : `Execution Error: ${result.statusDescription}`
+            ? (result.statusId === 3 ? "Code compiled and executed successfully!" : `Run finished with status: ${result.statusDescription}`)
+            : `Compilation Error`
         });
       } catch (error) {
         console.error(`Error during simple execution:`, error);

@@ -85,6 +85,10 @@ const submissionSchema = new mongoose.Schema(
     },
 
     executionTime: Number,
+    memoryUsed: {
+      type: Number,
+      default: 0,
+    },
 
     status: {
       type: String,

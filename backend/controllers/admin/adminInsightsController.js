@@ -8,6 +8,7 @@ import TrackTemplate from "../../models/TrackTemplate.js";
 import Resource from "../../models/Resource.js";
 import UserProgress from "../../models/UserProgress.js";
 import DailyTaskAttempt from "../../models/DailyTaskAttempt.js";
+import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import Log from "../../models/Log.js";
 import AuditLog from "../../models/AuditLog.js";
@@ -478,7 +479,10 @@ export const getSubmissionDetailPage = async (req, res) => {
         .populate("batchId", "name")
         .populate("codingRoundId")
         .populate("questionId")
-        .populate("attemptId")
+        .populate({
+          path: "attemptId",
+          populate: { path: "finalSubmissionId" }
+        })
         .lean();
     }
 
@@ -499,6 +503,10 @@ export const getSubmissionDetailPage = async (req, res) => {
 
       const problems = challengeSub.codingRoundId?.problems || [];
 
+      const finalSub = challengeSub.attemptId?.finalSubmissionId;
+      const execTime = finalSub?.executionTime || 0;
+      const memUsed = finalSub?.memoryUsed || 0;
+
       return res.status(200).json({
         success: true,
         data: {
@@ -508,13 +516,17 @@ export const getSubmissionDetailPage = async (req, res) => {
           batch: challengeSub.batchId?.name || "Unknown Batch",
           question: challengeSub.questionId?.title || "Daily Challenge",
           status: challengeSub.totalScore > 0 ? "Evaluated" : "Not Started",
-          exec: "-",
+          exec: execTime ? `${execTime}ms` : "-",
+          executionTime: execTime,
+          memoryUsed: memUsed,
           when: challengeSub.lastSubmissionAt || challengeSub.submittedAt,
           isChallenge: true,
           startedAt: challengeSub.attemptId?.startedAt || challengeSub.createdAt,
           submittedAt: challengeSub.submittedAt || challengeSub.createdAt,
           dayNumber: challengeSub.codingRoundId?.dayNumber,
           challengeTitle: challengeSub.codingRoundId?.title || "Daily Challenge",
+          score: challengeSub.totalScore || 0,
+          xpEarned: challengeSub.xpEarned || 0,
           problems: problems.map((prob, idx) => {
             const codeStr = codes[idx.toString()] || "";
             const isStarter = !codeStr || !codeStr.trim() ||
@@ -561,10 +573,213 @@ export const getSubmissionDetailPage = async (req, res) => {
         code: submission.submittedCode || "",
         language: submission.language || "Code",
         isChallenge: false,
+        score: submission.totalScore || submission.accuracyScore || 0,
+        xpEarned: submission.xpEarned || 0,
       },
     });
   } catch (error) {
     console.error("getSubmissionDetailPage error:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch submission detail." });
+  }
+};
+
+export const updateSubmissionScoreAdmin = async (req, res) => {
+  try {
+    const { submissionId } = req.params;
+    const { newScore, newXp, action } = req.body;
+
+    let isChallenge = false;
+    let dbId = submissionId;
+
+    if (submissionId && submissionId.startsWith("coding-")) {
+      dbId = submissionId.replace("coding-", "");
+      isChallenge = true;
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(dbId)) {
+      return res.status(400).json({ success: false, message: "Invalid submission ID." });
+    }
+
+    // 1. Handle Reset Action
+    if (action === "reset") {
+      let studentId = null;
+      let trackId = null;
+      let oldXp = 0;
+
+      if (isChallenge) {
+        const challengeSub = await StudentCodingSubmission.findById(dbId);
+        if (!challengeSub) {
+          return res.status(404).json({ success: false, message: "Coding submission not found." });
+        }
+
+        studentId = challengeSub.studentId;
+        trackId = challengeSub.trackId;
+        
+        if (challengeSub.attemptId) {
+          const attemptIdToUse = challengeSub.attemptId._id || challengeSub.attemptId;
+          const subRecord = await Submission.findOne({ attemptId: attemptIdToUse }).select("xpEarned").lean();
+          oldXp = subRecord?.xpEarned || 0;
+          
+          // Reset the DailyChallengeAttempt
+          await DailyChallengeAttempt.findByIdAndUpdate(attemptIdToUse, {
+            $set: {
+              status: "started",
+              submittedAt: null,
+              endedAt: null,
+              finalCode: "",
+              finalLanguage: "",
+              codingSubmissionId: null,
+              finalSubmissionId: null,
+            }
+          });
+          // Also delete standard submission record
+          await Submission.deleteOne({ attemptId: attemptIdToUse });
+        }
+
+        // Delete the StudentCodingSubmission record
+        await StudentCodingSubmission.findByIdAndDelete(dbId);
+      } else {
+        const sub = await Submission.findById(dbId);
+        if (!sub) {
+          return res.status(404).json({ success: false, message: "Submission not found." });
+        }
+
+        studentId = sub.studentId;
+        trackId = sub.trackId;
+        oldXp = sub.xpEarned || 0;
+
+        // Reset/delete the submission
+        await Submission.findByIdAndDelete(dbId);
+
+        // If it's linked to an attempt, reset that attempt as well
+        if (sub.attemptId) {
+          const attemptIdToUse = sub.attemptId._id || sub.attemptId;
+          await DailyChallengeAttempt.findByIdAndUpdate(attemptIdToUse, {
+            $set: {
+              status: "started",
+              submittedAt: null,
+              endedAt: null,
+              finalCode: "",
+              finalLanguage: "",
+              codingSubmissionId: null,
+              finalSubmissionId: null,
+            }
+          });
+          await StudentCodingSubmission.deleteOne({ attemptId: attemptIdToUse });
+        }
+      }
+
+      // Deduct XP from UserProgress
+      const courseIdKey = String(trackId || "daily_challenge");
+      if (studentId && oldXp > 0) {
+        const studentObj = await Student.findById(studentId);
+        if (studentObj?.userId) {
+          const progress = await UserProgress.findOne({ userId: studentObj.userId });
+          if (progress) {
+            const currentXp = progress.exerciseXP.get(courseIdKey) || 0;
+            progress.exerciseXP.set(courseIdKey, Math.max(0, currentXp - oldXp));
+            await progress.save();
+          }
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Submission successfully reset and attempt reopened.",
+      });
+    }
+
+    // 2. Handle Edit Score Action
+    if (newScore === undefined || newScore < 0 || newScore > 100) {
+      return res.status(400).json({ success: false, message: "Invalid score. Score must be between 0 and 100." });
+    }
+
+    const targetXp = Number(newXp) >= 0 ? Number(newXp) : Math.round(newScore * 0.1);
+    let studentId = null;
+    let trackId = null;
+    let oldXp = 0;
+
+    if (isChallenge) {
+      const challengeSub = await StudentCodingSubmission.findById(dbId);
+      if (!challengeSub) {
+        return res.status(404).json({ success: false, message: "Coding submission not found." });
+      }
+
+      studentId = challengeSub.studentId;
+      trackId = challengeSub.trackId;
+      challengeSub.totalScore = newScore;
+      
+      if (!challengeSub.problemScores) challengeSub.problemScores = new Map();
+      challengeSub.problemScores.set("0", newScore);
+      await challengeSub.save();
+
+      // Find and update the corresponding standard Submission record
+      if (challengeSub.attemptId) {
+        const attemptIdToUse = challengeSub.attemptId._id || challengeSub.attemptId;
+        const sub = await Submission.findOne({ attemptId: attemptIdToUse });
+        if (sub) {
+          oldXp = sub.xpEarned || 0;
+          sub.totalScore = newScore;
+          sub.accuracyScore = newScore;
+          sub.xpEarned = targetXp;
+          sub.status = newScore >= 100 ? "Passed" : (newScore === 0 ? "Failed" : "PartialPass");
+          await sub.save();
+        }
+      }
+    } else {
+      const sub = await Submission.findById(dbId);
+      if (!sub) {
+        return res.status(404).json({ success: false, message: "Submission not found." });
+      }
+
+      studentId = sub.studentId;
+      trackId = sub.trackId;
+      oldXp = sub.xpEarned || 0;
+
+      sub.totalScore = newScore;
+      sub.accuracyScore = newScore;
+      sub.xpEarned = targetXp;
+      sub.status = newScore >= 100 ? "Passed" : (newScore === 0 ? "Failed" : "PartialPass");
+      await sub.save();
+
+      // If it's a coding challenge, also update the coding submission
+      if (sub.attemptId) {
+        const attemptIdToUse = sub.attemptId._id || sub.attemptId;
+        const challengeSub = await StudentCodingSubmission.findOne({ attemptId: attemptIdToUse });
+        if (challengeSub) {
+          challengeSub.totalScore = newScore;
+          if (!challengeSub.problemScores) challengeSub.problemScores = new Map();
+          challengeSub.problemScores.set("0", newScore);
+          await challengeSub.save();
+        }
+      }
+    }
+
+    // Update UserProgress with difference in XP
+    const courseIdKey = String(trackId || "daily_challenge");
+    const deltaXp = targetXp - oldXp;
+    if (studentId && deltaXp !== 0) {
+      const studentObj = await Student.findById(studentId);
+      if (studentObj?.userId) {
+        const progress = await UserProgress.findOne({ userId: studentObj.userId });
+        if (progress) {
+          const currentXp = progress.exerciseXP.get(courseIdKey) || 0;
+          progress.exerciseXP.set(courseIdKey, Math.max(0, currentXp + deltaXp));
+          await progress.save();
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Submission score updated successfully.",
+      data: {
+        newScore,
+        newXp: targetXp,
+      }
+    });
+  } catch (error) {
+    console.error("updateSubmissionScoreAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update submission score." });
   }
 };

@@ -414,6 +414,11 @@ export const adminAPI = {
   issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
   revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
   restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
+
+  getCertificates: () => request('/admin/certificates'),
+  issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
+  revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
+  restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
   saveFinalTest: (testId, body) => request(testId ? `/admin/certificates/final-tests/${testId}` : '/admin/certificates/final-tests', {
     method: testId ? 'PUT' : 'POST',
     body: JSON.stringify(body),
@@ -421,6 +426,7 @@ export const adminAPI = {
 
   getSubmissions: () => request('/admin/submissions'),
   getSubmission: (submissionId) => request(`/admin/submissions/${submissionId}`),
+  updateSubmissionScore: (submissionId, body) => request(`/admin/submissions/${submissionId}/score`, { method: 'PUT', body: JSON.stringify(body) }),
   getNotifications: () => request('/admin/notifications'),
   createNotification: (body) => request('/admin/notifications', { method: 'POST', body: JSON.stringify(body) }),
   deleteNotification: (notificationId) => request(`/admin/notifications/${notificationId}`, { method: 'DELETE' }),

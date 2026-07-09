@@ -3,7 +3,7 @@ import axios from "axios";
 import Exercise from "../models/Exercise.js";
 import UserProgress from "../models/UserProgress.js";
 import Course from "../models/Course.js";
-import { LANGUAGE_IDS } from "../utils/judgeUtil.js";
+import { LANGUAGE_IDS, getJudge0Config, isJudge0Configured } from "../utils/judgeUtil.js";
 
 // This function manually marks exercises as completed without code validation
 export const submitExercise = async (req, res) => {
@@ -125,8 +125,8 @@ export const submitExerciseCode = async (req, res) => {
     const expectedProgramOutput = exercise.expectedProgramOutput?.trim(); // For validation
     const inputToUse = input || exercise.input || "";
 
-    if (!process.env.JUDGE0_RAPIDAPI_KEY) {
-      console.warn("WARNING: JUDGE0_RAPIDAPI_KEY is not defined in .env. Returning mock response for practice submission.");
+    if (!isJudge0Configured()) {
+      console.warn("WARNING: Judge0 configuration is missing. Returning mock response for practice submission.");
       return res.json({
         success: true,
         message: "Submission evaluated successfully (Mock)",
@@ -137,9 +137,12 @@ export const submitExerciseCode = async (req, res) => {
       });
     }
 
+    const { url, headers } = getJudge0Config();
+    const judgeUrl = `${url}/submissions?base64_encoded=false&wait=true`;
+
     // Submit to Judge0 API
     const submission = await axios.post(
-      "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true",
+      judgeUrl,
       {
         source_code: code,
         language_id: languageId,
@@ -147,11 +150,7 @@ export const submitExerciseCode = async (req, res) => {
         expected_output: expectedProgramOutput, // Use program output for Judge0 validation
       },
       {
-        headers: {
-          "Content-Type": "application/json",
-          "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-          "X-RapidAPI-Key": process.env.JUDGE0_RAPIDAPI_KEY,
-        },
+        headers,
       }
     );
 

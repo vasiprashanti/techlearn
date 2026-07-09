@@ -353,6 +353,7 @@ export default function DailyChallengeTest() {
 
   const handleRun = async () => {
     if (!problem || !studentEmail) return;
+    if (running || submitting) return;
     if (!code.trim()) {
       setOutput("Please write code before running.");
       return;
@@ -766,7 +767,7 @@ export default function DailyChallengeTest() {
                   Coding Round
                 </span>
                 <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  Runs left: {typeof runsLeft === "number" ? runsLeft : "5"}
+                  Runs: Unlimited
                 </span>
               </div>
             </div>
@@ -930,7 +931,7 @@ export default function DailyChallengeTest() {
       {/* Fixed Footer Action Bar */}
       <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
         <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap min-w-[80px] sm:min-w-[120px]">
-          {!isMcq ? `Runs left: ${typeof runsLeft === "number" ? runsLeft : "5"}` : ""}
+          {!isMcq ? "Runs: Unlimited" : ""}
         </div>
         
         <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap flex-grow flex justify-center">

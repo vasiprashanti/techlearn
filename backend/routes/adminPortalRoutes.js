@@ -7,6 +7,7 @@ import {
   getSubmissionDetailPage,
   getSystemHealthPage,
   listSubmissionsPage,
+  updateSubmissionScoreAdmin,
 } from "../controllers/admin/adminInsightsController.js";
 import {
   activateBatchAdmin,
@@ -159,6 +160,7 @@ router.put("/certificates/templates/:templateId", createOrUpdateCertificateTempl
 
 router.get("/submissions", listSubmissionsPage);
 router.get("/submissions/:submissionId", getSubmissionDetailPage);
+router.put("/submissions/:submissionId/score", updateSubmissionScoreAdmin);
 
 router.get("/notifications", listNotificationsAdmin);
 router.post("/notifications", createNotificationAdmin);

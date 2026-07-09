@@ -1,12 +1,24 @@
 import axios from "axios";
 
-// Judge0 API configuration
-const JUDGE0_API =
-  "https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true";
-const JUDGE0_HEADERS = {
-  "Content-Type": "application/json",
-  "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
-  "X-RapidAPI-Key": process.env.RAPIDAPI_KEY,
+// Unified Judge0 paid plan config resolver
+export const getJudge0Config = () => {
+  const url = process.env.JUDGE0_API_URL || "https://api.judge0.com";
+  const headers = { "Content-Type": "application/json" };
+  
+  const key = process.env.JUDGE0_API_KEY || process.env.JUDGE0_AUTH_TOKEN;
+  if (key) {
+    headers["X-Auth-Token"] = key;
+  }
+  
+  return { url, headers };
+};
+
+export const isJudge0Configured = () => {
+  return !!(
+    process.env.JUDGE0_API_URL ||
+    process.env.JUDGE0_API_KEY ||
+    process.env.JUDGE0_AUTH_TOKEN
+  );
 };
 
 const LANGUAGE_IDS = {
@@ -20,6 +32,9 @@ const LANGUAGE_IDS = {
   c: 50,
   cpp: 54,
   "c++": 54,
+  sql: 82,
+  sqlite: 82,
+  postgresql: 83,
 };
 
 // Simple function to normalize output for comparison
@@ -35,8 +50,8 @@ const testCodeWithJudge0 = async (
   input,
   expectedOutput
 ) => {
-  if (!process.env.RAPIDAPI_KEY) {
-    console.warn("WARNING: RAPIDAPI_KEY is missing. Using mock test case verification with brace checks.");
+  if (!isJudge0Configured()) {
+    console.warn("WARNING: Paid Judge0 configuration (JUDGE0_API_URL/KEY) is missing. Using mock test case verification with brace checks.");
     
     // Perform basic brace matching validation
     const braces = { '(': ')', '{': '}', '[': ']' };
@@ -66,6 +81,7 @@ const testCodeWithJudge0 = async (
         statusId: 6,
         statusDescription: "Compilation Error",
         executionTime: 0.1,
+        memory: 1024,
       };
     }
 
@@ -79,19 +95,23 @@ const testCodeWithJudge0 = async (
       statusId: 3,
       statusDescription: "Accepted",
       executionTime: 0.1,
+      memory: 1024,
     };
   }
 
+  const { url, headers } = getJudge0Config();
+  const judge0Endpoint = `${url}/submissions?base64_encoded=false&wait=true`;
+
   try {
     const response = await axios.post(
-      JUDGE0_API,
+      judge0Endpoint,
       {
         source_code: sourceCode,
         language_id: languageId,
         stdin: input || "",
       },
       {
-        headers: JUDGE0_HEADERS,
+        headers,
         timeout: 30000, // 30 second timeout
       }
     );
@@ -118,6 +138,7 @@ const testCodeWithJudge0 = async (
       statusId: status.id,
       statusDescription: status.description,
       executionTime: response.data.time || null, // Add execution time if available
+      memory: response.data.memory || null, // Add execution memory if available
     };
   } catch (error) {
     console.error("Judge0 API Error:", error.message);
@@ -136,8 +157,10 @@ const testCodeWithJudge0 = async (
       statusId: null,
       statusDescription: isRateLimited ? "Compiler Rate Limited" : "API Error",
       executionTime: null,
+      memory: null,
     };
   }
 };
 
 export { testCodeWithJudge0, normalizeOutput, LANGUAGE_IDS };
+

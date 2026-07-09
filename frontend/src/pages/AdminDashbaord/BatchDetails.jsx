@@ -1618,7 +1618,7 @@ const BatchDetails = () => {
                 </div>
 
                 {reviewSubmission.isChallenge ? (
-                  <div className="px-6 pb-6 max-h-[400px] overflow-y-auto space-y-4">
+                  <div className="px-6 pb-6 max-h-[350px] overflow-y-auto space-y-4">
                     <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold mb-2">Student Solutions</p>
                     {(!reviewSubmission.problems || reviewSubmission.problems.length === 0) ? (
                       <div className="text-center py-10 border border-dashed border-black/10 dark:border-white/10 rounded-xl bg-black/5 dark:bg-black/25">
@@ -1649,12 +1649,71 @@ const BatchDetails = () => {
                               </div>
                             </button>
                             {isExpanded && (
-                              <div className="p-4 bg-white/40 dark:bg-black/15">
+                              <div className="p-4 bg-white/40 dark:bg-black/15 space-y-4">
                                 {prob.hasRun || prob.submitted ? (
-                                  <div>
-                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Compiler State:</p>
-                                    <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[220px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
-                                  </div>
+                                  <>
+                                    <div>
+                                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">Submitted Code:</p>
+                                      <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[200px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{prob.code}</pre>
+                                    </div>
+
+                                    {prob.testCases && prob.testCases.length > 0 && (
+                                      <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/5">
+                                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Test Case Results:</p>
+                                        <div className="space-y-2">
+                                          {prob.testCases.filter(tc => tc.visible).map((tc, tcIdx) => (
+                                            <div key={tcIdx} className="text-xs border border-black/5 dark:border-white/5 rounded-lg p-2.5 bg-black/[0.01] dark:bg-white/[0.01]">
+                                              <div className="flex justify-between items-center font-medium">
+                                                <span className="text-slate-600 dark:text-slate-400">Visible Case #{tc.index !== undefined ? tc.index + 1 : tcIdx + 1}</span>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tc.passed ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"}`}>
+                                                  {tc.passed ? "Passed" : (tc.status || "Failed")}
+                                                </span>
+                                              </div>
+                                              <div className="flex gap-4 mt-1.5 text-slate-500 dark:text-slate-400">
+                                                <span>Time: {tc.executionTime !== undefined ? `${tc.executionTime}s` : "-"}</span>
+                                                <span>Memory: {tc.memoryUsed !== undefined ? `${tc.memoryUsed} KB` : "-"}</span>
+                                              </div>
+                                              {!tc.passed && tc.actualOutput && (
+                                                <div className="mt-2 grid grid-cols-2 gap-2 p-2 bg-red-500/5 dark:bg-red-500/10 border border-red-500/10 rounded-lg font-mono text-[10px]">
+                                                  <div>
+                                                    <span className="text-red-700 dark:text-red-400 font-semibold block mb-0.5">Expected:</span>
+                                                    <span className="text-slate-800 dark:text-slate-300">{tc.expectedOutput || "[Empty]"}</span>
+                                                  </div>
+                                                  <div>
+                                                    <span className="text-red-700 dark:text-red-400 font-semibold block mb-0.5">Actual:</span>
+                                                    <span className="text-slate-800 dark:text-slate-300">{tc.actualOutput || "[Empty]"}</span>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        {(() => {
+                                          const hiddenCases = prob.testCases.filter(tc => !tc.visible);
+                                          if (hiddenCases.length === 0) return null;
+                                          const hiddenPassed = hiddenCases.filter(tc => tc.passed).length;
+                                          const maxTime = Math.max(...hiddenCases.map(tc => tc.executionTime || 0));
+                                          const maxMem = Math.max(...hiddenCases.map(tc => tc.memoryUsed || 0));
+
+                                          return (
+                                            <div className="text-xs border border-black/5 dark:border-white/5 rounded-lg p-2.5 bg-black/[0.01] dark:bg-white/[0.01] space-y-1">
+                                              <div className="flex justify-between items-center font-medium">
+                                                <span className="text-slate-600 dark:text-slate-400 font-semibold">Hidden Test Cases Summary</span>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
+                                                  Passed: {hiddenPassed} / {hiddenCases.length}
+                                                </span>
+                                              </div>
+                                              <div className="flex gap-4 text-slate-500 dark:text-slate-400">
+                                                <span>Max Execution Time: {maxTime ? `${maxTime}s` : "-"}</span>
+                                                <span>Max Memory: {maxMem ? `${maxMem} KB` : "-"}</span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+                                  </>
                                 ) : (
                                   <p className="text-xs italic text-gray-500 py-2">User did not attempt it</p>
                                 )}
@@ -1667,14 +1726,75 @@ const BatchDetails = () => {
                   </div>
                 ) : (
                   reviewSubmission.code && (
-                    <div className="px-6 pb-6">
+                    <div className="px-6 pb-6 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                          <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Execution Time</p>
+                          <p className="text-sm mt-1 text-black/75 dark:text-white/80">{reviewSubmission.exec || "-"}</p>
+                        </div>
+                        <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
+                          <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold">Memory Used</p>
+                          <p className="text-sm mt-1 text-black/75 dark:text-white/80">{reviewSubmission.memoryUsed ? `${reviewSubmission.memoryUsed} KB` : "-"}</p>
+                        </div>
+                      </div>
                       <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-white/60 dark:bg-white/5">
-                        <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold mb-2">Submitted Code</p>
+                        <p className="text-xs text-black/45 dark:text-white/40 uppercase font-semibold mb-2">Submitted Code ({reviewSubmission.language || 'Code'})</p>
                         <pre className="text-xs font-mono bg-black/5 dark:bg-black/35 p-3 rounded-lg overflow-x-auto max-h-[300px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">{reviewSubmission.code}</pre>
                       </div>
                     </div>
                   )
                 )}
+
+                {/* Score & XP Editor footer */}
+                <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <label htmlFor="modalEditScore" className="text-xs font-semibold text-slate-500 dark:text-slate-400">Score:</label>
+                      <input
+                        id="modalEditScore"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={editScore}
+                        onChange={(e) => setEditScore(e.target.value)}
+                        disabled={actionLoading}
+                        className="w-16 rounded border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 text-center font-bold"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <label htmlFor="modalEditXp" className="text-xs font-semibold text-slate-500 dark:text-slate-400">XP:</label>
+                      <input
+                        id="modalEditXp"
+                        type="number"
+                        min="0"
+                        value={editXp}
+                        placeholder={reviewSubmission.xpEarned !== undefined ? reviewSubmission.xpEarned.toString() : ""}
+                        onChange={(e) => setEditXp(e.target.value)}
+                        disabled={actionLoading}
+                        className="w-16 rounded border border-black/10 dark:border-white/10 px-2 py-1 text-xs text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 text-center font-bold"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUpdateScore}
+                      disabled={actionLoading}
+                      className="rounded bg-[#3C83F6] hover:bg-blue-600 disabled:opacity-60 text-white font-semibold text-xs px-3.5 py-1.5 transition-all shadow-sm"
+                    >
+                      {actionLoading ? "Saving..." : "Update Score"}
+                    </button>
+                  </div>
+                  
+                  {reviewSubmission.id && (
+                    <button
+                      type="button"
+                      onClick={handleResetAttempt}
+                      disabled={actionLoading}
+                      className="rounded border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-60 font-semibold text-xs px-3.5 py-1.5 transition-all shadow-sm"
+                    >
+                      Reset Attempt
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>
