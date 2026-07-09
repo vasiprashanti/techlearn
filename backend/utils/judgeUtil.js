@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Unified Judge0 paid plan config resolver
 export const getJudge0Config = () => {
-  const url = process.env.JUDGE0_API_URL || "https://api.judge0.com";
+  const url = process.env.JUDGE0_API_URL || "https://ce.judge0.com";
   const headers = { "Content-Type": "application/json" };
   
   const key = process.env.JUDGE0_API_KEY || process.env.JUDGE0_AUTH_TOKEN;
