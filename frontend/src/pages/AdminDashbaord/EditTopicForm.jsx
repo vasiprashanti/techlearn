@@ -13,7 +13,6 @@ const EditTopicForm = () => {
   const [topicName, setTopicName] = useState("");
   const [notesBody, setNotesBody] = useState("");
   const [notesFile, setNotesFile] = useState(null);
-  const [mcqFile, setMcqFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -104,7 +103,6 @@ const EditTopicForm = () => {
       formData.append("topicName", topicName);
       formData.append("notesBody", notesBody);
       if (notesFile) formData.append("notesFile", notesFile);
-      if (mcqFile) formData.append("mcqFile", mcqFile);
       const token = localStorage.getItem("token");
       await axios.put(
         `${BASE_URL}/admin/topic/${topicId}`,
@@ -310,27 +308,7 @@ const EditTopicForm = () => {
                   )}
                 </div>
 
-                {/* MCQ File upload */}
-                <div className="pt-3 border-t border-black/5 dark:border-white/10 space-y-1.5">
-                  <h3 className="admin-section-heading">MCQ Quiz File</h3>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <label className="cursor-pointer font-semibold text-green-600 dark:text-green-400 hover:underline inline-flex items-center gap-2 text-sm">
-                      <HiOutlineUpload className="inline text-base" />
-                      <input
-                        type="file"
-                        accept=".md"
-                        className="hidden"
-                        onChange={(e) => setMcqFile(e.target.files?.[0] || null)}
-                      />
-                      Upload MCQ File (.md)
-                    </label>
-                    {mcqFile && (
-                      <p className="text-xs text-slate-500 max-w-xs truncate" title={mcqFile.name}>
-                        {mcqFile.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/5 dark:border-white/10 mt-4">

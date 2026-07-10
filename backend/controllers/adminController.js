@@ -557,7 +557,7 @@ export const uploadTopicImage = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No image file provided" });
     }
-    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/temp/${req.file.filename}`;
+    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/temp/${encodeURIComponent(req.file.filename)}`;
     return res.status(200).json({
       success: true,
       url: imageUrl,

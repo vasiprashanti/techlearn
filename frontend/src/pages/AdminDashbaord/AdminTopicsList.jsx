@@ -15,8 +15,6 @@ const AdminTopicsList = () => {
   const [error, setError] = useState(null);
 
   const [courseTitle, setCourseTitle] = useState("");
-  const [exerciseFile, setExerciseFile] = useState(null);
-  const [exerciseStatus, setExerciseStatus] = useState("");
   const [uploading, setUploading] = useState(false);
   const navigate = useNavigate();
 
@@ -27,7 +25,6 @@ const AdminTopicsList = () => {
     topicName: "",
     notesBody: "",
     notesFile: null,
-    mcqFile: null,
   });
   const [editError, setEditError] = useState("");
   const [editSuccess, setEditSuccess] = useState("");
@@ -86,7 +83,6 @@ const AdminTopicsList = () => {
   const [addTopicForm, setAddTopicForm] = useState({
     topicName: "",
     notesFile: null,
-    mcqFile: null,
   });
   const [addError, setAddError] = useState("");
   const [addSuccess, setAddSuccess] = useState("");
@@ -194,17 +190,14 @@ const AdminTopicsList = () => {
       // 1. Upload files first
       const formData = new FormData();
       formData.append("notesFile0", addTopicForm.notesFile);
-      if (addTopicForm.mcqFile) {
-        formData.append("mcqFile0", addTopicForm.mcqFile);
-      }
 
       const topicTitles = [addTopicForm.topicName.trim()];
       formData.append("titles", JSON.stringify(topicTitles));
 
       const mcqFilesInfo = [{
         index: 0,
-        hasMcq: !!addTopicForm.mcqFile,
-        mcqFileName: addTopicForm.mcqFile ? addTopicForm.mcqFile.name : ""
+        hasMcq: false,
+        mcqFileName: ""
       }];
       formData.append("mcqFilesInfo", JSON.stringify(mcqFilesInfo));
 
@@ -225,9 +218,9 @@ const AdminTopicsList = () => {
       const finalTopics = [{
         title: uploadedTopic.title || addTopicForm.topicName.trim(),
         noteFile: addTopicForm.notesFile.name,
-        mcqFile: addTopicForm.mcqFile ? addTopicForm.mcqFile.name : "",
+        mcqFile: "",
         notesFilePath: uploadedTopic.notesFilePath || null,
-        mcqFilePath: uploadedTopic.mcqFilePath || null,
+        mcqFilePath: null,
         index: targetIndex
       }];
 
@@ -280,7 +273,6 @@ const AdminTopicsList = () => {
         setAddTopicForm({
           topicName: "",
           notesFile: null,
-          mcqFile: null,
         });
       }, 1000);
 
@@ -298,7 +290,6 @@ const AdminTopicsList = () => {
       topicName: topic.topicName || "",
       notesBody: topic.notesContent || "",
       notesFile: null,
-      mcqFile: null,
     });
     setEditError("");
     setEditSuccess("");
@@ -350,9 +341,6 @@ const AdminTopicsList = () => {
       formData.append("notesBody", editTopicForm.notesBody);
       if (editTopicForm.notesFile) {
         formData.append("notesFile", editTopicForm.notesFile);
-      }
-      if (editTopicForm.mcqFile) {
-        formData.append("mcqFile", editTopicForm.mcqFile);
       }
 
       const token = localStorage.getItem("token");
@@ -426,55 +414,14 @@ const AdminTopicsList = () => {
     }
   };
 
-  const handleExerciseFileChange = (file) => {
-    setExerciseFile(file);
-    if (file) {
-      setExerciseStatus(`Selected file: ${file.name}`);
-    } else {
-      setExerciseStatus("");
-    }
-  };
 
-  const handleFileUpload = async (e) => {
-    e.preventDefault();
-    if (!exerciseFile) {
-      alert("Please select a file first.");
-      return;
-    }
-    const formData = new FormData();
-    formData.append("exerciseFile", exerciseFile);
-
-    try {
-      setUploading(true);
-      const token = localStorage.getItem("token");
-      await axios.put(
-        `${BASE_URL}/admin/${courseId}/exercise`,
-        formData,
-        token
-          ? {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          : {}
-      );
-      alert("Exercises updated successfully!");
-      setExerciseStatus(`Uploaded: ${exerciseFile.name}`);
-      setExerciseFile(null);
-    } catch (err) {
-      alert("Failed to update exercises.");
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const cardFormInputClass = "mt-1 w-full px-3 py-2.5 text-sm rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
   const categoryFormInputClass = "mt-1 w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/60 dark:bg-white/5 text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35";
   const dropdownOptionClass = "bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white";
   const configCardClass = "rounded-xl border border-black/5 dark:border-white/10 bg-white dark:bg-[#0f1f43] overflow-hidden";
 
-  if (loading && topics.length === 0 && !exerciseFile) {
+  if (loading && topics.length === 0) {
     return (
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? "dark" : "light"}`}>
         <div
@@ -583,24 +530,7 @@ const AdminTopicsList = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md) (Optional)</label>
-                  <div className="mt-1 flex items-center gap-3">
-                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                      <HiOutlineUpload className="text-sm" />
-                      <input
-                        type="file"
-                        accept=".csv,.md"
-                        className="hidden"
-                        onChange={(e) => setAddTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
-                      />
-                      Choose Quiz
-                    </label>
-                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                      {addTopicForm.mcqFile ? addTopicForm.mcqFile.name : "No file chosen"}
-                    </span>
-                  </div>
-                </div>
+
 
                 {addError && (
                   <p className="text-xs text-red-500">{addError}</p>
@@ -755,24 +685,7 @@ const AdminTopicsList = () => {
                   )}
                 </div>
 
-                <div>
-                  <label className="admin-micro-label text-black/50 dark:text-white/50">MCQ Quiz File (.csv / .md)</label>
-                  <div className="mt-1 flex items-center gap-3">
-                    <label className="cursor-pointer bg-white/80 dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-[#3C83F6] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                      <HiOutlineUpload className="text-sm" />
-                      <input
-                        type="file"
-                        accept=".csv,.md"
-                        className="hidden"
-                        onChange={(e) => setEditTopicForm(prev => ({ ...prev, mcqFile: e.target.files?.[0] || null }))}
-                      />
-                      Choose Quiz
-                    </label>
-                    <span className="text-xs text-slate-400 truncate max-w-[200px]">
-                      {editTopicForm.mcqFile ? editTopicForm.mcqFile.name : "No file chosen"}
-                    </span>
-                  </div>
-                </div>
+
 
                 {editError && (
                   <p className="text-xs text-red-500">{editError}</p>
@@ -1025,52 +938,7 @@ const AdminTopicsList = () => {
                 </form>
               </div>
 
-              {/* Upload Exercise File */}
-              <div className={configCardClass}>
-                <div className="flex items-center gap-3 px-5 py-4 border-b border-black/5 dark:border-white/10">
-                  <div className="w-8 h-8 rounded-xl bg-[#e8eef5] dark:bg-[#1a3a66] flex items-center justify-center shrink-0">
-                    <FiFileText className="w-4 h-4 text-[#3C83F6] dark:text-blue-300" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm md:text-[15px] font-semibold text-[#0b1b38] dark:text-white">Upload Exercise File</h3>
-                    <p className="text-[11px] md:text-xs text-[#5f7592] dark:text-slate-300">Configure or replace the exercise challenge sheet (.md file).</p>
-                  </div>
-                </div>
 
-                <form onSubmit={handleFileUpload} className="p-5 space-y-3">
-                  <div>
-                    <label className="admin-micro-label text-black/45 dark:text-white/45">Exercise Sheet (.md)</label>
-                    <div className="mt-1 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-black/10 dark:border-white/10 bg-[#f5f8fc] dark:bg-[#122b52] p-3">
-                      <label className="cursor-pointer shrink-0 border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] px-3 py-2 rounded-lg text-xs font-semibold text-[#3C83F6] dark:text-[#8fd9ff] hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition inline-flex items-center gap-1.5">
-                        <HiOutlineUpload className="text-sm" />
-                        <input
-                          type="file"
-                          accept=".md"
-                          className="hidden"
-                          onChange={(e) => handleExerciseFileChange(e.target.files?.[0] || null)}
-                        />
-                        Choose File
-                      </label>
-                      <span className="flex-1 text-xs text-slate-500 dark:text-slate-400 truncate min-w-0">
-                        {exerciseFile ? exerciseFile.name : "No file chosen"}
-                      </span>
-                      <button
-                        type="submit"
-                        className="dashboard-primary-btn h-9 px-4 text-xs shrink-0 disabled:opacity-50 sm:ml-auto"
-                        disabled={uploading || !exerciseFile}
-                      >
-                        {uploading ? "Uploading..." : "Submit"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {exerciseStatus && (
-                    <p className="text-xs text-slate-500 dark:text-slate-300 truncate px-1" title={exerciseStatus}>
-                      {exerciseStatus}
-                    </p>
-                  )}
-                </form>
-              </div>
 
             </div>
 
@@ -1143,7 +1011,7 @@ const AdminTopicsList = () => {
                                 <button
                                   onClick={() => {
                                     setSelectedSlotIndex(slotIndex);
-                                    setAddTopicForm({ topicName: "", notesFile: null, mcqFile: null });
+                                    setAddTopicForm({ topicName: "", notesFile: null });
                                     setAddError("");
                                     setAddSuccess("");
                                     setShowAddModal(true);
