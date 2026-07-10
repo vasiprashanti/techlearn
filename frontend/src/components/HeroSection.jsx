@@ -11,7 +11,7 @@ const HeroSection = () => {
         <div className="grid lg:grid-cols-[2fr_1fr] gap-12 items-center min-h-[480px]">
           {/* Left Content */}
           <div className="relative z-10 text-left lg:text-left">
-            <h1 className="font-press-start text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-medium tracking-tight mb-6 leading-[1.1] overflow-visible">
+            <h1 className="font-press-start text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 leading-[1.4] overflow-visible">
               <span
                 ref={titleRef}
                 className={`brand-heading-primary hover-gradient-text italic pr-2 ${
