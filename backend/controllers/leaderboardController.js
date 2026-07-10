@@ -96,8 +96,9 @@ export const getPublicLeaderboard = async (req, res) => {
           : 0;
 
         const solvedCount = (
-          (practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
-          (collegeMcqSolvedByEmail.get(email) || 0) ||
+          // Explicit parentheses to avoid (a + b || c) being parsed as (a + (b || c))
+          ((practiceSolvedByUserId.get(String(row.userId._id)) || 0) +
+           (collegeMcqSolvedByEmail.get(email) || 0)) ||
           completedExercises
         );
 

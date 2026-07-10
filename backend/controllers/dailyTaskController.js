@@ -393,22 +393,13 @@ export const submitDailyTask = async (req, res) => {
 
     const totalXpAdded = xpEarned + bonusXp;
 
-    // Update UserProgress collection
-    let progress = await UserProgress.findOne({ userId });
-    if (!progress) {
-      progress = new UserProgress({
-        userId,
-        courseXP: new Map(),
-        exerciseXP: new Map(),
-        completedExercises: [],
-      });
-    }
-
-    // Add to exerciseXP under the batch track ID key
+    // Update UserProgress atomically using $inc to prevent race-condition double-XP
     const courseIdKey = String(trackTemplate._id);
-    const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
-    progress.exerciseXP.set(courseIdKey, currentXP + totalXpAdded);
-    await progress.save();
+    await UserProgress.findOneAndUpdate(
+      { userId },
+      { $inc: { [`exerciseXP.${courseIdKey}`]: totalXpAdded } },
+      { upsert: true }
+    );
     invalidateDashboardCache(userId);
     await updateStudentStreak(email);
 

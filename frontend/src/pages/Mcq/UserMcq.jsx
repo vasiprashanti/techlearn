@@ -138,67 +138,60 @@ const UserMcq = () => {
   const [step, setStep] = useState("login"); // login → instructions → quiz → result
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
 
-  // Submit quiz results to backend
-  // Submit quiz results to backend
-const submitQuizResults = async () => {
-  try {
-    // Collect only selected options in the order of questions
-    const answers = quiz.questions.map((q, idx) => selectedAnswers[idx] ?? -1);
+  // Submit quiz results to backend — guarded by submitting flag to prevent double-submit
+  const submitQuizResults = async () => {
+    if (submitting || !quiz) return;
+    setSubmitting(true);
+    try {
+      // Collect only selected options in the order of questions
+      const answers = quiz.questions.map((q, idx) => selectedAnswers[idx] ?? -1);
 
-    const submissionData = {
-      email: userEmail,
-      answers
-    };
+      const submissionData = { email: userEmail, answers };
 
-    console.log("Submitting quiz results:", submissionData);
+      const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submissionData),
+      });
 
-    const res = await fetch(`${BASE_URL}/college-mcq/${linkId}/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(submissionData),
-    });
-
-    const data = await res.json();
-    console.log("Submission response:", res);
-    console.log("Submission response data:", data);
-
-    if (!res.ok) {
-      console.error("Failed to submit quiz results:", data.message);
-    } else {
-      console.log("Quiz submitted successfully:", data);
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Failed to submit quiz results:", data.message);
+      }
+    } catch (err) {
+      console.error("Error submitting quiz results:", err);
+    } finally {
+      setSubmitting(false);
     }
-  } catch (err) {
-    console.error("Error submitting quiz results:", err);
-  }
-};
+  };
 
 
-  // Timer effect
+  // Timer countdown effect — pure synchronous state update only
   useEffect(() => {
     if (step === "quiz" && timeLeft > 0) {
-      const timer = setInterval(async () => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            // Time's up - auto submit
-            (async () => {
-              await submitQuizResults(); // save result
-              setStep("result");
-            })();
-            return 0;
-          }
-          return prev - 1;
-        });
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => Math.max(0, prev - 1));
       }, 1000);
-
       return () => clearInterval(timer);
     }
   }, [step, timeLeft]);
+
+  // Auto-submit effect — fires when timer hits zero while in quiz step
+  useEffect(() => {
+    if (step === "quiz" && timeLeft === 0 && quiz) {
+      (async () => {
+        await submitQuizResults();
+        setStep("result");
+      })();
+    }
+  }, [timeLeft, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -214,11 +207,17 @@ const submitQuizResults = async () => {
   };
 
   const handleNext = async () => {
+    if (submitting) return; // Guard against double-click
     if (currentQuestion < quiz.questions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
     } else {
-      await submitQuizResults(); // ensure backend submission
-      setStep("result");
+      try {
+        await submitQuizResults();
+      } catch (err) {
+        console.error("Error on finish quiz:", err);
+      } finally {
+        setStep("result");
+      }
     }
   };
 
@@ -388,7 +387,7 @@ const submitQuizResults = async () => {
 
           {/* Options */}
           <div className="space-y-3">
-            {question.options.map((opt, idx) => (
+            {(question.options || []).map((opt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleAnswerSelect(idx)}
@@ -407,7 +406,7 @@ const submitQuizResults = async () => {
           <div className="flex justify-center">
             <button
               onClick={handleNext}
-              disabled={selectedAnswers[currentQuestion] === undefined}
+              disabled={selectedAnswers[currentQuestion] === undefined || submitting}
               className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 border border-blue-200/50 dark:border-blue-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {currentQuestion === quiz.questions.length - 1
