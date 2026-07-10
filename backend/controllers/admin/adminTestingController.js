@@ -51,6 +51,16 @@ const questionPayloads = [
     visibleTestCases: [{ input: "6\n1 2 2 3 3 3", output: "3" }],
     hiddenTestCases: [{ input: "5\n7 7 7 8 9", output: "3" }],
   },
+  {
+    title: "E2E SQL Sum Query",
+    description: "Write a SQL query that returns the value 12.",
+    difficulty: "Easy",
+    inputFormat: "No input.",
+    outputFormat: "One numeric value.",
+    visibleTestCases: [{ input: "", output: "12" }],
+    hiddenTestCases: [{ input: "", output: "12" }],
+    referenceLanguage: "sql",
+  },
 ];
 
 const upsertQuestion = async ({ category, payload }) => {
@@ -67,7 +77,7 @@ const upsertQuestion = async ({ category, payload }) => {
         isActive: true,
         trackType: "DSA",
         tags: ["E2E", "JUDGE0"],
-        referenceLanguage: "python",
+        referenceLanguage: payload.referenceLanguage || "python",
         content: {
           visibleTestCases: payload.visibleTestCases,
           hiddenTestCases: payload.hiddenTestCases,
