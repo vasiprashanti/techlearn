@@ -187,6 +187,11 @@ export const updateCourseShell = async (req, res) => {
       return res.status(400).json({ message: "Course title must be at least 1 character long" });
     }
 
+    const existingCourse = await Course.findById(courseId);
+    if (!existingCourse) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+
     let parsedBatchIds = assignedBatchIds;
     if (typeof assignedBatchIds === "string") {
       try {
@@ -201,15 +206,53 @@ export const updateCourseShell = async (req, res) => {
     if (description !== undefined) update.description = String(description).trim();
     if (level !== undefined) update.level = level;
     if (numTopics !== undefined) update.numTopics = Number(numTopics);
-    if (parsedBatchIds !== undefined) {
-      update.assignedBatchIds = Array.isArray(parsedBatchIds) ? parsedBatchIds.filter(Boolean) : [];
-    }
     if (courseType !== undefined) update.courseType = courseType;
     if (instructor !== undefined) update.instructor = instructor;
     if (duration !== undefined) update.duration = duration;
     if (schedule !== undefined) update.schedule = schedule;
     if (startDate !== undefined) update.startDate = startDate;
 
+    if (parsedBatchIds !== undefined) {
+      const newBatchIds = (Array.isArray(parsedBatchIds) ? parsedBatchIds.filter(Boolean) : []).map(String);
+      const oldBatchIds = (existingCourse.assignedBatchIds || []).map(String);
+
+      const addedBatchIds = newBatchIds.filter(id => !oldBatchIds.includes(id));
+      const removedBatchIds = oldBatchIds.filter(id => !newBatchIds.includes(id));
+
+      // Handle added batches: assign course
+      for (const batchId of addedBatchIds) {
+        const batch = await Batch.findById(batchId);
+        if (batch) {
+          const isAssigned = String(batch.attachedCourse) === String(courseId) ||
+                             (batch.supportingCourses || []).map(String).includes(String(courseId));
+          if (!isAssigned) {
+            if (!batch.attachedCourse) {
+              batch.attachedCourse = courseId;
+            } else {
+              batch.supportingCourses = batch.supportingCourses || [];
+              if (!batch.supportingCourses.map(String).includes(String(courseId))) {
+                batch.supportingCourses.push(courseId);
+              }
+            }
+            await batch.save();
+          }
+        }
+      }
+
+      // Handle removed batches: unassign course
+      for (const batchId of removedBatchIds) {
+        const batch = await Batch.findById(batchId);
+        if (batch) {
+          if (String(batch.attachedCourse) === String(courseId)) {
+            batch.attachedCourse = null;
+          }
+          batch.supportingCourses = (batch.supportingCourses || []).filter(id => String(id) !== String(courseId));
+          await batch.save();
+        }
+      }
+
+      update.assignedBatchIds = newBatchIds;
+    }
     if (req.file) {
       const uploadRes = await uploadCourseBanner(req.file);
       if (uploadRes?.secure_url) {
@@ -410,6 +453,7 @@ export const getAllCourses = async (req, res) => {
             const conditions = [
               { assignedBatchIds: { $size: 0 } },
               { assignedBatchIds: { $exists: false } },
+              { assignedBatchIds: batch._id },
             ];
 
             // Include primary course if it exists

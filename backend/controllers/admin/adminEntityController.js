@@ -682,6 +682,8 @@ export const listBatches = async (req, res) => {
         avgScore: Number((scoreMap[String(batch._id)] || 0).toFixed(0)),
         createdAt: batch.createdAt,
         currentActiveTrack,
+        attachedCourse: batch.attachedCourse || null,
+        supportingCourses: batch.supportingCourses || [],
       };
     });
 
@@ -694,7 +696,7 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection } = req.body;
+    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection, attachedCourse, supportingCourses, courses } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
@@ -703,6 +705,19 @@ export const createBatchAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
     }
     if (!assertObjectId(collegeId, "collegeId", res)) return;
+
+    let selectedCourseIds = [];
+    if (Array.isArray(courses)) {
+      selectedCourseIds = courses;
+    } else {
+      if (attachedCourse) selectedCourseIds.push(attachedCourse);
+      if (Array.isArray(supportingCourses)) selectedCourseIds.push(...supportingCourses);
+    }
+
+    for (const id of selectedCourseIds) {
+      if (!assertObjectId(id, "courses", res)) return;
+    }
+
     const requestedTemplateIds = Array.isArray(assignedTrackTemplateIds)
       ? assignedTrackTemplateIds
       : (assignedTrackTemplateId ? [assignedTrackTemplateId] : []);
@@ -711,6 +726,9 @@ export const createBatchAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Select active track templates only." });
     }
     const trackTemplate = trackTemplates.find((template) => template.trackType === "Daily Challenge") || trackTemplates[0] || null;
+
+    const resolvedAttached = selectedCourseIds.length > 0 ? selectedCourseIds[0] : null;
+    const resolvedSupporting = selectedCourseIds.length > 1 ? selectedCourseIds.slice(1) : [];
 
     const session = await mongoose.startSession();
     let batch;
@@ -729,6 +747,8 @@ export const createBatchAdmin = async (req, res) => {
               releaseTime: releaseTime || "00:00",
               status: status || BATCH_STATUS.DRAFT,
               programSelection: programSelection || "Placement Sprint",
+              attachedCourse: resolvedAttached,
+              supportingCourses: resolvedSupporting,
             },
           ],
           { session, ordered: true }
@@ -736,6 +756,15 @@ export const createBatchAdmin = async (req, res) => {
 
         batch = createdBatch;
         await ensureDefaultBatchTracks(batch._id, session);
+
+        // Sync course assignments
+        if (selectedCourseIds.length > 0) {
+          await Course.updateMany(
+            { _id: { $in: selectedCourseIds } },
+            { $addToSet: { assignedBatchIds: batch._id } },
+            { session }
+          );
+        }
       });
     } finally {
       await session.endSession();
@@ -2413,37 +2442,57 @@ export const updateBatchAdmin = async (req, res) => {
       programSelection: req.body.programSelection || existingBatch.programSelection || "Placement Sprint",
     };
 
-    if (Object.prototype.hasOwnProperty.call(req.body, "attachedCourse")) {
-      const attachedCourseValue = req.body.attachedCourse;
-      if (!attachedCourseValue) {
+    let primaryCourseId = undefined;
+    if (Object.prototype.hasOwnProperty.call(req.body, "primaryCourseId")) {
+      primaryCourseId = req.body.primaryCourseId;
+    } else if (Object.prototype.hasOwnProperty.call(req.body, "attachedCourse")) {
+      primaryCourseId = req.body.attachedCourse;
+    }
+
+    if (primaryCourseId !== undefined) {
+      if (!primaryCourseId) {
         update.attachedCourse = null;
       } else {
-        if (!assertObjectId(attachedCourseValue, "attachedCourse", res)) return;
-        const courseExists = await Course.exists({ _id: attachedCourseValue });
+        if (!assertObjectId(primaryCourseId, "attachedCourse", res)) return;
+        const courseExists = await Course.exists({ _id: primaryCourseId });
         if (!courseExists) {
-          return res.status(404).json({ success: false, message: "Attached course not found." });
+          return res.status(404).json({ success: false, message: "Course not found." });
         }
-        update.attachedCourse = attachedCourseValue;
+        update.attachedCourse = primaryCourseId;
       }
     }
 
-    // Handle primaryCourseId: sets attachedCourse, remainder become supportingCourses
-    if (Object.prototype.hasOwnProperty.call(req.body, "primaryCourseId")) {
-      const primaryId = req.body.primaryCourseId;
-      if (!primaryId) {
-        update.attachedCourse = null;
+    if (Object.prototype.hasOwnProperty.call(req.body, "courses")) {
+      const selectedCourseIds = req.body.courses || [];
+      for (const id of selectedCourseIds) {
+        if (!assertObjectId(id, "courses", res)) return;
+      }
+      const activeAttached = Object.prototype.hasOwnProperty.call(update, "attachedCourse") ? update.attachedCourse : existingBatch.attachedCourse;
+      const activeAttachedStr = activeAttached ? String(activeAttached) : null;
+
+      if (activeAttachedStr && selectedCourseIds.includes(activeAttachedStr)) {
+        update.attachedCourse = activeAttached;
       } else {
-        if (!assertObjectId(primaryId, "primaryCourseId", res)) return;
-        const courseExists = await Course.exists({ _id: primaryId });
-        if (!courseExists) {
-          return res.status(404).json({ success: false, message: "Primary course not found." });
+        update.attachedCourse = selectedCourseIds[0] || null;
+      }
+      update.supportingCourses = selectedCourseIds.filter(id => String(id) !== String(update.attachedCourse));
+    } else if (Object.prototype.hasOwnProperty.call(req.body, "supportingCourses")) {
+      const supporting = req.body.supportingCourses;
+      if (Array.isArray(supporting)) {
+        for (const id of supporting) {
+          if (!assertObjectId(id, "supportingCourses", res)) return;
         }
-        update.attachedCourse = primaryId;
-        // All other batch-assigned courses become supporting courses
+        update.supportingCourses = supporting;
+      }
+    } else if (primaryCourseId !== undefined) {
+      const activePrimary = primaryCourseId || null;
+      if (activePrimary) {
         const allAssignedCourses = await Course.find({ assignedBatchIds: existingBatch._id }).select("_id").lean();
         update.supportingCourses = allAssignedCourses
           .map((c) => c._id)
-          .filter((id) => String(id) !== String(primaryId));
+          .filter((id) => String(id) !== String(activePrimary));
+      } else {
+        update.supportingCourses = [];
       }
     }
 
@@ -2461,6 +2510,26 @@ export const updateBatchAdmin = async (req, res) => {
           batchId,
           { $set: update },
           { new: true, runValidators: true, session }
+        );
+
+        // Sync Course.assignedBatchIds
+        const activeAttached = Object.prototype.hasOwnProperty.call(update, "attachedCourse") ? update.attachedCourse : existingBatch.attachedCourse;
+        const activeSupporting = Object.prototype.hasOwnProperty.call(update, "supportingCourses") ? update.supportingCourses : (existingBatch.supportingCourses || []);
+        const selectedCourseIds = [activeAttached, ...activeSupporting].filter(Boolean).map(id => id.toString());
+
+        await Course.updateMany(
+          { _id: { $in: selectedCourseIds } },
+          { $addToSet: { assignedBatchIds: batchId } },
+          { session }
+        );
+
+        await Course.updateMany(
+          { 
+            _id: { $nin: selectedCourseIds },
+            assignedBatchIds: batchId 
+          },
+          { $pull: { assignedBatchIds: batchId } },
+          { session }
         );
         if (trackTemplateChanged && trackTemplates.length > 0) {
           reassignedStudents = await applyTrackTemplatesToBatchStudents({
@@ -2551,6 +2620,10 @@ export const deleteBatchAdmin = async (req, res) => {
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
+      Course.updateMany(
+        { assignedBatchIds: batchId },
+        { $pull: { assignedBatchIds: batchId } }
+      ),
     ]);
 
     await writeAuditLog({
@@ -3043,6 +3116,10 @@ export const bulkDeleteBatchesAdmin = async (req, res) => {
       studentIds.length ? Student.deleteMany({ _id: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? StudentTrackAssignment.deleteMany({ studentId: { $in: studentIds } }) : Promise.resolve(),
       studentIds.length ? deleteStudentProjectProgress(studentIds) : Promise.resolve(),
+      Course.updateMany(
+        { assignedBatchIds: { $in: batchIds } },
+        { $pull: { assignedBatchIds: { $in: batchIds } } }
+      ),
     ]);
 
     for (const batch of batches) {

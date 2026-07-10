@@ -286,6 +286,7 @@ const Batches = () => {
   const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [batchSearchTerm, setBatchSearchTerm] = useState('');
+  const [courses, setCourses] = useState([]);
   const [createBatchForm, setCreateBatchForm] = useState({
     batchName: '',
     college: '',
@@ -296,6 +297,7 @@ const Batches = () => {
     batchSize: '',
     status: 'Draft',
     programSelection: 'Placement Sprint',
+    courses: [],
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [collegeFilter, setCollegeFilter] = useState('All Colleges');
@@ -309,8 +311,10 @@ const Batches = () => {
   const [editingTrackTemplateId, setEditingTrackTemplateId] = useState(null);
   const [pendingTrackReplacement, setPendingTrackReplacement] = useState(null);
   const [trackTemplateDropdownOpen, setTrackTemplateDropdownOpen] = useState(false);
+  const [supportingCourseDropdownOpen, setSupportingCourseDropdownOpen] = useState(false);
   const searchInputRef = useRef(null);
   const trackTemplateDropdownRef = useRef(null);
+  const supportingCourseDropdownRef = useRef(null);
 
   const handleSelectToggle = (id) => {
     setSelectedBatchIds((prev) =>
@@ -342,10 +346,11 @@ const Batches = () => {
   const batchFormInputClass = 'mt-1 w-full px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadBatchPageData = useCallback(async () => {
-    const [remoteBatches, remoteColleges, remoteTrackTemplates] = await Promise.all([
+    const [remoteBatches, remoteColleges, remoteTrackTemplates, remoteCourses] = await Promise.all([
       adminAPI.getBatches(),
       adminAPI.getColleges(),
       adminAPI.getTrackTemplates().catch(() => []),
+      adminAPI.getCourses().catch(() => ({ courses: [] })),
     ]);
 
     const normalizedBatches = preferRemoteData(remoteBatches, emptyBatches).map(normalizeBatch);
@@ -364,6 +369,15 @@ const Batches = () => {
         trackType: template.trackType || 'Track',
       }));
     setTrackTemplates(assignableTemplates);
+
+    const assignableCourses = (remoteCourses?.courses || remoteCourses || [])
+      .filter((c) => !c.courseType || c.courseType === 'Self-paced')
+      .map((c) => ({
+        id: c.id || c._id,
+        title: c.title || 'Untitled Course',
+      }));
+    setCourses(assignableCourses);
+
     writeAdminSessionCache('batches', normalizedBatches);
     writeAdminSessionCache('batches-colleges', normalizedColleges);
     writeAdminSessionCache('batches-track-templates', assignableTemplates);
@@ -407,22 +421,29 @@ const Batches = () => {
     else setSearchQuery('');
   }, [isSearchOpen]);
 
-  // Close track template dropdown when clicking outside or pressing Escape
+  // Close track template and supporting course dropdowns when clicking outside or pressing Escape
   useEffect(() => {
-    if (!trackTemplateDropdownOpen) return;
     const handleOutsideClick = (e) => {
-      if (trackTemplateDropdownRef.current && !trackTemplateDropdownRef.current.contains(e.target)) {
+      if (trackTemplateDropdownOpen && trackTemplateDropdownRef.current && !trackTemplateDropdownRef.current.contains(e.target)) {
         setTrackTemplateDropdownOpen(false);
       }
+      if (supportingCourseDropdownOpen && supportingCourseDropdownRef.current && !supportingCourseDropdownRef.current.contains(e.target)) {
+        setSupportingCourseDropdownOpen(false);
+      }
     };
-    const handleEsc = (e) => { if (e.key === 'Escape') setTrackTemplateDropdownOpen(false); };
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        setTrackTemplateDropdownOpen(false);
+        setSupportingCourseDropdownOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('keydown', handleEsc);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('keydown', handleEsc);
     };
-  }, [trackTemplateDropdownOpen]);
+  }, [trackTemplateDropdownOpen, supportingCourseDropdownOpen]);
 
   const filteredRoutes = searchRoutes.filter((route) =>
     route.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -478,7 +499,6 @@ const Batches = () => {
     setEditingBatchId(null);
     setEditingTrackTemplateId(null);
     setTrackTemplateDropdownOpen(false);
-    setCreateError('');
     setCreateBatchForm({
       batchName: '',
       college: '',
@@ -491,6 +511,7 @@ const Batches = () => {
       batchSize: '',
       status: 'Draft',
       programSelection: 'Placement Sprint',
+      courses: [],
     });
     setIsCreateFormOpen(true);
   };
@@ -499,6 +520,11 @@ const Batches = () => {
     const assignedTrackTemplateIds = Array.isArray(batch.assignedTrackTemplateIds)
       ? batch.assignedTrackTemplateIds.map(String)
       : (batch.assignedTrackTemplateId ? [String(batch.assignedTrackTemplateId)] : []);
+
+    const allCourses = [
+      batch.attachedCourse ? String(batch.attachedCourse._id || batch.attachedCourse.id || batch.attachedCourse) : null,
+      ...(Array.isArray(batch.supportingCourses) ? batch.supportingCourses.map(c => String(c.id || c._id || c)) : [])
+    ].filter(Boolean);
 
     setEditingBatchId(batch.id);
     setEditingTrackTemplateId(batch.assignedTrackTemplateId || null);
@@ -516,6 +542,7 @@ const Batches = () => {
       batchSize: batch.batchSize ? String(batch.batchSize) : '',
       status: batch.status || 'Draft',
       programSelection: batch.programSelection || 'Placement Sprint',
+      courses: allCourses,
     });
     setIsCreateFormOpen(true);
   };
@@ -568,6 +595,7 @@ const Batches = () => {
         batchSize: createBatchForm.batchSize ? Number(createBatchForm.batchSize) : null,
         status: createBatchForm.status,
         programSelection: createBatchForm.programSelection || 'Placement Sprint',
+        courses: createBatchForm.courses || [],
       };
 
       if (editingBatchId) {
@@ -636,13 +664,15 @@ const Batches = () => {
       {isCreateFormOpen && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsCreateFormOpen(false)} />
-          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-xl shadow-2xl overflow-visible">
-            <div className="px-5 py-3 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+          <div className="relative w-full max-w-lg bg-white/95 dark:bg-[#0a1737]/95 border border-black/10 dark:border-white/10 rounded-xl shadow-2xl flex flex-col max-h-[85vh] overflow-visible">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <h2 className="text-base font-semibold text-[#3C83F6] dark:text-white">{editingBatchId ? 'Edit Batch' : 'Create Batch'}</h2>
               <button onClick={() => setIsCreateFormOpen(false)} className="text-xs text-black/40 dark:text-white/40 hover:text-black/60 dark:hover:text-white/60">Close</button>
             </div>
 
-            <div className="p-5 space-y-3">
+            {/* Modal Body (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 overflow-x-visible">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Batch Name*</label>
@@ -714,9 +744,7 @@ const Batches = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Track Templates*</label>
-                  {/* Dropdown multi-select */}
                   <div className="relative mt-1" ref={trackTemplateDropdownRef}>
-                    {/* Trigger button */}
                     <div
                       onClick={() => setTrackTemplateDropdownOpen((prev) => !prev)}
                       className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all cursor-pointer"
@@ -757,13 +785,11 @@ const Batches = () => {
                       <FiChevronDown className={`shrink-0 w-4 h-4 text-black/45 dark:text-white/50 transition-transform duration-200 ${trackTemplateDropdownOpen ? 'rotate-180' : ''}`} />
                     </div>
 
-                    {/* Dropdown panel */}
                     {trackTemplateDropdownOpen && (
                       <div
-                        className="absolute z-[150] mt-1.5 w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] shadow-xl overflow-hidden"
+                        className="absolute z-[150] mt-1.5 w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
                         onMouseDown={(e) => e.preventDefault()}
                       >
-                        {/* No template option */}
                         <label className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-b border-black/5 dark:border-white/5">
                           <input
                             type="checkbox"
@@ -774,7 +800,6 @@ const Batches = () => {
                           <span className="italic">No track template</span>
                         </label>
 
-                        {/* Active templates */}
                         <div className="max-h-40 overflow-y-auto">
                           {trackTemplates.length === 0 ? (
                             <p className="px-3 py-3 text-xs text-black/40 dark:text-white/40">No active track templates available.</p>
@@ -864,23 +889,122 @@ const Batches = () => {
                 </div>
               </div>
 
-              {createError && <p className="text-xs text-red-500">{createError}</p>}
+              {/* Add Courses Multi-Select Dropdown */}
+              <div className="border-t border-black/5 dark:border-white/5 pt-3.5">
+                <label className="admin-micro-label text-black/45 dark:text-white/45">Add Courses</label>
+                <div className="relative mt-1" ref={supportingCourseDropdownRef}>
+                  <div
+                    onClick={() => setSupportingCourseDropdownOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-left shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] focus:outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35 transition-all cursor-pointer"
+                  >
+                    <span className="flex-1 min-w-0">
+                      {(createBatchForm.courses || []).length === 0 ? (
+                        <span className="text-slate-500 dark:text-slate-400 text-xs">No courses selected</span>
+                      ) : (
+                        <span className="flex flex-wrap gap-1">
+                          {(createBatchForm.courses || []).map((id) => {
+                            const c = courses.find((x) => String(x.id) === String(id));
+                            return c ? (
+                              <span
+                                key={id}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#3C83F6]/10 dark:bg-[#3C83F6]/20 text-[#3C83F6] dark:text-blue-300"
+                              >
+                                {c.title}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCreateBatchForm((prev) => {
+                                      const nextIds = (prev.courses || []).filter((i) => i !== id);
+                                      return { ...prev, courses: nextIds };
+                                    });
+                                  }}
+                                  className="ml-0.5 hover:text-red-500 transition-colors"
+                                  aria-label={`Remove ${c.title}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ) : null;
+                          })}
+                        </span>
+                      )}
+                    </span>
+                    <FiChevronDown className={`shrink-0 w-4 h-4 text-black/45 dark:text-white/50 transition-transform duration-200 ${supportingCourseDropdownOpen ? 'rotate-180' : ''}`} />
+                  </div>
 
-              <div className="pt-1.5 flex items-center justify-end gap-2">
-                <button
-                  onClick={() => setIsCreateFormOpen(false)}
-                  className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={createBatch}
-                  disabled={isSavingBatch}
-                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
-                >
-                  {isSavingBatch ? 'Saving...' : editingBatchId ? 'Save Changes' : 'Create Batch'}
-                </button>
+                  {supportingCourseDropdownOpen && (
+                    <div
+                      className="absolute z-[150] mt-1.5 w-full rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <label className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer border-b border-black/5 dark:border-white/5">
+                        <input
+                          type="checkbox"
+                          checked={(createBatchForm.courses || []).length === 0}
+                          onChange={() => setCreateBatchForm((prev) => ({ ...prev, courses: [] }))}
+                          className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                        />
+                        <span className="italic">No courses selected</span>
+                      </label>
+
+                      <div className="max-h-40 overflow-y-auto">
+                        {courses.length === 0 ? (
+                          <p className="px-3 py-3 text-xs text-black/40 dark:text-white/40">No courses available.</p>
+                        ) : (
+                          courses.map((c) => {
+                            const cId = String(c.id);
+                            const isChecked = (createBatchForm.courses || []).includes(cId);
+                            return (
+                              <label
+                                key={cId}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium cursor-pointer transition-colors ${
+                                  isChecked
+                                    ? 'bg-[#3C83F6]/8 dark:bg-[#3C83F6]/15 text-[#3C83F6] dark:text-blue-300'
+                                    : 'text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={(event) => setCreateBatchForm((prev) => {
+                                    const currentIds = prev.courses || [];
+                                    const nextIds = event.target.checked
+                                      ? [...currentIds, cId]
+                                      : currentIds.filter((id) => id !== cId);
+                                    return { ...prev, courses: nextIds };
+                                  })}
+                                  className="w-3.5 h-3.5 rounded border-black/15 dark:border-white/20 text-[#3C83F6] focus:ring-[#3C83F6]"
+                                />
+                                <span className="flex-1 min-w-0 truncate">{c.title}</span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {createError && <p className="text-xs text-red-500">{createError}</p>}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-2 shrink-0 bg-slate-50/50 dark:bg-black/10 rounded-b-xl">
+              <button
+                onClick={() => setIsCreateFormOpen(false)}
+                className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createBatch}
+                disabled={isSavingBatch}
+                className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70 transition-colors"
+              >
+                {isSavingBatch ? 'Saving...' : editingBatchId ? 'Save Changes' : 'Create Batch'}
+              </button>
             </div>
           </div>
         </div>
