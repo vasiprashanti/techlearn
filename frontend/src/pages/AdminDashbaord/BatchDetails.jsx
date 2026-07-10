@@ -164,9 +164,10 @@ const BatchDetails = () => {
   }, [batchDetail, location.state, batchId]);
 
   useEffect(() => {
-    setSelectedAttachedCourseId(batch?.attachedCourse?.id ? String(batch.attachedCourse.id) : '');
-    setPrimaryCourseId(batch?.attachedCourse?.id ? String(batch.attachedCourse.id) : '');
-  }, [batch?.attachedCourse?.id]);
+    const activeId = batch?.attachedCourse?._id || batch?.attachedCourse?.id || batch?.attachedCourse;
+    setSelectedAttachedCourseId(activeId ? String(activeId) : '');
+    setPrimaryCourseId(activeId ? String(activeId) : '');
+  }, [batch?.attachedCourse]);
 
   useEffect(() => {
     let cancelled = false;

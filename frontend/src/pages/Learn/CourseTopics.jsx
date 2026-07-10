@@ -131,19 +131,7 @@ const CourseTopics = () => {
   const [placementData, setPlacementData] = useState(null);
   const [activeChallenge, setActiveChallenge] = useState(null);
 
-  // Resolve supporting courses with keyword match + positional fallback
-  // so the sidebar works even if course names don't contain "aptitude"/"technical"
-  const { aptitudeCourse, technicalCourse, extraCourses } = useMemo(() => {
-    const supporting = placementData?.supportingCourses || [];
-    const findByKeyword = (kw) => supporting.find(c => String(c.title).toLowerCase().includes(kw));
-    let apt = findByKeyword('aptitude') || findByKeyword('quant') || null;
-    let tech = findByKeyword('technical') || findByKeyword('core') || findByKeyword('cs') || null;
-    // positional fallback: first unmapped course = aptitude, second = technical
-    const unmapped = supporting.filter(c => c !== apt && c !== tech);
-    if (!apt && unmapped.length > 0) { apt = unmapped.shift(); }
-    if (!tech && unmapped.length > 0) { tech = unmapped.shift(); }
-    return { aptitudeCourse: apt, technicalCourse: tech, extraCourses: unmapped };
-  }, [placementData]);
+
 
   useEffect(() => {
     if (isPlacementSprint) {
@@ -411,55 +399,6 @@ const CourseTopics = () => {
                     Quick Actions
                   </div>
 
-                  {/* Today's Aptitude Notes — hidden when no supporting courses exist */}
-                  {(aptitudeCourse || (placementData?.supportingCourses?.length > 0)) && (
-                    <button
-                      onClick={() => {
-                        if (aptitudeCourse) {
-                          navigate(`/learn/courses/${aptitudeCourse.id}/topics?day=${selectedTopic + 1}`);
-                        } else {
-                          navigate('/dashboard/practice/aptitude');
-                        }
-                      }}
-                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
-                    >
-                      <span className="block min-w-0 flex-1 text-sm leading-tight">
-                        Go to Today's Aptitude Notes
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Today's Technical Notes — hidden when no supporting courses exist */}
-                  {(technicalCourse || (placementData?.supportingCourses?.length > 1)) && (
-                    <button
-                      onClick={() => {
-                        if (technicalCourse) {
-                          navigate(`/learn/courses/${technicalCourse.id}/topics?day=${selectedTopic + 1}`);
-                        } else {
-                          navigate('/dashboard');
-                        }
-                      }}
-                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
-                    >
-                      <span className="block min-w-0 flex-1 text-sm leading-tight">
-                        Go to Today's Technical Notes
-                      </span>
-                    </button>
-                  )}
-
-                  {/* Any extra supporting courses beyond aptitude + technical */}
-                  {extraCourses.map((course) => (
-                    <button
-                      key={course.id}
-                      onClick={() => navigate(`/learn/courses/${course.id}/topics?day=${selectedTopic + 1}`)}
-                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
-                    >
-                      <span className="block min-w-0 flex-1 text-sm leading-tight">
-                        {course.title}
-                      </span>
-                    </button>
-                  ))}
-
                   <button
                     onClick={() => {
                       if (activeChallenge?.linkId) {
@@ -471,7 +410,7 @@ const CourseTopics = () => {
                     className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
                   >
                     <span className="block min-w-0 flex-1 text-sm leading-tight">
-                      Go to Daily Challenge (OTP Verification Page)
+                      Go to Daily Challenge
                     </span>
                   </button>
 
@@ -480,9 +419,21 @@ const CourseTopics = () => {
                     className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
                   >
                     <span className="block min-w-0 flex-1 text-sm leading-tight">
-                      Go to Daily Tasks (Dashboard)
+                      Go to Daily Tasks
                     </span>
                   </button>
+
+                  {(placementData?.supportingCourses || []).map((course) => (
+                    <button
+                      key={course.id || course._id}
+                      onClick={() => navigate(`/learn/courses/${course.id || course._id}/topics?day=${selectedTopic + 1}`)}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    >
+                      <span className="block min-w-0 flex-1 text-sm leading-tight">
+                        Go to {course.title} Notes
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </aside>
