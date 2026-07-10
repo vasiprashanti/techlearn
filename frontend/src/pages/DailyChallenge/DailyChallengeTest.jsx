@@ -556,6 +556,7 @@ export default function DailyChallengeTest() {
 
   const executeEndChallenge = async () => {
     setShowEndConfirm(false);
+    if (!challenge) return; // Guard: challenge not loaded yet
     setSubmitting(true);
 
     try {
@@ -583,7 +584,7 @@ export default function DailyChallengeTest() {
   };
 
   const handleAutoSubmit = async (isTerminated = false) => {
-    if (!studentEmail) return;
+    if (!studentEmail || !challenge) return; // Guard: challenge not loaded yet
 
     try {
       const finalSolutions = [];

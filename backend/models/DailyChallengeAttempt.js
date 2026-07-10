@@ -100,6 +100,14 @@ const dailyChallengeAttemptSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    xpAwarded: {
+      type: Boolean,
+      default: false,
+    },
+    xpEarned: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

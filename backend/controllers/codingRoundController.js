@@ -373,7 +373,7 @@ const finalizeDailyChallengeAttempt = async ({
   attempt.finalSubmissionId = linkedSubmission?._id || attempt.finalSubmissionId;
   await attempt.save();
 
-  // Award XP for each question/problem
+  // Award XP for each question/problem — protected by xpAwarded flag (idempotent)
   try {
     let totalChallengeXpAwarded = 0;
     if (codingRound && codingRound.problems) {
@@ -392,20 +392,24 @@ const finalizeDailyChallengeAttempt = async ({
     }
 
     if (totalChallengeXpAwarded > 0 && student?.userId) {
-      let progress = await UserProgress.findOne({ userId: student.userId });
-      if (!progress) {
-        progress = new UserProgress({
-          userId: student.userId,
-          courseXP: new Map(),
-          exerciseXP: new Map(),
-          completedExercises: [],
-        });
+      // Atomically mark XP as awarded — only proceeds if xpAwarded was false
+      const claimedAttempt = await DailyChallengeAttempt.findOneAndUpdate(
+        { _id: attempt._id, xpAwarded: false },
+        { $set: { xpAwarded: true, xpEarned: totalChallengeXpAwarded } },
+        { new: true }
+      );
+
+      if (claimedAttempt) {
+        // Only this request claimed the flag — safely award XP atomically
+        const courseIdKey = String(codingRound.trackId || "daily_challenge");
+        await UserProgress.findOneAndUpdate(
+          { userId: student.userId },
+          { $inc: { [`exerciseXP.${courseIdKey}`]: totalChallengeXpAwarded } },
+          { upsert: true }
+        );
+        invalidateDashboardCache(student.userId);
       }
-      const courseIdKey = String(codingRound.trackId || "daily_challenge");
-      const currentXP = progress.exerciseXP.get(courseIdKey) || 0;
-      progress.exerciseXP.set(courseIdKey, currentXP + totalChallengeXpAwarded);
-      await progress.save();
-      invalidateDashboardCache(student.userId);
+      // If claimedAttempt is null, another request already awarded XP — skip silently
     }
   } catch (xpError) {
     console.error("Error awarding Daily Challenge XP:", xpError);
@@ -1870,6 +1874,15 @@ export const endCodingRound = async (req, res) => {
         isRoundEnded: true,
         roundEndedAt: new Date(),
         lastSubmissionAt: new Date(),
+      });
+    } else if (submission.isRoundEnded) {
+      // Idempotent guard — round already ended, return existing results without re-triggering finalize
+      return res.status(200).json({
+        success: true,
+        message: "Round was already ended",
+        alreadyEnded: true,
+        totalScore: submission.totalScore,
+        endedAt: submission.roundEndedAt,
       });
     } else {
       submission.isRoundEnded = true;

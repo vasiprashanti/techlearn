@@ -1,11 +1,13 @@
 import { sendMail } from "./mailer.js";
 import OTP from "../models/OTP.js";
+import crypto from "crypto";
 
 export function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Use cryptographically secure random integer (not Math.random)
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
-export async function storeOTP(key, otp, expiresIn = 30 * 60 * 1000) {
+export async function storeOTP(key, otp, expiresIn = 10 * 60 * 1000) {
   try {
     await OTP.findOneAndUpdate(
       { key },
@@ -19,16 +21,14 @@ export async function storeOTP(key, otp, expiresIn = 30 * 60 * 1000) {
 
 export async function verifyOTP(key, otp) {
   try {
-    const entry = await OTP.findOne({ key });
-    if (!entry) return false;
     const sanitizedOtp = String(otp || "").trim();
-    if (String(entry.otp).trim() !== sanitizedOtp) return false;
-    if (entry.expiresAt < new Date()) {
-      await OTP.deleteOne({ key });
-      return false;
-    }
-    await OTP.deleteOne({ key });
-    return true;
+    // Atomic findOneAndDelete — only ONE concurrent request can consume the OTP
+    const entry = await OTP.findOneAndDelete({
+      key,
+      otp: sanitizedOtp,
+      expiresAt: { $gt: new Date() },
+    });
+    return entry !== null;
   } catch (err) {
     console.error("Error verifying OTP from DB:", err);
     return false;
@@ -37,7 +37,7 @@ export async function verifyOTP(key, otp) {
 
 export async function sendOTPEmail(email, otp, context = "MCQ/Coding Round") {
   const subject = `Your OTP for ${context}`;
-  const text = `Your OTP is: ${otp}\nThis OTP is valid for 30 minutes.`;
+  const text = `Your OTP is: ${otp}\nThis OTP is valid for 10 minutes.`;
   await sendMail(email, subject, text);
 }
 
