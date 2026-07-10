@@ -11,7 +11,7 @@ const HeroSection = () => {
         <div className="grid lg:grid-cols-[2fr_1fr] gap-12 items-center min-h-[480px]">
           {/* Left Content */}
           <div className="relative z-10 text-left lg:text-left">
-            <h1 className="font-press-start text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-medium tracking-tight mb-6 leading-[1.4] overflow-visible">
+            <h1 className="font-press-start text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-medium tracking-tight mb-6 leading-[1.4] overflow-visible pl-4 sm:pl-8 md:pl-12">
               <span
                 ref={titleRef}
                 className={`brand-heading-primary hover-gradient-text italic pr-2 ${
@@ -35,7 +35,7 @@ const HeroSection = () => {
             {/* Subheading */}
             <p
               ref={descriptionRef}
-              className={`text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold ${
+              className={`text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold pl-4 sm:pl-8 md:pl-12 ${
                 isDescriptionInViewport ? "in-viewport" : ""
               }`}
             >
