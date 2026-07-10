@@ -11,7 +11,7 @@ const HeroSection = () => {
         <div className="grid lg:grid-cols-[2fr_1fr] gap-12 items-center min-h-[480px]">
           {/* Left Content */}
           <div className="relative z-10 text-left lg:text-left">
-            <h1 className="font-poppins text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-medium tracking-tight mb-6 leading-[1.1] overflow-visible">
+            <h1 className="font-press-start text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-medium tracking-tight mb-6 leading-[1.1] overflow-visible">
               <span
                 ref={titleRef}
                 className={`brand-heading-primary hover-gradient-text italic pr-2 ${
@@ -32,14 +32,14 @@ const HeroSection = () => {
               </span>
             </h1>
 
-            {/* Warning Text */}
+            {/* Subheading */}
             <p
               ref={descriptionRef}
-              className={`font-poppins text-sm sm:text-base md:text-lg lg:text-xl text-[var(--tl-navy-800)] dark:text-[var(--tl-sky-600)] hover-gradient-text max-w-full break-words ${
+              className={`text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold ${
                 isDescriptionInViewport ? "in-viewport" : ""
               }`}
             >
-              Warning: Coding skills may cause sudden job offers and inflated Git pushes.
+              Whether you're starting out or upskilling, we've got a course for you.
             </p>
           </div>
 

@@ -278,14 +278,6 @@ export default function Courses() {
         <div className="max-w-[1600px] mx-auto space-y-12">
 
           <section className="pt-6 space-y-10">
-            <header className="flex flex-col md:flex-row md:items-end justify-between pb-6 border-b border-[#8ec8ff]/30 dark:border-[#6fbfff]/25 gap-4">
-              <div>
-                <h1 className="mt-8 font-press-start text-4xl sm:text-5xl md:text-6xl font-medium tracking-tight leading-[1.1] overflow-visible">
-                  <span className="hover-gradient-text block">COURSES</span>
-                </h1>
-                <p className="text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold">Pick a track and start building skills</p>
-              </div>
-            </header>
 
             {error && (
               <div className="text-left py-2">
