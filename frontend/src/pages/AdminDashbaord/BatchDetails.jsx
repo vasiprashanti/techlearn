@@ -949,7 +949,19 @@ const BatchDetails = () => {
                           {filteredStudents.map((student, index) => {
                             const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                             return (
-                              <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                              <tr
+                                key={`${student.email}-${index}`}
+                                onClick={() => !isPlaceholder && setSelectedReportStudent(student)}
+                                onKeyDown={(event) => {
+                                  if (!isPlaceholder && (event.key === 'Enter' || event.key === ' ')) {
+                                    event.preventDefault();
+                                    setSelectedReportStudent(student);
+                                  }
+                                }}
+                                role={isPlaceholder ? undefined : 'button'}
+                                tabIndex={isPlaceholder ? undefined : 0}
+                                className={`border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors ${isPlaceholder ? '' : 'cursor-pointer focus:outline-none focus:bg-black/[0.03] dark:focus:bg-white/[0.05]'}`}
+                              >
                                 <td className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
@@ -969,12 +981,15 @@ const BatchDetails = () => {
                                       {student.todayChallengeSubmissionId ? (
                                         <button
                                           type="button"
-                                          onClick={() => setSelectedChallengeScore({
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedChallengeScore({
                                             studentName: student.name,
                                             email: student.email,
                                             submissionId: student.todayChallengeSubmissionId,
                                             scoresDetail: student.todayChallengeScoresDetail,
-                                          })}
+                                            });
+                                          }}
                                           className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
                                         >
                                           View score
@@ -993,7 +1008,10 @@ const BatchDetails = () => {
                                         <>
                                           <button
                                             type="button"
-                                            onClick={() => setActiveScoreTooltip(activeScoreTooltip === `${student.email}-task` ? null : `${student.email}-task`)}
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              setActiveScoreTooltip(activeScoreTooltip === `${student.email}-task` ? null : `${student.email}-task`);
+                                            }}
                                             className="text-[11px] sm:text-xs font-semibold text-emerald-600 hover:text-emerald-700 underline dark:text-emerald-300 dark:hover:text-emerald-200"
                                           >
                                             View score
@@ -1043,7 +1061,10 @@ const BatchDetails = () => {
                                       <div className="flex items-center justify-center gap-1.5">
                                         <button
                                           type="button"
-                                          onClick={() => setSelectedReportStudent(student)}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedReportStudent(student);
+                                          }}
                                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-blue-500/15 bg-blue-500/5 text-blue-600 transition-colors hover:bg-blue-500 hover:text-white dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-355 dark:hover:bg-blue-500 dark:hover:text-white"
                                           aria-label={`View report for ${student.name}`}
                                           title="View student report"
@@ -1052,7 +1073,8 @@ const BatchDetails = () => {
                                         </button>
                                         <button
                                           type="button"
-                                          onClick={() => {
+                                          onClick={(event) => {
+                                            event.stopPropagation();
                                             setFormError('');
                                             setStudentToRemove(student);
                                           }}
@@ -1235,7 +1257,19 @@ const BatchDetails = () => {
                             {filteredReportStudents.map((student, index) => {
                               const isPlaceholder = student.name === 'No enrolled students' && student.email === '-';
                               return (
-                                <tr key={`${student.email}-${index}`} className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                                <tr
+                                  key={`${student.email}-${index}`}
+                                  onClick={() => !isPlaceholder && setSelectedReportStudent(student)}
+                                  onKeyDown={(event) => {
+                                    if (!isPlaceholder && (event.key === 'Enter' || event.key === ' ')) {
+                                      event.preventDefault();
+                                      setSelectedReportStudent(student);
+                                    }
+                                  }}
+                                  role={isPlaceholder ? undefined : 'button'}
+                                  tabIndex={isPlaceholder ? undefined : 0}
+                                  className={`border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors ${isPlaceholder ? '' : 'cursor-pointer focus:outline-none focus:bg-black/[0.03] dark:focus:bg-white/[0.05]'}`}
+                                >
                                   {isPlaceholder ? (
                                     <td colSpan={maxTrackDays + 3} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center">
                                       No enrolled students
@@ -1274,7 +1308,8 @@ const BatchDetails = () => {
                                                 <>
                                                   <button
                                                     type="button"
-                                                    onClick={() => {
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
                                                       const key = `${student.email}-${dayNum}`;
                                                       setActiveDayScoreTooltip(activeDayScoreTooltip === key ? null : key);
                                                     }}
@@ -1306,12 +1341,15 @@ const BatchDetails = () => {
                                               {student.dayWiseHistoryChallengesSubmissionIds?.[dayNum] ? (
                                                 <button
                                                   type="button"
-                                                  onClick={() => setSelectedChallengeScore({
-                                                    studentName: student.name,
-                                                    email: student.email,
-                                                    submissionId: student.dayWiseHistoryChallengesSubmissionIds?.[dayNum],
-                                                    scoresDetail: student.dayWiseHistoryChallengesDetail?.[dayNum],
-                                                  })}
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setSelectedChallengeScore({
+                                                      studentName: student.name,
+                                                      email: student.email,
+                                                      submissionId: student.dayWiseHistoryChallengesSubmissionIds?.[dayNum],
+                                                      scoresDetail: student.dayWiseHistoryChallengesDetail?.[dayNum],
+                                                    });
+                                                  }}
                                                   className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
                                                 >
                                                   View score

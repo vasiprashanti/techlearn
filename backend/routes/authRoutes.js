@@ -114,17 +114,11 @@ router.post("/register", async function register(req, res) {
       password,
     });
 
-    const token = generateToken(newUser._id);
+    const mapped = await mapUserToStudentCohort(newUser);
+    const token = generateToken(mapped.user._id);
     return res.status(201).json({
       message: "User registered successfully",
-      user: {
-        id: newUser._id,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        email: newUser.email,
-        role: newUser.role,
-        programSelection: newUser.programSelection,
-      },
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
       token,
     });
   } catch (err) {
@@ -164,10 +158,11 @@ router.post("/login", async function login(req, res) {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    const token = generateToken(user._id);
+    const mapped = await mapUserToStudentCohort(user);
+    const token = generateToken(mapped.user._id);
     return res.status(200).json({
       message: "Login successful",
-      user: formatAuthUser(user),
+      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
       token,
     });
   } catch (err) {

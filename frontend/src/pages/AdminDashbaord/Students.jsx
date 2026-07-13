@@ -826,7 +826,19 @@ const Students = () => {
                 </thead>
                 <tbody className="border-t border-black/20 dark:border-white/10">
                   {sortedStudents.map((student, index) => (
-                    <tr key={student.id} className="border-b border-black/12 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02]">
+                    <tr
+                      key={student.id}
+                      onClick={() => setSelectedStudent(student)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          setSelectedStudent(student);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      className="border-b border-black/12 dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/[0.02] cursor-pointer focus:outline-none focus:bg-black/[0.02] dark:focus:bg-white/[0.04]"
+                    >
                       <td className="px-3 py-3 text-center text-[11px] sm:text-xs md:text-sm font-semibold text-black/55 dark:text-white/60">{index + 1}</td>
                       <td className="px-3 py-3 text-center truncate">
                         <p className="text-[11px] sm:text-xs md:text-sm font-semibold text-slate-800 dark:text-white/90 truncate">{student.name}</p>
@@ -846,9 +858,9 @@ const Students = () => {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <div className="flex items-center justify-center gap-1.5 pl-6 sm:pl-8">
-                          <button onClick={() => setSelectedStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${student.name}`}><FiEye className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => openEditStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${student.name}`}><FiEdit2 className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => setPendingDeleteStudent(student)} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${student.name}`}><FiTrash2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={(event) => { event.stopPropagation(); setSelectedStudent(student); }} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`View ${student.name}`}><FiEye className="w-3.5 h-3.5" /></button>
+                          <button onClick={(event) => { event.stopPropagation(); openEditStudent(student); }} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-[#3C83F6] hover:bg-[#3C83F6]/10" aria-label={`Edit ${student.name}`}><FiEdit2 className="w-3.5 h-3.5" /></button>
+                          <button onClick={(event) => { event.stopPropagation(); setPendingDeleteStudent(student); }} className="w-7 h-7 rounded-lg inline-flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:bg-rose-500/10" aria-label={`Delete ${student.name}`}><FiTrash2 className="w-3.5 h-3.5" /></button>
                         </div>
                       </td>
                     </tr>
