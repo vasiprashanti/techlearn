@@ -659,10 +659,10 @@ export const listBatches = async (req, res) => {
       return {
         id: batch._id,
         name: batch.name,
-        college: batch.collegeIds && batch.collegeIds.length > 0
-          ? batch.collegeIds.map((c) => c.name).join(", ")
+        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+          ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
-        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
+        collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
         assignedTrack: currentActiveTrack,
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
@@ -1154,11 +1154,11 @@ export const getBatchDetail = async (req, res) => {
       });
 
       const allCombinedSubs = [
-        ...studentSubsAllTime.filter(s => s.challengeType !== "daily_challenge").map(s => ({ ...s, type: "Submission", date: new Date(s.submittedAt || s.createdAt) })),
-        ...studentMcqSubsAllTime.map(s => ({ ...s, type: "StudentMcqSubmission", date: new Date(s.submittedAt) })),
-        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt) })),
-        ...studentCodingChallengeSubsAllTime.map(s => ({ ...s, type: "StudentCodingSubmission", date: new Date(s.lastSubmissionAt || s.submittedAt || s.createdAt) }))
-      ].sort((a, b) => b.date - a.date);
+        ...studentSubsAllTime.filter(s => s.challengeType !== "daily_challenge").map(s => ({ ...s, type: "Submission", date: new Date(s.submittedAt || s.createdAt || 0) })),
+        ...studentMcqSubsAllTime.map(s => ({ ...s, type: "StudentMcqSubmission", date: new Date(s.submittedAt || 0) })),
+        ...studentPracticeSubsAllTime.map(s => ({ ...s, type: "PracticeSubmission", date: new Date(s.submittedAt || 0) })),
+        ...studentCodingChallengeSubsAllTime.map(s => ({ ...s, type: "StudentCodingSubmission", date: new Date(s.lastSubmissionAt || s.submittedAt || s.createdAt || 0) }))
+      ].filter(s => s.date && !isNaN(s.date.getTime())).sort((a, b) => b.date - a.date);
 
       const dayWiseHistoryChallengesSubmissionIds = {};
 
@@ -1172,7 +1172,7 @@ export const getBatchDetail = async (req, res) => {
       };
 
       const latestAttempt = allCombinedSubs[0];
-      const lastAttemptAt = latestAttempt ? latestAttempt.date.toISOString() : null;
+      const lastAttemptAt = latestAttempt && latestAttempt.date && !isNaN(latestAttempt.date.getTime()) ? latestAttempt.date.toISOString() : null;
 
       const todayCombinedSubs = allCombinedSubs.filter(sub => sub.date >= todayStart && sub.date <= todayEnd);
 
@@ -1400,8 +1400,8 @@ export const getBatchDetail = async (req, res) => {
             const isCoding = qType === "coding" || qType === "debugging";
             
             let difficulty = "Easy";
-            const templateTask = activeDailyTaskTemplate?.dayAssignments
-              ?.find(da => da.dayNumber === day)
+            const templateTask = activeTrackTemplate?.dayAssignments
+              ?.find(da => da.dayNumber === studentDayNumber)
               ?.tasks?.find(tsk => String(tsk.questionId?._id || tsk.questionId) === String(t.questionId));
             if (templateTask && templateTask.questionId?.difficulty) {
               difficulty = templateTask.questionId.difficulty;
@@ -1702,8 +1702,8 @@ export const getBatchDetail = async (req, res) => {
             }
 
             let difficulty = "Easy";
-            const templateTask = activeDailyTaskTemplate?.dayAssignments
-              ?.find(da => da.dayNumber === day)
+            const templateTask = activeTrackTemplate?.dayAssignments
+              ?.find(da => da.dayNumber === studentDayNumber)
               ?.tasks?.find(tsk => String(tsk.questionId?._id || tsk.questionId) === String(t.questionId));
             if (templateTask && templateTask.questionId?.difficulty) {
               difficulty = templateTask.questionId.difficulty;
@@ -2311,14 +2311,14 @@ todayXp = todayChallengeXp + todayTaskXp;
         id: batch._id,
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
-        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
-        college: batch.collegeIds && batch.collegeIds.length > 0
-          ? batch.collegeIds.map((c) => c.name).join(", ")
+        collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
+        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+          ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
-          ? batch.assignedTrackTemplateIds.map((t) => String(t._id || t))
+          ? batch.assignedTrackTemplateIds.filter(Boolean).map((t) => String(t._id || t))
           : [
               batch.assignedDailyTaskTrack?._id,
               batch.assignedDailyChallengeTrack?._id,
@@ -2336,7 +2336,7 @@ todayXp = todayChallengeXp + todayTaskXp;
         activeStudentsToday: activeCount,
         inactiveStudentsToday: inactiveCount,
         currentActiveTrack,
-        attachedCourse: batch.attachedCourse
+        attachedCourse: (batch.attachedCourse && batch.attachedCourse._id)
           ? {
               id: batch.attachedCourse._id,
               title: batch.attachedCourse.title || "Untitled Course",
@@ -2345,8 +2345,8 @@ todayXp = todayChallengeXp + todayTaskXp;
             }
           : null,
         supportingCourses: Array.isArray(batch.supportingCourses)
-          ? batch.supportingCourses.map((c) => ({
-              id: c._id,
+          ? batch.supportingCourses.filter(Boolean).map((c) => ({
+              id: c._id || c,
               title: c.title || "Untitled Course",
               description: c.description || "",
               numTopics: c.numTopics || c.topicIds?.length || 0,
