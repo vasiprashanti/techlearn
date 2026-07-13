@@ -659,10 +659,10 @@ export const listBatches = async (req, res) => {
       return {
         id: batch._id,
         name: batch.name,
-        college: batch.collegeIds && batch.collegeIds.length > 0
-          ? batch.collegeIds.map((c) => c.name).join(", ")
+        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+          ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
-        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
+        collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
         assignedTrack: currentActiveTrack,
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
@@ -2311,9 +2311,9 @@ todayXp = todayChallengeXp + todayTaskXp;
         id: batch._id,
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
-        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
-        college: batch.collegeIds && batch.collegeIds.length > 0
-          ? batch.collegeIds.map((c) => c.name).join(", ")
+        collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
+        college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+          ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
