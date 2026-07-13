@@ -391,6 +391,34 @@ const finalizeDailyChallengeAttempt = async ({
       }
     }
 
+    // Task 2: Validate that starting/abandoning/terminating the test does not grant XP
+    let hasAttemptedAny = false;
+    if (submission.problemCodes) {
+      for (const [key, codeVal] of submission.problemCodes.entries()) {
+        const problemIndex = parseInt(key, 10);
+        const problem = codingRound?.problems?.[problemIndex];
+        const starterCode = problem?.starterCode || "";
+        const cleanCode = (codeVal || "").trim();
+        const cleanStarter = starterCode.trim();
+        if (cleanCode && cleanCode !== cleanStarter) {
+          hasAttemptedAny = true;
+          break;
+        }
+      }
+    }
+    if (!hasAttemptedAny && submission.problemSubmitted) {
+      for (const val of submission.problemSubmitted.values()) {
+        if (val === true) {
+          hasAttemptedAny = true;
+          break;
+        }
+      }
+    }
+
+    if (finalStatus === "terminated" || attempt.status === "terminated" || !hasAttemptedAny) {
+      totalChallengeXpAwarded = 0;
+    }
+
     if (totalChallengeXpAwarded > 0 && student?.userId) {
       // Atomically mark XP as awarded — only proceeds if xpAwarded was false
       const claimedAttempt = await DailyChallengeAttempt.findOneAndUpdate(

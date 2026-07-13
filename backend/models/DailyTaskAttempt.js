@@ -17,6 +17,10 @@ const taskProgressSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    xpEarned: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
       enum: ["Not Started", "In Progress", "Completed"],

@@ -267,6 +267,15 @@ export default function InterviewCoreCsQuestionDetail() {
         finalize: false,
       });
       setSubmissionMessage('');
+      if (isDailyMode) {
+        setTimeout(() => {
+          if (currentTaskIndex < dailySequence.length - 1) {
+            const nextTask = dailySequence[currentTaskIndex + 1];
+            const nextType = nextTask.taskType === 'SQL' ? 'sql' : nextTask.taskType === 'MCQ' || nextTask.taskType === 'Core CS' ? 'core-cs' : 'dsa';
+            navigate(`/dashboard/practice/${nextType}/${nextTask.questionId}?mode=daily`);
+          }
+        }, 2500);
+      }
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
     }
@@ -303,7 +312,7 @@ export default function InterviewCoreCsQuestionDetail() {
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
         <div className="border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
           {/* Header row with heading centered and difficulty pill absolute on the right */}
-          <div className="relative flex items-center justify-between w-full mb-6 select-none border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="w-full flex items-center justify-between mb-6 select-none border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-2">
             <button
               type="button"
               onClick={() => navigate(backPath)}
@@ -315,7 +324,7 @@ export default function InterviewCoreCsQuestionDetail() {
             <h1 className="text-[10px] md:text-xs font-press-start text-[#2563eb] dark:text-[#8fd9ff] uppercase">
               TECHNICAL MCQ
             </h1>
-            <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
+            <span className={`rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
               {question.difficulty}
             </span>
           </div>

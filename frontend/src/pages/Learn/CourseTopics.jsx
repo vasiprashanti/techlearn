@@ -131,28 +131,24 @@ const CourseTopics = () => {
   const [placementData, setPlacementData] = useState(null);
   const [activeChallenge, setActiveChallenge] = useState(null);
 
-
-
   useEffect(() => {
-    if (isPlacementSprint) {
-      placementLearningAPI.getDashboard()
-        .then((res) => {
-          if (res?.hasPlacementLearning) {
-            setPlacementData(res);
-          }
-        })
-        .catch(console.error);
+    placementLearningAPI.getDashboard()
+      .then((res) => {
+        if (res?.hasPlacementLearning) {
+          setPlacementData(res);
+        }
+      })
+      .catch(console.error);
 
-      dailyChallengeAPI.getActive()
-        .then((res) => {
-          const c = res?.challenge || res;
-          if (c && c.linkId) {
-            setActiveChallenge(c);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [isPlacementSprint]);
+    dailyChallengeAPI.getActive()
+      .then((res) => {
+        const c = res?.challenge || res;
+        if (c && c.linkId) {
+          setActiveChallenge(c);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!totalTopics || !currentCourse) return;
@@ -380,7 +376,16 @@ const CourseTopics = () => {
                   Next (Locked) <Lock className="w-3.5 h-3.5 text-black/30 dark:text-white/30" />
                 </button>
               ) : (
-                <button onClick={() => navigate(`/learn/exercises/${courseId}`)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
+                <button
+                  onClick={() => {
+                    if (placementData) {
+                      navigate('/dashboard');
+                    } else {
+                      navigate(`/learn/exercises/${courseId}`);
+                    }
+                  }}
+                  className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5"
+                >
                   Complete <CheckCircle className="w-4 h-4" />
                 </button>
               )}
@@ -388,7 +393,7 @@ const CourseTopics = () => {
 
               </div>
           </div>
-          {isPlacementSprint ? (
+          {placementData ? (
             <aside
               data-course-sidebar="true"
               className="sticky top-24 hidden w-64 self-start justify-self-start md:flex flex-col rounded-l-2xl border-y border-l border-black/5 bg-[#bceaff]/80 backdrop-blur-2xl shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-all duration-500 ease-out dark:rounded-none dark:border-transparent dark:bg-transparent dark:shadow-none dark:backdrop-blur-none max-h-[calc(100vh-8rem)] overflow-y-auto minimal-scrollbar"
@@ -398,6 +403,17 @@ const CourseTopics = () => {
                   <div className="text-[10.5px] uppercase tracking-[0.2em] text-[#001862]/40 dark:text-white/35 font-bold mb-4 px-5">
                     Quick Actions
                   </div>
+
+                  {!backendCourse?.isPlacementPrimary && placementData?.attachedCourse && (
+                    <button
+                      onClick={() => navigate(`/learn/courses/${placementData.attachedCourse.id || placementData.attachedCourse._id}/topics?day=${selectedTopic + 1}`)}
+                      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-transparent px-5 py-3.5 text-left text-sm tracking-wide text-[#001862] hover:border-[#7ec9ff]/35 hover:bg-[#d8f1fb]/55 hover:text-[#001862] dark:text-white/70 dark:hover:border-white/20 dark:hover:bg-[#1a2b6d]/95 dark:hover:text-white transition-all duration-300 ease-out font-medium"
+                    >
+                      <span className="block min-w-0 flex-1 text-sm leading-tight">
+                        Go to Today's {placementData.attachedCourse.title} Notes
+                      </span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => {
@@ -423,7 +439,7 @@ const CourseTopics = () => {
                     </span>
                   </button>
 
-                  {(placementData?.supportingCourses || []).map((course) => (
+                  {backendCourse?.isPlacementPrimary && (placementData?.supportingCourses || []).map((course) => (
                     <button
                       key={course.id || course._id}
                       onClick={() => navigate(`/learn/courses/${course.id || course._id}/topics?day=${selectedTopic + 1}`)}

@@ -12,8 +12,18 @@ const batchSchema = new mongoose.Schema(
     collegeId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "College",
-      required: true,
+      required: false,
       index: true, // All foreign keys must be indexed
+    },
+    collegeIds: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "College",
+        },
+      ],
+      default: [],
+      index: true,
     },
     name: {
       type: String,

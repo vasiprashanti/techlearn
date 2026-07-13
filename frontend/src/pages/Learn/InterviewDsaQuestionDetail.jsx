@@ -400,7 +400,7 @@ export default function InterviewDsaQuestionDetail() {
 
             {/* Scrollable description inside the Left Card */}
             <div className="flex-1 overflow-y-auto p-5">
-              <div className="prose prose-slate max-w-none dark:prose-invert text-sm">
+              <div className="prose prose-slate max-w-none dark:prose-invert text-base">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{details.statement}</ReactMarkdown>
               </div>
             </div>
@@ -436,7 +436,7 @@ export default function InterviewDsaQuestionDetail() {
                     type="button"
                     onClick={runCode}
                     disabled={isRunning}
-                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-2.5 sm:py-2 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Play className="h-3.5 w-3.5" />
                     {isRunning ? 'Run...' : 'Run'}
@@ -447,7 +447,7 @@ export default function InterviewDsaQuestionDetail() {
                       type="button"
                       onClick={markSolved}
                       disabled={isSubmitted}
-                      className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
+                      className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-2.5 sm:py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                     >
                       <CheckCircle className="h-3.5 w-3.5" />
                       Submit Code
@@ -489,7 +489,7 @@ export default function InterviewDsaQuestionDetail() {
 
         {/* Bottom Action Bar */}
         {isDailyMode && (
-          <footer className="relative h-11 shrink-0 mt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between select-none">
+          <footer className="relative py-2.5 shrink-0 mt-4 pt-4 border-t border-black/5 dark:border-white/10 flex items-center justify-between select-none">
             {/* Back button fixed to the bottom-left corner */}
             <button
               type="button"
@@ -502,7 +502,7 @@ export default function InterviewDsaQuestionDetail() {
                   navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                 }
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2563eb]/15 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-3 py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2563eb]/15 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-4 py-2.5 sm:py-2 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
             >
               Back
             </button>
@@ -518,7 +518,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-4 py-1 text-xs font-semibold text-white shadow-sm transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-5 py-2.5 sm:py-2 text-xs font-semibold text-white shadow-sm transition-all duration-200"
                 >
                   Next
                 </button>
@@ -526,7 +526,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-1 text-xs font-semibold text-white shadow-sm hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 sm:py-2 text-xs font-semibold text-white shadow-sm hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
                 >
                   Finish
                 </button>

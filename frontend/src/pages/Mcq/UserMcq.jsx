@@ -144,6 +144,7 @@ const UserMcq = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [timeLeft, setTimeLeft] = useState(0);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Submit quiz results to backend — guarded by submitting flag to prevent double-submit
   const submitQuizResults = async () => {
@@ -208,6 +209,7 @@ const UserMcq = () => {
 
   const handleNext = async () => {
     if (submitting) return; // Guard against double-click
+    setShowFeedback(false);
     if (currentQuestion < quiz.questions.length - 1) {
       setCurrentQuestion((prev) => prev + 1);
     } else {
@@ -373,47 +375,87 @@ const UserMcq = () => {
             </div>
           </div>
 
-          {/* Question */}
-          {question.topic && (
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-blue-500/15 bg-blue-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">
-                {question.topic}
-              </span>
-            </div>
-          )}
           <h2 className="text-xl font-medium text-gray-900 dark:text-white">
             {question.question}
           </h2>
 
           {/* Options */}
           <div className="space-y-3">
-            {(question.options || []).map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleAnswerSelect(idx)}
-                className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-300 ${
-                  selectedAnswers[currentQuestion] === idx
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-                    : "border-gray-300 dark:border-gray-500 bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-gray-200 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-400/50"
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+            {(question.options || []).map((opt, idx) => {
+              let optionClass = "border-gray-300 dark:border-gray-500 bg-gray-50 dark:bg-gray-700/50 text-gray-800 dark:text-gray-200 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:border-blue-400/50";
+              
+              if (selectedAnswers[currentQuestion] === idx) {
+                optionClass = "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300";
+              }
+              
+              if (showFeedback) {
+                if (idx === question.correct) {
+                  optionClass = "border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300";
+                } else if (selectedAnswers[currentQuestion] === idx) {
+                  optionClass = "border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300";
+                } else {
+                  optionClass = "border-gray-200 dark:border-gray-700 bg-gray-50/30 dark:bg-gray-800/20 text-gray-400 dark:text-gray-500 opacity-60";
+                }
+              }
+
+              return (
+                <button
+                  key={idx}
+                  disabled={showFeedback}
+                  onClick={() => handleAnswerSelect(idx)}
+                  className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-300 ${optionClass}`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
           </div>
+
+          {/* Feedback & Explanation Section */}
+          {showFeedback && (
+            <div className={`rounded-xl border p-4 text-left ${
+              selectedAnswers[currentQuestion] === question.correct
+                ? "border-green-200 bg-green-50/80 dark:border-green-800/40 dark:bg-green-900/20 text-green-800 dark:text-green-200"
+                : "border-red-200 bg-red-50/80 dark:border-red-800/40 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+            }`}>
+              <div className="font-bold mb-1">
+                {selectedAnswers[currentQuestion] === question.correct ? "✅ Correct!" : "❌ Incorrect"}
+              </div>
+              <div className="text-sm leading-relaxed">
+                {question.explanation || "No explanation provided."}
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
           <div className="flex justify-center">
-            <button
-              onClick={handleNext}
-              disabled={selectedAnswers[currentQuestion] === undefined || submitting}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 border border-blue-200/50 dark:border-blue-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {currentQuestion === quiz.questions.length - 1
-                ? "Finish Quiz"
-                : "Next Question"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {!showFeedback ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFeedback(true);
+                  setTimeout(() => {
+                    handleNext();
+                  }, 2500);
+                }}
+                disabled={selectedAnswers[currentQuestion] === undefined || submitting}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit Answer
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={submitting}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-300 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-800/40 text-blue-800 dark:text-blue-200 border border-blue-200/50 dark:border-blue-700/50"
+              >
+                {currentQuestion === quiz.questions.length - 1
+                  ? "Finish Quiz"
+                  : "Next Question"}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </motion.div>
       </div>
