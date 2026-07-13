@@ -608,6 +608,7 @@ export const listBatches = async (req, res) => {
     const batches = await Batch.find()
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
+      .populate("collegeIds", "name")
       .populate("assignedTrackTemplate", "name category trackType status dayAssignments")
       .populate("assignedDailyTaskTrack", "name category trackType status dayAssignments")
       .populate("assignedDailyChallengeTrack", "name category trackType status dayAssignments")
@@ -658,7 +659,10 @@ export const listBatches = async (req, res) => {
       return {
         id: batch._id,
         name: batch.name,
-        college: batch.collegeId?.name || "Unknown College",
+        college: batch.collegeIds && batch.collegeIds.length > 0
+          ? batch.collegeIds.map((c) => c.name).join(", ")
+          : (batch.collegeId?.name || "Unknown College"),
+        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
         assignedTrack: currentActiveTrack,
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
@@ -696,15 +700,19 @@ export const listBatches = async (req, res) => {
 
 export const createBatchAdmin = async (req, res) => {
   try {
-    const { collegeId, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection, attachedCourse, supportingCourses, courses } = req.body;
+    const { collegeId, collegeIds, name, startDate, expiryDate, releaseTime, status, assignedTrack, assignedTrackTemplateId, assignedTrackTemplateIds, batchSize, programSelection, attachedCourse, supportingCourses, courses } = req.body;
     const parsedBatchSize =
       batchSize === undefined || batchSize === null || String(batchSize).trim() === ""
         ? null
         : Number(batchSize);
-    if (!collegeId || !name || !startDate || !expiryDate) {
-      return res.status(400).json({ success: false, message: "collegeId, name, startDate, and expiryDate are required." });
+    
+    const resolvedCollegeIds = Array.isArray(collegeIds) ? collegeIds : (collegeId ? [collegeId] : []);
+    if (resolvedCollegeIds.length === 0 || !name || !startDate || !expiryDate) {
+      return res.status(400).json({ success: false, message: "collegeIds, name, startDate, and expiryDate are required." });
     }
-    if (!assertObjectId(collegeId, "collegeId", res)) return;
+    for (const id of resolvedCollegeIds) {
+      if (!assertObjectId(id, "collegeIds", res)) return;
+    }
 
     let selectedCourseIds = [];
     if (Array.isArray(courses)) {
@@ -737,7 +745,8 @@ export const createBatchAdmin = async (req, res) => {
         const [createdBatch] = await Batch.create(
           [
             {
-              collegeId,
+              collegeId: resolvedCollegeIds[0],
+              collegeIds: resolvedCollegeIds,
               name: name.trim(),
               startDate,
               expiryDate,
@@ -801,6 +810,7 @@ export const getBatchDetail = async (req, res) => {
 
     const batch = await Batch.findById(batchId)
       .populate("collegeId", "name")
+      .populate("collegeIds", "name")
       .populate("assignedTrackTemplate", "name category trackType status")
       .populate("assignedDailyTaskTrack", "name category trackType status")
       .populate("assignedDailyChallengeTrack", "name category trackType status")
@@ -2301,7 +2311,10 @@ todayXp = todayChallengeXp + todayTaskXp;
         id: batch._id,
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
-        college: batch.collegeId?.name || "Unknown College",
+        collegeIds: (batch.collegeIds || []).map((c) => String(c._id || c)),
+        college: batch.collegeIds && batch.collegeIds.length > 0
+          ? batch.collegeIds.map((c) => c.name).join(", ")
+          : (batch.collegeId?.name || "Unknown College"),
         assignedTrack: batch.assignedTrackTemplate?.name || batch.assignedTrack || "",
         assignedTrackTemplateId: batch.assignedTrackTemplate?._id || null,
         assignedTrackTemplateIds: (batch.assignedTrackTemplateIds && batch.assignedTrackTemplateIds.length > 0)
@@ -2496,9 +2509,19 @@ export const updateBatchAdmin = async (req, res) => {
       }
     }
 
-    if (req.body.collegeId) {
+    if (req.body.collegeIds) {
+      if (!Array.isArray(req.body.collegeIds) || req.body.collegeIds.length === 0) {
+        return res.status(400).json({ success: false, message: "collegeIds must be a non-empty array." });
+      }
+      for (const id of req.body.collegeIds) {
+        if (!assertObjectId(id, "collegeIds", res)) return;
+      }
+      update.collegeIds = req.body.collegeIds;
+      update.collegeId = req.body.collegeIds[0];
+    } else if (req.body.collegeId) {
       if (!assertObjectId(req.body.collegeId, "collegeId", res)) return;
       update.collegeId = req.body.collegeId;
+      update.collegeIds = [req.body.collegeId];
     }
 
     const session = await mongoose.startSession();

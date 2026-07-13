@@ -381,14 +381,21 @@ export const submitDailyTask = async (req, res) => {
     // Calculate XP
     const difficulty = configuredTask?.questionId?.difficulty || "Easy";
     const accuracy = typeof task.accuracy === "number" ? task.accuracy : 100;
-    let xpEarned = Number(configuredTask?.xpValue || 0) > 0
-      ? Number(configuredTask.xpValue)
-      : calculateTaskXP({ taskType, difficulty, accuracy });
+    const isValidAttempt = isCorrect === true || accuracy > 0;
+    let xpEarned = 0;
+    if (isValidAttempt) {
+      xpEarned = Number(configuredTask?.xpValue || 0) > 0
+        ? Number(configuredTask.xpValue)
+        : calculateTaskXP({ taskType, difficulty, accuracy });
+    }
 
     // Calculate bonuses if all completed today
     let bonusXp = 0;
     if (justCompletedDay) {
-      bonusXp += TASK_XP.ALL_COMPLETED_BONUS; // +25 XP
+      const hasAnyValidTask = attempt.tasksProgress.some(t => t.attempted && (t.isCorrect === true || (typeof t.accuracy === 'number' && t.accuracy > 0)));
+      if (hasAnyValidTask) {
+        bonusXp += TASK_XP.ALL_COMPLETED_BONUS; // +25 XP
+      }
     }
 
     const totalXpAdded = xpEarned + bonusXp;

@@ -287,9 +287,11 @@ const Batches = () => {
   const [isDeletingBatch, setIsDeletingBatch] = useState(false);
   const [batchSearchTerm, setBatchSearchTerm] = useState('');
   const [courses, setCourses] = useState([]);
+  const [collegeDropdownOpen, setCollegeDropdownOpen] = useState(false);
   const [createBatchForm, setCreateBatchForm] = useState({
     batchName: '',
     college: '',
+    collegeIds: [],
     startDate: '',
     assignedTrack: '',
     assignedTrackTemplateIds: [],
@@ -502,6 +504,7 @@ const Batches = () => {
     setCreateBatchForm({
       batchName: '',
       college: '',
+      collegeIds: [],
       startDate: '',
       assignedTrack: '',
       assignedTrackTemplateId: '',
@@ -526,6 +529,10 @@ const Batches = () => {
       ...(Array.isArray(batch.supportingCourses) ? batch.supportingCourses.map(c => String(c.id || c._id || c)) : [])
     ].filter(Boolean);
 
+    const collegeIds = Array.isArray(batch.collegeIds)
+      ? batch.collegeIds.map(String)
+      : (batch.collegeId ? [String(batch.collegeId._id || batch.collegeId.id || batch.collegeId)] : []);
+
     setEditingBatchId(batch.id);
     setEditingTrackTemplateId(batch.assignedTrackTemplateId || null);
     setTrackTemplateDropdownOpen(false);
@@ -533,6 +540,7 @@ const Batches = () => {
     setCreateBatchForm({
       batchName: batch.name || '',
       college: batch.college || '',
+      collegeIds,
       startDate: batch.startDateValue || '',
       assignedTrack: batch.assignedTrack || '',
       assignedTrackTemplateId: assignedTrackTemplateIds[0] || '',
@@ -552,8 +560,8 @@ const Batches = () => {
       setCreateError('Batch name is required');
       return;
     }
-    if (!createBatchForm.college) {
-      setCreateError('College is required');
+    if (!createBatchForm.collegeIds || createBatchForm.collegeIds.length === 0) {
+      setCreateError('At least one college is required');
       return;
     }
     if (!createBatchForm.startDate || !createBatchForm.endDate) {
@@ -569,12 +577,6 @@ const Batches = () => {
       return;
     }
 
-    const selectedCollege = colleges.find((college) => college.name === createBatchForm.college);
-    if (!selectedCollege?.id) {
-      setCreateError('Please select a valid college');
-      return;
-    }
-
     const selectedTemplateIds = Array.isArray(createBatchForm.assignedTrackTemplateIds)
       ? createBatchForm.assignedTrackTemplateIds.map(String)
       : [];
@@ -585,7 +587,8 @@ const Batches = () => {
 
     try {
       const payload = {
-        collegeId: selectedCollege.id,
+        collegeId: createBatchForm.collegeIds[0],
+        collegeIds: createBatchForm.collegeIds,
         name: createBatchForm.batchName.trim(),
         startDate: createBatchForm.startDate,
         expiryDate: createBatchForm.endDate,
@@ -683,20 +686,51 @@ const Batches = () => {
                     className={batchFormInputClass}
                   />
                 </div>
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">College*</label>
-                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select
-                      value={createBatchForm.college}
-                      onChange={(e) => setCreateBatchForm((prev) => ({ ...prev, college: e.target.value }))}
-                      className="appearance-none w-full px-3 py-2 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                 <div>
+                  <label className="admin-micro-label text-black/45 dark:text-white/45">Colleges*</label>
+                  <div className="relative mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setCollegeDropdownOpen(!collegeDropdownOpen)}
+                      className="w-full text-left px-3 py-2 text-sm font-medium rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] text-slate-800 dark:text-white outline-none flex items-center justify-between shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]"
                     >
-                      <option className={dropdownOptionClass} value="">Select college</option>
-                      {collegeOptions.map((college) => (
-                        <option className={dropdownOptionClass} key={college} value={college}>{college}</option>
-                      ))}
-                    </select>
-                    <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                      <span className="truncate">
+                        {createBatchForm.collegeIds && createBatchForm.collegeIds.length > 0
+                          ? `${createBatchForm.collegeIds.length} college(s) selected`
+                          : 'Select colleges'}
+                      </span>
+                      <FiChevronDown className="w-4 h-4 ml-2 text-black/45 dark:text-white/60" />
+                    </button>
+                    {collegeDropdownOpen && (
+                      <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white dark:bg-slate-900 border border-black/10 dark:border-white/10 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                        {colleges.map((col) => {
+                          const colId = col.id || col._id;
+                          const isChecked = createBatchForm.collegeIds.includes(String(colId));
+                          return (
+                            <label key={colId} className="flex items-center gap-2.5 px-2 py-1.5 hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  setCreateBatchForm((prev) => {
+                                    const updated = prev.collegeIds.includes(String(colId))
+                                      ? prev.collegeIds.filter(id => id !== String(colId))
+                                      : [...prev.collegeIds, String(colId)];
+                                    return {
+                                      ...prev,
+                                      collegeIds: updated,
+                                      college: updated.length > 0 ? (colleges.find(c => String(c.id || c._id) === updated[0])?.name || '') : ''
+                                    };
+                                  });
+                                }}
+                                className="rounded text-[#3C83F6] focus:ring-[#3C83F6]"
+                              />
+                              <span className="text-sm text-slate-700 dark:text-slate-200">{col.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

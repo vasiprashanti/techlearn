@@ -229,6 +229,11 @@ export default function InterviewAptitudeQuestionDetail() {
       
       if (isDailyMode) {
         await fetchDailyTasks();
+        setTimeout(() => {
+          if (currentTaskIndex < dailySequence.length - 1) {
+            navigate(`/dashboard/practice/aptitude/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
+          }
+        }, 2500);
       }
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');
@@ -287,7 +292,7 @@ export default function InterviewAptitudeQuestionDetail() {
         <div className="w-full flex flex-col items-start rounded-2xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 p-6 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
           
           {/* Header Action Button */}
-          <div className="relative w-full flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="w-full flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 flex-wrap gap-2 select-none">
             <button
               type="button"
               onClick={() => navigate(backPath)}
@@ -296,7 +301,7 @@ export default function InterviewAptitudeQuestionDetail() {
               <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </button>
-            <span className={`absolute right-0 rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
+            <span className={`rounded-full border px-2.5 py-0.5 font-semibold text-xs ${difficultyPillClass[question.difficulty]}`}>
               {question.difficulty}
             </span>
           </div>

@@ -483,25 +483,33 @@ export const recordPracticeSubmission = async (req, res) => {
                   attempt.tasksProgress.forEach((t) => {
                     if (isSameTrack(t.taskType)) {
                       let xpEarned = calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed });
+                      let earned = 0;
                       if (t.taskType === "Coding" || t.taskType === "SQL") {
                         const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);
                         const fraction = Math.max(0, Math.min(100, acc)) / 100;
-                        totalXpAdded += Math.round(xpEarned * fraction);
+                        earned = Math.round(xpEarned * fraction);
                       } else {
                         if (t.isCorrect === true) {
-                          totalXpAdded += xpEarned;
+                          earned = xpEarned;
                         }
                       }
+                      t.xpEarned = earned;
+                      totalXpAdded += earned;
                     }
                   });
                   
-                  // Add bonuses only if all tasks are completed
+                  // Add bonuses only if all tasks are completed and they have at least one valid attempt
                   if (allCompleted) {
-                    totalXpAdded += TASK_XP.ALL_COMPLETED_BONUS;
-                    if (!skippedAny) {
-                      totalXpAdded += TASK_XP.NO_SKIP_BONUS;
+                    const hasValidAttempt = attempt.tasksProgress.some(t => t.attempted && (t.isCorrect === true || (typeof t.accuracy === 'number' && t.accuracy > 0)));
+                    if (hasValidAttempt) {
+                      totalXpAdded += TASK_XP.ALL_COMPLETED_BONUS;
+                      if (!skippedAny) {
+                        totalXpAdded += TASK_XP.NO_SKIP_BONUS;
+                      }
                     }
                   }
+                  
+                  await attempt.save();
                   
                   if (totalXpAdded > 0) {
                     let progress = await mongoose.model("UserProgress").findOne({ userId: req.user._id });

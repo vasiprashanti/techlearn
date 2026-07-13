@@ -442,7 +442,8 @@ export const verifyOTPAndGetCollegeMcq = async (req, res) => {
         options: q.options,
         difficulty: q.difficulty,
         tags: q.tags,
-        // Don't include correct answer
+        correct: q.correct,
+        explanation: q.explanation || "No explanation provided.",
       })),
       timeLimit: collegeMcq.duration * 60, // convert to seconds
     };

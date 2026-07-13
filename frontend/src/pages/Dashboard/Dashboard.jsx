@@ -263,12 +263,19 @@ export default function Dashboard() {
                 return t.isCorrect === true;
               }).length;
 
+              const totalXp = payload.data.tasks.reduce((sum, t) => sum + (t.xpEarned || 0), 0);
+              const hasValidAttempt = payload.data.tasks.some(t => t.attempted && (t.isCorrect === true || (t.accuracy && t.accuracy > 0)));
+              const finalBonus = hasValidAttempt ? 25 : 0;
+
               setAdvancementModal({
                 isOpen: true,
                 completedDay: payload.data.dayNumber,
                 nextDay: payload.data.dayNumber + 1,
                 isDailyTaskMode: true,
-                score: `${correctTasksCount}/${totalTasksCount}`
+                score: `${correctTasksCount}/${totalTasksCount}`,
+                tasks: payload.data.tasks,
+                totalXp: totalXp,
+                bonusXp: finalBonus,
               });
               localStorage.setItem(seenKey, "true");
             }
@@ -1293,11 +1300,57 @@ export default function Dashboard() {
                 Awesome effort! You have successfully completed all your {advancementModal.isDailyTaskMode ? "Daily Tasks" : "tasks"} for <span className="font-semibold text-slate-800 dark:text-white font-sans">Day {advancementModal.completedDay}</span>{advancementModal.isDailyTaskMode ? "." : " of the project."}
               </p>
               {advancementModal.isDailyTaskMode && advancementModal.score && (
-                <div className="bg-[#3C83F6]/20 dark:bg-blue-950/40 py-2.5 px-4 rounded-xl border border-[#3C83F6]/40 dark:border-blue-800/40 text-center">
-                  <span className="block text-[8px] font-press-start uppercase text-slate-500 dark:text-slate-400">Your Evaluation Score</span>
-                  <span className="mt-1 block text-base font-bold text-[#3C83F6] dark:text-[#8fd9ff] font-press-start text-xs">
-                    {advancementModal.score} Correct
-                  </span>
+                <div className="space-y-3">
+                  <div className="bg-[#3C83F6]/20 dark:bg-blue-950/40 py-2.5 px-4 rounded-xl border border-[#3C83F6]/40 dark:border-blue-800/40 text-center">
+                    <span className="block text-[8px] font-press-start uppercase text-slate-500 dark:text-slate-400">Your Evaluation Score</span>
+                    <span className="mt-1 block text-base font-bold text-[#3C83F6] dark:text-[#8fd9ff] font-press-start text-xs">
+                      {advancementModal.score} Correct
+                    </span>
+                  </div>
+
+                  {advancementModal.tasks && advancementModal.tasks.length > 0 && (
+                    <div className="mt-4 text-left space-y-2 border-t border-black/5 dark:border-white/5 pt-4 max-h-60 overflow-y-auto minimal-scrollbar">
+                      <span className="block text-[8px] font-press-start uppercase text-slate-500 dark:text-slate-400 mb-2">Task-Wise Summary</span>
+                      {advancementModal.tasks.map((task, idx) => {
+                        const isCorrect = task.taskType === "Coding" || task.taskType === "SQL" || task.taskType === "Debugging"
+                          ? (task.accuracy >= 100 || task.isCorrect === true)
+                          : task.isCorrect === true;
+                        return (
+                          <div key={idx} className="flex justify-between items-center text-xs p-2 rounded-lg bg-slate-50 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-slate-800 dark:text-white truncate">{task.title}</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-mono">{task.taskType}</span>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              {task.taskType === "Coding" || task.taskType === "SQL" ? (
+                                <span className="text-[10px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded font-mono">
+                                  Acc: {task.accuracy ?? 0}%
+                                </span>
+                              ) : null}
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                isCorrect
+                                  ? "bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-300"
+                                  : "bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-300"
+                              }`}>
+                                {isCorrect ? "Correct" : "Incorrect"}
+                              </span>
+                              <span className="font-bold text-[#3C83F6] dark:text-[#8fd9ff]">
+                                +{task.xpEarned || 0} XP
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div className="flex justify-between items-center text-xs p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-semibold mt-2">
+                        <span>Daily Completion Bonus</span>
+                        <span>+{advancementModal.bonusXp || 0} XP</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-800 dark:text-blue-300 font-bold mt-3">
+                        <span>Total Day XP Earned</span>
+                        <span>+{(advancementModal.totalXp || 0) + (advancementModal.bonusXp || 0)} XP</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               

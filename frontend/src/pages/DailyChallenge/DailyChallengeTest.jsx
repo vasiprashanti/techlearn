@@ -1039,9 +1039,9 @@ export default function DailyChallengeTest() {
               <button
                 type="button"
                 onClick={modalAlert.onConfirm || (() => setModalAlert({ show: false, title: "", message: "", onConfirm: null }))}
-                className="h-10 px-6 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold transition-all shadow-md active:scale-[0.98]"
+                className="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-[#0d2a57] border border-black/10 dark:border-white/10 font-press-start text-[9px] uppercase tracking-wider transition-all shadow-md active:scale-[0.98] cursor-pointer font-bold"
               >
-                Okay
+                I Understand
               </button>
             </div>
           </div>

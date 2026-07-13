@@ -66,6 +66,7 @@ const McqUpload = () => {
       correct: 0,
       difficulty: "Medium",
       tags: [],
+      explanation: "",
     }));
     setQuestions(newQuestions);
   };
@@ -348,6 +349,18 @@ const McqUpload = () => {
                     <option value="Medium">Medium</option>
                     <option value="Hard">Hard</option>
                   </select>
+                </div>
+
+                {/* Explanation */}
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Explanation</label>
+                  <textarea
+                    value={q.explanation || ""}
+                    onChange={(e) => handleQuestionChange(qIndex, "explanation", e.target.value)}
+                    placeholder="Enter explanation for this question"
+                    rows={2}
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
                 </div>
 
                 {/* Tags */}

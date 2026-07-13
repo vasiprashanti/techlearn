@@ -47,6 +47,10 @@ const collegeMcqSchema = new mongoose.Schema(
             trim: true,
           },
         ],
+        explanation: {
+          type: String,
+          default: "",
+        },
       },
     ],
     isActive: {
