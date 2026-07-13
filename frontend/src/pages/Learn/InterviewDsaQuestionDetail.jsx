@@ -76,6 +76,46 @@ export default function InterviewDsaQuestionDetail() {
     }
   }, [questionId, isDailyMode]);
 
+  useEffect(() => {
+    if (!isDailyMode) return;
+
+    const handleClipboardEvent = (e) => {
+      e.preventDefault();
+      alert("Copy/Cut/Paste is disabled during daily tasks.");
+    };
+
+    const handleKeydown = (e) => {
+      const pressedKey = String(e.key || "").toLowerCase();
+      const isClipboardShortcut =
+        ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "insert"].includes(pressedKey)) ||
+        (e.shiftKey && pressedKey === "insert");
+
+      if (isClipboardShortcut) {
+        e.preventDefault();
+        alert("Clipboard keyboard shortcuts are disabled during daily tasks.");
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      alert("Right-click context menu is disabled during daily tasks.");
+    };
+
+    document.addEventListener("copy", handleClipboardEvent, true);
+    document.addEventListener("cut", handleClipboardEvent, true);
+    document.addEventListener("paste", handleClipboardEvent, true);
+    document.addEventListener("keydown", handleKeydown, true);
+    document.addEventListener("contextmenu", handleContextMenu, true);
+
+    return () => {
+      document.removeEventListener("copy", handleClipboardEvent, true);
+      document.removeEventListener("cut", handleClipboardEvent, true);
+      document.removeEventListener("paste", handleClipboardEvent, true);
+      document.removeEventListener("keydown", handleKeydown, true);
+      document.removeEventListener("contextmenu", handleContextMenu, true);
+    };
+  }, [isDailyMode]);
+
   const dailySequence = useMemo(() => {
     if (!isDailyMode) return [];
     return dailyTasksList.filter(t => t.taskType === 'Coding' || t.taskType === 'Debugging');

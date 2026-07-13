@@ -243,6 +243,8 @@ export default function Dashboard() {
             text: t.title,
             type: t.taskType,
             completed: t.status === "Completed",
+            isCorrect: t.isCorrect,
+            accuracy: t.accuracy,
           }));
           setDailyTasks(list);
           setIsFullyCompleted(payload.data.isFullyCompleted);
@@ -252,11 +254,21 @@ export default function Dashboard() {
             const seenKey = `daily-task-completed-seen-day-${payload.data.dayNumber}`;
             const alreadySeen = localStorage.getItem(seenKey);
             if (!alreadySeen) {
+              const totalTasksCount = payload.data.tasks.length;
+              const correctTasksCount = payload.data.tasks.filter(t => {
+                if (t.status !== "Completed") return false;
+                if (t.taskType === "Coding" || t.taskType === "SQL" || t.taskType === "Debugging") {
+                  return t.accuracy >= 100 || t.isCorrect === true;
+                }
+                return t.isCorrect === true;
+              }).length;
+
               setAdvancementModal({
                 isOpen: true,
                 completedDay: payload.data.dayNumber,
                 nextDay: payload.data.dayNumber + 1,
-                isDailyTaskMode: true
+                isDailyTaskMode: true,
+                score: `${correctTasksCount}/${totalTasksCount}`
               });
               localStorage.setItem(seenKey, "true");
             }
@@ -336,6 +348,18 @@ export default function Dashboard() {
     });
     return Math.round(totalProgress);
   }, [groupedTasks]);
+
+  const dailyTasksScore = useMemo(() => {
+    if (dailyTasks.length === 0) return null;
+    const correctCount = dailyTasks.filter(t => {
+      if (!t.completed) return false;
+      if (t.type === "Coding" || t.type === "SQL" || t.type === "Debugging") {
+        return t.accuracy >= 100 || t.isCorrect === true;
+      }
+      return t.isCorrect === true;
+    }).length;
+    return `${correctCount}/${dailyTasks.length}`;
+  }, [dailyTasks]);
 
   const handleGroupClick = (group) => {
     if (isFullyCompleted) {
@@ -990,7 +1014,7 @@ export default function Dashboard() {
                         <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">DAILY TASKS</h3>
                       </div>
                       <span className="font-pixel-header text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
-                        {groupedTasks.filter((g) => g.completed).length}/{groupedTasks.length}
+                        {isFullyCompleted && dailyTasksScore ? `SCORE: ${dailyTasksScore}` : `${groupedTasks.filter((g) => g.completed).length}/${groupedTasks.length}`}
                       </span>
                     </div>
 
@@ -1268,6 +1292,14 @@ export default function Dashboard() {
               <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
                 Awesome effort! You have successfully completed all your {advancementModal.isDailyTaskMode ? "Daily Tasks" : "tasks"} for <span className="font-semibold text-slate-800 dark:text-white font-sans">Day {advancementModal.completedDay}</span>{advancementModal.isDailyTaskMode ? "." : " of the project."}
               </p>
+              {advancementModal.isDailyTaskMode && advancementModal.score && (
+                <div className="bg-[#3C83F6]/20 dark:bg-blue-950/40 py-2.5 px-4 rounded-xl border border-[#3C83F6]/40 dark:border-blue-800/40 text-center">
+                  <span className="block text-[8px] font-press-start uppercase text-slate-500 dark:text-slate-400">Your Evaluation Score</span>
+                  <span className="mt-1 block text-base font-bold text-[#3C83F6] dark:text-[#8fd9ff] font-press-start text-xs">
+                    {advancementModal.score} Correct
+                  </span>
+                </div>
+              )}
               
               <div className="bg-[#3C83F6]/10 dark:bg-white/5 py-4 px-6 rounded-xl border border-[#3C83F6]/20 dark:border-white/10 flex items-center justify-center gap-3">
                 <div className="text-right">

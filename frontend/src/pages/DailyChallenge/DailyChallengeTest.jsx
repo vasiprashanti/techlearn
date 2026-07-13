@@ -348,6 +348,44 @@ export default function DailyChallengeTest() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleClipboardEvent = (e) => {
+      e.preventDefault();
+      announceClipboardBlocked(e.type === "paste" ? "Paste" : e.type === "copy" ? "Copy" : "Cut");
+    };
+
+    const handleKeydown = (e) => {
+      const pressedKey = String(e.key || "").toLowerCase();
+      const isClipboardShortcut =
+        ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "insert"].includes(pressedKey)) ||
+        (e.shiftKey && pressedKey === "insert");
+
+      if (isClipboardShortcut) {
+        e.preventDefault();
+        announceClipboardBlocked(pressedKey === "v" || (e.shiftKey && pressedKey === "insert") ? "Paste" : pressedKey === "x" ? "Cut" : "Copy");
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      announceClipboardBlocked("Right-click Context Menu");
+    };
+
+    document.addEventListener("copy", handleClipboardEvent, true);
+    document.addEventListener("cut", handleClipboardEvent, true);
+    document.addEventListener("paste", handleClipboardEvent, true);
+    document.addEventListener("keydown", handleKeydown, true);
+    document.addEventListener("contextmenu", handleContextMenu, true);
+
+    return () => {
+      document.removeEventListener("copy", handleClipboardEvent, true);
+      document.removeEventListener("cut", handleClipboardEvent, true);
+      document.removeEventListener("paste", handleClipboardEvent, true);
+      document.removeEventListener("keydown", handleKeydown, true);
+      document.removeEventListener("contextmenu", handleContextMenu, true);
+    };
+  }, [announceClipboardBlocked]);
+
   const moveToResult = (resultPayload) => {
     localStorage.removeItem(`daily-challenge-draft-${linkId}`);
     setDailyChallengeSession(linkId, {
