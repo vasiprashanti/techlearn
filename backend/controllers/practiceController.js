@@ -601,6 +601,9 @@ export const getPracticeStats = async (req, res) => {
       if (submission.isCorrect) correctByTrack[submission.track].add(submission.questionId);
     }
 
+    const studentObj = await mongoose.model("Student").findOne({ userId: req.user._id }).lean();
+    const currentStreak = studentObj ? (studentObj.streak || 0) : 0;
+
     for (const track of TRACKS) {
       stats[track].attempted = attemptedByTrack[track].size;
       stats[track].correct = correctByTrack[track].size;
@@ -609,14 +612,14 @@ export const getPracticeStats = async (req, res) => {
           ? Number(((stats[track].correct / stats[track].attempted) * 100).toFixed(1))
           : 0;
 
-      stats[track].streak = 0;
+      stats[track].streak = currentStreak;
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        streak: 0,
-        lastActivityDate: null,
+        streak: currentStreak,
+        lastActivityDate: studentObj ? (studentObj.lastActiveAt || null) : null,
         tracks: TRACKS.map((track) => stats[track]),
       },
     });
