@@ -1421,12 +1421,12 @@ const BatchDetails = () => {
       {isAddFormOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setIsAddFormOpen(false)} />
-          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+          <div className="relative w-full max-w-2xl rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
               <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-white">Add Student</h2>
               <button onClick={() => setIsAddFormOpen(false)} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 min-h-0">
               <div className="inline-flex rounded-xl border border-black/10 dark:border-white/10 p-1 bg-black/[0.03] dark:bg-white/5">
                 <button onClick={() => setStudentMode('existing')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'existing' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>Existing student</button>
                 <button onClick={() => setStudentMode('new')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${studentMode === 'new' ? 'bg-white dark:bg-[#18365f] text-[#3C83F6] dark:text-white shadow-sm' : 'text-black/55 dark:text-white/60'}`}>New student</button>
@@ -1613,8 +1613,12 @@ const BatchDetails = () => {
                   </div>
                 </div>
               </div>
+            </div> {/* End scrollable body */}
+
+            {/* Fixed Footer */}
+            <div className="px-6 py-4 border-t border-black/10 dark:border-white/10 flex flex-col gap-2 shrink-0 bg-white/95 dark:bg-[#0a1737]/95">
               {formError && <p className="text-xs text-red-500">{formError}</p>}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="flex items-center justify-end gap-2.5">
                 <button onClick={() => setIsAddFormOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5">Cancel</button>
                 <button onClick={saveStudent} disabled={isSavingStudent} className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] disabled:opacity-70">{isSavingStudent ? 'Saving...' : studentMode === 'existing' ? 'Add to Batch' : 'Add Student'}</button>
               </div>

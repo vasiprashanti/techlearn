@@ -364,46 +364,188 @@ export default function InterviewDsaQuestionDetail() {
     navigate('/dashboard');
   };
 
+  const MarkdownComponents = {
+    h2: ({ node, ...props }) => (
+      <h2 
+        className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 mt-6" 
+        {...props} 
+      />
+    ),
+    h3: ({ node, ...props }) => (
+      <h3 
+        className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 mt-6" 
+        {...props} 
+      />
+    ),
+    p: ({ node, ...props }) => (
+      <p 
+        className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] mb-4" 
+        {...props} 
+      />
+    ),
+    ul: ({ node, ...props }) => (
+      <ul 
+        className="list-none pl-0 flex flex-col gap-2 mb-4" 
+        {...props} 
+      />
+    ),
+    li: ({ node, children, ...props }) => (
+      <li 
+        className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2.5 px-3.5 rounded-lg border border-gray-200 dark:border-gray-800" 
+        {...props}
+      >
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0043A1] shrink-0"></span>
+        <span className="flex-1">{children}</span>
+      </li>
+    ),
+    pre: ({ node, children, ...props }) => (
+      <div className="bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col my-4">
+        <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider select-none">
+          <span>Code Block / Example</span>
+        </div>
+        <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap m-0 border-0" {...props}>
+          {children}
+        </pre>
+      </div>
+    ),
+    code: ({ node, inline, className, children, ...props }) => {
+      if (inline) {
+        return (
+          <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-[#0043A1] dark:text-[#93c5fd] font-mono text-xs rounded border border-gray-200 dark:border-gray-700 font-semibold" {...props}>
+            {children}
+          </code>
+        );
+      }
+      return (
+        <code className="text-xs font-mono" {...props}>
+          {children}
+        </code>
+      );
+    }
+  };
+
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
       <div className="min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)] flex flex-col lg:overflow-hidden w-full">
         {/* Workspace Body split */}
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
-          <aside className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
-            {/* Header inside the Left Card */}
-            <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
+          <aside 
+            className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-6 gap-5 scrollbar-thin"
+            style={{ scrollbarWidth: 'thin' }}
+          >
+            {/* Header Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-5 rounded-xl shrink-0">
               {!isDailyMode && (
                 <button
                   type="button"
                   onClick={() => navigate(dsaListPath)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#2563eb] hover:text-[#1d4ed8] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff] mb-3"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#8fd9ff] hover:text-[#a8e6ff] mb-3"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   Back
                 </button>
               )}
               
-              <h1 className="text-lg font-bold tracking-tight text-[#0d2a57] dark:text-white mb-2">
+              <h1 className="text-xl font-extrabold tracking-tight text-[#0d2a57] dark:text-white mb-2">
                 {question.title}
               </h1>
 
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                <span className="rounded-full border border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
                   {question.subtitle}
                 </span>
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                <span className="rounded-full border border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2.5 py-0.5 font-semibold">
                   {question.difficulty}
                 </span>
               </div>
             </div>
 
-            {/* Scrollable description inside the Left Card */}
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="prose prose-slate max-w-none dark:prose-invert text-base">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{details.statement}</ReactMarkdown>
+            {/* Problem Statement Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Problem Statement
+              </h2>
+              <div className="prose prose-slate max-w-none dark:prose-invert">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                  {question.description || `**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`}
+                </ReactMarkdown>
               </div>
             </div>
+
+            {/* Input Format Card */}
+            {question.inputFormat && (
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                  Input Format
+                </h2>
+                <div className="prose prose-slate max-w-none dark:prose-invert">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {question.inputFormat}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {/* Output Format Card */}
+            {question.outputFormat && (
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                  Output Format
+                </h2>
+                <div className="prose prose-slate max-w-none dark:prose-invert">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {question.outputFormat}
+                  </ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {/* Sample Testcases */}
+            {question.visibleTestCases && question.visibleTestCases.length > 0 && (
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                  Sample Testcase
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                    <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <span>Input</span>
+                      <button 
+                        onClick={() => {
+                          const text = question.visibleTestCases[0]?.input || "";
+                          navigator.clipboard.writeText(text);
+                        }}
+                        className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                      {question.visibleTestCases[0]?.input || ""}
+                    </pre>
+                  </div>
+
+                  <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                    <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      <span>Output</span>
+                      <button 
+                        onClick={() => {
+                          const text = question.visibleTestCases[0]?.output || question.visibleTestCases[0]?.expectedOutput || "";
+                          navigator.clipboard.writeText(text);
+                        }}
+                        className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                      {question.visibleTestCases[0]?.output || question.visibleTestCases[0]?.expectedOutput || ""}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
           </aside>
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
@@ -436,7 +578,7 @@ export default function InterviewDsaQuestionDetail() {
                     type="button"
                     onClick={runCode}
                     disabled={isRunning}
-                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-2.5 sm:py-2 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#0043A1]/20 dark:border-[#0043A1]/40 bg-[#0043A1]/5 dark:bg-[#0043A1]/15 px-2.5 py-1.5 text-xs font-semibold text-[#2563eb] dark:text-[#93c5fd] hover:bg-[#0043A1]/15 dark:hover:bg-[#0043A1]/35 transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Play className="h-3.5 w-3.5" />
                     {isRunning ? 'Run...' : 'Run'}
@@ -447,7 +589,7 @@ export default function InterviewDsaQuestionDetail() {
                       type="button"
                       onClick={markSolved}
                       disabled={isSubmitted}
-                      className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-2.5 sm:py-2 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
+                      className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex gap-1.5 rounded-lg bg-[#0043A1] hover:bg-[#003680] px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm z-10"
                     >
                       <CheckCircle className="h-3.5 w-3.5" />
                       Submit Code
@@ -476,7 +618,7 @@ export default function InterviewDsaQuestionDetail() {
             </section>
 
             {/* Card 2: Terminal / Output Console (flex-[1], outer rounded-xl, inner terminal sharp) */}
-            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#2563eb]/15 bg-white/20 p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
+            <section className="flex-[1] min-h-[90px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-[#0043A1]/15 bg-white/20 p-3 shadow-[0_20px_50px_rgba(12,52,171,0.06)] backdrop-blur-xl dark:border-[#0043A1]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff] border-b border-black/5 dark:border-white/5 pb-1.5">
                 Terminal
               </div>
@@ -489,7 +631,7 @@ export default function InterviewDsaQuestionDetail() {
 
         {/* Bottom Action Bar */}
         {isDailyMode && (
-          <footer className="relative py-2.5 shrink-0 mt-4 pt-4 border-t border-black/5 dark:border-white/10 flex items-center justify-between select-none">
+          <footer className="relative py-1 shrink-0 mt-4 pt-2 border-t border-black/5 dark:border-white/10 flex items-center justify-between select-none">
             {/* Back button fixed to the bottom-left corner */}
             <button
               type="button"
@@ -502,13 +644,13 @@ export default function InterviewDsaQuestionDetail() {
                   navigate(`/dashboard/practice/${prevType}/${prevTask.questionId}?mode=daily`);
                 }
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[#2563eb]/15 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-4 py-2.5 sm:py-2 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#0043A1]/15 dark:border-white/10 bg-[#0043A1]/5 dark:bg-white/5 px-4 py-1.5 text-xs font-semibold text-[#0043A1] dark:text-gray-300 hover:bg-[#0043A1]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
             >
               Back
             </button>
 
             {/* Daily Tasks X/N centered between them */}
-            <div className="absolute left-1/2 -translate-x-1/2 font-press-start text-[9px] md:text-[10px] text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider">
+            <div className="absolute left-1/2 -translate-x-1/2 font-press-start text-[9px] md:text-[10px] text-[#0043A1] dark:text-[#8fd9ff] uppercase tracking-wider">
               {`CODING TASK ${currentTaskIndex + 1}/${dailySequence.length}`}
             </div>
 
@@ -518,7 +660,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] active:scale-[0.98] px-5 py-2.5 sm:py-2 text-xs font-semibold text-white shadow-sm transition-all duration-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#0043A1] hover:bg-[#003680] active:scale-[0.98] px-5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all duration-200"
                 >
                   Next
                 </button>
@@ -526,7 +668,7 @@ export default function InterviewDsaQuestionDetail() {
                 <button
                   type="button"
                   onClick={handleFinish}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-2.5 sm:py-2 text-xs font-semibold text-white shadow-sm hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-1.5 text-xs font-semibold text-white shadow-sm hover:brightness-105 transition-all duration-200 active:scale-[0.98]"
                 >
                   Finish
                 </button>
