@@ -797,38 +797,133 @@ export default function DailyChallengeTest() {
       ) : (
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
           {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
-          <section className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]">
-            <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">
-              {challenge?.problems?.length > 1 && (
-                <div className="flex border-b border-black/5 dark:border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none">
-                  {renderQuestionTabs()}
-                </div>
-              )}
+          {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
+          <section 
+            className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-6 gap-5 scrollbar-thin"
+            style={{ scrollbarWidth: 'thin' }}
+          >
+            {challenge?.problems?.length > 1 && (
+              <div className="flex border-b border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none shrink-0">
+                {renderQuestionTabs()}
+              </div>
+            )}
 
-              <h2 className="text-lg font-bold text-[#0d2a57] dark:text-white mb-2">{problem.problemTitle}</h2>
-              
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  Coding Round
-                </span>
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  Runs: Unlimited
-                </span>
+            {/* Header Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-5 rounded-xl">
+              <h1 className="text-xl font-extrabold mb-3 text-[#0d2a57] dark:text-white tracking-tight">
+                {problem.problemTitle}
+              </h1>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2.5 py-0.5">Easy</span>
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5">Coding Round</span>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{problem.description}</p>
+            {/* Problem Statement Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Problem Statement
+              </h2>
+              <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] whitespace-pre-wrap">
+                {problem.description}
+              </p>
+              {problem.problemTitle === "Arithmetic Calculator" && (
+                <ul className="list-none pl-0 mt-4 flex flex-col gap-2">
+                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">+</b> Addition
+                  </li>
+                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">-</b> Subtraction
+                  </li>
+                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">*</b> Multiplication
+                  </li>
+                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">/</b> Integer Division
+                  </li>
+                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">%</b> Modulo
+                  </li>
+                </ul>
+              )}
+            </div>
 
-              <div className="space-y-3 text-xs text-gray-700 dark:text-gray-300 border-t border-gray-300/30 dark:border-gray-700/30 pt-3">
-                <div>
-                  <h3 className="font-semibold text-gray-950 dark:text-white">Input Format</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.inputDescription || "Refer to problem statement."}</p>
+            {/* Input & Output Format Grid */}
+            <div className="flex flex-col gap-4">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                  Input Format
+                </h2>
+                <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14px]">
+                  {problem.inputDescription || "Refer to problem statement."}
+                </p>
+              </div>
+
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                  Output Format
+                </h2>
+                <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14px]">
+                  {problem.outputDescription || "Return expected output."}
+                </p>
+              </div>
+            </div>
+
+            {/* Sample Testcases */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Sample Testcase
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <span>Input</span>
+                    <button 
+                      onClick={() => {
+                        const text = problem.example?.input?.replace(/\\n/g, "\n") || problem.visibleTestCases?.[0]?.input || "10\n5\n+";
+                        navigator.clipboard.writeText(text);
+                      }}
+                      className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                    {problem.example?.input?.replace(/\\n/g, "\n") ||
+                      problem.visibleTestCases?.[0]?.input ||
+                      "10\n5\n+"}
+                  </pre>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-950 dark:text-white">Output Format</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mt-0.5">{problem.outputDescription || "Return expected output."}</p>
+
+                <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                  <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <span>Output</span>
+                    <button 
+                      onClick={() => {
+                        const text = problem.example?.output?.replace(/\\n/g, "\n") || problem.visibleTestCases?.[0]?.expectedOutput || "15";
+                        navigator.clipboard.writeText(text);
+                      }}
+                      className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                    {problem.example?.output?.replace(/\\n/g, "\n") ||
+                      problem.visibleTestCases?.[0]?.expectedOutput ||
+                      "15"}
+                  </pre>
                 </div>
+              </div>
+            </div>
+
+            {/* Explanation Section */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
+              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Explanation
+              </h2>
+              <div className="bg-[#0043A1]/15 border-l-4 border-[#0043A1] p-4 rounded-r-lg text-[14px] text-[#0d2a57] dark:text-gray-300 font-mono">
+                {problem.example?.explanation || problem.visibleTestCases?.[0]?.explanation || "Refer to example output."}
               </div>
             </div>
           </section>
@@ -860,7 +955,7 @@ export default function DailyChallengeTest() {
                     type="button"
                     onClick={handleRun}
                     disabled={isDone || running || submitting}
-                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#2563eb]/20 dark:border-white/10 bg-[#2563eb]/5 dark:bg-white/5 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
+                    className="flex-1 sm:flex-initial sm:w-20 justify-center items-center inline-flex gap-1.5 rounded-lg border border-[#0043A1]/20 dark:border-[#0043A1]/40 bg-[#0043A1]/5 dark:bg-[#0043A1]/15 px-2.5 py-1.5 sm:py-1 text-xs font-semibold text-[#3b82f6] dark:text-[#93c5fd] hover:bg-[#0043A1]/15 dark:hover:bg-[#0043A1]/35 transition-all duration-200 active:scale-[0.98]"
                   >
                     <Play className="h-3.5 w-3.5" />
                     {running ? "Run..." : "Run"}
@@ -869,7 +964,7 @@ export default function DailyChallengeTest() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isDone || running || submitting}
-                    className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
+                    className="flex-1 sm:flex-initial sm:w-32 justify-center items-center inline-flex rounded-lg bg-[#0043A1] hover:bg-[#003680] px-3 py-1.5 sm:py-1 text-xs font-semibold text-white disabled:opacity-60 transition-all duration-200 active:scale-[0.98] shadow-sm"
                   >
                     {isDone ? "Submitted" : submitting ? "Submitting..." : "Submit & Next"}
                   </button>
@@ -961,7 +1056,7 @@ export default function DailyChallengeTest() {
             </section>
 
             {/* Card 2: Terminal Output */}
-            <section className="flex-[1] min-h-[180px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3">
+            <section className="flex-[1] min-h-[90px] lg:min-h-0 flex flex-col overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3">
               <div className="font-semibold mb-2 shrink-0 text-sm text-[#0d2a57] dark:text-[#8fd9ff]">
                 Terminal
               </div>
@@ -974,12 +1069,12 @@ export default function DailyChallengeTest() {
       )}
 
       {/* Fixed Footer Action Bar */}
-      <footer className="relative h-14 sm:h-16 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
+      <footer className="relative h-9 sm:h-10 shrink-0 border-t border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/70 px-4 sm:px-6 backdrop-blur-xl flex items-center justify-between gap-2 select-none">
         <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 select-none whitespace-nowrap min-w-[80px] sm:min-w-[120px]">
           {!isMcq ? "Runs: Unlimited" : ""}
         </div>
         
-        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#2563eb] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap flex-grow flex justify-center">
+        <div className="font-press-start text-[7.5px] sm:text-[10px] md:text-xs text-[#0043A1] dark:text-[#8fd9ff] uppercase tracking-wider select-none text-center whitespace-nowrap flex-grow flex justify-center">
           DAILY CHALLENGE
         </div>
 
@@ -988,7 +1083,7 @@ export default function DailyChallengeTest() {
             type="button"
             onClick={handleEndChallenge}
             disabled={submitting}
-            className="rounded-lg sm:rounded-xl border border-red-200/50 bg-red-500 hover:bg-red-600 px-2.5 py-1 sm:px-5 sm:py-2 text-[10px] sm:text-sm font-semibold text-white disabled:opacity-60 active:scale-[0.98] transition-all duration-200 shadow-sm whitespace-nowrap"
+            className="rounded-lg sm:rounded-xl border border-red-200/50 bg-red-500 hover:bg-red-600 px-2.5 py-0.5 sm:px-4 sm:py-1 text-[10px] sm:text-xs font-semibold text-white disabled:opacity-60 active:scale-[0.98] transition-all duration-200 shadow-sm whitespace-nowrap"
           >
             End Challenge
           </button>

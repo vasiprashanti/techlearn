@@ -395,20 +395,16 @@ const finalizeDailyChallengeAttempt = async ({
     let hasAttemptedAny = false;
     if (submission.problemCodes) {
       for (const [key, codeVal] of submission.problemCodes.entries()) {
-        const problemIndex = parseInt(key, 10);
-        const problem = codingRound?.problems?.[problemIndex];
-        const starterCode = problem?.starterCode || "";
         const cleanCode = (codeVal || "").trim();
-        const cleanStarter = starterCode.trim();
-        if (cleanCode && cleanCode !== cleanStarter) {
-          hasAttemptedAny = true;
-          break;
-        }
-      }
-    }
-    if (!hasAttemptedAny && submission.problemSubmitted) {
-      for (const val of submission.problemSubmitted.values()) {
-        if (val === true) {
+        const isNotAttempted = !cleanCode ||
+          cleanCode.startsWith("//") ||
+          cleanCode.startsWith("#") ||
+          cleanCode.startsWith("--") ||
+          cleanCode === "def solve():\n    pass" ||
+          cleanCode === "def solve():" ||
+          (cleanCode.includes("pass") && cleanCode.length < 50);
+
+        if (!isNotAttempted) {
           hasAttemptedAny = true;
           break;
         }
@@ -991,10 +987,14 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
         testsPassed = 1;
       }
     } else {
-      const isStarter = !submittedCode || !submittedCode.trim() ||
-        submittedCode === "def solve():\n    pass" ||
-        submittedCode.trim() === "def solve():" ||
-        (submittedCode.includes("pass") && submittedCode.length < 50);
+      const trimmed = submittedCode ? submittedCode.trim() : "";
+      const isStarter = !trimmed ||
+        trimmed.startsWith("//") ||
+        trimmed.startsWith("#") ||
+        trimmed.startsWith("--") ||
+        trimmed === "def solve():\n    pass" ||
+        trimmed === "def solve():" ||
+        (trimmed.includes("pass") && trimmed.length < 50);
 
       if (isStarter) {
         submission.problemScores.set(idxStr, 0);
@@ -1007,9 +1007,15 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
       const languageId = LANGUAGE_IDS[language?.toLowerCase()];
       if (languageId) {
         const allTestCases = [
-          ...(problem.visibleTestCases || []).map((testCase, index) => ({ ...testCase, visible: true, index })),
+          ...(problem.visibleTestCases || []).map((testCase, index) => ({
+            input: testCase.input || "",
+            expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
+            visible: true,
+            index
+          })),
           ...(problem.hiddenTestCases || []).map((testCase, index) => ({
-            ...testCase,
+            input: testCase.input || "",
+            expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
             visible: false,
             index: (problem.visibleTestCases || []).length + index,
           })),
@@ -1019,11 +1025,12 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
         for (let i = 0; i < totalTests; i++) {
           const testCase = allTestCases[i];
           try {
+            const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
             const testResult = await testCodeWithJudge0(
               submittedCode,
               languageId,
               testCase.input,
-              testCase.expectedOutput
+              targetExpectedOutput
             );
             const passed = testResult.success && testResult.outputMatches;
             if (passed) {
@@ -1033,17 +1040,18 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
               index: testCase.index,
               visible: testCase.visible,
               passed,
-              expectedOutput: testCase.expectedOutput || "",
+              expectedOutput: targetExpectedOutput || "",
               actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
               status: testResult.statusDescription || "",
               executionTime: Number(testResult.executionTime || 0),
             });
           } catch (err) {
+            const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
             testCaseDetails.push({
               index: testCase.index,
               visible: testCase.visible,
               passed: false,
-              expectedOutput: testCase.expectedOutput || "",
+              expectedOutput: targetExpectedOutput || "",
               actualOutput: "",
               status: err?.message || "Execution Error",
               executionTime: 0,
@@ -1293,12 +1301,14 @@ export const submitCodingRoundAnswers = async (req, res) => {
     } else {
       const allTestCases = [
         ...(problem.visibleTestCases || []).map((testCase, index) => ({
-          ...(testCase.toObject ? testCase.toObject() : testCase),
+          input: testCase.input || "",
+          expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
           visible: true,
           index,
         })),
         ...(problem.hiddenTestCases || []).map((testCase, index) => ({
-          ...(testCase.toObject ? testCase.toObject() : testCase),
+          input: testCase.input || "",
+          expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
           visible: false,
           index: (problem.visibleTestCases || []).length + index,
         })),
@@ -1309,11 +1319,12 @@ export const submitCodingRoundAnswers = async (req, res) => {
         const testCase = allTestCases[i];
 
         try {
+          const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
           const testResult = await testCodeWithJudge0(
             submittedCode,
             languageId,
             testCase.input,
-            testCase.expectedOutput
+            targetExpectedOutput
           );
 
           const passed = testResult.success && testResult.outputMatches;
@@ -1326,19 +1337,20 @@ export const submitCodingRoundAnswers = async (req, res) => {
             index: testCase.index,
             visible: testCase.visible,
             passed,
-            expectedOutput: testCase.expectedOutput || "",
+            expectedOutput: targetExpectedOutput || "",
             actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
             status: testResult.statusDescription || "",
             executionTime: Number(testResult.executionTime || 0),
             memoryUsed: Number(testResult.memory || 0),
           });
         } catch (error) {
+          const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
           testsFailed++;
           testCaseDetails.push({
             index: testCase.index,
             visible: testCase.visible,
             passed: false,
-            expectedOutput: testCase.expectedOutput || "",
+            expectedOutput: targetExpectedOutput || "",
             actualOutput: "",
             status: error?.message || "Execution Error",
             executionTime: 0,

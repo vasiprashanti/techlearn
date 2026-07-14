@@ -615,57 +615,157 @@ const CodingCompiler = ({ user, contestData }) => {
       {/* MAIN CONTENT */}
       <div className="flex flex-1 pt-5 overflow-auto">
         {/* LEFT PANEL */}
-        <div className="w-1/2 bg-white/20 dark:bg-gray-900/40 p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700">
-          <h1 className="text-2xl font-bold mb-4 dark:text-white">
-            {PROBLEM.problemTitle || PROBLEM.title || "Problem"}
-          </h1>
-          <p className="text-gray-700 dark:text-gray-300 mb-4">
-            {PROBLEM.description || "No description available"}
-          </p>
+        {/* LEFT PANEL */}
+        <div className="w-1/2 bg-[#0f172a] p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5">
+          {/* Header Card */}
+          <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] p-6 rounded-xl border border-gray-300 dark:border-gray-700">
+            <h1 className="text-2xl font-extrabold mb-3 dark:text-white tracking-tight">
+              {PROBLEM.problemTitle || PROBLEM.title || "Problem"}
+            </h1>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold">
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300 bg-[#14532d] text-[#86efac] border-[#166534]">Easy</span>
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">1 sec</span>
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">256 MB</span>
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Data Types</span>
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Operators</span>
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Day 1</span>
+            </div>
+          </div>
 
-          <h2 className="font-semibold mt-3 dark:text-white">Input Format:</h2>
-          <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {(Array.isArray(PROBLEM.inputFormat)
-              ? PROBLEM.inputFormat
-              : PROBLEM.inputDescription
-              ? PROBLEM.inputDescription.split("\n")
-              : ["No input format specified"]
-            ).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-
-          <h2 className="font-semibold mt-3 dark:text-white">Output Format:</h2>
-          <ul className="list-disc pl-6 text-gray-700 dark:text-gray-300 mb-4">
-            {(Array.isArray(PROBLEM.outputFormat)
-              ? PROBLEM.outputFormat
-              : PROBLEM.outputDescription
-              ? PROBLEM.outputDescription.split("\n")
-              : ["No output format specified"]
-            ).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
-
-          {/* Example Section */}
-          <h2 className="font-semibold mt-3 dark:text-white">Example:</h2>
-          <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              <strong>Input:</strong>
-              <pre className="mt-1 text-xs">
-                {PROBLEM.example?.input?.replace(/\\n/g, "\n") ||
-                  PROBLEM.visibleTestCases?.[0]?.input ||
-                  "No example input provided"}
-              </pre>
+          {/* Problem Statement Card */}
+          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              Problem Statement
+            </h2>
+            <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px]">
+              {PROBLEM.description || "No description available"}
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-              <strong>Output:</strong>
-              <pre className="mt-1 text-xs">
-                {PROBLEM.example?.output?.replace(/\\n/g, "\n") ||
-                  PROBLEM.visibleTestCases?.[0]?.expectedOutput ||
-                  "No example output provided"}
-              </pre>
-            </p>
+            {/* Render a custom list block for operator helpers if present */}
+            {PROBLEM.problemTitle === "Arithmetic Calculator" && (
+              <ul className="list-none pl-0 mt-4 flex flex-col gap-2">
+                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">+</b> Addition
+                </li>
+                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">-</b> Subtraction
+                </li>
+                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">*</b> Multiplication
+                </li>
+                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">/</b> Integer Division
+                </li>
+                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">%</b> Modulo
+                </li>
+              </ul>
+            )}
+          </div>
+
+          {/* Input & Output Format Grid */}
+          <div className="grid grid-cols-2 gap-5">
+            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Input Format
+              </h2>
+              <ul className="list-none pl-0 flex flex-col gap-2">
+                {(Array.isArray(PROBLEM.inputFormat)
+                  ? PROBLEM.inputFormat
+                  : PROBLEM.inputDescription
+                  ? PROBLEM.inputDescription.split("\n")
+                  : ["No input format specified"]
+                ).map((line, i) => (
+                  <li key={i} className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0043A1]"></span>
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+                Output Format
+              </h2>
+              <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px]">
+                {PROBLEM.outputFormat || PROBLEM.outputDescription || "Print the result after performing the operation."}
+              </p>
+            </div>
+          </div>
+
+          {/* Constraints Section */}
+          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              Constraints
+            </h2>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {(PROBLEM.constraints || [
+                "-10⁹ ≤ A,B ≤ 10⁹",
+                "B ≠ 0 for / and %"
+              ]).map((c, idx) => (
+                <div key={idx} className="px-3.5 py-2 bg-[#0f172a] border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-mono text-gray-400">
+                  {c}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Sample Testcases */}
+          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              Sample Testcase
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center px-4 py-2.5 bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <span>Input</span>
+                  <button 
+                    onClick={() => {
+                      const text = PROBLEM.example?.input?.replace(/\\n/g, "\n") || PROBLEM.visibleTestCases?.[0]?.input || "10\n5\n+";
+                      navigator.clipboard.writeText(text);
+                    }}
+                    className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre className="p-3.5 text-[13.5px] font-mono text-gray-200 bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                  {PROBLEM.example?.input?.replace(/\\n/g, "\n") ||
+                    PROBLEM.visibleTestCases?.[0]?.input ||
+                    "10\n5\n+"}
+                </pre>
+              </div>
+
+              <div className="bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                <div className="flex justify-between items-center px-4 py-2.5 bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <span>Output</span>
+                  <button 
+                    onClick={() => {
+                      const text = PROBLEM.example?.output?.replace(/\\n/g, "\n") || PROBLEM.visibleTestCases?.[0]?.expectedOutput || "15";
+                      navigator.clipboard.writeText(text);
+                    }}
+                    className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre className="p-3.5 text-[13.5px] font-mono text-gray-200 bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                  {PROBLEM.example?.output?.replace(/\\n/g, "\n") ||
+                    PROBLEM.visibleTestCases?.[0]?.expectedOutput ||
+                    "15"}
+                </pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Explanation Section */}
+          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              Explanation
+            </h2>
+            <div className="bg-[#0043A1]/15 border-l-4 border-[#0043A1] p-4 rounded-r-lg text-[14.5px] text-gray-700 dark:text-gray-300 font-mono">
+              {PROBLEM.example?.explanation || "10 + 5 = 15"}
+            </div>
           </div>
         </div>
 
@@ -744,7 +844,7 @@ const CodingCompiler = ({ user, contestData }) => {
             <button
               onClick={handleRun}
               disabled={isRunning}
-              className="flex items-center gap-2 px-5 h-11 bg-blue-600 text-white rounded-xl shadow disabled:opacity-50 transition hover:bg-blue-700"
+              className="flex items-center gap-2 px-5 h-11 bg-[#0043A1] text-white rounded-xl shadow disabled:opacity-50 transition hover:bg-[#003680]"
             >
               <Play className="w-4 h-4" /> {isRunning ? "Testing..." : "Run"}
             </button>
@@ -805,14 +905,14 @@ const CodingCompiler = ({ user, contestData }) => {
       </div>
 
       {/* Bottom Controls */}
-      <div className="flex items-center justify-between p-4 border-t border-gray-300 dark:border-gray-700 sticky bottom-0 bg-white/80 dark:bg-gray-900/80 z-10 backdrop-blur-md">
+      <div className="flex items-center justify-between py-2 px-4 border-t border-gray-300 dark:border-gray-700 sticky bottom-0 bg-white/80 dark:bg-gray-900/80 z-10 backdrop-blur-md">
         <button
           onClick={handleSubmit}
           disabled={
             isRunning ||
             submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
           }
-          className="px-5 py-2.5 bg-blue-900 text-white rounded-xl shadow font-semibold hover:bg-blue-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-5 py-1.5 bg-[#0043A1] text-white rounded-xl shadow font-semibold hover:bg-[#003680] transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submittedProblems.has(PROBLEM.problemTitle || PROBLEM.title)
             ? "Already Submitted"
@@ -821,7 +921,7 @@ const CodingCompiler = ({ user, contestData }) => {
             : "Submit"}
         </button>
 
-        <div className="text-center font-mono text-lg font-bold tracking-wide dark:text-white">
+        <div className="text-center font-mono text-base font-bold tracking-wide dark:text-white">
           Time Left:{" "}
           <span className={timerWarning ? "text-red-500" : ""}>
             {formatTime(timeLeft)}
@@ -831,14 +931,14 @@ const CodingCompiler = ({ user, contestData }) => {
         {currentProblemIndex < problems.length - 1 ? (
           <button
             onClick={handleNextQuestion}
-            className="px-4 py-2 bg-emerald-500 text-white rounded-xl shadow font-semibold hover:bg-emerald-600 transition"
+            className="px-4 py-1.5 bg-emerald-500 text-white rounded-xl shadow font-semibold hover:bg-emerald-600 transition"
           >
             Next Question &gt;&gt;
           </button>
         ) : (
           <button
             onClick={handleEndRound}
-            className="px-4 py-2 bg-red-600 text-white rounded-xl shadow font-semibold hover:bg-red-700 transition"
+            className="px-4 py-1.5 bg-red-600 text-white rounded-xl shadow font-semibold hover:bg-red-700 transition"
           >
             End Round
           </button>
