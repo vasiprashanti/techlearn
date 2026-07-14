@@ -1130,17 +1130,17 @@ export const getBatchDetail = async (req, res) => {
         const matchesStudent = String(submission.studentId) === String(student._id);
         const matchesBatchDirectly = submission.batchId && String(submission.batchId) === String(batch._id);
         const matchesBatchQuestion = submission.questionId && batchQuestionIds.has(String(submission.questionId._id || submission.questionId));
-        const isAfterStart = new Date(submission.submittedAt || submission.createdAt) >= batchReleaseStart;
+        const isAfterStart = matchesBatchDirectly || new Date(submission.submittedAt || submission.createdAt) >= batchReleaseStart;
         return matchesStudent && (matchesBatchDirectly || matchesBatchQuestion) && isAfterStart;
       });
       const studentMcqSubsAllTime = mcqSubmissions.filter(
         (sub) => String(sub.studentEmail || "").trim().toLowerCase() === studentEmail &&
-                 new Date(sub.submittedAt) >= batchReleaseStart
+                 (String(sub.batchId || "") === String(batch._id) || new Date(sub.submittedAt) >= batchReleaseStart)
       );
       const studentPracticeSubsAllTime = practiceSubmissions.filter((sub) => {
         const matchesStudent = studentUserId && String(sub.userId) === String(studentUserId);
         const matchesBatchQuestion = sub.questionBankId && batchQuestionIds.has(String(sub.questionBankId));
-        const isAfterStart = new Date(sub.submittedAt) >= batchReleaseStart;
+        const isAfterStart = (sub.batchId && String(sub.batchId) === String(batch._id)) || new Date(sub.submittedAt) >= batchReleaseStart;
         return matchesStudent && matchesBatchQuestion && isAfterStart;
       });
       const canonicalChallengeAttemptIds = new Set(
@@ -1149,7 +1149,7 @@ export const getBatchDetail = async (req, res) => {
       const studentCodingChallengeSubsAllTime = codingChallengeSubmissions.filter((sub) => {
         const matchesStudent = String(sub.studentEmail || "").trim().toLowerCase() === studentEmail;
         const alreadyLinked = sub.attemptId && canonicalChallengeAttemptIds.has(String(sub.attemptId));
-        const isAfterStart = new Date(sub.lastSubmissionAt || sub.submittedAt || sub.createdAt) >= batchReleaseStart;
+        const isAfterStart = (sub.batchId && String(sub.batchId) === String(batch._id)) || new Date(sub.lastSubmissionAt || sub.submittedAt || sub.createdAt) >= batchReleaseStart;
         return matchesStudent && !alreadyLinked && isAfterStart;
       });
 
@@ -1182,7 +1182,7 @@ export const getBatchDetail = async (req, res) => {
             new Date(att.createdAt || att.updatedAt) >= todayStart && 
             new Date(att.createdAt || att.updatedAt) <= todayEnd
           )
-        ) && new Date(att.createdAt) >= batchReleaseStart
+        ) && (String(att.batchId || "") === String(batch._id) || new Date(att.createdAt) >= batchReleaseStart)
       );
 
       const studentChallengeAttemptToday = dailyChallengeAttempts.find(
@@ -1775,7 +1775,7 @@ todayXp = todayChallengeXp + todayTaskXp;
 
         const dayAttempt = dailyTaskAttempts.find(
           (att) => studentUserId && String(att.userId) === String(studentUserId) && att.dayNumber === day &&
-                  new Date(att.createdAt) >= batchReleaseStart
+                  (String(att.batchId || "") === String(batchId) || new Date(att.createdAt) >= batchReleaseStart)
         );
         if (dayAttempt) {
           const mcqTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
@@ -1980,15 +1980,21 @@ todayXp = todayChallengeXp + todayTaskXp;
         const dayChallengeAttempt = dailyChallengeAttempts.find(
           (att) => String(att.studentEmail || "").trim().toLowerCase() === studentEmail &&
                   String(att.batchId || "") === String(batchId) &&
-                  assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId)) &&
-                  new Date(att.createdAt || att.startedAt) >= batchReleaseStart
+                  (assignedChallengeIdsForDay.has(String(att.questionId?._id || att.questionId)) ||
+                   (att.codingRoundId && (att.codingRoundId.dayNumber === day || String(att.codingRoundId.dayNumber) === String(day))))
         );
 
-        const studentChallengeSub = challengeSubmissions.find(
+        let studentChallengeSub = challengeSubmissions.find(
           (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
                   ((cs.attemptId && String(cs.attemptId) === String(dayChallengeAttempt?._id)) ||
                    (dayChallengeAttempt && String(cs.codingRoundId) === String(dayChallengeAttempt.codingRoundId)))
         );
+        if (!studentChallengeSub) {
+          studentChallengeSub = challengeSubmissions.find(
+            (cs) => String(cs.studentEmail || "").trim().toLowerCase() === studentEmail &&
+                    cs.workingDay === day
+          );
+        }
 
         let correctChallenges = 0;
         let totalChallenges = 0;
