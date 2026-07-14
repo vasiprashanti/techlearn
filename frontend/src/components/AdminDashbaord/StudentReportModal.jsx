@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FiX, FiAward, FiActivity, FiTarget, FiTrendingUp, FiCalendar, 
-  FiClock, FiCode, FiCheckCircle, FiAlertCircle, FiEdit2, FiSave, FiRefreshCw 
+  FiClock, FiCode, FiCheckCircle, FiAlertCircle, FiEdit2, FiSave, FiRefreshCw, FiEye
 } from 'react-icons/fi';
 import { adminAPI } from '../../services/adminApi';
 
@@ -24,6 +24,10 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [editXp, setEditXp] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
+  const [viewingCodeSub, setViewingCodeSub] = useState(null);
+  const [selectedMcqDay, setSelectedMcqDay] = useState(null);
+  const [selectedPerformanceDay, setSelectedPerformanceDay] = useState(null);
+  const [batchTracks, setBatchTracks] = useState([]);
 
   useEffect(() => {
     if (!isOpen || !studentId) return;
@@ -50,6 +54,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
         if (bId) {
           try {
             const batchRes = await adminAPI.getBatch(bId);
+            const tracksData = batchRes?.tracks || batchRes?.data?.tracks || [];
+            setBatchTracks(tracksData);
             const table = batchRes?.studentsTable || [];
             const match = table.find(s => String(s.id || s._id) === String(studentId));
             if (match) {
@@ -158,6 +164,37 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
       }
     });
   }
+
+  const getChallengeMcqStats = (dayNum) => {
+    const challengeDetail = batchStudentData?.dayWiseHistoryChallengesDetail?.[dayNum];
+    if (!challengeDetail || !challengeDetail.mcq) return '—';
+    
+    let totalEarned = 0;
+    let totalMax = 0;
+    let hasMcq = false;
+    
+    Object.values(challengeDetail.mcq).forEach(val => {
+      if (val && val !== '—') {
+        const parts = val.split('/');
+        totalEarned += parseFloat(parts[0]) || 0;
+        totalMax += parseFloat(parts[1]) || 0;
+        hasMcq = true;
+      }
+    });
+    
+    return hasMcq ? `${totalEarned}/${totalMax}` : '—';
+  };
+
+  const getMcqTitlesForDay = (trackType, dayNum) => {
+    const track = batchTracks.find(t => {
+      if (trackType === "Daily Task") {
+        return t.name?.toLowerCase().includes("task") || t.id?.toLowerCase().includes("task");
+      } else {
+        return t.name?.toLowerCase().includes("challenge") || t.id?.toLowerCase().includes("challenge");
+      }
+    });
+    return track?.days?.find(d => Number(d.dayNumber) === Number(dayNum))?.mcq || [];
+  };
 
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
@@ -320,21 +357,43 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                       <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Tasks Score Details</h4>
                       {batchStudentData?.todayScoresDetail ? (
                         <div className="space-y-2 text-xs">
-                          <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
-                            <span>MCQ Tasks:</span>
-                            <span className="font-bold">{batchStudentData.todayScoresDetail.mcq || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
-                            <span>SQL Tasks:</span>
-                            <span className="font-bold">{batchStudentData.todayScoresDetail.sql || '—'}</span>
-                          </div>
-                          <div className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
-                            <span>Coding Tasks:</span>
-                            <span className="font-bold">{batchStudentData.todayScoresDetail.coding || '—'}</span>
-                          </div>
-                          <div className="flex justify-between pt-2">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">Today's Total Tasks score:</span>
-                            <span className="font-extrabold text-blue-600 dark:text-blue-400">{batchStudentData.todayScore || '—'}</span>
+                          {Object.entries(batchStudentData.todayScoresDetail).map(([key, val]) => {
+                            if (!val || val === '—') return null;
+                            const label = key === 'mcq' ? 'MCQ Tasks' : key === 'sql' ? 'SQL Tasks' : 'Coding Tasks';
+                            if (key === 'coding') {
+                              const parts = val.split('/');
+                              const accuracy = parts[0] === '—' ? 0 : parseInt(parts[0], 10);
+                              const maxAccuracy = parseInt(parts[1], 10) || 100;
+                              const passedCount = accuracy >= 100 ? 1 : 0;
+                              const totalCount = 1;
+                              return (
+                                <div key={key} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                  <span>{label}:</span>
+                                  <span className="font-bold">
+                                    {passedCount}/{totalCount} (Score: {accuracy}/{maxAccuracy})
+                                  </span>
+                                </div>
+                              );
+                            } else {
+                              const parts = val.split('/');
+                              const correct = parts[0] === '—' ? 0 : parseInt(parts[0], 10);
+                              const total = parseInt(parts[1], 10) || 0;
+                              return (
+                                <div key={key} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                  <span>{label}:</span>
+                                  <span className="font-bold">
+                                    {correct}/{total} (Score: {correct}/{total})
+                                  </span>
+                                </div>
+                              );
+                            }
+                          })}
+                          {Object.values(batchStudentData.todayScoresDetail).every(v => !v || v === '—') && (
+                            <p className="text-xs italic text-slate-400 text-center py-4">No tasks assigned or attempted today.</p>
+                          )}
+                          <div className="flex justify-between pt-2 border-t border-black/10 dark:border-white/10 mt-2">
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">Total Tasks XP Gained Today:</span>
+                            <span className="font-extrabold text-blue-600 dark:text-blue-400">+{batchStudentData.todayTaskXp || 0} XP</span>
                           </div>
                         </div>
                       ) : (
@@ -346,14 +405,66 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                       <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Today's Challenges Score Details</h4>
                       {batchStudentData?.todayChallengeScoresDetail ? (
                         <div className="space-y-2 text-xs">
-                          {Object.entries(batchStudentData.todayChallengeScoresDetail).map(([k, v]) => (
-                            <div key={k} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
-                              <span className="capitalize">{k} Score:</span>
-                              <span className="font-bold">{v || '—'}</span>
-                            </div>
-                          ))}
-                          <div className="flex justify-between pt-2">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">Challenge XP Gained:</span>
+                          {(() => {
+                            const detailsList = [];
+                            const detailObj = batchStudentData.todayChallengeScoresDetail || {};
+                            Object.entries(detailObj).forEach(([subType, sections]) => {
+                              if (sections && typeof sections === 'object') {
+                                Object.entries(sections).forEach(([section, val]) => {
+                                  if (!val || val === '—') return;
+                                  const parts = val.split('/');
+                                  const earned = parts[0] === '—' ? 0 : parseFloat(parts[0]);
+                                  const max = parseFloat(parts[1]) || 0;
+                                  
+                                  let label = '';
+                                  if (subType === 'mcq') {
+                                    const labelMap = {
+                                      java: 'Java MCQ',
+                                      dsa: 'DSA MCQ',
+                                      sql: 'SQL MCQ',
+                                      aptitude: 'Aptitude MCQ',
+                                      technical: 'Technical MCQ'
+                                    };
+                                    label = labelMap[section] || `${section.toUpperCase()} MCQ`;
+                                  } else {
+                                    const labelMap = {
+                                      java: 'Java Coding',
+                                      dsa: 'DSA Coding',
+                                      sql: 'SQL Coding',
+                                      aptitude: 'Aptitude Coding',
+                                      technical: 'Technical Coding'
+                                    };
+                                    label = labelMap[section] || `${section.toUpperCase()} Coding`;
+                                  }
+
+                                  if (subType === 'coding') {
+                                    const totalQuestions = 1;
+                                    const correctQuestions = earned >= max ? 1 : 0;
+                                    detailsList.push(
+                                      <div key={`${subType}-${section}`} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                        <span>{label}:</span>
+                                        <span className="font-bold">
+                                          {correctQuestions}/{totalQuestions} (Score: {earned}/{max})
+                                        </span>
+                                      </div>
+                                    );
+                                  } else {
+                                    detailsList.push(
+                                      <div key={`${subType}-${section}`} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                        <span>{label}:</span>
+                                        <span className="font-bold">
+                                          {earned}/{max} (Score: {earned}/{max})
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                });
+                              }
+                            });
+                            return detailsList.length > 0 ? detailsList : <p className="text-xs italic text-slate-400 text-center py-4">No challenges assigned or attempted today.</p>;
+                          })()}
+                          <div className="flex justify-between pt-2 border-t border-black/10 dark:border-white/10 mt-2">
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">Total Challenge XP Gained Today:</span>
                             <span className="font-extrabold text-blue-600 dark:text-blue-400">+{batchStudentData.todayChallengeXp || 0} XP</span>
                           </div>
                         </div>
@@ -430,20 +541,27 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                                     </>
                                   ) : (
                                     <>
-                                      <button 
-                                        onClick={() => handleScoreEdit(sub)}
-                                        className="text-blue-500 hover:text-blue-600 p-1"
-                                        title="Override score"
-                                      >
-                                        <FiEdit2 className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button 
-                                        onClick={() => handleResetSubmission(id)}
-                                        className="text-red-500 hover:text-red-600 p-1"
-                                        title="Re-open submission"
-                                      >
-                                        <FiRefreshCw className="w-3.5 h-3.5" />
-                                      </button>
+                                       <button 
+                                         onClick={() => setViewingCodeSub(sub)}
+                                         className="text-slate-500 hover:text-slate-700 p-1"
+                                         title="View submission"
+                                       >
+                                         <FiEye className="w-3.5 h-3.5" />
+                                       </button>
+                                       <button 
+                                         onClick={() => handleScoreEdit(sub)}
+                                         className="text-blue-500 hover:text-blue-600 p-1"
+                                         title="Override score"
+                                       >
+                                         <FiEdit2 className="w-3.5 h-3.5" />
+                                       </button>
+                                       <button 
+                                         onClick={() => handleResetSubmission(id)}
+                                         className="text-red-500 hover:text-red-600 p-1"
+                                         title="Re-open submission"
+                                       >
+                                         <FiRefreshCw className="w-3.5 h-3.5" />
+                                       </button>
                                     </>
                                   )}
                                 </div>
@@ -467,20 +585,42 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                 <div className="space-y-4">
                   <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">MCQ Practice Metrics</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {batchStudentData?.dayWiseHistoryTasksDetail ? (
-                      Object.entries(batchStudentData.dayWiseHistoryTasksDetail)
-                        .filter(([_, detail]) => detail?.mcq)
-                        .map(([day, detail]) => (
-                          <div key={day} className="border border-black/5 dark:border-white/10 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5 flex justify-between items-center text-xs">
-                            <span className="font-semibold">Day {day}</span>
-                            <span className="font-extrabold text-blue-600 dark:text-blue-400">{detail.mcq}</span>
+                    {(() => {
+                      const daysWithMcq = [];
+                      if (batchStudentData?.dayWiseHistoryTasksDetail) {
+                        Object.entries(batchStudentData.dayWiseHistoryTasksDetail).forEach(([day, detail]) => {
+                          const hasTaskMcq = detail?.mcq && detail.mcq !== '—';
+                          const hasChallengeMcq = getChallengeMcqStats(day) !== '—';
+                          if (hasTaskMcq || hasChallengeMcq) {
+                            daysWithMcq.push({ day, detail });
+                          }
+                        });
+                      }
+                      
+                      return daysWithMcq.length > 0 ? (
+                        daysWithMcq.map(({ day, detail }) => (
+                          <div 
+                            key={day} 
+                            onClick={() => setSelectedMcqDay(day)}
+                            className="cursor-pointer border border-black/5 dark:border-white/10 p-4 rounded-xl bg-slate-50/50 dark:bg-white/5 hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all flex flex-col gap-2 text-xs"
+                          >
+                            <div className="flex justify-between items-center border-b border-black/5 dark:border-white/5 pb-1.5 font-bold text-slate-800 dark:text-slate-200">
+                              <span>Day {day}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Daily Tasks:</span>
+                              <span className="font-extrabold text-blue-600 dark:text-blue-400">{detail.mcq || '—'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Daily Challenge:</span>
+                              <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{getChallengeMcqStats(day)}</span>
+                            </div>
                           </div>
                         ))
-                    ) : null}
-                    {(!batchStudentData?.dayWiseHistoryTasksDetail || 
-                      Object.values(batchStudentData.dayWiseHistoryTasksDetail).filter(detail => detail?.mcq).length === 0) && (
-                      <p className="col-span-full text-center py-8 text-slate-400 italic text-xs">No MCQ performance data recorded.</p>
-                    )}
+                      ) : (
+                        <p className="col-span-full text-center py-8 text-slate-400 italic text-xs">No MCQ performance data recorded.</p>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -488,29 +628,33 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               {/* TAB 5: DAILY PERFORMANCE MATRIX */}
               {activeTab === 'Daily Performance' && (
                 <div className="space-y-4">
-                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Task Progression Matrix</h3>
+                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Progression Matrix</h3>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">Click on any day card to view the tasks & challenges scores detail for that day.</p>
                   <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
                     {Array.from({ length: 30 }).map((_, idx) => {
                       const dayNum = idx + 1;
                       const scoreStr = batchStudentData?.dayWiseHistoryTasks?.[dayNum];
-                      let colorClass = 'bg-slate-100 text-slate-400 dark:bg-white/5'; // Not attempted
+                      let colorClass = 'bg-slate-100 hover:bg-slate-200 text-slate-400 dark:bg-white/5 cursor-pointer'; // Default / click handler active
                       
                       if (scoreStr && scoreStr !== '—' && scoreStr !== 'NIL' && scoreStr !== 'NA') {
                         if (scoreStr.includes('/')) {
                           const [num, den] = scoreStr.split('/').map(Number);
                           const ratio = num / den;
-                          if (ratio >= 0.8) colorClass = 'bg-blue-600 text-white font-extrabold';
-                          else if (ratio >= 0.5) colorClass = 'bg-blue-500/20 text-[#3C83F6] border border-blue-500/25 font-bold';
-                          else colorClass = 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-350 border border-slate-300/30';
+                          if (ratio >= 0.8) colorClass = 'bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer';
+                          else if (ratio >= 0.5) colorClass = 'bg-blue-500/20 hover:bg-blue-500/35 text-[#3C83F6] border border-blue-500/25 font-bold cursor-pointer';
+                          else colorClass = 'bg-slate-200 hover:bg-slate-300 text-slate-600 dark:bg-white/10 dark:text-slate-350 border border-slate-300/30 cursor-pointer';
                         } else {
-                          colorClass = 'bg-blue-600 text-white font-extrabold';
+                          colorClass = 'bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer';
                         }
                       }
                       
                       return (
-                        <div key={dayNum} className={`p-2.5 rounded-lg flex flex-col items-center justify-center gap-1 text-center ${colorClass}`}>
+                        <div 
+                          key={dayNum} 
+                          onClick={() => setSelectedPerformanceDay(dayNum)}
+                          className={`p-2.5 rounded-lg flex flex-col items-center justify-center gap-1 text-center transition-all ${colorClass}`}
+                        >
                           <span className="text-[10px] uppercase font-bold">Day {dayNum}</span>
-                          <span className="text-xs">{scoreStr && scoreStr !== 'NIL' ? scoreStr : '—'}</span>
                         </div>
                       );
                     })}
@@ -522,6 +666,265 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
           </div>
         )}
       </div>
+
+      {viewingCodeSub && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setViewingCodeSub(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Submission Code Review</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{viewingCodeSub.question || 'Coding Submission'}</p>
+              </div>
+              <button onClick={() => setViewingCodeSub(null)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Close</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-950/30">
+                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Submitted Code ({viewingCodeSub.language || viewingCodeSub.lang || 'Code'})</p>
+                <pre className="text-xs font-mono bg-black/5 dark:bg-black/50 p-3 rounded-lg overflow-x-auto max-h-[400px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">
+                  {viewingCodeSub.submittedCode || viewingCodeSub.submittedSql || viewingCodeSub.code || 'No code submitted.'}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedMcqDay && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm" onClick={() => setSelectedMcqDay(null)} />
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+            
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">MCQ Performance - Day {selectedMcqDay}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{name}</p>
+              </div>
+              <button onClick={() => setSelectedMcqDay(null)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Close</button>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
+              {/* Daily Tasks MCQ */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
+                  Daily Tasks MCQ ({batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—'})
+                </h3>
+                {(() => {
+                  const titles = getMcqTitlesForDay("Daily Task", selectedMcqDay);
+                  const taskMcq = batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—';
+                  if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily task MCQs completed or assigned on this day.</p>;
+                  
+                  const parts = taskMcq.split('/');
+                  const attempted = parts[0] !== '—';
+                  const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
+                  
+                  return (
+                    <div className="space-y-2">
+                      {titles.map((title, idx) => {
+                        let statusTag = "Not attempted";
+                        let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
+                        
+                        if (attempted) {
+                          if (idx < correctCount) {
+                            statusTag = "Correct";
+                            tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+                          } else {
+                            statusTag = "Incorrect";
+                            tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+                          }
+                        }
+                        
+                        return (
+                          <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+                            <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Daily Challenge MCQ */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
+                  Daily Challenge MCQ ({getChallengeMcqStats(selectedMcqDay)})
+                </h3>
+                {(() => {
+                  const titles = getMcqTitlesForDay("Daily Challenge", selectedMcqDay);
+                  const challengeMcq = getChallengeMcqStats(selectedMcqDay);
+                  if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily challenge MCQs completed or assigned on this day.</p>;
+                  
+                  const parts = challengeMcq.split('/');
+                  const attempted = parts[0] !== '—';
+                  const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
+                  
+                  return (
+                    <div className="space-y-2">
+                      {titles.map((title, idx) => {
+                        let statusTag = "Not attempted";
+                        let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
+                        
+                        if (attempted) {
+                          if (idx < correctCount) {
+                            statusTag = "Correct";
+                            tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+                          } else {
+                            statusTag = "Incorrect";
+                            tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+                          }
+                        }
+                        
+                        return (
+                          <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+                            <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedPerformanceDay && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm" onClick={() => setSelectedPerformanceDay(null)} />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+            
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Scores Breakdown - Day {selectedPerformanceDay}</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{name}</p>
+              </div>
+              <button onClick={() => setSelectedPerformanceDay(null)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Close</button>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Daily Tasks Card */}
+                <div className="border border-black/5 dark:border-white/10 p-5 rounded-xl bg-slate-50/50 dark:bg-white/5 space-y-4">
+                  <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Tasks Score Details</h4>
+                  {batchStudentData?.dayWiseHistoryTasksDetail?.[selectedPerformanceDay] ? (
+                    <div className="space-y-2 text-xs">
+                      {Object.entries(batchStudentData.dayWiseHistoryTasksDetail[selectedPerformanceDay]).map(([key, val]) => {
+                        if (!val || val === '—') return null;
+                        const label = key === 'mcq' ? 'MCQ Tasks' : key === 'sql' ? 'SQL Tasks' : 'Coding Tasks';
+                        if (key === 'coding') {
+                          const parts = val.split('/');
+                          const accuracy = parts[0] === '—' ? 0 : parseInt(parts[0], 10);
+                          const maxAccuracy = parseInt(parts[1], 10) || 100;
+                          const passedCount = accuracy >= 100 ? 1 : 0;
+                          const totalCount = 1;
+                          return (
+                            <div key={key} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                              <span>{label}:</span>
+                              <span className="font-bold">
+                                {passedCount}/{totalCount} (Score: {accuracy}/{maxAccuracy})
+                              </span>
+                            </div>
+                          );
+                        } else {
+                          const parts = val.split('/');
+                          const correct = parts[0] === '—' ? 0 : parseInt(parts[0], 10);
+                          const total = parseInt(parts[1], 10) || 0;
+                          return (
+                            <div key={key} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                              <span>{label}:</span>
+                              <span className="font-bold">
+                                {correct}/{total} (Score: {correct}/{total})
+                              </span>
+                            </div>
+                          );
+                        }
+                      })}
+                      {Object.values(batchStudentData.dayWiseHistoryTasksDetail[selectedPerformanceDay]).every(v => !v || v === '—') && (
+                        <p className="text-xs italic text-slate-400 text-center py-4">No tasks assigned or attempted this day.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-slate-400 text-center py-6">No tasks recorded this day.</p>
+                  )}
+                </div>
+
+                {/* Daily Challenges Card */}
+                <div className="border border-black/5 dark:border-white/10 p-5 rounded-xl bg-slate-50/50 dark:bg-white/5 space-y-4">
+                  <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Challenges Score Details</h4>
+                  {batchStudentData?.dayWiseHistoryChallengesDetail?.[selectedPerformanceDay] ? (
+                    <div className="space-y-2 text-xs">
+                      {(() => {
+                        const detailsList = [];
+                        const challengeDetail = batchStudentData.dayWiseHistoryChallengesDetail[selectedPerformanceDay] || {};
+                        Object.entries(challengeDetail).forEach(([subType, sections]) => {
+                          if (sections && typeof sections === 'object') {
+                            Object.entries(sections).forEach(([section, val]) => {
+                              if (!val || val === '—') return;
+                              const parts = val.split('/');
+                              const earned = parts[0] === '—' ? 0 : parseFloat(parts[0]);
+                              const max = parseFloat(parts[1]) || 0;
+                              
+                              let label = '';
+                              if (subType === 'mcq') {
+                                const labelMap = {
+                                  java: 'Java MCQ',
+                                  dsa: 'DSA MCQ',
+                                  sql: 'SQL MCQ',
+                                  aptitude: 'Aptitude MCQ',
+                                  technical: 'Technical MCQ'
+                                };
+                                label = labelMap[section] || `${section.toUpperCase()} MCQ`;
+                              } else {
+                                const labelMap = {
+                                  java: 'Java Coding',
+                                  dsa: 'DSA Coding',
+                                  sql: 'SQL Coding',
+                                  aptitude: 'Aptitude Coding',
+                                  technical: 'Technical Coding'
+                                };
+                                label = labelMap[section] || `${section.toUpperCase()} Coding`;
+                              }
+
+                              if (subType === 'coding') {
+                                const totalQuestions = 1;
+                                const correctQuestions = earned >= max ? 1 : 0;
+                                detailsList.push(
+                                  <div key={`${subType}-${section}`} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                    <span>{label}:</span>
+                                    <span className="font-bold">
+                                      {correctQuestions}/{totalQuestions} (Score: {earned}/{max})
+                                    </span>
+                                  </div>
+                                );
+                              } else {
+                                detailsList.push(
+                                  <div key={`${subType}-${section}`} className="flex justify-between py-1 border-b border-black/5 dark:border-white/5">
+                                    <span>{label}:</span>
+                                    <span className="font-bold">
+                                      {earned}/{max} (Score: {earned}/{max})
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            });
+                          }
+                        });
+                        return detailsList.length > 0 ? detailsList : <p className="text-xs italic text-slate-400 text-center py-4">No challenges assigned or attempted this day.</p>;
+                      })()}
+                    </div>
+                  ) : (
+                    <p className="text-xs italic text-slate-400 text-center py-6">No challenges completed this day.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
