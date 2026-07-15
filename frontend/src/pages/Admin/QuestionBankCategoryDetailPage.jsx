@@ -967,6 +967,7 @@ export const QuestionBankCategoryDetailPage = () => {
           {/* Core detail panel wrapping table */}
           <CategoryDetailPanel
             category={category || { title: 'Loading...', categoryType }}
+            categories={categories}
             questions={questions}
             onAddQuestion={handleAddQuestionClick}
             onEditQuestion={handleEditQuestionClick}
@@ -974,6 +975,7 @@ export const QuestionBankCategoryDetailPage = () => {
             onViewQuestion={setViewQuestion}
             onBulkAddQuestions={handleBulkAddQuestionClick}
             usageAnalytics={usageAnalytics}
+            refetchQuestions={refetchQuestions}
           />
         </div>
       </main>

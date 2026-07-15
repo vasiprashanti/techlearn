@@ -1933,3 +1933,74 @@ export const bulkDeleteQuestionCategoriesAdmin = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to bulk delete question categories." });
   }
 };
+
+export const moveQuestionsAdmin = async (req, res) => {
+  try {
+    const { questionIds, targetCategoryId } = req.body;
+    if (!targetCategoryId) {
+      return res.status(400).json({ success: false, message: "Target category is required." });
+    }
+    if (!Array.isArray(questionIds) || questionIds.length === 0) {
+      return res.status(400).json({ success: false, message: "Question IDs must be a non-empty array." });
+    }
+
+    const targetCategory = await Category.findById(targetCategoryId);
+    if (!targetCategory) {
+      return res.status(404).json({ success: false, message: "Target category not found." });
+    }
+
+    // Find all questions to move
+    const questions = await Question.find({ _id: { $in: questionIds } });
+    if (questions.length === 0) {
+      return res.status(404).json({ success: false, message: "No questions found to move." });
+    }
+
+    // Verify types match
+    const targetType = String(targetCategory.categoryType || "").toUpperCase();
+    for (const q of questions) {
+      const qType = String(q.categoryType || "").toUpperCase();
+      if (qType !== targetType) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot move question '${q.title || q.question}' of type ${qType} to category of type ${targetType}. Types must match.`
+        });
+      }
+    }
+
+    // Perform the move by updating categoryId and categorySlug and categoryTitle
+    await Question.updateMany(
+      { _id: { $in: questionIds } },
+      {
+        $set: {
+          categoryId: targetCategory._id,
+          categorySlug: targetCategory.slug,
+          categoryTitle: targetCategory.title,
+        }
+      }
+    );
+
+    // Audit log
+    try {
+      for (const q of questions) {
+        await writeAuditLog({
+          verb: "Updated",
+          entityType: "Question",
+          entityId: q._id,
+          action: "Moved question to another category",
+          detail: `Moved question from category ID ${q.categoryId} to ${targetCategory.title}`,
+          actor: req.user,
+        });
+      }
+    } catch (auditError) {
+      console.error("Failed to write audit log for moved questions:", auditError);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully moved ${questions.length} questions to category '${targetCategory.title}'.`
+    });
+  } catch (error) {
+    console.error("moveQuestionsAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Server error moving questions." });
+  }
+};

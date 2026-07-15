@@ -31,9 +31,7 @@ const mapUserToStudentCohort = async (user) => {
 
   const batch = await Batch.findById(student.batchId).lean();
   if (!batch) {
-    const error = new Error("Your cohort exists, but the assigned batch was not found.");
-    error.status = 404;
-    throw error;
+    console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
 
   let changed = false;
@@ -47,7 +45,7 @@ const mapUserToStudentCohort = async (user) => {
     changed = true;
   }
 
-  if (batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
+  if (batch && batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
     user.startDate = batch.startDate;
     changed = true;
   }

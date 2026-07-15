@@ -46,7 +46,7 @@ const CourseTopics = () => {
 
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const cachedCourse = readCachedCourseDetails(courseId);
   
   const [isSyllabusOpen, setIsSyllabusOpen] = useState(false);
@@ -248,7 +248,7 @@ const CourseTopics = () => {
                         key={topic.id}
                         onClick={() => {
                           if (topic.isLocked) return;
-                          setSelectedTopic(index);
+                          setSearchParams({ day: index + 1 });
                           setIsSyllabusOpen(false);
                         }}
                         disabled={topic.isLocked}
@@ -291,7 +291,7 @@ const CourseTopics = () => {
                       key={topic.id}
                       onClick={() => {
                         if (topic.isLocked) return;
-                        setSelectedTopic(index);
+                        setSearchParams({ day: index + 1 });
                       }}
                       disabled={topic.isLocked}
                       className={`group flex w-full items-center justify-between gap-3 rounded-2xl border px-5 py-3.5 text-left text-sm tracking-wide transition-all duration-300 ease-out ${
@@ -322,9 +322,6 @@ const CourseTopics = () => {
               
               {/* Premium Heading Section */}
               <div className="mb-8 text-center md:text-left">
-                {/* Swapped out useInViewport for a Framer Motion component tied to a key.
-                  This forces React to completely unmount and re-animate the title whenever the selectedTopic changes.
-                */}
                 <h1
                   key={selectedTopic}
                   className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold text-[#001862] dark:text-white tracking-tight leading-[1.1]"
@@ -333,7 +330,7 @@ const CourseTopics = () => {
                 </h1>
               </div>
 
-              {/* Dynamic Content - Added CSS rules to strictly strip top margin from the very first Markdown element */}
+              {/* Dynamic Content */}
               {currentTopic?.hasNotes && currentTopic?.notesContent ? (
                 <div className="w-full [&>*:first-child]:mt-0 [&>*:first-child>*:first-child]:mt-0">
                   <Suspense fallback={<div className="h-48 animate-pulse rounded-2xl bg-white/20 dark:bg-white/5" />}>
@@ -358,7 +355,7 @@ const CourseTopics = () => {
               {/* Premium Navigation Footer */}
               <div className="dashboard-surface flex items-center justify-between gap-2 mt-8 p-3 sm:p-4 rounded-[1.5rem] shadow-sm">
               {!isFirstTopic ? (
-                <button onClick={() => setSelectedTopic(prev => prev - 1)} className="flex shrink-0 items-center gap-2 px-3 sm:px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
+                <button onClick={() => setSearchParams({ day: selectedTopic })} className="flex shrink-0 items-center gap-2 px-3 sm:px-6 py-3.5 rounded-xl text-[10px] uppercase tracking-widest font-bold text-[#001862] dark:text-white/60 hover:bg-white dark:hover:bg-white/10 transition-all border border-transparent hover:border-black/5 dark:hover:border-white/5">
                   <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
                 </button>
               ) : <div className="w-24" />}
@@ -368,7 +365,7 @@ const CourseTopics = () => {
               </span>
 
               {!isLastTopic && !currentCourse?.topics[selectedTopic + 1]?.isLocked ? (
-                <button onClick={() => setSelectedTopic(prev => prev + 1)} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
+                <button onClick={() => setSearchParams({ day: selectedTopic + 2 })} className="dashboard-primary-btn flex shrink-0 items-center gap-2 px-4 sm:px-8 py-3.5">
                   <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
                 </button>
               ) : !isLastTopic ? (

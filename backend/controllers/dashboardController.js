@@ -67,6 +67,7 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
+    streak: linkedStudent?.streak || 0,
   };
 };
 
@@ -120,7 +121,7 @@ export const getDashboardData = async (req, res) => {
       .trim()
       .toLowerCase();
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name").lean()
+      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak").lean()
       : null;
     const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
     const latestDailyChallenge = linkedStudent?._id

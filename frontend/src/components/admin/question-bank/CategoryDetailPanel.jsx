@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { FiSearch, FiPlus, FiChevronDown, FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import QuestionTable from './QuestionTable';
+import { adminAPI } from '../../../services/adminApi';
 
 export const CategoryDetailPanel = ({
   category = {},
+  categories = [],
   questions = [],
   onAddQuestion,
   onEditQuestion,
@@ -12,6 +14,7 @@ export const CategoryDetailPanel = ({
   onViewQuestion,
   onBulkAddQuestions,
   usageAnalytics,
+  refetchQuestions,
 }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -20,6 +23,50 @@ export const CategoryDetailPanel = ({
   const [sortBy, setSortBy] = useState('newest');
   const [tagFilter, setTagFilter] = useState('All tags');
   const [activeTab, setActiveTab] = useState('questions');
+
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [targetCategoryToMove, setTargetCategoryToMove] = useState('');
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState('');
+
+  const sameTypeCategories = useMemo(() => {
+    const currentType = String(category.categoryType || 'Coding').toUpperCase();
+    const currentId = String(category.id || category._id);
+    return categories.filter((cat) => {
+      const catId = String(cat.id || cat._id);
+      const catType = String(cat.categoryType || 'Coding').toUpperCase();
+      return catId !== currentId && catType === currentType;
+    });
+  }, [categories, category]);
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setTargetCategoryToMove('');
+  };
+
+  const handleMoveQuestions = async () => {
+    if (!targetCategoryToMove || selectedIds.length === 0) return;
+    setMoving(true);
+    setMoveError('');
+    try {
+      await adminAPI.moveQuestions({
+        questionIds: selectedIds,
+        targetCategoryId: targetCategoryToMove,
+      });
+      setSelectedIds([]);
+      setTargetCategoryToMove('');
+      if (refetchQuestions) {
+        await refetchQuestions();
+      }
+      alert('Questions moved successfully!');
+    } catch (err) {
+      console.error(err);
+      setMoveError(err.message || 'Failed to move questions.');
+    } finally {
+      setMoving(false);
+    }
+  };
 
   const dropdownOptionClass = 'bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white';
 
@@ -212,12 +259,6 @@ export const CategoryDetailPanel = ({
               <FiPlus className="w-3.5 h-3.5" />
               Add Question
             </button>
-            <button
-              onClick={onBulkAddQuestions}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-semibold whitespace-nowrap transition-colors"
-            >
-              Bulk Add
-            </button>
           </div>
         </div>
 
@@ -227,12 +268,90 @@ export const CategoryDetailPanel = ({
           onView={onViewQuestion}
           onEdit={onEditQuestion}
           onDelete={onDeleteQuestion}
+          isSelectionMode={isSelectionMode}
+          selectedIds={selectedIds}
+          onSelectToggle={(id) => {
+            setSelectedIds((prev) => 
+              prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+            );
+          }}
+          onSelectAll={(ids) => {
+            setSelectedIds(ids);
+          }}
         />
 
-        {/* Caption */}
-        <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-          Showing {sortedQuestions.length} of {questions.length} questions
-        </p>
+        {/* Caption & Bottom Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-black/5 dark:border-white/10 mt-4">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium order-2 sm:order-1">
+            Showing {sortedQuestions.length} of {questions.length} questions
+          </p>
+          
+          <div className="flex flex-wrap items-center gap-3 order-1 sm:order-2">
+            {!isSelectionMode ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onBulkAddQuestions}
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold whitespace-nowrap transition-colors"
+                >
+                  Bulk Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsSelectionMode(true)}
+                  className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#3C83F6]/10 text-[#3C83F6] hover:bg-[#3C83F6]/20 text-xs font-semibold whitespace-nowrap transition-colors"
+                >
+                  Bulk Move
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#3C83F6] dark:text-blue-400 whitespace-nowrap">
+                    Selection Mode ({selectedIds.length} selected)
+                  </span>
+                </div>
+                {sameTypeCategories.length > 0 ? (
+                  <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+                    <select
+                      value={targetCategoryToMove}
+                      onChange={(e) => setTargetCategoryToMove(e.target.value)}
+                      className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none"
+                    >
+                      <option value="">Select target category...</option>
+                      {sameTypeCategories.map((cat) => (
+                        <option key={cat.id || cat._id} value={cat.id || cat._id} className={dropdownOptionClass}>
+                          {cat.title}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      disabled={!targetCategoryToMove || selectedIds.length === 0 || moving}
+                      onClick={handleMoveQuestions}
+                      className="h-9 px-4 rounded-lg bg-[#3c83f6] hover:bg-blue-700 text-white text-xs font-semibold active:scale-[0.98] disabled:opacity-50 transition-all whitespace-nowrap"
+                    >
+                      {moving ? 'Moving...' : 'Move Questions'}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-slate-400">No other categories of same type to move to.</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectionMode(false);
+                    handleClearSelection();
+                  }}
+                  className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 text-slate-650 dark:text-slate-350 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold whitespace-nowrap transition-colors"
+                >
+                  Cancel
+                </button>
+                {moveError && <span className="text-xs text-red-500 font-semibold">{moveError}</span>}
+              </div>
+            )}
+          </div>
+        </div>
       </section>
 
       ) : (

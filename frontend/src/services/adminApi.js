@@ -354,6 +354,7 @@ export const adminAPI = {
   bulkCreateQuestions: (body) => request('/admin/questions', { method: 'POST', body: JSON.stringify(body) }),
   updateQuestion: (questionId, body) => request(`/admin/questions/${questionId}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteQuestion: (questionId) => request(`/admin/questions/${questionId}`, { method: 'DELETE' }),
+  moveQuestions: (body) => request('/admin/questions/move', { method: 'POST', body: JSON.stringify(body) }),
 
   getTrackTemplates: () => request('/admin/track-templates'),
   getTrackTemplate: (templateId) => request(`/admin/track-templates/${templateId}`),

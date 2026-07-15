@@ -15,10 +15,22 @@ const statusPillClass = (status) => {
     : 'bg-slate-500/10 dark:bg-slate-500/15 text-slate-600 dark:text-slate-400';
 };
 
-export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
+export const QuestionTable = ({ 
+  questions = [], 
+  onView, 
+  onEdit, 
+  onDelete, 
+  isSelectionMode = false,
+  selectedIds = [], 
+  onSelectToggle, 
+  onSelectAll 
+}) => {
   const getPrompt = (question) => question.description || question.problemDescription || question.title || 'No prompt provided';
   const getQid = (question, index) => question.qid || `QID-${String(index + 1).padStart(6, '0')}`;
   const getTags = (question) => Array.isArray(question.tags) ? question.tags.filter(Boolean) : [];
+
+  const allIds = questions.map(q => q.id || q._id);
+  const allSelected = questions.length > 0 && allIds.every(id => selectedIds.includes(id));
 
   return (
     <div className="space-y-4">
@@ -32,6 +44,14 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
             <div className="px-3.5 pt-4 pb-2.5 min-h-[76px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef]/30 dark:bg-[#24384e]/30">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1.5">
+                  {isSelectionMode && (
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.includes(question.id || question._id)} 
+                      onChange={() => onSelectToggle && onSelectToggle(question.id || question._id)}
+                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                    />
+                  )}
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">#{index + 1}</span>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">{getQid(question, index)}</span>
                   <span className={`inline-flex min-w-[54px] items-center justify-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide uppercase ${difficultyPillClass(question.difficulty)}`}>
@@ -96,7 +116,25 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
         <table className="w-full min-w-[1000px] table-fixed">
           <thead>
             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-              <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-14 whitespace-nowrap">#</th>
+              <th className="px-4 py-2.5 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-16 whitespace-nowrap">
+                <div className="flex items-center justify-center gap-1">
+                  {isSelectionMode && (
+                    <input 
+                      type="checkbox" 
+                      checked={allSelected} 
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          onSelectAll && onSelectAll([...new Set([...selectedIds, ...allIds])]);
+                        } else {
+                          onSelectAll && onSelectAll(selectedIds.filter(id => !allIds.includes(id)));
+                        }
+                      }}
+                      className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                    />
+                  )}
+                  <span>#</span>
+                </div>
+              </th>
               <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-32 whitespace-nowrap">QID</th>
               <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">Prompt</th>
               <th className="px-4 py-2.5 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 w-56 whitespace-nowrap">Tags</th>
@@ -110,8 +148,18 @@ export const QuestionTable = ({ questions = [], onView, onEdit, onDelete }) => {
                 key={question.id || question._id}
                 className="border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors"
               >
-                <td className="px-4 py-2.5 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
-                  {index + 1}
+                <td className="px-4 py-2.5 text-center whitespace-nowrap w-16">
+                  <div className="flex items-center justify-center gap-1.5">
+                    {isSelectionMode && (
+                      <input 
+                        type="checkbox" 
+                        checked={selectedIds.includes(question.id || question._id)} 
+                        onChange={() => onSelectToggle && onSelectToggle(question.id || question._id)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer h-3.5 w-3.5"
+                      />
+                    )}
+                    <span className="text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50">{index + 1}</span>
+                  </div>
                 </td>
                 <td className="px-4 py-2.5 text-sm font-semibold text-[#3C83F6] dark:text-[#bceaff] whitespace-nowrap">
                   {getQid(question, index)}

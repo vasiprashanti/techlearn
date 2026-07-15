@@ -64,6 +64,7 @@ import {
   updateTrackTemplate,
   bulkDeleteTrackTemplatesAdmin,
   bulkDeleteQuestionCategoriesAdmin,
+  moveQuestionsAdmin,
 } from "../controllers/admin/adminLearningController.js";
 import {
   createNotificationAdmin,
@@ -123,6 +124,7 @@ router.get("/questions/categories/:categoryId/usage", getQuestionCategoryUsage);
 router.post("/questions/categories/bulk-delete", bulkDeleteQuestionCategoriesAdmin);
 router.get("/questions", listQuestionsAdmin);
 router.post("/questions", createQuestionAdmin);
+router.post("/questions/move", moveQuestionsAdmin);
 router.get("/questions/:questionId", getQuestionDetailAdmin);
 router.put("/questions/:questionId", updateQuestionAdmin);
 router.delete("/questions/:questionId", deleteQuestionAdmin);
