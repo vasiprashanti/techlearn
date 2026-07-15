@@ -166,9 +166,10 @@ export default function Courses() {
       formData.append("duration", courseForm.duration.trim());
       formData.append("schedule", courseForm.schedule.trim());
       formData.append("startDate", courseForm.startDate.trim());
-      if (bannerFile) {
-        formData.append("bannerFile", bannerFile);
-      }
+    }
+
+    if (bannerFile) {
+      formData.append("bannerFile", bannerFile);
     }
 
     try {
@@ -399,17 +400,18 @@ export default function Courses() {
                           className={categoryFormInputClass}
                         />
                       </div>
-                      <div className="col-span-2">
-                        <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                          className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
-                        />
-                      </div>
                     </>
                   )}
+
+                  <div className="col-span-2">
+                    <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                      className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
+                    />
+                  </div>
                 </div>
 
                 {formError && (

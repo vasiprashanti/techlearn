@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Play, SendHorizontal, Clock } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
@@ -91,7 +93,7 @@ export default function DailyChallengeTest() {
     setOutput(`${actionLabel} is disabled during the Daily Challenge.`);
   }, []);
 
-  const isMcq = problem?.categoryType === "MCQ";
+  const isMcq = String(problem?.categoryType || problem?.type || problem?.questionType || "").toLowerCase().includes("mcq");
   const mcqOptions = problem?.content?.options || problem?.options || [];
 
   // Reset or load code for active problem
@@ -162,7 +164,7 @@ export default function DailyChallengeTest() {
     return challenge.problems.map((p, idx) => {
       const isActive = idx === activeProblemIndex;
       const isSubmitted = submittedProblems.has(idx);
-      const isMcqQuestion = p.categoryType === "MCQ";
+      const isMcqQuestion = String(p.categoryType || p.type || p.questionType || "").toLowerCase().includes("mcq");
       const hasDraftSelection = !isSubmitted && (
         isMcqQuestion 
           ? (solutions[idx] && solutions[idx].code)
@@ -308,9 +310,9 @@ export default function DailyChallengeTest() {
   useEffect(() => {
     const visibilityHandler = () => {
       if (document.hidden) {
-        const nextCount = (parseInt(localStorage.getItem(`daily-challenge-switches-${linkId}`) || "0")) + 1;
-        localStorage.setItem(`daily-challenge-switches-${linkId}`, nextCount.toString());
+        const nextCount = tabSwitchCount.current + 1;
         tabSwitchCount.current = nextCount;
+        localStorage.setItem(`daily-challenge-switches-${linkId}`, nextCount.toString());
 
         if (nextCount >= 3) {
           setModalAlert({
@@ -548,8 +550,6 @@ export default function DailyChallengeTest() {
           setDailyChallengeSession(linkId, { attempt: data.attempt });
         }
 
-        setOutput(`✅ Question ${currentIdx + 1} Submitted Successfully!\nScore: ${data.problemScore || 0}`);
-
         if (challenge && nextSubmitted.size === challenge.problems.length) {
           const finalSolutions = Object.entries(nextSolutions).map(([idx, val]) => ({
             problemIndex: parseInt(idx),
@@ -576,6 +576,65 @@ export default function DailyChallengeTest() {
     }
   };
 
+  const MarkdownComponents = {
+    h2: ({ node, ...props }) => (
+      <h2
+        className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 mt-6"
+        {...props}
+      />
+    ),
+    h3: ({ node, ...props }) => (
+      <h3
+        className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 mt-6"
+        {...props}
+      />
+    ),
+    p: ({ node, ...props }) => (
+      <p
+        className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] mb-4"
+        {...props}
+      />
+    ),
+    ul: ({ node, ...props }) => (
+      <ul
+        className="list-none pl-0 flex flex-col gap-2 mb-4"
+        {...props}
+      />
+    ),
+    li: ({ node, children, ...props }) => (
+      <li
+        className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2.5 px-3.5 rounded-lg border border-gray-200 dark:border-gray-800"
+        {...props}
+      >
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0043A1] shrink-0"></span>
+        <span className="flex-1">{children}</span>
+      </li>
+    ),
+    pre: ({ node, children, ...props }) => (
+      <div className="bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col my-4">
+        <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider select-none">
+          <span>Code Block / Example</span>
+        </div>
+        <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap m-0 border-0" {...props}>
+          {children}
+        </pre>
+      </div>
+    ),
+    code: ({ node, inline, className, children, ...props }) => {
+      if (inline) {
+        return (
+          <code className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-[#0043A1] dark:text-[#93c5fd] font-mono text-xs rounded border border-gray-200 dark:border-gray-700 font-semibold" {...props}>
+            {children}
+          </code>
+        );
+      }
+      return (
+        <code className="text-xs font-mono" {...props}>
+          {children}
+        </code>
+      );
+    }
+  };
   const handleEndChallenge = () => {
     if (!studentEmail) return;
 
@@ -675,6 +734,15 @@ export default function DailyChallengeTest() {
 
   return (
     <div className="flex min-h-screen lg:h-screen flex-col lg:overflow-hidden bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff] dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128]">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           {theme === "dark" ? (
@@ -795,138 +863,66 @@ export default function DailyChallengeTest() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
+      <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
           {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
-          {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
-          <section 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[250px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-6 gap-5 scrollbar-thin"
-            style={{ scrollbarWidth: 'thin' }}
+          <aside 
+            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
           >
             {challenge?.problems?.length > 1 && (
-              <div className="flex border-b border-white/5 pb-2 mb-2 gap-2 overflow-x-auto select-none shrink-0">
+              <div className="flex border-b border-white/5 pb-2 mb-1 gap-2 overflow-x-auto select-none shrink-0 no-scrollbar">
                 {renderQuestionTabs()}
               </div>
             )}
 
-            {/* Header Card */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-5 rounded-xl">
-              <h1 className="text-xl font-extrabold mb-3 text-[#0d2a57] dark:text-white tracking-tight">
+            {/* Header Card (Top 15%) */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-0 flex flex-col justify-center gap-1.5">
+              <h1 className="text-sm font-extrabold mb-1.5 text-[#0d2a57] dark:text-white tracking-tight leading-tight">
                 {problem.problemTitle}
               </h1>
-              <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2.5 py-0.5">Easy</span>
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5">Coding Round</span>
+              <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold">
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5">Easy</span>
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5">Coding Round</span>
               </div>
             </div>
 
-            {/* Problem Statement Card */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+            {/* Problem Statement Card (Middle 30%) */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-0 overflow-hidden shrink-0 text-left flex flex-col no-scrollbar">
+              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                 Problem Statement
               </h2>
-              <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] whitespace-pre-wrap">
-                {problem.description}
-              </p>
-              {problem.problemTitle === "Arithmetic Calculator" && (
-                <ul className="list-none pl-0 mt-4 flex flex-col gap-2">
-                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">+</b> Addition
-                  </li>
-                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">-</b> Subtraction
-                  </li>
-                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">*</b> Multiplication
-                  </li>
-                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">/</b> Integer Division
-                  </li>
-                  <li className="flex items-center gap-3 text-[14px] text-gray-700 dark:text-gray-300 bg-white/60 dark:bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">%</b> Modulo
-                  </li>
-                </ul>
-              )}
+              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                  {problem.description || `**${problem.problemTitle || "Problem"}**\n\nProblem statement will be added here.`}
+                </ReactMarkdown>
+              </div>
             </div>
 
-            {/* Input & Output Format Grid */}
-            <div className="flex flex-col gap-4">
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+            {/* Input & Output Format (Bottom 55% split) */}
+            <div className="grid grid-cols-2 gap-3 w-full flex-1 shrink min-h-0 overflow-hidden">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                   Input Format
                 </h2>
-                <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14px]">
-                  {problem.inputDescription || "Refer to problem statement."}
-                </p>
+                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {problem.inputDescription || "Refer to problem statement."}
+                  </ReactMarkdown>
+                </div>
               </div>
 
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                   Output Format
                 </h2>
-                <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14px]">
-                  {problem.outputDescription || "Return expected output."}
-                </p>
-              </div>
-            </div>
-
-            {/* Sample Testcases */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
-                Sample Testcase
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                  <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <span>Input</span>
-                    <button 
-                      onClick={() => {
-                        const text = problem.example?.input?.replace(/\\n/g, "\n") || problem.visibleTestCases?.[0]?.input || "10\n5\n+";
-                        navigator.clipboard.writeText(text);
-                      }}
-                      className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
-                    {problem.example?.input?.replace(/\\n/g, "\n") ||
-                      problem.visibleTestCases?.[0]?.input ||
-                      "10\n5\n+"}
-                  </pre>
-                </div>
-
-                <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                  <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    <span>Output</span>
-                    <button 
-                      onClick={() => {
-                        const text = problem.example?.output?.replace(/\\n/g, "\n") || problem.visibleTestCases?.[0]?.expectedOutput || "15";
-                        navigator.clipboard.writeText(text);
-                      }}
-                      className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
-                    {problem.example?.output?.replace(/\\n/g, "\n") ||
-                      problem.visibleTestCases?.[0]?.expectedOutput ||
-                      "15"}
-                  </pre>
+                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                    {problem.outputDescription || "Return expected output."}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>
 
-            {/* Explanation Section */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
-                Explanation
-              </h2>
-              <div className="bg-[#0043A1]/15 border-l-4 border-[#0043A1] p-4 rounded-r-lg text-[14px] text-[#0d2a57] dark:text-gray-300 font-mono">
-                {problem.example?.explanation || problem.visibleTestCases?.[0]?.explanation || "Refer to example output."}
-              </div>
-            </div>
-          </section>
+          </aside>
 
           <div className="flex-grow flex-1 w-full lg:w-[65%] xl:w-[60%] flex flex-col gap-3 lg:overflow-hidden">
             {/* Card 1: Coding Space */}

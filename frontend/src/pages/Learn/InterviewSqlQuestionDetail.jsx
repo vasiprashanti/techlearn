@@ -396,108 +396,118 @@ export default function InterviewSqlQuestionDetail() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-[1400px]">
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
       <div className="min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)] flex flex-col lg:overflow-hidden w-full">
         {/* Workspace Body split */}
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-6 gap-5 scrollbar-thin"
-            style={{ scrollbarWidth: 'thin' }}
+            className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 no-scrollbar"
           >
-            {/* Header Card */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-5 rounded-xl shrink-0">
+            {/* Header Card (Top 15%) */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center gap-1.5">
               {!isDailyMode && (
                 <button
                   type="button"
                   onClick={() => navigate(backPath)}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[#8fd9ff] hover:text-[#a8e6ff] mb-3"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#8fd9ff] hover:text-[#a8e6ff] mb-1"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-3 w-3" />
                   Back
                 </button>
               )}
               
-              <h1 className="text-xl font-extrabold tracking-tight text-[#0d2a57] dark:text-white mb-2">
+              <h1 className="text-sm font-extrabold tracking-tight text-[#0d2a57] dark:text-white leading-tight">
                 {question.title}
               </h1>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="rounded-full border border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
                   {question.subtitle}
                 </span>
-                <span className="rounded-full border border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2.5 py-0.5 font-semibold">
+                <span className="rounded-full border border-white/5 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5 font-semibold">
                   {question.difficulty}
                 </span>
               </div>
             </div>
 
-            {/* Problem Statement Card */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-              <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+            {/* Problem Statement Card (Middle 30%) */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-[30%] overflow-y-auto shrink-0 text-left flex flex-col no-scrollbar">
+              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                 Problem Statement
               </h2>
-              <div className="prose prose-slate max-w-none dark:prose-invert">
+              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                   {question.description || `**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`}
                 </ReactMarkdown>
               </div>
             </div>
 
-            {/* Input Format Card */}
-            {question.inputFormat && (
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
-                  Input Format
-                </h2>
-                <div className="prose prose-slate max-w-none dark:prose-invert">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                    {question.inputFormat}
-                  </ReactMarkdown>
-                </div>
+            {/* Input & Output Format (Bottom 55% split) */}
+            {(question.inputFormat || question.outputFormat) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:h-[50%] lg:min-h-[50%] shrink-0 min-h-0 overflow-y-auto no-scrollbar">
+                {question.inputFormat && (
+                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                    <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
+                      Input Format
+                    </h2>
+                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                        {question.inputFormat}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+                {question.outputFormat && (
+                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                    <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
+                      Output Format
+                    </h2>
+                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
+                        {question.outputFormat}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Output Format Card */}
-            {question.outputFormat && (
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
-                  Output Format
-                </h2>
-                <div className="prose prose-slate max-w-none dark:prose-invert">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                    {question.outputFormat}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            )}
-
-            {/* Sample Testcases */}
+            {/* Sample Testcases (Rest under this as separate cards) */}
             {question.visibleTestCases && question.visibleTestCases.length > 0 && (
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-5 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors">
-                <h2 className="text-sm font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0">
+                <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
                   Sample Testcase
                 </h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                    <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <div className="flex justify-between items-center px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                       <span>Input</span>
                       <button 
                         onClick={() => {
                           const text = question.visibleTestCases[0]?.input || "";
                           navigator.clipboard.writeText(text);
                         }}
-                        className="bg-[#0043A1] text-white border-none px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-[#003680] transition active:scale-95"
+                        className="bg-[#0043A1] text-white border-none px-2 py-0.5 rounded text-[9px] font-semibold hover:bg-[#003680] transition active:scale-95"
                       >
                         Copy
                       </button>
                     </div>
-                    <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                    <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
                       {question.visibleTestCases[0]?.input || ""}
                     </pre>
                   </div>
 
                   <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                    <div className="flex justify-between items-center px-4 py-2 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <div className="flex justify-between items-center px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                       <span>Output</span>
                       <button 
                         onClick={() => {
@@ -509,7 +519,7 @@ export default function InterviewSqlQuestionDetail() {
                         Copy
                       </button>
                     </div>
-                    <pre className="p-3.5 text-[13px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap">
+                    <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
                       {question.visibleTestCases[0]?.output || question.visibleTestCases[0]?.expectedOutput || ""}
                     </pre>
                   </div>

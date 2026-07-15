@@ -6,6 +6,7 @@ import Track from "../../models/Track.js";
 import Batch from "../../models/Batch.js";
 import Resource from "../../models/Resource.js";
 import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 import FinalTest from "../../models/FinalTest.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import IssuedCertificate from "../../models/IssuedCertificate.js";
@@ -137,10 +138,20 @@ const detectResourceType = (file = {}) => {
 };
 
 const uploadResourceFile = async (file) => {
-  if (!file?.buffer) return null;
+  let fileBuffer = file?.buffer;
+  if (!fileBuffer && file?.path) {
+    try {
+      fileBuffer = await fs.promises.readFile(file.path);
+    } catch (err) {
+      console.error("Failed to read resource temp file:", err);
+    }
+  }
+
+  if (!fileBuffer) return null;
+
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     return {
-      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`,
+      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
     };
   }
 
@@ -164,7 +175,7 @@ const uploadResourceFile = async (file) => {
           else resolve(result);
         }
       )
-      .end(file.buffer);
+      .end(fileBuffer);
   });
 };
 

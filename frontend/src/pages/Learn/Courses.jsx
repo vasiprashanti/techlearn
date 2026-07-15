@@ -298,39 +298,51 @@ export default function Courses() {
                   className="w-full max-w-full"
                 >
                   <CarouselContent className="-ml-2 py-4">
-                    {coursesData.filter(course => course.courseType !== 'Trainer-led').map((course) => (
-                      <CarouselItem
-                        key={course.id}
-                        className="sm:basis-1/2 lg:basis-1/3 xl:basis-1/4 px-3"
-                      >
-                        <div
-                          onMouseEnter={() => prefetchCourseTopics(course)}
-                          onFocus={() => prefetchCourseTopics(course)}
-                          onClick={() => {
-                            prefetchCourseTopics(course);
-                            navigate(getCourseTopicsPath(course));
-                          }}
-                          className="dashboard-surface group p-6 md:p-8 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[260px] relative overflow-hidden hover:-translate-y-1 h-full dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
+                    {(() => {
+                      const selfPacedCourses = coursesData.filter(course => course.courseType !== 'Trainer-led');
+                      const groupedSelfPaced = [];
+                      for (let i = 0; i < selfPacedCourses.length; i += 2) {
+                        groupedSelfPaced.push(selfPacedCourses.slice(i, i + 2));
+                      }
+                      return groupedSelfPaced.map((pair, index) => (
+                        <CarouselItem
+                          key={index}
+                          className="basis-1/2 sm:basis-1/2 md:basis-1/3 lg:basis-1/4 px-3"
                         >
-                          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#7ec9ff]/18 to-transparent rounded-full blur-3xl -mr-10 -mt-10 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
+                          <div className="flex flex-col gap-4">
+                            {pair.map((course) => (
+                              <div
+                                key={course.id}
+                                onMouseEnter={() => prefetchCourseTopics(course)}
+                                onFocus={() => prefetchCourseTopics(course)}
+                                onClick={() => {
+                                  prefetchCourseTopics(course);
+                                  navigate(getCourseTopicsPath(course));
+                                }}
+                                className="dashboard-surface group p-3.5 md:p-4 transition-all duration-500 cursor-pointer flex flex-col justify-between min-h-[160px] md:min-h-[180px] relative overflow-hidden hover:-translate-y-1 h-[160px] md:h-[180px] rounded-2xl border border-black/5 bg-white/40 shadow-[0_8px_20px_rgba(60,131,246,0.04)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)]"
+                              >
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#7ec9ff]/15 to-transparent rounded-full blur-2xl -mr-8 -mt-8 transition-opacity duration-500 opacity-0 group-hover:opacity-100"></div>
 
-                          <div className="relative z-10 flex items-start justify-between mb-5 min-h-[52px]">
-                            <div className="dashboard-icon-badge group-hover:scale-110 transition-transform duration-500">
-                              <Code className="w-5 h-5 text-[#3C83F6] dark:text-[#8fd9ff]" />
-                            </div>
-                          </div>
+                                <div className="relative z-10 flex items-start justify-between mb-3">
+                                  <div className="dashboard-icon-badge group-hover:scale-105 transition-transform duration-500 p-1.5 bg-[#3C83F6]/10 rounded-lg">
+                                    <Code className="w-4 h-4 text-[#3C83F6] dark:text-[#8fd9ff]" />
+                                  </div>
+                                </div>
 
-                          <div className="relative z-10 mt-auto">
-                            <h3 className="text-xl md:text-[1.6rem] font-semibold text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#96ddff] transition-colors mb-3 min-h-[72px] leading-snug flex items-start">
-                              {course.title}
-                            </h3>
-                            <p className="text-sm text-[#00113b] dark:text-[#7fb8e2] leading-relaxed line-clamp-2 min-h-[46px]">
-                              {course.description}
-                            </p>
+                                <div className="relative z-10 mt-auto text-left">
+                                  <h3 className="text-sm md:text-base font-bold text-[#00113b] dark:text-[#8fd9ff] group-hover:text-[#001b5c] dark:group-hover:text-[#96ddff] transition-colors mb-1.5 leading-snug line-clamp-2">
+                                    {course.title}
+                                  </h3>
+                                  <p className="text-[11px] md:text-xs text-[#00113b] dark:text-[#7fb8e2] leading-relaxed line-clamp-2">
+                                    {course.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      </CarouselItem>
-                    ))}
+                        </CarouselItem>
+                      ));
+                    })()}
                   </CarouselContent>
                 </Carousel>
 
