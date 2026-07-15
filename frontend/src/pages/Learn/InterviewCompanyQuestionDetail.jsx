@@ -133,7 +133,6 @@ export default function InterviewCompanyQuestionDetail() {
         isCorrect: correct,
         selectedAnswer: String.fromCharCode(65 + selectedOption),
       });
-      setSubmissionMessage('Answer submitted successfully!');
       window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (error) {
       setSubmissionMessage(error?.message || 'Could not save practice progress.');

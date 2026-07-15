@@ -79,7 +79,6 @@ export default function DailyChallengeAccess() {
       setDailyChallengeSession(linkId, {
         studentEmail: email.trim().toLowerCase(),
       });
-      setNotice("OTP sent. You can use any recent OTP from your email.");
     } catch (err) {
       setError(err.message || "Failed to send OTP.");
     } finally {
@@ -182,16 +181,12 @@ export default function DailyChallengeAccess() {
           <h3 className="font-press-start text-[9px] leading-relaxed tracking-wider text-[#00113b] dark:text-[#8fd9ff] uppercase">
             DAILY CHALLENGE ACCESS
           </h3>
-          <p className="text-sm font-semibold leading-relaxed text-[#00113b] dark:text-white md:text-base">
-            {challengeTitle}
-          </p>
           
-          <p className="text-xs leading-relaxed text-[#00113b]/70 dark:text-[#81bde6] md:text-sm">
-            {otpSent 
-              ? "An OTP has been sent to your registered email address. Please enter it below to proceed."
-              : "To ensure a secure environment, click the button below to get an OTP on your registered email address."
-            }
-          </p>
+          {otpSent && (
+            <p className="text-xs leading-relaxed text-[#00113b]/70 dark:text-[#81bde6] md:text-sm">
+              An OTP has been sent to your registered email address. Please enter it below to proceed.
+            </p>
+          )}
 
           <div className="space-y-3 pt-2">
             {notice && <p className="text-xs font-semibold text-emerald-500 md:text-sm mb-2">{notice}</p>}

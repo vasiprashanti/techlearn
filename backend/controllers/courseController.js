@@ -6,16 +6,27 @@ import Exercise from "../models/Exercise.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 import {
   parseNotesMarkdownFile,
   parseMcqMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 
 const uploadCourseBanner = async (file) => {
-  if (!file?.buffer) return null;
+  let fileBuffer = file?.buffer;
+  if (!fileBuffer && file?.path) {
+    try {
+      fileBuffer = await fs.promises.readFile(file.path);
+    } catch (err) {
+      console.error("Failed to read course banner temp file:", err);
+    }
+  }
+
+  if (!fileBuffer) return null;
+
   if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
     return {
-      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${file.buffer.toString("base64")}`,
+      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
     };
   }
 
@@ -39,7 +50,7 @@ const uploadCourseBanner = async (file) => {
           else resolve(result);
         }
       )
-      .end(file.buffer);
+      .end(fileBuffer);
   });
 };
 

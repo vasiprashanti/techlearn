@@ -7,11 +7,11 @@ const HeroSection = () => {
 
   return (
     <div className="relative z-10 bg-transparent overflow-hidden pt-20">
-      <div className="container px-4 py-12 mx-auto max-w-7xl relative z-20">
-        <div className="grid lg:grid-cols-[2fr_1fr] gap-12 items-center min-h-[480px]">
+      <div className="mx-auto max-w-[1600px] px-4 sm:px-6 md:px-12 lg:px-16 relative z-20">
+        <div className="grid grid-cols-[2fr_1.2fr] sm:grid-cols-[2fr_1fr] gap-4 sm:gap-8 md:gap-12 items-center min-h-[300px] md:min-h-[400px]">
           {/* Left Content */}
-          <div className="relative z-10 text-left lg:text-left">
-            <h1 className="font-press-start text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-medium tracking-tight mb-6 leading-[1.4] overflow-visible pl-4 sm:pl-8 md:pl-12">
+          <div className="relative z-10 text-left">
+            <h1 className="font-press-start text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-medium tracking-tight mb-6 leading-[1.4] overflow-visible">
               <span
                 ref={titleRef}
                 className={`brand-heading-primary hover-gradient-text italic pr-2 ${
@@ -35,21 +35,21 @@ const HeroSection = () => {
             {/* Subheading */}
             <p
               ref={descriptionRef}
-              className={`text-[11px] sm:text-xs md:text-sm tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold pl-4 sm:pl-8 md:pl-12 ${
+              className={`text-[10px] min-[380px]:text-[11px] sm:text-xs md:text-sm tracking-[0.1em] sm:tracking-[0.2em] uppercase text-[#00113b] dark:text-[#7fb9e6] mt-4 font-semibold whitespace-nowrap ${
                 isDescriptionInViewport ? "in-viewport" : ""
               }`}
             >
-              Whether you're starting out or upskilling, we've got a course for you.
+              Whether you're starting out or upskilling,<br />we've got a course for you.
             </p>
           </div>
 
           {/* Right Side - Book Animation */}
-          <div className="relative flex items-center justify-center lg:justify-end">
-            <div className="relative transition-transform duration-300 hover:scale-105 hover:rotate-[5deg]">
+          <div className="relative flex items-center justify-end">
+            <div className="relative transition-transform duration-300 hover:scale-105 hover:rotate-[5deg] w-full flex justify-end">
               <img
                 src="/book-optimized.webp"
                 alt="Learning Books Animation"
-                className="w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain filter drop-shadow-2xl"
+                className="w-full max-w-[8rem] sm:max-w-[12rem] md:max-w-[16rem] lg:max-w-96 object-contain filter drop-shadow-2xl"
                 fetchPriority="high"
               />
             </div>

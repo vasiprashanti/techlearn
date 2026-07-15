@@ -224,7 +224,6 @@ export default function InterviewAptitudeQuestionDetail() {
         selectedAnswer: String.fromCharCode(65 + selectedOption),
         finalize: false,
       });
-      setSubmissionMessage('Answer submitted successfully!');
       setIsSubmitted(true);
       window.dispatchEvent(new CustomEvent('xpUpdated'));
       

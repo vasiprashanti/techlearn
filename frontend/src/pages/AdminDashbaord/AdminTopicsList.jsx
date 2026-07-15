@@ -392,9 +392,10 @@ const AdminTopicsList = () => {
         formData.append("duration", duration);
         formData.append("schedule", schedule);
         formData.append("startDate", startDate);
-        if (bannerFile) {
-          formData.append("bannerFile", bannerFile);
-        }
+      }
+
+      if (bannerFile) {
+        formData.append("bannerFile", bannerFile);
       }
 
       await axios.put(
@@ -812,7 +813,8 @@ const AdminTopicsList = () => {
                       className={`${cardFormInputClass} resize-none`}
                       placeholder="Summarize course goals and curriculum syllabus..."
                     />
-                  </div>                  <div className="grid grid-cols-2 gap-4">
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
                       <input
@@ -908,22 +910,23 @@ const AdminTopicsList = () => {
                             placeholder="e.g. Mon-Sat"
                           />
                         </div>
-                        <div className="col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
-                          {bannerImage && (
-                            <div className="mb-2 text-xs text-slate-500 truncate">
-                              Current: <a href={bannerImage} target="_blank" rel="noreferrer" className="text-[#3C83F6] underline">{bannerImage}</a>
-                            </div>
-                          )}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
-                            className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
-                          />
-                        </div>
-                      </>
-                    )}
+                        </>
+                      )}
+
+                      <div className="col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45 font-medium">Banner Image</label>
+                        {bannerImage && (
+                          <div className="mb-2 text-xs text-slate-500 truncate">
+                            Current: <a href={bannerImage} target="_blank" rel="noreferrer" className="text-[#3C83F6] underline">{bannerImage}</a>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setBannerFile(e.target.files?.[0] || null)}
+                          className="text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-[#3C83F6]/10 file:text-[#3C83F6] hover:file:bg-[#3C83F6]/20 cursor-pointer w-full mt-1"
+                        />
+                      </div>
                   </div>
 
                   <div className="flex justify-end pt-2 border-t border-black/5 dark:border-white/10">
