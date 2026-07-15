@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FiX, FiAward, FiActivity, FiTarget, FiTrendingUp, FiCalendar, 
-  FiClock, FiCode, FiCheckCircle, FiAlertCircle, FiEdit2, FiSave, FiRefreshCw, FiEye
+  FiClock, FiCode, FiCheckCircle, FiAlertCircle, FiEdit2, FiSave, FiRefreshCw, FiEye, FiChevronDown
 } from 'react-icons/fi';
 import { adminAPI } from '../../services/adminApi';
 
@@ -28,6 +28,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [selectedMcqDay, setSelectedMcqDay] = useState(null);
   const [selectedPerformanceDay, setSelectedPerformanceDay] = useState(null);
   const [batchTracks, setBatchTracks] = useState([]);
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [expandedMcqId, setExpandedMcqId] = useState(null);
 
   useEffect(() => {
     if (!isOpen || !studentId) return;
@@ -60,6 +62,10 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             const match = table.find(s => String(s.id || s._id) === String(studentId));
             if (match) {
               setBatchStudentData(match);
+              const firstAttemptedDay = Object.values(match.dayWiseStudentReport || {}).find((day) =>
+                (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0
+              );
+              setSelectedDay(firstAttemptedDay?.dayNumber || 1);
             }
             // Sort batch table by totalXp to find student rank in batch
             const sortedTable = [...table].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0));
@@ -278,7 +284,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
 
             {/* Sub-tabs selection row */}
             <div className="flex border-b border-black/10 dark:border-white/10 overflow-x-auto minimal-scrollbar">
-              {['Overview', 'Today\'s Submissions', 'Coding Submissions', 'MCQ Summary', 'Daily Performance'].map(tab => (
+              {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Daily Performance'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -476,6 +482,45 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                 </div>
               )}
 
+              {/* TAB 2: DAY-WISE SUBMISSIONS */}
+              {activeTab === 'Day-wise Report' && (() => {
+                const dayReports = batchStudentData?.dayWiseStudentReport || {};
+                const dayReport = dayReports[selectedDay] || { dailyTasks: [], dailyChallenge: [], metrics: { coding: {}, mcq: {}, sql: {}, totalScore: 0, totalXp: 0 } };
+                const allItems = [...dayReport.dailyTasks, ...dayReport.dailyChallenge];
+                const renderSubmission = (item, index) => {
+                  const itemId = `${item.source}-${item.title}-${index}`;
+                  if (item.type === 'mcq') {
+                    const expanded = expandedMcqId === itemId;
+                    return <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03]">
+                      <button type="button" onClick={() => setExpandedMcqId(expanded ? null : itemId)} className="w-full px-3 py-2.5 flex items-center justify-between gap-3 text-left text-xs">
+                        <span><span className="font-semibold">{item.title}</span><span className="ml-2 text-slate-400">{item.source}</span></span>
+                        <FiChevronDown className={`shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      </button>
+                      {expanded && <div className="px-3 pb-3 grid grid-cols-2 gap-2 border-t border-black/5 dark:border-white/10 pt-2 text-[11px] text-slate-600 dark:text-slate-300">
+                        <span>Selected: <strong>{item.selectedOption || 'Not answered'}</strong></span>
+                        <span>Correct: <strong>{item.correctAnswer || 'Not available'}</strong></span>
+                        <span>Score: <strong>{item.score}%</strong></span>
+                        <span>Accuracy: <strong>{item.accuracy}%</strong></span>
+                      </div>}
+                    </div>;
+                  }
+                  return <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-3 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="font-semibold">{item.title}</span><span className="text-slate-400">{item.source} · {item.language || item.type}</span></div>
+                    <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-500 dark:text-slate-400"><span>Score <strong className="text-slate-800 dark:text-white">{item.score}%</strong></span><span>Accuracy <strong className="text-slate-800 dark:text-white">{item.accuracy}%</strong></span><span>XP <strong className="text-slate-800 dark:text-white">{item.xp}</strong></span></div>
+                    {item.code && <pre className="max-h-40 overflow-auto rounded-md bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200 whitespace-pre-wrap">{item.code}</pre>}
+                  </div>;
+                };
+                return <div className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto minimal-scrollbar pb-1">
+                    {Array.from({ length: 30 }, (_, index) => index + 1).map((day) => <button key={day} type="button" onClick={() => setSelectedDay(day)} className={`shrink-0 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${selectedDay === day ? 'border-blue-500 bg-blue-500 text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-slate-300 hover:border-blue-400'}`}>Day {day}</button>)}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[['Coding', dayReport.metrics.coding], ['MCQ', dayReport.metrics.mcq], ['SQL', dayReport.metrics.sql], ['Total XP', { score: dayReport.metrics.totalScore, accuracy: dayReport.metrics.totalXp }]].map(([label, metric]) => <div key={label} className="rounded-xl border border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3"><span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">{label}</span><span className="mt-1 block text-sm font-extrabold text-blue-600 dark:text-blue-300">{label === 'Total XP' ? `${metric.accuracy || 0} XP` : `${metric.score || 0}%`}</span>{label !== 'Total XP' && <span className="text-[10px] text-slate-400">{metric.accuracy || 0}% accuracy</span>}</div>)}
+                  </div>
+                  {allItems.length ? <div className="space-y-3">{allItems.map(renderSubmission)}</div> : <div className="rounded-xl border border-dashed border-black/10 dark:border-white/15 px-4 py-10 text-center text-xs italic text-slate-400">No submissions recorded for Day {selectedDay}.</div>}
+                </div>;
+              })()}
+
               {/* TAB 3: CODING SUBMISSIONS WITH MANUAL SCORING */}
               {activeTab === 'Coding Submissions' && (
                 <div className="space-y-4">
@@ -628,36 +673,23 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               {/* TAB 5: DAILY PERFORMANCE MATRIX */}
               {activeTab === 'Daily Performance' && (
                 <div className="space-y-4">
-                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Daily Progression Matrix</h3>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">Click on any day card to view the tasks & challenges scores detail for that day.</p>
-                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
-                    {Array.from({ length: 30 }).map((_, idx) => {
-                      const dayNum = idx + 1;
-                      const scoreStr = batchStudentData?.dayWiseHistoryTasks?.[dayNum];
-                      let colorClass = 'bg-slate-100 hover:bg-slate-200 text-slate-400 dark:bg-white/5 cursor-pointer'; // Default / click handler active
-                      
-                      if (scoreStr && scoreStr !== '—' && scoreStr !== 'NIL' && scoreStr !== 'NA') {
-                        if (scoreStr.includes('/')) {
-                          const [num, den] = scoreStr.split('/').map(Number);
-                          const ratio = num / den;
-                          if (ratio >= 0.8) colorClass = 'bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer';
-                          else if (ratio >= 0.5) colorClass = 'bg-blue-500/20 hover:bg-blue-500/35 text-[#3C83F6] border border-blue-500/25 font-bold cursor-pointer';
-                          else colorClass = 'bg-slate-200 hover:bg-slate-300 text-slate-600 dark:bg-white/10 dark:text-slate-350 border border-slate-300/30 cursor-pointer';
-                        } else {
-                          colorClass = 'bg-blue-600 hover:bg-blue-700 text-white font-extrabold cursor-pointer';
-                        }
-                      }
-                      
-                      return (
-                        <div 
-                          key={dayNum} 
-                          onClick={() => setSelectedPerformanceDay(dayNum)}
-                          className={`p-2.5 rounded-lg flex flex-col items-center justify-center gap-1 text-center transition-all ${colorClass}`}
-                        >
-                          <span className="text-[10px] uppercase font-bold">Day {dayNum}</span>
-                        </div>
-                      );
-                    })}
+                  <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Day-wise Performance</h3>
+                  <div className="overflow-x-auto rounded-xl border border-black/5 dark:border-white/10">
+                    <table className="w-full min-w-[760px] text-left text-xs">
+                      <thead className="bg-slate-50 dark:bg-white/5 text-[10px] uppercase tracking-wider text-slate-400">
+                        <tr><th className="p-3">Day</th><th className="p-3">Coding</th><th className="p-3">MCQ</th><th className="p-3">SQL</th><th className="p-3">Total Score</th><th className="p-3">Total XP</th></tr>
+                      </thead>
+                      <tbody>
+                        {Object.values(batchStudentData?.dayWiseStudentReport || {}).filter((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0).map((day) => (
+                          <tr key={day.dayNumber} className="border-t border-black/5 dark:border-white/10">
+                            <td className="p-3 font-semibold">Day {day.dayNumber}</td>
+                            {['coding', 'mcq', 'sql'].map((type) => <td key={type} className="p-3">{day.metrics[type].score || 0}% <span className="text-slate-400">({day.metrics[type].accuracy || 0}% acc.)</span></td>)}
+                            <td className="p-3 font-semibold">{day.metrics.totalScore || 0}</td><td className="p-3 font-semibold text-blue-600 dark:text-blue-300">{day.metrics.totalXp || 0} XP</td>
+                          </tr>
+                        ))}
+                        {!Object.values(batchStudentData?.dayWiseStudentReport || {}).some((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0) && <tr><td colSpan={6} className="p-8 text-center italic text-slate-400">No assessment attempts recorded yet.</td></tr>}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}

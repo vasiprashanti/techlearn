@@ -856,8 +856,8 @@ export const getBatchDetail = async (req, res) => {
           ...(batch.assignedTrackTemplate?._id ? [{ _id: batch.assignedTrackTemplate._id }] : []),
         ],
       })
-        .populate("dayAssignments.questionId", "title categoryType categorySlug trackType difficulty")
-        .populate("dayAssignments.tasks.questionId", "title categoryType categorySlug trackType difficulty")
+        .populate("dayAssignments.questionId", "title categoryType categorySlug trackType difficulty content.correctOption")
+        .populate("dayAssignments.tasks.questionId", "title categoryType categorySlug trackType difficulty content.correctOption")
         .lean(),
       userIds.length
         ? PracticeSubmission.find({ userId: { $in: userIds } }).lean()
@@ -1730,8 +1730,49 @@ todayXp = todayChallengeXp + todayTaskXp;
       const dayWiseHistoryTasksDetail = {};
       const dayWiseHistoryChallenges = {};
       const dayWiseHistoryChallengesDetail = {};
+      const dayWiseStudentReport = {};
+
+      const getMapValue = (map, key) => {
+        if (!map) return undefined;
+        if (map instanceof Map) return map.get(key);
+        return map[key];
+      };
+
+      const toAnswerLabel = (value) => {
+        if (value === undefined || value === null || value === "") return "Not answered";
+        if (typeof value === "number" || /^\d+$/.test(String(value))) {
+          return ["A", "B", "C", "D"][Number(value)] || String(value);
+        }
+        return String(value);
+      };
+
+      const createDayReport = (day) => ({
+        dayNumber: day,
+        dailyTasks: [],
+        dailyChallenge: [],
+        metrics: {
+          coding: { score: 0, accuracy: 0, count: 0, xp: 0 },
+          mcq: { score: 0, accuracy: 0, count: 0, xp: 0 },
+          sql: { score: 0, accuracy: 0, count: 0, xp: 0 },
+          totalScore: 0,
+          totalXp: 0,
+        },
+      });
+
+      const addReportItem = (dayReport, collection, item) => {
+        dayReport[collection].push(item);
+        const metric = dayReport.metrics[item.type];
+        if (!metric) return;
+        metric.score += Number(item.score || 0);
+        metric.accuracy += Number(item.accuracy || 0);
+        metric.count += 1;
+        metric.xp += Number(item.xp || 0);
+        dayReport.metrics.totalScore += Number(item.score || 0);
+        dayReport.metrics.totalXp += Number(item.xp || 0);
+      };
 
       for (let day = 1; day <= 30; day++) {
+        const dayReport = createDayReport(day);
         // --- 1. DAILY TASKS ---
         let correctTasks = 0;
         let totalTasks = 0;
@@ -1778,6 +1819,35 @@ todayXp = todayChallengeXp + todayTaskXp;
                   (String(att.batchId || "") === String(batchId) || new Date(att.createdAt) >= batchReleaseStart)
         );
         if (dayAttempt) {
+          const taskQuestionMap = new Map();
+          dailyTaskTemplates.forEach((template) => {
+            const assignment = template.dayAssignments?.find((entry) => entry.dayNumber === day);
+            if (assignment?.questionId) taskQuestionMap.set(String(assignment.questionId._id || assignment.questionId), assignment.questionId);
+            (assignment?.tasks || []).forEach((task) => {
+              if (task.questionId) taskQuestionMap.set(String(task.questionId._id || task.questionId), task.questionId);
+            });
+          });
+
+          (dayAttempt.tasksProgress || []).forEach((task) => {
+            if (!task.attempted && task.status === "Not Started") return;
+            const question = taskQuestionMap.get(String(task.questionId?._id || task.questionId)) || {};
+            const rawType = String(task.taskType || question.categoryType || question.trackType || "Coding").toLowerCase();
+            const type = rawType === "sql" ? "sql" : (rawType === "mcq" || rawType === "aptitude" || rawType === "core cs" ? "mcq" : "coding");
+            const accuracy = Number(task.accuracy ?? (task.isCorrect === true ? 100 : 0));
+            addReportItem(dayReport, "dailyTasks", {
+              source: "Daily Task",
+              type,
+              title: question.title || "Daily Task question",
+              language: task.language || "",
+              code: task.code || "",
+              score: accuracy,
+              accuracy,
+              xp: Number(task.xpEarned || 0),
+              selectedOption: type === "mcq" ? toAnswerLabel(task.selectedOption) : "",
+              correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
+              status: task.status || "Not Started",
+            });
+          });
           const mcqTasks = dayAttempt.tasksProgress.filter(t => t.taskType === "MCQ" || t.taskType === "Aptitude" || t.taskType === "Core CS");
           const completedMcqs = mcqTasks.filter(t => t.status === "Completed" && t.isCorrect);
           correctMcq += completedMcqs.length;
@@ -1842,6 +1912,56 @@ todayXp = todayChallengeXp + todayTaskXp;
           const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
           const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
           dayTaskSubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd && sub.challengeType !== "daily_challenge" && !sub.codingRoundId);
+        }
+
+        // Older task attempts may not have a DailyTaskAttempt document. Keep those
+        // submissions visible in the report instead of rendering an empty day.
+        if (!dayAttempt && dayTaskSubs.length > 0) {
+          const taskQuestionMap = new Map();
+          dailyTaskTemplates.forEach((template) => {
+            const assignment = template.dayAssignments?.find((entry) => entry.dayNumber === day);
+            if (assignment?.questionId) taskQuestionMap.set(String(assignment.questionId._id || assignment.questionId), assignment.questionId);
+            (assignment?.tasks || []).forEach((task) => {
+              if (task.questionId) taskQuestionMap.set(String(task.questionId._id || task.questionId), task.questionId);
+            });
+          });
+
+          dayTaskSubs.forEach((submission, index) => {
+            if (submission.type === "StudentMcqSubmission") {
+              const answers = submission.answers || [];
+              addReportItem(dayReport, "dailyTasks", {
+                source: "Daily Task",
+                type: "mcq",
+                title: `MCQ submission ${index + 1}`,
+                score: answers.length ? Math.round((answers.filter((answer) => answer.isCorrect).length / answers.length) * 100) : Number(submission.score || 0),
+                accuracy: answers.length ? Math.round((answers.filter((answer) => answer.isCorrect).length / answers.length) * 100) : Number(submission.score || 0),
+                xp: Number(submission.xpEarned || 0),
+                selectedOption: answers.map((answer) => toAnswerLabel(answer.selectedAnswer ?? answer.answer)).join(", "),
+                correctAnswer: answers.map((answer) => toAnswerLabel(answer.correctAnswer)).join(", "),
+                status: "Submitted",
+              });
+              return;
+            }
+
+            const questionId = String(submission.questionId?._id || submission.questionId || submission.questionBankId || "");
+            const question = taskQuestionMap.get(questionId) || {};
+            const rawType = String(question.categoryType || question.trackType || submission.categoryType || submission.track || "Coding").toLowerCase();
+            const type = rawType === "sql" ? "sql" : (rawType === "mcq" || rawType === "aptitude" || rawType === "core cs" ? "mcq" : "coding");
+            const score = Number(submission.accuracyScore ?? submission.accuracy ?? submission.totalScore ?? (submission.isCorrect ? 100 : 0));
+            addReportItem(dayReport, "dailyTasks", {
+              source: "Daily Task",
+              type,
+              title: question.title || submission.questionTitle || "Daily Task question",
+              language: submission.language || "",
+              code: submission.submittedCode || submission.code || "",
+              score,
+              accuracy: score,
+              xp: Number(submission.xpEarned || 0),
+              selectedOption: type === "mcq" ? toAnswerLabel(submission.selectedAnswer) : "",
+              correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
+              status: submission.status || "Submitted",
+            });
+          });
         }
 
         let subCorrectTasks = 0;
@@ -2174,6 +2294,49 @@ todayXp = todayChallengeXp + todayTaskXp;
           dayWiseHistoryChallengesSubmissionIds[day] = null;
         }
         dayWiseHistoryChallengesDetail[day] = dayChallengesDetail;
+
+        if (studentChallengeSub && activeDailyChallengeTemplate) {
+          const assignment = activeDailyChallengeTemplate.dayAssignments?.find((entry) => entry.dayNumber === day);
+          const challengeTasks = assignment?.tasks?.length ? assignment.tasks : (assignment?.questionId ? [assignment] : []);
+          challengeTasks.forEach((task, index) => {
+            const question = task.questionId || {};
+            const rawType = String(task.taskType || question.categoryType || question.trackType || "Coding").toLowerCase();
+            const type = rawType === "sql" ? "sql" : (rawType === "mcq" || rawType === "aptitude" || rawType === "core cs" ? "mcq" : "coding");
+            const score = Number(getMapValue(studentChallengeSub.problemScores, String(index)) || 0);
+            const testResults = getMapValue(studentChallengeSub.problemTestCaseResults, String(index)) || [];
+            const accuracy = testResults.length
+              ? Math.round((testResults.filter((result) => result.passed).length / testResults.length) * 100)
+              : score;
+            const difficultyXp = { Easy: 25, Medium: 50, Hard: 90 }[question.difficulty] || 25;
+            addReportItem(dayReport, "dailyChallenge", {
+              source: "Daily Challenge",
+              type,
+              title: question.title || `Challenge question ${index + 1}`,
+              language: getMapValue(studentChallengeSub.problemLanguages, String(index)) || "",
+              code: getMapValue(studentChallengeSub.problemCodes, String(index)) || "",
+              score,
+              accuracy,
+              xp: Math.round((score / 100) * difficultyXp),
+              selectedOption: type === "mcq" ? toAnswerLabel(getMapValue(studentChallengeSub.problemCodes, String(index))) : "",
+              correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
+              status: getMapValue(studentChallengeSub.problemSubmitted, String(index)) ? "Submitted" : "Not submitted",
+              testCases: testResults,
+            });
+          });
+        }
+
+        ["coding", "mcq", "sql"].forEach((type) => {
+          const metric = dayReport.metrics[type];
+          if (metric.count) metric.accuracy = Math.round(metric.accuracy / metric.count);
+        });
+        const totalAssessmentCount = ["coding", "mcq", "sql"].reduce(
+          (count, type) => count + dayReport.metrics[type].count,
+          0
+        );
+        if (totalAssessmentCount) {
+          dayReport.metrics.totalScore = Math.round(dayReport.metrics.totalScore / totalAssessmentCount);
+        }
+        dayWiseStudentReport[day] = dayReport;
       }
 
 
@@ -2194,6 +2357,7 @@ todayXp = todayChallengeXp + todayTaskXp;
         dayWiseHistoryTasksDetail,
         dayWiseHistoryChallenges,
         dayWiseHistoryChallengesDetail,
+        dayWiseStudentReport,
         todayChallengeSubmissionId,
         dayWiseHistoryChallengesSubmissionIds,
         lastAttemptAt,
