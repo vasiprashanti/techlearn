@@ -813,7 +813,8 @@ const AdminTopicsList = () => {
                       className={`${cardFormInputClass} resize-none`}
                       placeholder="Summarize course goals and curriculum syllabus..."
                     />
-                  </div>                  <div className="grid grid-cols-2 gap-4">
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="admin-micro-label text-black/45 dark:text-white/45">Topics Count</label>
                       <input
@@ -908,6 +909,7 @@ const AdminTopicsList = () => {
                             className={cardFormInputClass}
                             placeholder="e.g. Mon-Sat"
                           />
+                        </div>
                         </>
                       )}
 
