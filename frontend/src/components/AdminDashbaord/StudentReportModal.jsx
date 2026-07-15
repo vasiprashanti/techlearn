@@ -25,11 +25,28 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState('');
   const [viewingCodeSub, setViewingCodeSub] = useState(null);
+  const [loadingCode, setLoadingCode] = useState(false);
   const [selectedMcqDay, setSelectedMcqDay] = useState(null);
   const [selectedPerformanceDay, setSelectedPerformanceDay] = useState(null);
   const [batchTracks, setBatchTracks] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [expandedMcqId, setExpandedMcqId] = useState(null);
+
+  const handleViewCode = async (sub) => {
+    setLoadingCode(true);
+    setViewingCodeSub(sub);
+    try {
+      const id = sub.id || sub._id;
+      const res = await adminAPI.getSubmission(id);
+      if (res) {
+        setViewingCodeSub(res);
+      }
+    } catch (err) {
+      console.error("Failed to fetch submission details", err);
+    } finally {
+      setLoadingCode(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen || !studentId) return;
@@ -538,7 +555,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                         </tr>
                       </thead>
                       <tbody>
-                        {submissions.filter(s => s.lang === 'Code' || s.language || s.submittedCode).map((sub, index) => {
+                        {submissions.filter(s => s.lang || s.language || s.submittedCode).map((sub, index) => {
                           const id = sub.id || sub._id;
                           const isEditing = editingSubmissionId === id;
                           return (
@@ -587,7 +604,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                                   ) : (
                                     <>
                                        <button 
-                                         onClick={() => setViewingCodeSub(sub)}
+                                         onClick={() => handleViewCode(sub)}
                                          className="text-slate-500 hover:text-slate-700 p-1"
                                          title="View submission"
                                        >
@@ -702,21 +719,40 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
       {viewingCodeSub && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" onClick={() => setViewingCodeSub(null)} />
-          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white">Submission Code Review</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{viewingCodeSub.question || 'Coding Submission'}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+                  {viewingCodeSub.questionTitle || (typeof viewingCodeSub.question === 'object' ? viewingCodeSub.question?.title : viewingCodeSub.question) || 'Coding Submission'}
+                </p>
               </div>
               <button onClick={() => setViewingCodeSub(null)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Close</button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-950/30">
-                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Submitted Code ({viewingCodeSub.language || viewingCodeSub.lang || 'Code'})</p>
-                <pre className="text-xs font-mono bg-black/5 dark:bg-black/50 p-3 rounded-lg overflow-x-auto max-h-[400px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">
-                  {viewingCodeSub.submittedCode || viewingCodeSub.submittedSql || viewingCodeSub.code || 'No code submitted.'}
-                </pre>
-              </div>
+            <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+              {loadingCode ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Loading code...</p>
+                </div>
+              ) : viewingCodeSub.problems && viewingCodeSub.problems.length > 0 ? (
+                viewingCodeSub.problems.map((prob, idx) => (
+                  <div key={idx} className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-950/30 space-y-2">
+                    <p className="text-xs font-bold text-slate-800 dark:text-white">{prob.title || `Problem ${idx + 1}`}</p>
+                    <p className="text-xs text-slate-400 uppercase font-semibold">Submitted Code ({prob.language || 'Code'})</p>
+                    <pre className="text-xs font-mono bg-black/5 dark:bg-black/50 p-3 rounded-lg overflow-x-auto max-h-[250px] text-gray-805 dark:text-emerald-400 whitespace-pre-wrap">
+                      {prob.code || 'No code submitted.'}
+                    </pre>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-xl border border-black/10 dark:border-white/10 p-4 bg-slate-50 dark:bg-slate-950/30">
+                  <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Submitted Code ({viewingCodeSub.language || viewingCodeSub.lang || 'Code'})</p>
+                  <pre className="text-xs font-mono bg-black/5 dark:bg-black/50 p-3 rounded-lg overflow-x-auto max-h-[400px] text-gray-800 dark:text-emerald-400 whitespace-pre-wrap">
+                    {viewingCodeSub.submittedCode || viewingCodeSub.submittedSql || viewingCodeSub.code || 'No code submitted.'}
+                  </pre>
+                </div>
+              )}
             </div>
           </div>
         </div>

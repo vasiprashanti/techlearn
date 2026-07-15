@@ -77,26 +77,17 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Calculate total XP based on user track (programSelection)
-  const calculateTotalXP = (courseXP, exerciseXP, projectXP, programSelection) => {
+  // Calculate total XP by summing all categories
+  const calculateTotalXP = (courseXP, exerciseXP, projectXP) => {
     let total = 0;
-    if (programSelection === "Full Stack Project Program") {
-      if (projectXP && typeof projectXP === 'object') {
-        total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
-      }
-      return total;
-    }
-
     if (courseXP && typeof courseXP === 'object') {
       total += Object.values(courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
     }
     if (exerciseXP && typeof exerciseXP === 'object') {
       total += Object.values(exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
     }
-    if (programSelection === "Both") {
-      if (projectXP && typeof projectXP === 'object') {
-        total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
-      }
+    if (projectXP && typeof projectXP === 'object') {
+      total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
     }
     return total;
   };

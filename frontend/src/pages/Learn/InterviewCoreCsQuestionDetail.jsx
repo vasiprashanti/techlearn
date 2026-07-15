@@ -329,7 +329,7 @@ export default function InterviewCoreCsQuestionDetail() {
             </span>
           </div>
 
-          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-center mb-6 mt-3">
+          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-left mb-6 mt-3">
             {isDailyMode && (
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
                 Question {currentTaskIndex + 1} of {dailySequence.length}
@@ -339,7 +339,7 @@ export default function InterviewCoreCsQuestionDetail() {
               {question.question}
             </h2>
             {question.description && (
-              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-center border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
+              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-left border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
                 {question.description}
               </p>
             )}

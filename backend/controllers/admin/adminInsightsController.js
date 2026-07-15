@@ -549,11 +549,14 @@ export const getSubmissionDetailPage = async (req, res) => {
       });
     }
 
-    const submission = await Submission.findById(dbId)
-      .populate("studentId", "name email")
-      .populate("batchId", "name")
-      .populate("questionId", "title categoryType")
-      .lean();
+    let submission = null;
+    if (dbId && mongoose.Types.ObjectId.isValid(dbId)) {
+      submission = await Submission.findById(dbId)
+        .populate("studentId", "name email")
+        .populate("batchId", "name")
+        .populate("questionId", "title categoryType")
+        .lean();
+    }
 
     if (!submission) {
       return res.status(404).json({ success: false, message: "Submission not found." });

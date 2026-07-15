@@ -222,6 +222,7 @@ export default function InterviewAptitudeQuestionDetail() {
         track: 'Aptitude',
         isCorrect: correct,
         selectedAnswer: String.fromCharCode(65 + selectedOption),
+        finalize: false,
       });
       setSubmissionMessage('Answer submitted successfully!');
       setIsSubmitted(true);
@@ -244,6 +245,21 @@ export default function InterviewAptitudeQuestionDetail() {
     if (currentTaskIndex < dailySequence.length - 1) {
       navigate(`/dashboard/practice/aptitude/${dailySequence[currentTaskIndex + 1].questionId}?mode=daily`);
     }
+  };
+
+  const handleFinish = async () => {
+    try {
+      await practiceAPI.recordSubmission({
+        questionId: question.id,
+        track: 'Aptitude',
+        isCorrect: isLastSubmissionCorrect,
+        selectedAnswer: selectedOption !== null ? String.fromCharCode(65 + selectedOption) : "",
+        finalize: true,
+      });
+    } catch (err) {
+      console.error("Failed to finalize task:", err);
+    }
+    navigate('/dashboard');
   };
 
   if (loading) {
@@ -307,7 +323,7 @@ export default function InterviewAptitudeQuestionDetail() {
           </div>
 
           {/* Question text card */}
-          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-center mb-6 mt-3">
+          <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-left mb-6 mt-3">
             {isDailyMode && (
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#2563eb] text-white px-4 py-1.5 rounded-full text-xs font-semibold shadow-md whitespace-nowrap">
                 Question {currentTaskIndex + 1} of {dailySequence.length}
@@ -317,7 +333,7 @@ export default function InterviewAptitudeQuestionDetail() {
               {question.title}
             </h2>
             {question.description && (
-              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-center border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
+              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-left border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
                 {question.description}
               </p>
             )}
@@ -424,7 +440,7 @@ export default function InterviewAptitudeQuestionDetail() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => navigate('/dashboard')}
+                      onClick={handleFinish}
                       className="inline-flex w-36 justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-md hover:brightness-105 active:scale-[0.98] transition-all duration-200"
                     >
                       Finish Daily Task

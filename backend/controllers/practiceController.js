@@ -124,7 +124,13 @@ export const listPracticeQuestions = async (req, res) => {
     const requestedTrack = normalizePracticeTrack(req.query.track);
 
     // Fetch student's batchId to filter categories
-    const student = await Student.findOne({ userId: req.user?._id });
+    let student = null;
+    if (req.user?.email) {
+      student = await Student.findOne({ email: req.user.email.toLowerCase().trim() });
+    }
+    if (!student && req.user?._id) {
+      student = await Student.findOne({ userId: req.user._id });
+    }
     const studentBatchId = student?.batchId;
 
     // 1. Fetch categories marked "Practice" or "Both" matching batch or global
@@ -184,7 +190,7 @@ export const recordPracticeSubmission = async (req, res) => {
     let canonicalQuestion = null;
     if (mongoose.Types.ObjectId.isValid(questionIdRaw)) {
       canonicalQuestion = await Question.findById(questionIdRaw)
-        .select("+content.hiddenTestCases")
+        .select("+content.hiddenTestCases +content.correctOption")
         .lean();
     }
 
@@ -193,6 +199,12 @@ export const recordPracticeSubmission = async (req, res) => {
     const isMcqSubmission = normalizedCategoryType === "MCQ" && ["A", "B", "C", "D"].includes(selectedAnswer);
 
     let isCorrect = Boolean(req.body.isCorrect);
+    if (isMcqSubmission && canonicalQuestion) {
+      const correctAns = String(canonicalQuestion.content?.correctOption || "").trim().toUpperCase();
+      if (correctAns) {
+        isCorrect = (selectedAnswer === correctAns);
+      }
+    }
     let evaluatedScore = Number.isFinite(Number(req.body.score)) ? Number(req.body.score) : null;
     let evaluatedAccuracy = Number.isFinite(Number(req.body.accuracy)) ? Number(req.body.accuracy) : null;
     let passedTestCases = 0;
@@ -411,14 +423,12 @@ export const recordPracticeSubmission = async (req, res) => {
                     await attempt.save();
                   } else {
                     // MCQ, Aptitude, Core CS
-                    if (!task.attempted) {
-                      task.status = "In Progress";
-                      task.selectedOption = selectedAnswer || "";
-                      task.isCorrect = isCorrect;
-                      task.attempted = true;
-                      task.completedAt = new Date();
-                      await attempt.save();
-                    }
+                    task.status = "In Progress";
+                    task.selectedOption = selectedAnswer || "";
+                    task.isCorrect = isCorrect;
+                    task.attempted = true;
+                    task.completedAt = new Date();
+                    await attempt.save();
                   }
                 } else {
                   // When final Finish is clicked (finalize: true)
@@ -432,13 +442,13 @@ export const recordPracticeSubmission = async (req, res) => {
                     task.status = "Completed";
                     task.completedAt = new Date();
                   } else {
-                    if (!task.attempted) {
-                      task.status = "Completed";
-                      task.selectedOption = selectedAnswer || "";
+                    task.status = "Completed";
+                    if (selectedAnswer) {
+                      task.selectedOption = selectedAnswer;
                       task.isCorrect = isCorrect;
-                      task.attempted = true;
-                      task.completedAt = new Date();
                     }
+                    task.attempted = true;
+                    task.completedAt = new Date();
                   }
                   
                   const isSameTrack = (taskType) => {
@@ -546,7 +556,13 @@ export const recordPracticeSubmission = async (req, res) => {
 
 export const getPracticeStats = async (req, res) => {
   try {
-    const student = await Student.findOne({ userId: req.user?._id });
+    let student = null;
+    if (req.user?.email) {
+      student = await Student.findOne({ email: req.user.email.toLowerCase().trim() });
+    }
+    if (!student && req.user?._id) {
+      student = await Student.findOne({ userId: req.user._id });
+    }
     const studentBatchId = student?.batchId;
 
     const Category = mongoose.model("Category");
@@ -601,7 +617,7 @@ export const getPracticeStats = async (req, res) => {
       if (submission.isCorrect) correctByTrack[submission.track].add(submission.questionId);
     }
 
-    const studentObj = await mongoose.model("Student").findOne({ userId: req.user._id }).lean();
+    const studentObj = await mongoose.model("Student").findOne({ email: req.user.email.toLowerCase().trim() }).lean();
     const currentStreak = studentObj ? (studentObj.streak || 0) : 0;
 
     for (const track of TRACKS) {
@@ -631,7 +647,13 @@ export const getPracticeStats = async (req, res) => {
 
 export const listPracticeCategoriesForStudent = async (req, res) => {
   try {
-    const student = await Student.findOne({ userId: req.user?._id });
+    let student = null;
+    if (req.user?.email) {
+      student = await Student.findOne({ email: req.user.email.toLowerCase().trim() });
+    }
+    if (!student && req.user?._id) {
+      student = await Student.findOne({ userId: req.user._id });
+    }
     const studentBatchId = student?.batchId;
 
     const Category = mongoose.model("Category");
