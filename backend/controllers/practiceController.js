@@ -4,6 +4,7 @@ import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
+import { updateStudentStreak } from "../utils/streakUtil.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
 
@@ -251,8 +252,12 @@ export const recordPracticeSubmission = async (req, res) => {
       }
 
       if (canonicalQuestion) {
-        const visibleTestCases = canonicalQuestion.visibleTestCases || canonicalQuestion.content?.visibleTestCases || [];
-        const hiddenTestCases = canonicalQuestion.hiddenTestCases || canonicalQuestion.content?.hiddenTestCases || [];
+        const visibleTestCases = (canonicalQuestion.visibleTestCases && canonicalQuestion.visibleTestCases.length > 0)
+          ? canonicalQuestion.visibleTestCases
+          : (canonicalQuestion.content?.visibleTestCases || []);
+        const hiddenTestCases = (canonicalQuestion.hiddenTestCases && canonicalQuestion.hiddenTestCases.length > 0)
+          ? canonicalQuestion.hiddenTestCases
+          : (canonicalQuestion.content?.hiddenTestCases || []);
         const allTestCases = [
           ...visibleTestCases.map((tc, index) => ({ ...tc, visible: true, index })),
           ...hiddenTestCases.map((tc, index) => ({ ...tc, visible: false, index: visibleTestCases.length + index })),
@@ -545,6 +550,14 @@ export const recordPracticeSubmission = async (req, res) => {
       }
     } catch (dtError) {
       console.error("Daily task automatic submission completion failed:", dtError);
+    }
+
+    try {
+      if (req.user?.email) {
+        await updateStudentStreak(req.user.email);
+      }
+    } catch (streakErr) {
+      console.error("Streak update error in practice submission:", streakErr);
     }
 
     return res.status(201).json({ success: true, data: submission });

@@ -62,13 +62,13 @@ export const mapQuestionToProblem = (question) => ({
   content: {
     options: question.content?.options || question.options || [],
   },
-  visibleTestCases: (question.visibleTestCases || []).map((testCase) => ({
+  visibleTestCases: (question.visibleTestCases?.length ? question.visibleTestCases : question.content?.visibleTestCases || []).map((testCase) => ({
     input: testCase.input || "",
-    expectedOutput: testCase.output || "",
+    expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
   })),
-  hiddenTestCases: (question.hiddenTestCases || []).map((testCase) => ({
+  hiddenTestCases: (question.hiddenTestCases?.length ? question.hiddenTestCases : question.content?.hiddenTestCases || []).map((testCase) => ({
     input: testCase.input || "",
-    expectedOutput: testCase.output || "",
+    expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
   })),
 });
 

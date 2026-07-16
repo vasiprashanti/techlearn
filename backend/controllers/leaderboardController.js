@@ -42,8 +42,8 @@ export const getPublicLeaderboard = async (req, res) => {
 
     let filteredRows = progressRows.filter((row) => row.userId && row.userId.role !== "admin");
 
-    if (isProjectUser) {
-      const userBatchIdStr = req.user.batchId ? req.user.batchId.toString() : null;
+    if (req.user && req.user.batchId) {
+      const userBatchIdStr = req.user.batchId.toString();
       filteredRows = filteredRows.filter((row) => {
         const rowBatchIdStr = row.userId.batchId ? row.userId.batchId.toString() : null;
         return rowBatchIdStr && rowBatchIdStr === userBatchIdStr;

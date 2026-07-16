@@ -28,6 +28,7 @@ import {
 import { invalidateDashboardCache } from "./dashboardController.js";
 import UserProgress from "../models/UserProgress.js";
 import { calculateChallengeXP } from "../services/xpService.js";
+import { updateStudentStreak } from "../utils/streakUtil.js";
 
 const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
   const email =
@@ -1278,7 +1279,9 @@ export const submitCodingRoundAnswers = async (req, res) => {
       }
     }
 
-    const question = await Question.findById(targetQuestionId || codingRound.questionId).select("+content.correctOption").lean();
+    const question = await Question.findById(targetQuestionId || codingRound.questionId)
+      .select("+content.correctOption +content.hiddenTestCases")
+      .lean();
     const isMcq = String(question?.categoryType || "").toUpperCase() === "MCQ" || String(question?.categoryType || "").toUpperCase() === "APTITUDE";
 
     if (isMcq) {
@@ -1299,18 +1302,26 @@ export const submitCodingRoundAnswers = async (req, res) => {
         testsFailed = 1;
       }
     } else {
+      const resolvedVisible = (problem.visibleTestCases && problem.visibleTestCases.length > 0)
+        ? problem.visibleTestCases
+        : ((question?.visibleTestCases?.length ? question.visibleTestCases : question?.content?.visibleTestCases) || []);
+      
+      const resolvedHidden = (problem.hiddenTestCases && problem.hiddenTestCases.length > 0)
+        ? problem.hiddenTestCases
+        : ((question?.hiddenTestCases?.length ? question.hiddenTestCases : question?.content?.hiddenTestCases) || []);
+
       const allTestCases = [
-        ...(problem.visibleTestCases || []).map((testCase, index) => ({
+        ...resolvedVisible.map((testCase, index) => ({
           input: testCase.input || "",
           expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
           visible: true,
           index,
         })),
-        ...(problem.hiddenTestCases || []).map((testCase, index) => ({
+        ...resolvedHidden.map((testCase, index) => ({
           input: testCase.input || "",
           expectedOutput: testCase.expectedOutput !== undefined ? testCase.expectedOutput : (testCase.output || ""),
           visible: false,
-          index: (problem.visibleTestCases || []).length + index,
+          index: resolvedVisible.length + index,
         })),
       ];
       totalTests = allTestCases.length;
@@ -1404,6 +1415,8 @@ export const submitCodingRoundAnswers = async (req, res) => {
         await challengeAttempt.save();
       }
     }
+
+    await updateStudentStreak(normalizedEmail);
 
     res.status(200).json({
       success: true,
@@ -1775,7 +1788,9 @@ export const runCodingRoundAnswers = async (req, res) => {
       submission.problemRuns.set(problemIndex.toString(), runsCount + 1);
 
       // Support customInput falling back to first visible test case input
-      const visibleTestCases = problem.visibleTestCases || question?.visibleTestCases || question?.content?.visibleTestCases || [];
+      const visibleTestCases = (problem.visibleTestCases && problem.visibleTestCases.length > 0)
+        ? problem.visibleTestCases
+        : ((question?.visibleTestCases?.length ? question.visibleTestCases : question?.content?.visibleTestCases) || []);
       const simpleInput = customInput !== undefined ? customInput : (visibleTestCases.length > 0 ? visibleTestCases[0].input : "");
       
       try {
@@ -1996,6 +2011,8 @@ export const endCodingRound = async (req, res) => {
 
     const finalTotalScore = Number(computedTotalScore.toFixed(1));
 
+    await updateStudentStreak(normalizedEmail);
+
     res.status(200).json({
       success: true,
       message: "Coding round ended successfully",
@@ -2154,6 +2171,8 @@ export const autoSubmitRound = async (req, res) => {
       totalProblems: codingRound.problems.length,
       correctSolutions,
     });
+
+    await updateStudentStreak(normalizedEmail);
 
     res.status(200).json({
       success: true,

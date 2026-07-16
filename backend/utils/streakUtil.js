@@ -6,7 +6,8 @@ import Submission from "../models/Submission.js";
 const toDayKey = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
+  const istDate = new Date(date.getTime() + 5.5 * 60 * 60 * 1000);
+  return istDate.toISOString().slice(0, 10);
 };
 
 export const updateStudentStreak = async (email) => {
@@ -42,25 +43,26 @@ export const updateStudentStreak = async (email) => {
       return;
     }
 
-    const cursor = new Date();
-    cursor.setUTCHours(0, 0, 0, 0);
-    const today = cursor.toISOString().slice(0, 10);
-    const yesterday = new Date(cursor);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const now = new Date();
+    const today = toDayKey(now);
+    const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterday = toDayKey(yesterdayDate);
+
+    const cursor = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
 
     if (!activityDays.has(today)) {
-      if (!activityDays.has(yesterday.toISOString().slice(0, 10))) {
+      if (!activityDays.has(yesterday)) {
         student.streak = 0;
         await student.save();
         return;
       }
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
+      cursor.setTime(cursor.getTime() - 24 * 60 * 60 * 1000);
     }
 
     let streak = 0;
     while (activityDays.has(cursor.toISOString().slice(0, 10))) {
       streak += 1;
-      cursor.setUTCDate(cursor.getUTCDate() - 1);
+      cursor.setTime(cursor.getTime() - 24 * 60 * 60 * 1000);
     }
 
     student.streak = streak;
