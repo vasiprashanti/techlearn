@@ -167,9 +167,10 @@ export default function QuestionCatalogPage({
   }, []);
 
   const availableTags = useMemo(() => {
+    const slugify = (str) => String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     const pool = selectedTopic === 'All Topics'
         ? displayQuestions
-        : displayQuestions.filter((question) => question.topic === selectedTopic);
+        : displayQuestions.filter((question) => slugify(question.topic) === slugify(selectedTopic));
 
     return Array.from(new Set(pool.map((question) => question.subtitle))).sort((a, b) =>
       a.localeCompare(b)
@@ -177,6 +178,7 @@ export default function QuestionCatalogPage({
   }, [displayQuestions, selectedTopic]);
 
   const filteredQuestions = useMemo(() => {
+    const slugify = (str) => String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     return displayQuestions.filter((question) => {
       const matchesSearch =
         !searchTerm ||
@@ -188,7 +190,7 @@ export default function QuestionCatalogPage({
         selectedDifficulty === 'All Difficulty' || question.difficulty === selectedDifficulty;
 
       const matchesTopic =
-        selectedTopic === 'All Topics' || question.topic === selectedTopic;
+        selectedTopic === 'All Topics' || slugify(question.topic) === slugify(selectedTopic);
 
       const matchesTag =
         selectedTag === 'All' || question.subtitle === selectedTag;
@@ -302,6 +304,25 @@ export default function QuestionCatalogPage({
         navigate(`/dashboard/practice/aptitude/${question.id}?from=${sourcePath}`);
       } else {
         navigate(`/learn/interview-questions/aptitude/${question.id}`);
+      }
+      return;
+    }
+
+    // Fallback for custom topics (JFS QUIZ 1, JAVA PRACTICE, etc.)
+    const isMcq = String(question.categoryType || "").toUpperCase() === "MCQ";
+    if (isMcq) {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/core-cs/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/core-cs/${question.id}`);
+      }
+    } else {
+      if (isDashboardPracticeRoute) {
+        const sourcePath = encodeURIComponent(location.pathname);
+        navigate(`/dashboard/practice/dsa/${question.id}?from=${sourcePath}`);
+      } else {
+        navigate(`/learn/interview-questions/dsa/${question.id}`);
       }
     }
   };
@@ -517,8 +538,8 @@ export default function QuestionCatalogPage({
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                            difficultyPillClass[question.difficulty]
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
+                            difficultyPillClass[question.difficulty] || 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-300 dark:border-slate-800'
                           }`}
                         >
                           {question.difficulty}
@@ -526,8 +547,8 @@ export default function QuestionCatalogPage({
                       </td>
                       <td className="px-4 py-4">
                         <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                            topicPillClass[question.topic]
+                          className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
+                            topicPillClass[question.topic] || 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/20 dark:text-slate-300 dark:border-slate-800'
                           }`}
                         >
                           {question.topic}

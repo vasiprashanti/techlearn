@@ -23,9 +23,9 @@ export default function InterviewCoreCsQuestionDetail() {
   const backPath = isDailyMode
     ? '/dashboard'
     : isDashboardContext
-      ? sourcePath === '/dashboard/practice' || sourcePath === '/dashboard/practice/core-cs'
-        ? sourcePath
-        : '/dashboard/practice/core-cs'
+      ? sourcePath
+        ? decodeURIComponent(sourcePath)
+        : '/dashboard/practice'
       : '/learn/interview-questions/core-cs';
 
   const [question, setQuestion] = useState(null);
@@ -258,7 +258,6 @@ export default function InterviewCoreCsQuestionDetail() {
     setIsLastSubmissionCorrect(correct);
     
     try {
-      setSubmissionMessage('Submitting answer for evaluation...');
       const res = await practiceAPI.recordSubmission({
         questionId: question.id,
         track: 'Core CS',
@@ -266,7 +265,7 @@ export default function InterviewCoreCsQuestionDetail() {
         selectedAnswer: String.fromCharCode(65 + selectedOption),
         finalize: false,
       });
-      setSubmissionMessage('');
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
       if (isDailyMode) {
         setTimeout(() => {
           if (currentTaskIndex < dailySequence.length - 1) {
@@ -300,6 +299,7 @@ export default function InterviewCoreCsQuestionDetail() {
         selectedAnswer: selectedOption !== null ? String.fromCharCode(65 + selectedOption) : "",
         finalize: true,
       });
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (err) {
       console.error("Failed to finalize task:", err);
     }
@@ -308,19 +308,24 @@ export default function InterviewCoreCsQuestionDetail() {
 
   return (
     <UserSidebarLayout maxWidthClass="max-w-3xl lg:max-w-5xl">
+      {!isDailyMode && (
+        <div className="w-full text-left mb-3 max-w-2xl lg:max-w-4xl mx-auto">
+          <button
+            type="button"
+            onClick={() => navigate(backPath)}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Questions
+          </button>
+        </div>
+      )}
       <div className="max-w-2xl lg:max-w-4xl mx-auto">
         {/* Outer Card - Matching exact Dashboard Overview Card styles */}
         <div className="border border-[#2563eb]/15 dark:border-[#15366f]/45 bg-white/20 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] shadow-[0_20px_50px_rgba(12,52,171,0.06)] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] backdrop-blur-xl p-6 md:p-8 rounded-xl flex flex-col items-center">
           {/* Header row with heading centered and difficulty pill absolute on the right */}
           <div className="w-full flex items-center justify-between mb-6 select-none border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => navigate(backPath)}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-black/50 transition-all duration-200"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back
-            </button>
+            <div className="w-[80px]" /> {/* Spacer to balance absolute centering of heading */}
             <h1 className="text-[10px] md:text-xs font-press-start text-[#2563eb] dark:text-[#8fd9ff] uppercase">
               TECHNICAL MCQ
             </h1>

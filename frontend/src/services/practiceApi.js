@@ -18,7 +18,9 @@ const handleResponse = async (response) => {
 export const practiceAPI = {
   getQuestions: async (track) => {
     const suffix = track ? `?track=${encodeURIComponent(track)}` : '';
-    const response = await fetch(`${API_BASE}/practice/questions${suffix}`);
+    const response = await fetch(`${API_BASE}/practice/questions${suffix}`, {
+      headers: buildHeaders(),
+    });
     return handleResponse(response);
   },
 

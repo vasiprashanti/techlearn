@@ -104,6 +104,7 @@ export default function DailyChallengeTest() {
         next.add(activeProblemIndex);
         return next;
       });
+      setOutput(""); // Clear terminal output when question changes
       const isChallengeMcq = problem.categoryType === "MCQ";
       const currentSolution = solutions[activeProblemIndex];
       if (currentSolution) {
@@ -394,6 +395,7 @@ export default function DailyChallengeTest() {
       result: resultPayload,
       completedAt: new Date().toISOString(),
     });
+    window.dispatchEvent(new CustomEvent('xpUpdated'));
     navigate(`/daily-challenge/${linkId}/result`, { replace: true });
   };
 
@@ -709,6 +711,7 @@ export default function DailyChallengeTest() {
           terminated: true,
           terminationReason: "Tab-switch limit exceeded"
         });
+        window.dispatchEvent(new CustomEvent('xpUpdated'));
         navigate(`/daily-challenge/${linkId}/result`, { replace: true });
       } else {
         moveToResult(response?.data || {});

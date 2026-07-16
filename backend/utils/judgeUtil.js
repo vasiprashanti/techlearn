@@ -112,7 +112,7 @@ const LANGUAGE_IDS = {
 // Simple function to normalize output for comparison
 const normalizeOutput = (output) => {
   if (!output) return "";
-  return output.toString().trim();
+  return output.toString().replace(/\r\n/g, "\n").trim();
 };
 
 // Test code against a test case using Judge0 API

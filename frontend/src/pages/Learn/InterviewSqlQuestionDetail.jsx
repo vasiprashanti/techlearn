@@ -25,9 +25,9 @@ export default function InterviewSqlQuestionDetail() {
   const backPath = isDailyMode
     ? '/dashboard'
     : isDashboardContext
-      ? sqlSourcePath === '/dashboard/practice' || sqlSourcePath === '/dashboard/practice/sql'
-        ? sqlSourcePath
-        : '/dashboard/practice/sql'
+      ? sqlSourcePath
+        ? decodeURIComponent(sqlSourcePath)
+        : '/dashboard/practice'
       : '/learn/interview-questions/sql';
 
   const [liveQuestions, setLiveQuestions] = useState([]);
@@ -258,6 +258,7 @@ export default function InterviewSqlQuestionDetail() {
         setOutput('Error: Incorrect query. Please check your SQL and try again.');
         setIsLastSubmissionCorrect(false);
       }
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (error) {
       setOutput(`Submission failed: ${error?.message || 'Unknown error occurred'}`);
     }
@@ -312,6 +313,7 @@ export default function InterviewSqlQuestionDetail() {
         code,
         finalize: false,
       });
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (err) {
       console.error("Failed to save progress:", err);
     }
@@ -328,6 +330,7 @@ export default function InterviewSqlQuestionDetail() {
         code,
         finalize: true,
       });
+      window.dispatchEvent(new CustomEvent('xpUpdated'));
     } catch (err) {
       console.error("Failed to finalize task:", err);
     }
@@ -405,6 +408,18 @@ export default function InterviewSqlQuestionDetail() {
           scrollbar-width: none !important;
         }
       `}</style>
+      {!isDailyMode && (
+        <div className="w-full text-left mb-3">
+          <button
+            type="button"
+            onClick={() => navigate(backPath)}
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#2d7fe8] hover:text-[#236ccd] dark:text-[#8fd9ff] dark:hover:text-[#a8e6ff]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Questions
+          </button>
+        </div>
+      )}
       <div className="min-h-[calc(100vh-12rem)] lg:h-[calc(100vh-10rem)] flex flex-col lg:overflow-hidden w-full">
         {/* Workspace Body split */}
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
@@ -414,17 +429,6 @@ export default function InterviewSqlQuestionDetail() {
           >
             {/* Header Card (Top 15%) */}
             <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center gap-1.5">
-              {!isDailyMode && (
-                <button
-                  type="button"
-                  onClick={() => navigate(backPath)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#8fd9ff] hover:text-[#a8e6ff] mb-1"
-                >
-                  <ArrowLeft className="h-3 w-3" />
-                  Back
-                </button>
-              )}
-              
               <h1 className="text-sm font-extrabold tracking-tight text-[#0d2a57] dark:text-white leading-tight">
                 {question.title}
               </h1>

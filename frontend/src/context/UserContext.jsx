@@ -192,6 +192,7 @@ export const UserProvider = ({ children }) => {
   // Listen for XP updates to sync dashboard context data
   useEffect(() => {
     const handleXPUpdate = () => {
+      localStorage.removeItem(DASHBOARD_CACHE_KEY);
       fetchUserData();
     };
 

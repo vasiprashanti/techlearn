@@ -1283,16 +1283,19 @@ export default function Dashboard() {
       {/* Day Advancement Modal */}
       {advancementModal.isOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 font-sans">
-          <div className="relative w-full max-w-md bg-white dark:bg-[#0a1128] border-2 border-[#3C83F6]/50 rounded-2xl p-6 md:p-8 shadow-2xl text-center border-b-8">
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#3C83F6] text-white p-3 rounded-full border-4 border-white dark:border-[#0a1128] shadow-lg">
-              <img
-                src={pixelStarImg}
-                alt="Level Up"
-                className="w-10 h-10 object-contain pixel-icon"
-              />
-            </div>
+          <div className="relative w-full max-w-md max-h-[85vh] flex flex-col bg-white dark:bg-[#0a1128] border-2 border-[#3C83F6]/50 rounded-2xl shadow-2xl text-center border-b-8 overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-[#3C83F6]/10 to-transparent pointer-events-none"></div>
             
-            <div className="mt-6 space-y-4">
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-8 md:px-8 space-y-5 minimal-scrollbar mt-4">
+              <div className="mx-auto bg-[#3C83F6] text-white p-3 rounded-full border-4 border-white dark:border-[#0a1128] shadow-lg w-16 h-16 flex items-center justify-center mb-2">
+                <img
+                  src={pixelStarImg}
+                  alt="Level Up"
+                  className="w-8 h-8 object-contain pixel-icon"
+                />
+              </div>
+
               <h3 className="font-pixel-header text-[10px] tracking-wider text-[#3C83F6] dark:text-[#8fd9ff] uppercase">
                 DAY COMPLETE!
               </h3>
@@ -1309,7 +1312,7 @@ export default function Dashboard() {
                   </div>
 
                   {advancementModal.tasks && advancementModal.tasks.length > 0 && (
-                    <div className="mt-4 text-left space-y-2 border-t border-black/5 dark:border-white/5 pt-4 max-h-60 overflow-y-auto minimal-scrollbar">
+                    <div className="mt-4 text-left space-y-2 border-t border-black/5 dark:border-white/5 pt-4 max-h-48 overflow-y-auto minimal-scrollbar">
                       <span className="block text-[8px] font-press-start uppercase text-slate-500 dark:text-slate-400 mb-2">Task-Wise Summary</span>
                       {advancementModal.tasks.map((task, idx) => {
                         const isCorrect = task.taskType === "Coding" || task.taskType === "SQL" || task.taskType === "Debugging"
@@ -1366,12 +1369,13 @@ export default function Dashboard() {
                 </div>
               </div>
               
-              <p className="text-xs text-slate-500 dark:text-slate-400 italic font-sans">
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic font-sans pb-2">
                 {advancementModal.isDailyTaskMode ? "Come back tomorrow for your next daily tasks and keep your streak alive!" : "New lesson notes and tasks have been unlocked for you."}
               </p>
             </div>
 
-            <div className="mt-6 flex justify-center">
+            {/* Modal Footer (Sticky Button) */}
+            <div className="p-4 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-center">
               <button
                 onClick={() => {
                   const isDaily = advancementModal.isDailyTaskMode;
@@ -1380,7 +1384,7 @@ export default function Dashboard() {
                     navigate(`/dashboard/project/day-notes?day=${advancementModal.nextDay}`);
                   }
                 }}
-                className="px-6 py-2.5 bg-[#3C83F6] text-white hover:bg-blue-600 font-press-start text-[9px] rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 active:translate-y-0"
+                className="px-6 py-2.5 bg-[#3C83F6] text-white hover:bg-blue-600 font-press-start text-[9px] rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 active:translate-y-0 w-full max-w-[200px]"
               >
                 {advancementModal.isDailyTaskMode ? "AWESOME" : `UNLEASH DAY ${advancementModal.nextDay}`}
               </button>
