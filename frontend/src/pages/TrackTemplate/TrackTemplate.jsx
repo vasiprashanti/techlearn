@@ -123,7 +123,7 @@ export default function TrackTemplate() {
       assignedBatch: track.assignedBatch || '',
     }));
     const normalizedCategories = preferRemoteData(remoteCategories, [])
-      .filter((category) => category.visibility !== 'Practice')
+      .filter((category) => category.visibility !== 'Practice' && category.usage !== 'Practice')
       .map((category) => category.title)
       .filter(Boolean);
 
