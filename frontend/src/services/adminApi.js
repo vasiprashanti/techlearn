@@ -369,6 +369,7 @@ export const adminAPI = {
     return request(`/admin/track-templates/${templateId}/days/${dayNumber}${query}`, { method: 'DELETE' });
   },
   reorderTrackTemplate: (templateId, body) => request(`/admin/track-templates/${templateId}/reorder`, { method: 'PUT', body: JSON.stringify(body) }),
+  updateTrackTemplateDayOverride: (templateId, dayNumber, body) => request(`/admin/track-templates/${templateId}/days/${dayNumber}/override`, { method: 'PUT', body: JSON.stringify(body) }),
 
   getResources: () => request('/admin/resources'),
   createResource: async (body) => {

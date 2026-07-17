@@ -113,7 +113,7 @@ export const QuestionBankCategoryDetailPage = () => {
   const [isQuestionFormOpen, setIsQuestionFormOpen] = useState(false);
   const [questionFormMode, setQuestionFormMode] = useState('single');
   const [bulkForms, setBulkForms] = useState([]);
-  const [bulkCount, setBulkCount] = useState('3');
+  const [bulkCount, setBulkCount] = useState('1');
   const [editingQuestionId, setEditingQuestionId] = useState(null);
   const [questionForm, setQuestionForm] = useState(createQuestionForm());
   const [expandedFormSections, setExpandedFormSections] = useState({
@@ -201,7 +201,7 @@ export const QuestionBankCategoryDetailPage = () => {
     setEditingQuestionId(null);
     setQuestionFormMode('bulk');
     setFormError('');
-    const count = Math.max(1, Math.min(25, Number(bulkCount) || 3));
+    const count = Math.max(1, Math.min(25, Number(bulkCount) || 1));
     setBulkForms(Array.from({ length: count }, () => createQuestionForm(trackOptions[0] || '')));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
     setIsQuestionFormOpen(true);

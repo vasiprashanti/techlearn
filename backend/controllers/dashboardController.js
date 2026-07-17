@@ -8,6 +8,8 @@ import Student from "../models/Student.js";
 import Submission from "../models/Submission.js";
 import mongoose from "mongoose";
 
+import { updateStudentStreak } from "../utils/streakUtil.js";
+
 const DASHBOARD_CACHE_TTL_MS = 30 * 1000;
 const dashboardCache = new Map();
 
@@ -120,6 +122,11 @@ export const getDashboardData = async (req, res) => {
     const normalizedEmail = String(user?.email || req.user?.email || "")
       .trim()
       .toLowerCase();
+
+    if (normalizedEmail) {
+      await updateStudentStreak(normalizedEmail);
+    }
+
     const linkedStudent = normalizedEmail
       ? await Student.findOne({ email: normalizedEmail }).select("_id name streak").lean()
       : null;

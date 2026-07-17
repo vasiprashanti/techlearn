@@ -833,7 +833,7 @@ export const listTrackTemplates = async (req, res) => {
 
 export const createTrackTemplate = async (req, res) => {
   try {
-    const { name, description, status, iconKey, batchId } = req.body;
+    const { name, description, status, iconKey, batchId, defaultReleaseTime } = req.body;
     const category = req.body.category || req.body.trackType;
 
     if (!name?.trim() || !category?.trim()) {
@@ -842,7 +842,13 @@ export const createTrackTemplate = async (req, res) => {
 
     // Verify category doesn't have "Practice" visibility
     const categoriesList = category.split(",").map((c) => c.trim());
-    const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+    const slugsList = categoriesList.map((c) => slugifyCategory(c));
+    const dbCategories = await Category.find({
+      $or: [
+        { title: { $in: categoriesList } },
+        { slug: { $in: slugsList } },
+      ],
+    }).lean();
     const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
     if (hasPracticeCategory) {
       return res.status(400).json({
@@ -870,6 +876,7 @@ export const createTrackTemplate = async (req, res) => {
         dayNumber: i,
         questionId: null,
         tasks: [],
+        releaseTimeOverride: null,
       });
     }
 
@@ -883,6 +890,7 @@ export const createTrackTemplate = async (req, res) => {
       status: status || "Active",
       iconKey: iconKey || getTrackTemplateIconKey(category),
       dayAssignments,
+      defaultReleaseTime: defaultReleaseTime || "00:00",
       versionHistory: [{ version: 1, label: "v1 - Initial template", changedBy: getActorName(req.user) }],
     });
 
@@ -928,7 +936,13 @@ export const getTrackTemplateDetail = async (req, res) => {
       if (template.category && template.category !== "Daily Task") {
         const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
         if (categoriesList.length > 0) {
-          const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+          const slugsList = categoriesList.map((c) => slugifyCategory(c));
+          const dbCategories = await Category.find({
+            $or: [
+              { title: { $in: categoriesList } },
+              { slug: { $in: slugsList } },
+            ],
+          }).lean();
           const categoryIds = dbCategories.map((c) => c._id);
           const categorySlugs = dbCategories.map((c) => c.slug);
           questionFilter.$or = [
@@ -1088,7 +1102,13 @@ export const updateTrackTemplate = async (req, res) => {
       const nextCategory = req.body.category.trim();
       if (nextCategory) {
         const categoriesList = nextCategory.split(",").map((c) => c.trim());
-        const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+        const slugsList = categoriesList.map((c) => slugifyCategory(c));
+        const dbCategories = await Category.find({
+          $or: [
+            { title: { $in: categoriesList } },
+            { slug: { $in: slugsList } },
+          ],
+        }).lean();
         const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
         if (hasPracticeCategory) {
           return res.status(400).json({
@@ -1119,6 +1139,9 @@ export const updateTrackTemplate = async (req, res) => {
       }
     }
     if (req.body.status) template.status = req.body.status;
+    if (req.body.defaultReleaseTime !== undefined) {
+      template.defaultReleaseTime = req.body.defaultReleaseTime || "00:00";
+    }
 
     if (req.body.totalDays || req.body.durationDays) {
       const duration = resolveTemplateDuration({
@@ -1136,6 +1159,7 @@ export const updateTrackTemplate = async (req, res) => {
               dayNumber: i,
               questionId: null,
               tasks: [],
+              releaseTimeOverride: null,
             });
           }
         } else if (duration.totalDays < currentDaysCount) {
@@ -2015,3 +2039,49 @@ export const moveQuestionsAdmin = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server error moving questions." });
   }
 };
+
+export const updateTrackTemplateDayOverride = async (req, res) => {
+  try {
+    const { templateId, dayNumber } = req.params;
+    const { releaseTimeOverride } = req.body;
+    if (!assertObjectId(templateId, "templateId", res)) return;
+
+    const template = await TrackTemplate.findById(templateId);
+    if (!template) {
+      return res.status(404).json({ success: false, message: "Track template not found." });
+    }
+
+    const normalizedDayNumber = Number(dayNumber);
+    let dayAssignment = template.dayAssignments.find((assignment) => assignment.dayNumber === normalizedDayNumber);
+    if (!dayAssignment) {
+      template.dayAssignments.push({
+        dayNumber: normalizedDayNumber,
+        tasks: [],
+        releaseTimeOverride: null,
+      });
+      dayAssignment = template.dayAssignments.find((assignment) => assignment.dayNumber === normalizedDayNumber);
+    }
+
+    dayAssignment.releaseTimeOverride = releaseTimeOverride || null;
+
+    const nextVersion = (template.versionHistory?.length || 0) + 1;
+    template.versionHistory = [
+      {
+        version: nextVersion,
+        label: `v${nextVersion} - Updated release time override for day ${dayNumber} to ${releaseTimeOverride || "default"}`,
+        changedBy: getActorName(req.user),
+        changedAt: new Date(),
+      },
+      ...(template.versionHistory || []),
+    ];
+
+    await template.save();
+    await syncTemplateToTrack(template);
+
+    return res.status(200).json({ success: true, data: template });
+  } catch (error) {
+    console.error("updateTrackTemplateDayOverride error:", error);
+    return res.status(500).json({ success: false, message: "Failed to update release time override." });
+  }
+};
+
