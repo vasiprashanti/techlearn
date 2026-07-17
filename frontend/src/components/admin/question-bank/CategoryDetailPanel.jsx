@@ -18,10 +18,9 @@ export const CategoryDetailPanel = ({
 }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('All levels');
-  const [statusFilter, setStatusFilter] = useState('All statuses');
+  const [difficultyFilter, setDifficultyFilter] = useState('Difficulty');
   const [sortBy, setSortBy] = useState('newest');
-  const [tagFilter, setTagFilter] = useState('All tags');
+  const [tagFilter, setTagFilter] = useState('Tags');
   const [activeTab, setActiveTab] = useState('questions');
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -79,19 +78,16 @@ export const CategoryDetailPanel = ({
         String(question.track || question.trackType || '').toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesDifficulty =
-        difficultyFilter === 'All levels' ||
+        difficultyFilter === 'Difficulty' ||
         String(question.difficulty).toLowerCase() === difficultyFilter.toLowerCase();
 
-      const matchesStatus =
-        statusFilter === 'All statuses' ||
-        String(question.status || 'Active').toLowerCase() === statusFilter.toLowerCase();
       const matchesTag =
-        tagFilter === 'All tags' ||
+        tagFilter === 'Tags' ||
         (question.tags || []).some((tag) => String(tag).toLowerCase() === tagFilter.toLowerCase());
 
-      return matchesSearch && matchesDifficulty && matchesStatus && matchesTag;
+      return matchesSearch && matchesDifficulty && matchesTag;
     });
-  }, [questions, searchTerm, difficultyFilter, statusFilter, tagFilter]);
+  }, [questions, searchTerm, difficultyFilter, tagFilter]);
 
   const sortedQuestions = useMemo(() => [...filteredQuestions].sort((a, b) => {
     if (sortBy === 'oldest') return new Date(a.created || 0) - new Date(b.created || 0);
@@ -219,46 +215,106 @@ export const CategoryDetailPanel = ({
             />
           </div>
 
-          {/* Filters */}
-          <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
-            {[
-              { value: difficultyFilter, onChange: setDifficultyFilter, options: ['All levels', 'Easy', 'Medium', 'Hard'] },
-              { value: statusFilter,    onChange: setStatusFilter,    options: ['All statuses', 'Active', 'Draft', 'Archived'] },
-              { value: tagFilter,       onChange: setTagFilter,       options: ['All tags', ...uniqueTags] },
-              { value: sortBy,          onChange: setSortBy,          options: [
-                  { value: 'newest', label: 'Newest first' },
-                  { value: 'oldest', label: 'Oldest first' },
-                  { value: 'easy-hard', label: 'Easy → Hard' },
-                  { value: 'hard-easy', label: 'Hard → Easy' },
-                ],
-              },
-            ].map(({ value, onChange, options }, i) => (
-              <div key={i} className="relative">
-                <select
-                  value={value}
-                  onChange={(e) => onChange(e.target.value)}
-                  className="appearance-none h-9 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  {options.map((opt) =>
-                    typeof opt === 'string'
-                      ? <option key={opt} className={dropdownOptionClass}>{opt}</option>
-                      : <option key={opt.value} value={opt.value} className={dropdownOptionClass}>{opt.label}</option>
-                  )}
-                </select>
-                <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-              </div>
-            ))}
-          </div>
+          {/* Filters & Actions Wrapper - vertical stack on mobile/tablet, single line on desktop */}
+          <div className="flex flex-col gap-2.5 w-full lg:flex-row lg:flex-1 lg:items-center lg:gap-2.5">
+            
+            {/* Filters */}
+            <div className="grid grid-cols-3 gap-2 w-full lg:flex lg:w-auto lg:items-center lg:gap-2">
+              {[
+                { value: difficultyFilter, onChange: setDifficultyFilter, options: ['Difficulty', 'Easy', 'Medium', 'Hard'], widthClass: 'w-28' },
+                { value: tagFilter,       onChange: setTagFilter,       options: ['Tags', ...uniqueTags], widthClass: 'w-24' },
+                { value: sortBy,          onChange: setSortBy,          options: [
+                    { value: 'newest', label: 'Newest first' },
+                    { value: 'oldest', label: 'Oldest first' },
+                    { value: 'easy-hard', label: 'Easy → Hard' },
+                    { value: 'hard-easy', label: 'Hard → Easy' },
+                  ],
+                  widthClass: 'w-36',
+                },
+              ].map(({ value, onChange, options, widthClass }, i) => (
+                <div key={i} className={`relative w-full lg:${widthClass || ''}`}>
+                  <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="appearance-none w-full h-9 rounded-lg border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 pr-8 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                  >
+                    {options.map((opt) =>
+                      typeof opt === 'string'
+                        ? <option key={opt} className={dropdownOptionClass}>{opt}</option>
+                        : <option key={opt.value} value={opt.value} className={dropdownOptionClass}>{opt.label}</option>
+                    )}
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                </div>
+              ))}
+            </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 lg:ml-auto shrink-0">
-            <button
-              onClick={onAddQuestion}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#3C83F6] text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap transition-colors"
-            >
-              <FiPlus className="w-3.5 h-3.5" />
-              Add Question
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 w-full lg:w-auto lg:ml-auto">
+              {!isSelectionMode ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectionMode(true)}
+                    className="flex items-center justify-center gap-1.5 h-9 px-5 rounded-lg border border-[#3C83F6]/20 bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-white/10 dark:text-white hover:bg-[#3C83F6]/20 text-sm font-semibold whitespace-nowrap transition-colors flex-1 lg:flex-initial lg:min-w-[110px]"
+                  >
+                    Bulk Move
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onBulkAddQuestions}
+                    className="flex items-center justify-center gap-1.5 h-9 px-5 rounded-lg bg-[#3C83F6] text-white hover:bg-[#2f73e0] text-sm font-semibold whitespace-nowrap transition-colors flex-1 lg:flex-initial lg:min-w-[110px]"
+                  >
+                    <FiPlus className="w-3.5 h-3.5" />
+                    Bulk Add
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap lg:flex-nowrap">
+                  <span className="text-xs font-bold text-[#3C83F6] dark:text-blue-400 whitespace-nowrap mr-1">
+                    Selection Mode ({selectedIds.length} selected)
+                  </span>
+                  {sameTypeCategories.length > 0 ? (
+                    <>
+                      <select
+                        value={targetCategoryToMove}
+                        onChange={(e) => setTargetCategoryToMove(e.target.value)}
+                        className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none flex-1 lg:flex-initial"
+                      >
+                        <option value="">Select target category...</option>
+                        {sameTypeCategories.map((cat) => (
+                          <option key={cat.id || cat._id} value={cat.id || cat._id} className={dropdownOptionClass}>
+                            {cat.title}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={!targetCategoryToMove || selectedIds.length === 0 || moving}
+                        onClick={handleMoveQuestions}
+                        className="h-9 px-4 rounded-lg bg-[#3c83f6] hover:bg-blue-700 text-white text-xs font-semibold active:scale-[0.98] disabled:opacity-50 transition-all whitespace-nowrap flex-1 lg:flex-initial"
+                      >
+                        {moving ? 'Moving...' : 'Move Questions'}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400">No other categories of same type to move to.</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectionMode(false);
+                      handleClearSelection();
+                    }}
+                    className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 text-slate-650 dark:text-slate-350 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold whitespace-nowrap transition-colors flex-1 lg:flex-initial"
+                  >
+                    Bulk Back
+                  </button>
+                  {moveError && <span className="text-xs text-red-500 font-semibold">{moveError}</span>}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
 
@@ -285,72 +341,6 @@ export const CategoryDetailPanel = ({
           <p className="text-xs text-slate-400 dark:text-slate-500 font-medium order-2 sm:order-1">
             Showing {sortedQuestions.length} of {questions.length} questions
           </p>
-          
-          <div className="flex flex-wrap items-center gap-3 order-1 sm:order-2">
-            {!isSelectionMode ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onBulkAddQuestions}
-                  className="flex items-center gap-1.5 h-9 px-4 rounded-lg border border-black/10 dark:border-white/10 text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold whitespace-nowrap transition-colors"
-                >
-                  Bulk Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsSelectionMode(true)}
-                  className="flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#3C83F6]/10 text-[#3C83F6] hover:bg-[#3C83F6]/20 text-xs font-semibold whitespace-nowrap transition-colors"
-                >
-                  Bulk Move
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#3C83F6] dark:text-blue-400 whitespace-nowrap">
-                    Selection Mode ({selectedIds.length} selected)
-                  </span>
-                </div>
-                {sameTypeCategories.length > 0 ? (
-                  <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-                    <select
-                      value={targetCategoryToMove}
-                      onChange={(e) => setTargetCategoryToMove(e.target.value)}
-                      className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f1f43] text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none"
-                    >
-                      <option value="">Select target category...</option>
-                      {sameTypeCategories.map((cat) => (
-                        <option key={cat.id || cat._id} value={cat.id || cat._id} className={dropdownOptionClass}>
-                          {cat.title}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      disabled={!targetCategoryToMove || selectedIds.length === 0 || moving}
-                      onClick={handleMoveQuestions}
-                      className="h-9 px-4 rounded-lg bg-[#3c83f6] hover:bg-blue-700 text-white text-xs font-semibold active:scale-[0.98] disabled:opacity-50 transition-all whitespace-nowrap"
-                    >
-                      {moving ? 'Moving...' : 'Move Questions'}
-                    </button>
-                  </div>
-                ) : (
-                  <span className="text-xs text-slate-400">No other categories of same type to move to.</span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectionMode(false);
-                    handleClearSelection();
-                  }}
-                  className="h-9 px-3 rounded-lg border border-black/10 dark:border-white/10 text-slate-650 dark:text-slate-350 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-semibold whitespace-nowrap transition-colors"
-                >
-                  Cancel
-                </button>
-                {moveError && <span className="text-xs text-red-500 font-semibold">{moveError}</span>}
-              </div>
-            )}
-          </div>
         </div>
       </section>
 
