@@ -60,6 +60,7 @@ export default function TrackTemplate() {
     description: '',
     totalDays: '30',
     status: 'Active',
+    defaultReleaseTime: '00:00',
   });
   const [selectedTrack, setSelectedTrack] = useState(null);
   const [historyTrack, setHistoryTrack] = useState(null);
@@ -234,6 +235,7 @@ export default function TrackTemplate() {
       description: '',
       totalDays: '30',
       status: 'Active',
+      defaultReleaseTime: '00:00',
     });
   };
 
@@ -247,6 +249,7 @@ export default function TrackTemplate() {
       description: '',
       totalDays: '30',
       status: 'Active',
+      defaultReleaseTime: '00:00',
     });
     setIsCreateTemplateOpen(true);
   };
@@ -260,6 +263,7 @@ export default function TrackTemplate() {
       description: track.description || '',
       totalDays: String(track.totalDays || 1),
       status: track.status || 'Active',
+      defaultReleaseTime: track.defaultReleaseTime || '00:00',
     });
     setTemplateFormError('');
     setIsCreateTemplateOpen(true);
@@ -282,6 +286,7 @@ export default function TrackTemplate() {
       description: createTemplateForm.description.trim() || `${totalDays}-day ${effectiveCategory} track template`,
       totalDays,
       status: createTemplateForm.status,
+      defaultReleaseTime: createTemplateForm.defaultReleaseTime || '00:00',
     };
 
     try {
@@ -429,36 +434,43 @@ export default function TrackTemplate() {
         <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeCreateTemplateModal} />
           <div
-            className="relative w-full max-w-[420px] max-h-[84vh] rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-black/20 dark:[&::-webkit-scrollbar-thumb]:bg-white/25 [&::-webkit-scrollbar-thumb]:rounded-full"
-            style={{ scrollbarWidth: 'thin' }}
+            className="relative w-full max-w-2xl max-h-[90vh] rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl flex flex-col overflow-hidden"
           >
-            <div className="sticky top-0 z-10 px-3.5 py-2.5 border-b border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 backdrop-blur">
-              <h2 className="text-base font-semibold text-[#3C83F6] dark:text-white">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+            {/* Fixed Header */}
+            <div className="px-5 py-3.5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
+              <h2 className="text-lg font-semibold text-[#3C83F6] dark:text-[#bceaff]">{editingTemplateId ? 'Edit Template' : 'Create Template'}</h2>
+              <button onClick={closeCreateTemplateModal} className="text-sm text-black/40 dark:text-white/40">Close</button>
             </div>
 
-            <div className="p-3.5 space-y-2.5">
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
-                <input
-                  value={createTemplateForm.name}
-                  onChange={(e) => updateCreateTemplateField('name', e.target.value)}
-                  placeholder="Enter template name"
-                  className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
-                />
-              </div>
+            {/* Scrollable Form Body with scrollbar hidden */}
+            <div
+              className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0 [&::-webkit-scrollbar]:hidden"
+              style={{ scrollbarWidth: 'none' }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Template name*</label>
+                  <input
+                    value={createTemplateForm.name}
+                    onChange={(e) => updateCreateTemplateField('name', e.target.value)}
+                    placeholder="Enter template name"
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35"
+                  />
+                </div>
 
-              <div>
-                <label className="admin-micro-label text-black/50 dark:text-white/50">Track Type*</label>
-                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                  <select
-                    value={createTemplateForm.trackType || 'Daily Challenge'}
-                    onChange={(e) => updateCreateTemplateField('trackType', e.target.value)}
-                    className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
-                  >
-                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Challenge">Daily Challenge (Single Timed DSA)</option>
-                    <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Task">Daily Task (Multi-Task/Day)</option>
-                  </select>
-                  <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Track Type*</label>
+                  <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.18)] hover:bg-white dark:hover:bg-[#162a52] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                    <select
+                      value={createTemplateForm.trackType || 'Daily Challenge'}
+                      onChange={(e) => updateCreateTemplateField('trackType', e.target.value)}
+                      className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Challenge">Daily Challenge (Single Timed DSA)</option>
+                      <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Daily Task">Daily Task (Multi-Task/Day)</option>
+                    </select>
+                    <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                  </div>
                 </div>
               </div>
 
@@ -466,7 +478,7 @@ export default function TrackTemplate() {
                 {createTemplateForm.trackType === 'Daily Task' || createTemplateForm.trackType === 'Daily Challenge' ? (
                   <div>
                     <label className="admin-micro-label text-black/50 dark:text-white/50">Select Categories to Include* (Multiple allowed)</label>
-                    <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto">
+                    <div className="mt-1.5 p-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] space-y-2 max-h-40 overflow-y-auto [&::-webkit-scrollbar]:hidden" style={{ scrollbarWidth: 'none' }}>
                       {questionCategories.map((cat) => {
                         const selectedList = createTemplateForm.category && createTemplateForm.category !== 'Daily Task' && createTemplateForm.category !== 'Daily Challenge'
                           ? createTemplateForm.category.split(',').map((c) => c.trim())
@@ -507,7 +519,7 @@ export default function TrackTemplate() {
                       <select
                         value={createTemplateForm.category}
                         onChange={(e) => updateCreateTemplateField('category', e.target.value)}
-                        className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                        className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                       >
                         <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="">Select category</option>
                         {questionCategories.map((category) => (
@@ -536,7 +548,7 @@ export default function TrackTemplate() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="admin-micro-label text-black/50 dark:text-white/50">Total days</label>
                   <input
@@ -544,7 +556,17 @@ export default function TrackTemplate() {
                     min="1"
                     value={createTemplateForm.totalDays}
                     onChange={(e) => updateCreateTemplateField('totalDays', e.target.value)}
-                    className="mt-1 w-full h-9 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="admin-micro-label text-black/50 dark:text-white/50">Default Release Time*</label>
+                  <input
+                    type="time"
+                    value={createTemplateForm.defaultReleaseTime || '00:00'}
+                    onChange={(e) => updateCreateTemplateField('defaultReleaseTime', e.target.value)}
+                    className="mt-1 w-full h-10 rounded-xl border border-black/10 dark:border-white/10 bg-[#dbe5f1] dark:bg-[#122b52] px-3 text-sm text-[#1a2335] dark:text-white"
                   />
                 </div>
 
@@ -554,7 +576,7 @@ export default function TrackTemplate() {
                     <select
                       value={createTemplateForm.status}
                       onChange={(e) => updateCreateTemplateField('status', e.target.value)}
-                      className="appearance-none w-full h-9 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
+                      className="appearance-none w-full h-10 rounded-xl border-0 bg-transparent px-3 pr-10 text-sm font-medium text-slate-800 dark:text-white outline-none"
                     >
                       <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Active">active</option>
                       <option className="bg-white text-slate-800 dark:bg-[#0f1f43] dark:text-white" value="Draft">draft</option>
@@ -567,21 +589,24 @@ export default function TrackTemplate() {
               {templateFormError && (
                 <p className="text-xs text-red-500">{templateFormError}</p>
               )}
+            </div>
 
-              <div className="pt-0.5 flex items-center justify-end gap-2">
-                <button
-                  onClick={closeCreateTemplateModal}
-                  className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitTemplate}
-                  className="h-9 px-4 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold"
-                >
-                  {editingTemplateId ? 'Save Changes' : 'Create Template'}
-                </button>
-              </div>
+            {/* Fixed Footer */}
+            <div className="px-5 py-3.5 border-t border-black/10 dark:border-white/10 flex items-center justify-end gap-3 shrink-0 bg-white/50 dark:bg-[#0a1737]/50">
+              <button
+                type="button"
+                onClick={closeCreateTemplateModal}
+                className="px-4 py-2.5 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-black/65 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitTemplate}
+                className="px-5 py-2.5 rounded-xl text-sm font-medium border border-[#3C83F6]/20 bg-[#3C83F6] text-white hover:bg-[#2f73e0] transition-colors disabled:opacity-70"
+              >
+                {editingTemplateId ? 'Save Changes' : 'Create Template'}
+              </button>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import UserProgress from "../models/UserProgress.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
-import { getTrackAssignmentDate } from "../utils/trackAssignmentSchedule.js";
+import { getTrackAssignmentDate, calculateCurrentDayNumber } from "../utils/trackAssignmentSchedule.js";
 
 const getISTDateParts = (date) => {
   const d = new Date(date);
@@ -79,11 +79,11 @@ export const getTodayDailyTasks = async (req, res) => {
     }
 
     // 3. Resolve active day number
-    const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
+    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task");
     const batchEnd = endOfDay(batch.expiryDate);
     const now = new Date();
 
-    if (now < releaseStart || now > batchEnd) {
+    if (dayNumber === 0 || now > batchEnd) {
       return res.status(200).json({
         success: true,
         data: {
@@ -95,7 +95,6 @@ export const getTodayDailyTasks = async (req, res) => {
       });
     }
 
-    const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     const dayAssignment = trackTemplate.dayAssignments.find((d) => d.dayNumber === dayNumber);
 
     if (!dayAssignment || (!dayAssignment.tasks && !dayAssignment.questionId)) {
@@ -290,8 +289,7 @@ export const submitDailyTask = async (req, res) => {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Task"), batch.releaseTime || "00:00");
-    const dayNumber = Math.floor((new Date().getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task");
 
     let attempt = await DailyTaskAttempt.findOne({
       userId,
@@ -381,7 +379,7 @@ export const submitDailyTask = async (req, res) => {
     // Calculate XP
     const difficulty = configuredTask?.questionId?.difficulty || "Easy";
     const accuracy = typeof task.accuracy === "number" ? task.accuracy : 100;
-    const isValidAttempt = isCorrect === true || accuracy > 0;
+    const isValidAttempt = task.isCorrect === true || accuracy > 0;
     let xpEarned = 0;
     if (isValidAttempt) {
       xpEarned = Number(configuredTask?.xpValue || 0) > 0

@@ -15,6 +15,7 @@ import {
   FiTrash2,
   FiChevronDown,
   FiChevronRight,
+  FiClock,
 } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
@@ -91,6 +92,9 @@ export default function TrackTemplateDetails() {
   const [selectedAssignments, setSelectedAssignments] = useState([]);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isOverrideModalOpen, setIsOverrideModalOpen] = useState(false);
+  const [overrideDayNumber, setOverrideDayNumber] = useState(null);
+  const [overrideTimeVal, setOverrideTimeVal] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -416,6 +420,30 @@ export default function TrackTemplateDetails() {
     });
   };
 
+  const openOverrideModal = (dayNumber, currentOverride) => {
+    setOverrideDayNumber(dayNumber);
+    setOverrideTimeVal(currentOverride || '');
+    setIsOverrideModalOpen(true);
+  };
+
+  const closeOverrideModal = () => {
+    setIsOverrideModalOpen(false);
+    setOverrideDayNumber(null);
+    setOverrideTimeVal('');
+  };
+
+  const saveOverrideTime = async () => {
+    try {
+      await adminAPI.updateTrackTemplateDayOverride(templateId, overrideDayNumber, {
+        releaseTimeOverride: overrideTimeVal || null,
+      });
+      await reloadTrackTemplate();
+      closeOverrideModal();
+    } catch (err) {
+      console.error("Failed to save override release time", err);
+    }
+  };
+
   const assignQuestionToDay = async () => {
     if (!addDayForm.questionIds.length) return;
     try {
@@ -648,6 +676,45 @@ export default function TrackTemplateDetails() {
         </div>
       )}
 
+      {isOverrideModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={closeOverrideModal} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl p-6 space-y-4">
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+              Set Release Time Override (Day {overrideDayNumber})
+            </h3>
+            <div>
+              <label className="admin-micro-label text-slate-500 dark:text-white/50 block mb-1">Release Time Override</label>
+              <input
+                type="time"
+                value={overrideTimeVal}
+                onChange={(e) => setOverrideTimeVal(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-slate-800 text-sm text-[#1a2335] dark:text-white outline-none"
+              />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Leave blank to clear override and use default release time.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={closeOverrideModal}
+                className="h-9 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-black/70 dark:text-white/75 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveOverrideTime}
+                className="h-9 px-4 rounded-xl bg-[#3c83f6] hover:bg-[#2563eb] text-white text-sm font-semibold transition-colors"
+              >
+                Save Override
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {bulkDeleteConfirm && (
         <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setBulkDeleteConfirm(false)} />
@@ -763,13 +830,22 @@ export default function TrackTemplateDetails() {
                         {expandedDays[day.dayNumber] ? <FiChevronDown className="w-4 h-4" /> : <FiChevronRight className="w-4 h-4" />}
                         Day {day.dayNumber} ({(day.tasks?.length || 0) + (day.questionId ? 1 : 0)} Questions)
                       </button>
-                      <button
-                        onClick={() => openAddTaskModal(day.dayNumber)}
-                        className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
-                      >
-                        <FiPlus className="w-3.5 h-3.5" />
-                        Add Question/Task
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => openOverrideModal(day.dayNumber, day.releaseTimeOverride)}
+                          className="h-7 px-3 rounded-lg border border-[#3c83f6]/20 bg-[#3c83f6]/10 hover:bg-[#3c83f6]/25 text-[#3c83f6] dark:text-white dark:bg-white/10 dark:border-white/20 hover:dark:bg-white/15 text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                        >
+                          <FiClock className="w-3.5 h-3.5" />
+                          {day.releaseTimeOverride ? `Override: ${day.releaseTimeOverride}` : 'Set Override'}
+                        </button>
+                        <button
+                          onClick={() => openAddTaskModal(day.dayNumber)}
+                          className="h-7 px-3 rounded-lg bg-[#3c83f6] hover:bg-[#2563eb] text-white text-xs font-semibold inline-flex items-center gap-1"
+                        >
+                          <FiPlus className="w-3.5 h-3.5" />
+                          Add Question/Task
+                        </button>
+                      </div>
                     </div>
                     {expandedDays[day.dayNumber] && <div className="space-y-2 pl-3">
                       {day.questionId && (

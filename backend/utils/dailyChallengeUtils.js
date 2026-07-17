@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { getTrackAssignmentDate } from "./trackAssignmentSchedule.js";
+import { getTrackAssignmentDate, calculateCurrentDayNumber } from "./trackAssignmentSchedule.js";
 import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import CodingRound from "../models/CodingRound.js";
 import College from "../models/College.js";
@@ -238,11 +238,11 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
       });
     }
   }
-  const releaseStart = combineDateAndTime(getTrackAssignmentDate(batch, "Daily Challenge"), batch.releaseTime || "00:00");
+  const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Challenge");
   const batchEnd = endOfDay(batch.expiryDate);
   const now = new Date();
 
-  if (now < releaseStart) {
+  if (dayNumber === 0) {
     const error = new Error("Today’s Daily Challenge has not been released yet.");
     error.statusCode = 404;
     throw error;
@@ -268,7 +268,6 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
 
   if (trackTemplate) {
     const totalTemplateDays = trackTemplate.totalDays || trackTemplate.dayAssignments?.length || 1;
-    const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     const lookupDay = ((dayNumber - 1) % totalTemplateDays) + 1;
     const dayAssignment = (trackTemplate.dayAssignments || []).find(
       (assignment) => Number(assignment.dayNumber) === Number(lookupDay)
@@ -333,8 +332,6 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     error.statusCode = 404;
     throw error;
   }
-
-  const dayNumber = Math.floor((now.getTime() - releaseStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
   const durationMinutes = DAILY_CHALLENGE_RULES.timerLimitMinutes;
 
   let resolvedQuestionIds = [];

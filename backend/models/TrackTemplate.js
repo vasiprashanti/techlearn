@@ -47,6 +47,10 @@ const trackTemplateDaySchema = new mongoose.Schema(
       type: [taskAssignmentSchema],
       default: [],
     },
+    releaseTimeOverride: {
+      type: String,
+      default: null,
+    },
   },
   { _id: false }
 );
@@ -121,6 +125,10 @@ const trackTemplateSchema = new mongoose.Schema(
     versionHistory: {
       type: [versionHistorySchema],
       default: [{ version: 1, label: "v1 - Initial template", changedBy: "System" }],
+    },
+    defaultReleaseTime: {
+      type: String,
+      default: "00:00",
     },
   },
   { timestamps: true }

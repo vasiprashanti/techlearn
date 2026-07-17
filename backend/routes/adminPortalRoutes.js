@@ -65,6 +65,7 @@ import {
   bulkDeleteTrackTemplatesAdmin,
   bulkDeleteQuestionCategoriesAdmin,
   moveQuestionsAdmin,
+  updateTrackTemplateDayOverride,
 } from "../controllers/admin/adminLearningController.js";
 import {
   createNotificationAdmin,
@@ -138,6 +139,7 @@ router.delete("/track-templates/:templateId", deleteTrackTemplate);
 router.post("/track-templates/bulk-delete", bulkDeleteTrackTemplatesAdmin);
 router.post("/track-templates/:templateId/days", assignTrackTemplateDay);
 router.delete("/track-templates/:templateId/days/:dayNumber", removeTrackTemplateDay);
+router.put("/track-templates/:templateId/days/:dayNumber/override", updateTrackTemplateDayOverride);
 router.put("/track-templates/:templateId/reorder", reorderTrackTemplateQuestions);
 
 router.get("/resources", listResourcesAdmin);
