@@ -134,7 +134,7 @@ export default function TrackTemplateDetails() {
 
     categories.forEach((catName) => {
       const dbCat = allCategories.find(
-        (c) => c.title && c.title.toLowerCase() === catName
+        (c) => (c.title && c.title.toLowerCase() === catName) || c.slug === slugifyCategory(catName)
       );
       if (dbCat) {
         if (dbCat.categoryType === 'MCQ') mcq = true;
@@ -161,11 +161,15 @@ export default function TrackTemplateDetails() {
       .split(",")
       .map((cat) => {
         const trimmed = cat.trim();
-        return categorySlugMap[trimmed] || slugifyCategory(trimmed);
+        const dbCat = allCategories.find(
+          (candidate) => (candidate.title && candidate.title.toLowerCase() === trimmed.toLowerCase())
+            || candidate.slug === slugifyCategory(trimmed)
+        );
+        return dbCat?.slug || categorySlugMap[trimmed] || slugifyCategory(trimmed);
       })
       .filter(Boolean)
       .join(",");
-  }, [track]);
+  }, [track, allCategories]);
 
   const assignedQuestionIdSet = useMemo(() => {
     const ids = new Set();
@@ -187,10 +191,10 @@ export default function TrackTemplateDetails() {
 
     return availableQuestions.filter((question) => {
       if (assignedQuestionIdSet.has(String(question.id || question._id))) return false;
-      const qCatName = question.track ? question.track.toLowerCase() : '';
+      const qCatName = (question.categoryTitle || question.track || '').toLowerCase();
       const dbCat = allCategories.find(
-        (c) => c.title && c.title.toLowerCase() === qCatName
-      );
+        (c) => (c.title && c.title.toLowerCase() === qCatName) || c.slug === question.categorySlug
+     );
 
       const qCatType = (question.categoryType || dbCat?.categoryType || "").toUpperCase();
       if (isTaskTypeCoding) {
