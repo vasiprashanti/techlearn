@@ -842,7 +842,13 @@ export const createTrackTemplate = async (req, res) => {
 
     // Verify category doesn't have "Practice" visibility
     const categoriesList = category.split(",").map((c) => c.trim());
-    const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+    const slugsList = categoriesList.map((c) => slugifyCategory(c));
+    const dbCategories = await Category.find({
+      $or: [
+        { title: { $in: categoriesList } },
+        { slug: { $in: slugsList } },
+      ],
+    }).lean();
     const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
     if (hasPracticeCategory) {
       return res.status(400).json({
@@ -930,7 +936,13 @@ export const getTrackTemplateDetail = async (req, res) => {
       if (template.category && template.category !== "Daily Task") {
         const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
         if (categoriesList.length > 0) {
-          const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+          const slugsList = categoriesList.map((c) => slugifyCategory(c));
+          const dbCategories = await Category.find({
+            $or: [
+              { title: { $in: categoriesList } },
+              { slug: { $in: slugsList } },
+            ],
+          }).lean();
           const categoryIds = dbCategories.map((c) => c._id);
           const categorySlugs = dbCategories.map((c) => c.slug);
           questionFilter.$or = [
@@ -1090,7 +1102,13 @@ export const updateTrackTemplate = async (req, res) => {
       const nextCategory = req.body.category.trim();
       if (nextCategory) {
         const categoriesList = nextCategory.split(",").map((c) => c.trim());
-        const dbCategories = await Category.find({ title: { $in: categoriesList } }).lean();
+        const slugsList = categoriesList.map((c) => slugifyCategory(c));
+        const dbCategories = await Category.find({
+          $or: [
+            { title: { $in: categoriesList } },
+            { slug: { $in: slugsList } },
+          ],
+        }).lean();
         const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
         if (hasPracticeCategory) {
           return res.status(400).json({

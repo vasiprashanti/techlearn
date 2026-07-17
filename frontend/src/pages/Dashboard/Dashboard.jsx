@@ -885,8 +885,10 @@ export default function Dashboard() {
                     : featuredLeaderboard.map((student) => (
                         <div
                           key={student.userId}
-                          className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-colors ${
-                            student.isUser ? 'bg-[#3C83F6]/10 dark:bg-white/10 border border-[#3C83F6]/20 dark:border-white/20' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                          className={`flex items-center gap-2 py-1 px-1.5 rounded-sm transition-all duration-300 ${
+                            student.isUser
+                              ? 'bg-gradient-to-r from-[#3C83F6]/20 via-[#3C83F6]/10 to-transparent dark:from-[#3C83F6]/30 dark:via-[#3C83F6]/10 border border-[#3C83F6]/40 dark:border-[#3C83F6]/50 shadow-[0_0_15px_rgba(60,131,246,0.3)] dark:shadow-[0_0_20px_rgba(60,131,246,0.45)] ring-1 ring-[#3C83F6]/30'
+                              : 'hover:bg-black/5 dark:hover:bg-white/5'
                           }`}
                         >
                           <div
@@ -897,7 +899,7 @@ export default function Dashboard() {
                             #{student.rank}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-press-start-2p text-[8px] sm:text-[9.5px] truncate ml-1 leading-tight ${student.isUser ? 'text-[#3C83F6] dark:text-white font-medium' : 'text-[#00113b] dark:text-white font-normal'}`}>
+                            <div className={`font-press-start-2p text-[8px] sm:text-[9.5px] truncate ml-1 leading-tight ${student.isUser ? 'text-slate-900 dark:text-white font-bold tracking-wide' : 'text-[#00113b] dark:text-white font-normal'}`}>
                               {student.name}
                             </div>
                           </div>
