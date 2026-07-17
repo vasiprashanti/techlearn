@@ -256,10 +256,22 @@ export default function TrackTemplate() {
 
   const openEditTemplateModal = (track) => {
     setEditingTemplateId(track.id);
+    
+    // Filter out categories that are configured for Practice (not in questionCategories list)
+    // to prevent legacy categories from blocking updates with visibility validation errors.
+    let filteredCat = '';
+    if (track.category) {
+      filteredCat = track.category
+        .split(',')
+        .map((c) => c.trim())
+        .filter((c) => questionCategories.includes(c))
+        .join(', ');
+    }
+
     setCreateTemplateForm({
       name: track.name || '',
       trackType: track.trackType || 'Daily Challenge',
-      category: track.category || '',
+      category: filteredCat || '',
       description: track.description || '',
       totalDays: String(track.totalDays || 1),
       status: track.status || 'Active',
