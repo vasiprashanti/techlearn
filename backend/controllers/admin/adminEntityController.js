@@ -2327,7 +2327,10 @@ todayXp = todayChallengeXp + todayTaskXp;
 
         ["coding", "mcq", "sql"].forEach((type) => {
           const metric = dayReport.metrics[type];
-          if (metric.count) metric.accuracy = Math.round(metric.accuracy / metric.count);
+          if (metric.count) {
+            metric.score = Math.round(metric.score / metric.count);
+            metric.accuracy = Math.round(metric.accuracy / metric.count);
+          }
         });
         const totalAssessmentCount = ["coding", "mcq", "sql"].reduce(
           (count, type) => count + dayReport.metrics[type].count,

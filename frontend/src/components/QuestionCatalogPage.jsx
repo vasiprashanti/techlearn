@@ -9,6 +9,11 @@ const difficultyOptions = ['All Difficulty', 'Easy', 'Medium', 'Hard'];
 const topicOptions = ['All Topics', 'DSA', 'SQL', 'Core CS', 'Company', 'Aptitude'];
 const INITIAL_VISIBLE_TAGS = 10;
 
+const slugify = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
 const difficultyPillClass = {
   Easy: 'bg-[#dff8e7] text-[#1f9c5d] border-[#bceccb]',
   Medium: 'bg-[#fff2c9] text-[#b7791f] border-[#ffe396]',
@@ -190,7 +195,10 @@ export default function QuestionCatalogPage({
         selectedDifficulty === 'All Difficulty' || question.difficulty === selectedDifficulty;
 
       const matchesTopic =
-        selectedTopic === 'All Topics' || slugify(question.topic) === slugify(selectedTopic);
+        selectedTopic === 'All Topics' ||
+        [question.topic, question.categorySlug, question.subtitle]
+          .filter(Boolean)
+          .some((value) => slugify(value) === slugify(selectedTopic));
 
       const matchesTag =
         selectedTag === 'All' || question.subtitle === selectedTag;

@@ -106,6 +106,7 @@ const formatQuestion = (question) => {
     id: String(question._id),
     title: question.title,
     subtitle: question.tags?.[0] || category?.title || question.categoryTitle || question.trackType || track,
+    categorySlug: category?.slug || question.categorySlug || '',
     difficulty: question.difficulty || "Easy",
     topic: track,
     categoryType: categoryType,
@@ -165,7 +166,10 @@ export const listPracticeQuestions = async (req, res) => {
       .filter((question) => {
         if (!requestedTrack) return true;
         const slugify = (str) => String(str).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-        return slugify(question.topic) === slugify(requestedTrack);
+        const requestedSlug = slugify(requestedTrack);
+        return [question.topic, question.categorySlug, question.subtitle]
+          .filter(Boolean)
+          .some((value) => slugify(value) === requestedSlug);
       });
 
     return res.status(200).json({ success: true, data });

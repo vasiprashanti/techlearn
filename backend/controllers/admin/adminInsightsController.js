@@ -335,6 +335,18 @@ export const listSubmissionsPage = async (req, res) => {
       filter.studentId = req.query.studentId;
     }
 
+    const reportStudent = req.query.studentId
+      ? await Student.findById(req.query.studentId).select("email").lean()
+      : null;
+    const codingStudentFilter = req.query.studentId
+      ? {
+          $or: [
+            { studentId: req.query.studentId },
+            ...(reportStudent?.email ? [{ studentEmail: reportStudent.email }] : []),
+          ],
+        }
+      : {};
+
     const [total, submissions, totalToday, acceptedToday, averageExecution, pendingStudents, challengeCodingSubmissions] = await Promise.all([
       Submission.countDocuments(filter),
       Submission.find(filter)
@@ -361,7 +373,7 @@ export const listSubmissionsPage = async (req, res) => {
         .lean(),
       StudentCodingSubmission.find({
         ...(filter.batchId ? { batchId: filter.batchId } : {}),
-        ...(filter.studentId ? { studentId: filter.studentId } : {}),
+        ...codingStudentFilter,
         problemSubmitted: { $exists: true },
       })
         .sort({ lastSubmissionAt: -1 })
