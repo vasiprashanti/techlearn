@@ -289,7 +289,9 @@ export const QuestionBankCategoryDetailPage = () => {
         if ((isCodingCategory || isNotesCategory) && !form.problemDescription.trim()) return true;
         if (
           isCodingCategory &&
-          (!form.visibleTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()) ||
+          (!form.inputFormat.trim() ||
+            !form.outputFormat.trim() ||
+            !form.visibleTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()) ||
             !form.hiddenTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()))
         ) return true;
         if (isMcqCategory && form.options.filter((option) => option.text.trim()).length < 2) return true;
@@ -670,47 +672,79 @@ export const QuestionBankCategoryDetailPage = () => {
                         )}
                         {isCodingCategory && (
                           <>
+                            <div>
+                              <label className="admin-micro-label text-black/45 dark:text-white/45">Input Format*</label>
+                              <textarea
+                                value={form.inputFormat}
+                                onChange={(e) => updateBulkFormField(index, 'inputFormat', e.target.value)}
+                                rows={2}
+                                placeholder="Describe the input expected by the program"
+                                className={questionFormInputClass}
+                              />
+                            </div>
+                            <div>
+                              <label className="admin-micro-label text-black/45 dark:text-white/45">Output Format*</label>
+                              <textarea
+                                value={form.outputFormat}
+                                onChange={(e) => updateBulkFormField(index, 'outputFormat', e.target.value)}
+                                rows={2}
+                                placeholder="Describe the output the program should produce"
+                                className={questionFormInputClass}
+                              />
+                            </div>
                             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <textarea
-                                value={form.visibleTestCases?.[0]?.input || ''}
-                                onChange={(e) => {
-                                  const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                  updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                }}
-                                rows={2}
-                                placeholder="Visible test input"
-                                className={questionFormInputClass}
-                              />
-                              <textarea
-                                value={form.visibleTestCases?.[0]?.output || ''}
-                                onChange={(e) => {
-                                  const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                  updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                }}
-                                rows={2}
-                                placeholder="Visible test output"
-                                className={questionFormInputClass}
-                              />
-                              <textarea
-                                value={form.hiddenTestCases?.[0]?.input || ''}
-                                onChange={(e) => {
-                                  const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                  updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                }}
-                                rows={2}
-                                placeholder="Hidden test input"
-                                className={questionFormInputClass}
-                              />
-                              <textarea
-                                value={form.hiddenTestCases?.[0]?.output || ''}
-                                onChange={(e) => {
-                                  const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                  updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                }}
-                                rows={2}
-                                placeholder="Hidden test output"
-                                className={questionFormInputClass}
-                              />
+                              <div>
+                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Input*</label>
+                                <textarea
+                                  value={form.visibleTestCases?.[0]?.input || ''}
+                                  onChange={(e) => {
+                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), input: e.target.value }];
+                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
+                                  }}
+                                  rows={2}
+                                  placeholder="Input shown to students"
+                                  className={questionFormInputClass}
+                                />
+                              </div>
+                              <div>
+                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Output*</label>
+                                <textarea
+                                  value={form.visibleTestCases?.[0]?.output || ''}
+                                  onChange={(e) => {
+                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), output: e.target.value }];
+                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
+                                  }}
+                                  rows={2}
+                                  placeholder="Expected output shown to students"
+                                  className={questionFormInputClass}
+                                />
+                              </div>
+                              <div>
+                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Input*</label>
+                                <textarea
+                                  value={form.hiddenTestCases?.[0]?.input || ''}
+                                  onChange={(e) => {
+                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), input: e.target.value }];
+                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
+                                  }}
+                                  rows={2}
+                                  placeholder="Input used during final evaluation"
+                                  className={questionFormInputClass}
+                                />
+                              </div>
+                              <div>
+                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Output*</label>
+                                <textarea
+                                  value={form.hiddenTestCases?.[0]?.output || ''}
+                                  onChange={(e) => {
+                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), output: e.target.value }];
+                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
+                                  }}
+                                  rows={2}
+                                  placeholder="Expected output used during final evaluation"
+                                  className={questionFormInputClass}
+                                />
+                              </div>
                             </div>
                           </>
                         )}

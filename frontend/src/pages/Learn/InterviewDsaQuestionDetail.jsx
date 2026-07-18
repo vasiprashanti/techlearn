@@ -455,7 +455,7 @@ export default function InterviewDsaQuestionDetail() {
         <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[300px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 no-scrollbar"
+            className="w-full lg:w-[35%] xl:w-[40%] h-[360px] lg:h-auto flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 minimal-scrollbar"
           >
             {/* Header Card (Top 15%) */}
             <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center gap-1.5">
@@ -474,11 +474,11 @@ export default function InterviewDsaQuestionDetail() {
             </div>
 
             {/* Problem Statement Card (Middle 30%) */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-[30%] overflow-y-auto shrink-0 text-left flex flex-col no-scrollbar">
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors h-[150px] lg:h-[30%] lg:min-h-[130px] overflow-hidden shrink-0 text-left flex flex-col">
               <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                 Problem Statement
               </h2>
-              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto minimal-scrollbar pr-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                   {question.description || `**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`}
                 </ReactMarkdown>
@@ -486,42 +486,36 @@ export default function InterviewDsaQuestionDetail() {
             </div>
 
             {/* Input & Output Format (Bottom 55% split) */}
-            {(question.inputFormat || question.outputFormat) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:h-[50%] lg:min-h-[50%] shrink-0 min-h-0 overflow-y-auto no-scrollbar">
-                {question.inputFormat && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full shrink-0 min-h-[120px]">
                   <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
                     <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                       Input Format
                     </h2>
                     <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                        {question.inputFormat}
+                      {question.inputFormat || "Refer to the problem statement and visible test case input."}
                       </ReactMarkdown>
                     </div>
                   </div>
-                )}
-                {question.outputFormat && (
                   <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
                     <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                       Output Format
                     </h2>
                     <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                        {question.outputFormat}
+                      {question.outputFormat || "Print the expected result shown by the visible test case."}
                       </ReactMarkdown>
                     </div>
                   </div>
-                )}
               </div>
-            )}
 
             {/* Sample Testcases (Rest under this as separate cards) */}
-            {question.visibleTestCases && question.visibleTestCases.length > 0 && (
               <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0">
                 <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
-                  Sample Testcase
+                  Visible Test Cases
                 </h2>
-                <div className="grid grid-cols-2 gap-3">
+                {question.visibleTestCases?.length ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
                     <div className="flex justify-between items-center px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                       <span>Input</span>
@@ -558,8 +552,10 @@ export default function InterviewDsaQuestionDetail() {
                     </pre>
                   </div>
                 </div>
+                ) : (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">No visible test cases were provided for this question.</p>
+                )}
               </div>
-            )}
           </aside>
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
