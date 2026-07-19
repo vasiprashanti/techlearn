@@ -43,6 +43,22 @@ const resolveTemplateDuration = ({ totalDays, durationDays }) => {
   return { totalDays: resolvedTotalDays };
 };
 
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const resolveTemplateCategories = async (categoryNames = []) => {
+  const names = categoryNames.map((name) => String(name || "").trim()).filter(Boolean);
+  const slugs = names.map((name) => slugifyCategory(name)).filter(Boolean);
+  if (!names.length) return [];
+
+  return Category.find({
+    $or: [
+      { slug: { $in: slugs } },
+      { title: { $in: names } },
+      ...names.map((name) => ({ title: new RegExp(`^${escapeRegex(name)}$`, "i") })),
+    ],
+  }).lean();
+};
+
 const syncTemplateToTrack = async (template) => {
   if (!template?.batchId) return;
 
@@ -841,14 +857,8 @@ export const createTrackTemplate = async (req, res) => {
     }
 
     // Verify category doesn't have "Practice" visibility
-    const categoriesList = category.split(",").map((c) => c.trim());
-    const slugsList = categoriesList.map((c) => slugifyCategory(c));
-    const dbCategories = await Category.find({
-      $or: [
-        { title: { $in: categoriesList } },
-        { slug: { $in: slugsList } },
-      ],
-    }).lean();
+    const categoriesList = category.split(",").map((c) => c.trim()).filter(Boolean);
+    const dbCategories = await resolveTemplateCategories(categoriesList);
     const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
     if (hasPracticeCategory) {
       return res.status(400).json({
@@ -883,8 +893,12 @@ export const createTrackTemplate = async (req, res) => {
     const template = await TrackTemplate.create({
       name: name.trim(),
       trackType: req.body.trackType || "Daily Challenge",
-      description: description?.trim() || `${duration.totalDays}-day ${category} track template`,
-      category: category.trim(),
+     description: description?.trim() || `${duration.totalDays}-day ${category} track template`,
+      category: categoriesList
+        .map((name) => dbCategories.find((cat) => (
+          cat.slug === slugifyCategory(name) || cat.title.toLowerCase() === name.toLowerCase()
+        ))?.title || name)
+        .join(", "),
       batchId: batchId || null,
       totalDays: duration.totalDays,
       status: status || "Active",
@@ -933,18 +947,16 @@ export const getTrackTemplateDetail = async (req, res) => {
 
     let questionFilter = { status: "Active", isActive: { $ne: false } };
     if (effectiveType === "Daily Task" || effectiveType === "Daily Challenge") {
-      if (template.category && template.category !== "Daily Task") {
+      if (template.category) {
         const categoriesList = template.category.split(",").map((c) => c.trim()).filter(Boolean);
-        if (categoriesList.length > 0) {
-          const slugsList = categoriesList.map((c) => slugifyCategory(c));
-          const dbCategories = await Category.find({
-            $or: [
-              { title: { $in: categoriesList } },
-              { slug: { $in: slugsList } },
-            ],
-          }).lean();
+        const questionCategories = categoriesList.filter((name) => !["daily task", "daily challenge"].includes(name.toLowerCase()));
+        if (questionCategories.length > 0) {
+          const dbCategories = await resolveTemplateCategories(questionCategories);
           const categoryIds = dbCategories.map((c) => c._id);
-          const categorySlugs = dbCategories.map((c) => c.slug);
+          const categorySlugs = [...new Set([
+            ...dbCategories.map((c) => c.slug),
+            ...questionCategories.map((name) => slugifyCategory(name)),
+          ].filter(Boolean))];
           questionFilter.$or = [
             { categoryId: { $in: categoryIds } },
             { categorySlug: { $in: categorySlugs } },
@@ -1101,14 +1113,8 @@ export const updateTrackTemplate = async (req, res) => {
     if (req.body.category !== undefined) {
       const nextCategory = req.body.category.trim();
       if (nextCategory) {
-        const categoriesList = nextCategory.split(",").map((c) => c.trim());
-        const slugsList = categoriesList.map((c) => slugifyCategory(c));
-        const dbCategories = await Category.find({
-          $or: [
-            { title: { $in: categoriesList } },
-            { slug: { $in: slugsList } },
-          ],
-        }).lean();
+        const categoriesList = nextCategory.split(",").map((c) => c.trim()).filter(Boolean);
+        const dbCategories = await resolveTemplateCategories(categoriesList);
         const hasPracticeCategory = dbCategories.some((cat) => cat.visibility === "Practice");
         if (hasPracticeCategory) {
           return res.status(400).json({
@@ -1116,7 +1122,11 @@ export const updateTrackTemplate = async (req, res) => {
             message: "Templates cannot be associated with categories configured for 'Practice' visibility.",
           });
         }
-        template.category = nextCategory;
+        template.category = categoriesList
+          .map((name) => dbCategories.find((cat) => (
+            cat.slug === slugifyCategory(name) || cat.title.toLowerCase() === name.toLowerCase()
+          ))?.title || name)
+          .join(", ");
         template.iconKey = req.body.iconKey || getTrackTemplateIconKey(template.category);
       } else {
         template.category = req.body.trackType || template.trackType || "Daily Challenge";

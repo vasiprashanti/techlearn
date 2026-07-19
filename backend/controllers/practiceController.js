@@ -7,6 +7,7 @@ import { normalizeCategoryType } from "../utils/questionBank.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 
 const TRACKS = ["DSA", "Core CS", "SQL", "Aptitude", "Company Based"];
+const PRACTICE_DAILY_RUN_LIMIT = Math.max(1, Number(process.env.PRACTICE_DAILY_RUN_LIMIT || 50));
 
 const normalizeSqlQuery = (query) => {
   if (!query) return "";
@@ -64,6 +65,14 @@ const toDayKey = (date) => {
   const parsed = new Date(date);
   if (Number.isNaN(parsed.getTime())) return "";
   return parsed.toISOString().slice(0, 10);
+};
+
+const getIndiaDayWindow = (date = new Date()) => {
+  const offsetMs = 5.5 * 60 * 60 * 1000;
+  const indiaMidnight = new Date(date.getTime() + offsetMs);
+  indiaMidnight.setUTCHours(0, 0, 0, 0);
+  const start = new Date(indiaMidnight.getTime() - offsetMs);
+  return { start, end: new Date(start.getTime() + 24 * 60 * 60 * 1000) };
 };
 
 const calculateStreak = (submissions) => {
@@ -190,6 +199,27 @@ export const recordPracticeSubmission = async (req, res) => {
 
     if (!TRACKS.includes(track)) {
       return res.status(400).json({ success: false, message: "track must be one of DSA, Core CS, SQL, Aptitude, or Company Based." });
+    }
+
+    const source = ["track_template", "daily_challenge"].includes(req.body.source)
+      ? req.body.source
+      : "practice";
+    if (source === "practice") {
+      const { start, end } = getIndiaDayWindow();
+      const runsToday = await PracticeSubmission.countDocuments({
+        userId: req.user._id,
+        source: "practice",
+        submittedAt: { $gte: start, $lt: end },
+      });
+      if (runsToday >= PRACTICE_DAILY_RUN_LIMIT) {
+        return res.status(429).json({
+          success: false,
+          message: `Daily Practice run limit reached (${PRACTICE_DAILY_RUN_LIMIT} runs). Please try again tomorrow.`,
+          limit: PRACTICE_DAILY_RUN_LIMIT,
+          used: runsToday,
+          resetAt: end.toISOString(),
+        });
+      }
     }
 
     let canonicalQuestion = null;
@@ -325,7 +355,7 @@ export const recordPracticeSubmission = async (req, res) => {
       categoryId: canonicalQuestion?.categoryId || null,
       categoryType: normalizedCategoryType || null,
       track,
-      source: req.body.source || "practice",
+      source,
       selectedAnswer: isMcqSubmission ? selectedAnswer : "",
       isCorrect,
       score,
