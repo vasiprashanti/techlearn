@@ -73,6 +73,177 @@ const formFromQuestion = (question) => ({
   editorial: question.editorial || '',
 });
 
+const QuestionFormFields = ({
+  formData,
+  onChange,
+  onTestCaseChange,
+  onAddTestCase,
+  onRemoveTestCase,
+  onMcqOptionChange,
+  expandedSections,
+  onToggleSection,
+  categoryType,
+  dropdownOptionClass,
+  questionFormInputClass,
+}) => {
+  const isCodingCategory = categoryType === 'Coding';
+  const isMcqCategory = categoryType === 'MCQ';
+  const isNotesCategory = categoryType === 'Notes';
+
+  const handleAddTagLocal = () => {
+    const nextTag = (formData.tagInput || '').trim();
+    if (!nextTag) return;
+    const currentTags = formData.tags || [];
+    if (currentTags.includes(nextTag)) {
+      onChange('tagInput', '');
+      return;
+    }
+    onChange({
+      tags: [...currentTags, nextTag],
+      tagInput: '',
+    });
+  };
+
+  const handleRemoveTagLocal = (tagToRemove) => {
+    const currentTags = formData.tags || [];
+    onChange('tags', currentTags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const titleField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
+      <input
+        value={formData.title || ''}
+        onChange={(e) => onChange('title', e.target.value)}
+        placeholder="Enter one-word topic"
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
+  const difficultyField = (
+    <div>
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
+      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+        <select
+          value={formData.difficulty || 'Easy'}
+          onChange={(e) => onChange('difficulty', e.target.value)}
+          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none w-full"
+        >
+          <option className={dropdownOptionClass}>Easy</option>
+          <option className={dropdownOptionClass}>Medium</option>
+          <option className={dropdownOptionClass}>Hard</option>
+        </select>
+        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+      </div>
+    </div>
+  );
+
+  const explanationField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
+      <input
+        value={formData.explanation || ''}
+        onChange={(e) => onChange('explanation', e.target.value)}
+        placeholder="Explain why this option is correct"
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
+  const tagsField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
+      <div className="mt-1 flex gap-2">
+        <input
+          value={formData.tagInput || ''}
+          onChange={(e) => onChange('tagInput', e.target.value)}
+          placeholder="Add keyword tag..."
+          className={questionFormInputClass}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddTagLocal();
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={handleAddTagLocal}
+          className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold border border-[#3C83F6]/20 transition-colors shadow-sm"
+        >
+          Add
+        </button>
+      </div>
+      {formData.tags && formData.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {formData.tags.map((tag) => (
+            <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200">
+              {tag}
+              <button type="button" onClick={() => handleRemoveTagLocal(tag)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <FiX className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const descriptionField = (
+    <div className="md:col-span-2">
+      <label className="admin-micro-label text-black/45 dark:text-white/45">
+        {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}
+      </label>
+      <textarea
+        value={formData.problemDescription || ''}
+        onChange={(e) => onChange('problemDescription', e.target.value)}
+        rows={4}
+        placeholder={isNotesCategory ? 'Describe what this note covers...' : isMcqCategory ? 'Optional supporting text...' : 'Describe the problem statement in detail...'}
+        className={questionFormInputClass}
+      />
+    </div>
+  );
+
+  const dynamicHostField = (
+    <div className="md:col-span-2 pt-2">
+      <DynamicQuestionFormHost
+        categoryType={categoryType}
+        formData={formData}
+        onChange={onChange}
+        onTestCaseChange={onTestCaseChange}
+        onAddTestCase={onAddTestCase}
+        onRemoveTestCase={onRemoveTestCase}
+        onMcqOptionChange={onMcqOptionChange}
+        expandedSections={expandedSections}
+        onToggleSection={onToggleSection}
+      />
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      {isMcqCategory ? (
+        <>
+          {descriptionField}
+          {dynamicHostField}
+          {explanationField}
+          {titleField}
+          {tagsField}
+        </>
+      ) : (
+        <>
+          {titleField}
+          {difficultyField}
+          {tagsField}
+          {descriptionField}
+          {dynamicHostField}
+        </>
+      )}
+    </div>
+  );
+};
+
 export const QuestionBankCategoryDetailPage = () => {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
@@ -184,8 +355,14 @@ export const QuestionBankCategoryDetailPage = () => {
     }
   }, [trackOptions, questionForm.trackType]);
 
-  const updateFormField = (field, value) => {
-    setQuestionForm((prev) => ({ ...prev, [field]: value }));
+  const [bulkExpandedSections, setBulkExpandedSections] = useState({});
+
+  const updateFormField = (fieldOrObject, value) => {
+    if (typeof fieldOrObject === 'object' && fieldOrObject !== null) {
+      setQuestionForm((prev) => ({ ...prev, ...fieldOrObject }));
+    } else {
+      setQuestionForm((prev) => ({ ...prev, [fieldOrObject]: value }));
+    }
   };
 
   const handleAddQuestionClick = () => {
@@ -204,6 +381,7 @@ export const QuestionBankCategoryDetailPage = () => {
     const count = Math.max(1, Math.min(25, Number(bulkCount) || 1));
     setBulkForms(Array.from({ length: count }, () => createQuestionForm(trackOptions[0] || '')));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
+    setBulkExpandedSections({});
     setIsQuestionFormOpen(true);
   };
 
@@ -222,6 +400,7 @@ export const QuestionBankCategoryDetailPage = () => {
     setFormError('');
     setQuestionForm(createQuestionForm(trackOptions[0] || ''));
     setExpandedFormSections({ visible: false, hidden: false, reference: false });
+    setBulkExpandedSections({});
   };
 
   const generateBulkForms = () => {
@@ -233,8 +412,18 @@ export const QuestionBankCategoryDetailPage = () => {
     });
   };
 
-  const updateBulkFormField = (index, field, value) => {
-    setBulkForms((prev) => prev.map((form, formIndex) => (formIndex === index ? { ...form, [field]: value } : form)));
+  const updateBulkFormField = (index, fieldOrObject, value) => {
+    setBulkForms((prev) =>
+      prev.map((form, formIndex) => {
+        if (formIndex === index) {
+          if (typeof fieldOrObject === 'object' && fieldOrObject !== null) {
+            return { ...form, ...fieldOrObject };
+          }
+          return { ...form, [fieldOrObject]: value };
+        }
+        return form;
+      })
+    );
   };
 
   const toggleFormSection = (sectionKey) => {
@@ -244,17 +433,17 @@ export const QuestionBankCategoryDetailPage = () => {
     }));
   };
 
-  const handleAddTag = () => {
-    const nextTag = questionForm.tagInput.trim();
-    if (!nextTag || questionForm.tags.includes(nextTag)) {
-      setQuestionForm((prev) => ({ ...prev, tagInput: '' }));
-      return;
-    }
-    setQuestionForm((prev) => ({ ...prev, tags: [...prev.tags, nextTag], tagInput: '' }));
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setQuestionForm((prev) => ({ ...prev, tags: prev.tags.filter((tag) => tag !== tagToRemove) }));
+  const toggleBulkFormSection = (formIndex, sectionKey) => {
+    setBulkExpandedSections((prev) => {
+      const formSections = prev[formIndex] || { visible: false, hidden: false, reference: false };
+      return {
+        ...prev,
+        [formIndex]: {
+          ...formSections,
+          [sectionKey]: !formSections[sectionKey],
+        },
+      };
+    });
   };
 
   const handleUpdateTestCase = (section, index, field, value) => {
@@ -264,15 +453,36 @@ export const QuestionBankCategoryDetailPage = () => {
     }));
   };
 
-  const handleUpdateMcqOption = (index, value) => {
-    setQuestionForm((prev) => ({
-      ...prev,
-      options: prev.options.map((option, i) => (i === index ? { ...option, text: value } : option)),
-    }));
+  const handleUpdateBulkTestCase = (formIndex, section, testCaseIndex, field, value) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) =>
+        idx === formIndex
+          ? {
+              ...form,
+              [section]: form[section].map((tc, i) =>
+                i === testCaseIndex ? { ...tc, [field]: value } : tc
+              ),
+            }
+          : form
+      )
+    );
   };
 
   const handleAddTestCase = (section) => {
     setQuestionForm((prev) => ({ ...prev, [section]: [...prev[section], createTestCase()] }));
+  };
+
+  const handleAddBulkTestCase = (formIndex, section) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) =>
+        idx === formIndex
+          ? {
+              ...form,
+              [section]: [...form[section], createTestCase()],
+            }
+          : form
+      )
+    );
   };
 
   const handleRemoveTestCase = (section, index) => {
@@ -282,6 +492,41 @@ export const QuestionBankCategoryDetailPage = () => {
     }));
   };
 
+  const handleRemoveBulkTestCase = (formIndex, section, testCaseIndex) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) =>
+        idx === formIndex
+          ? {
+              ...form,
+              [section]: form[section].filter((_, i) => i !== testCaseIndex),
+            }
+          : form
+      )
+    );
+  };
+
+  const handleUpdateMcqOption = (index, value) => {
+    setQuestionForm((prev) => ({
+      ...prev,
+      options: prev.options.map((option, i) => (i === index ? { ...option, text: value } : option)),
+    }));
+  };
+
+  const handleUpdateBulkMcqOption = (formIndex, optionIndex, value) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) =>
+        idx === formIndex
+          ? {
+              ...form,
+              options: form.options.map((opt, i) =>
+                i === optionIndex ? { ...opt, text: value } : opt
+              ),
+            }
+          : form
+      )
+    );
+  };
+
   const handleSaveQuestion = async () => {
     if (questionFormMode === 'bulk') {
       const invalidIndex = bulkForms.findIndex((form) => {
@@ -289,9 +534,7 @@ export const QuestionBankCategoryDetailPage = () => {
         if ((isCodingCategory || isNotesCategory) && !form.problemDescription.trim()) return true;
         if (
           isCodingCategory &&
-          (!form.inputFormat.trim() ||
-            !form.outputFormat.trim() ||
-            !form.visibleTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()) ||
+          (!form.visibleTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()) ||
             !form.hiddenTestCases?.some((testCase) => testCase.input.trim() || testCase.output.trim()))
         ) return true;
         if (isMcqCategory && form.options.filter((option) => option.text.trim()).length < 2) return true;
@@ -424,135 +667,6 @@ export const QuestionBankCategoryDetailPage = () => {
     }
   };
 
-  const titleField = (
-    <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
-      <input
-        value={questionForm.title}
-        onChange={(e) => updateFormField('title', e.target.value)}
-        placeholder="Enter one-word topic"
-        className={questionFormInputClass}
-      />
-    </div>
-  );
-
-  const trackTypeField = (
-    <div>
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Track type*</label>
-      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-        <select
-          value={questionForm.trackType}
-          onChange={(e) => updateFormField('trackType', e.target.value)}
-          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-        >
-          <option className={dropdownOptionClass} value="">Select track type</option>
-          {trackOptions.map((track) => (
-            <option className={dropdownOptionClass} key={track} value={track}>{track}</option>
-          ))}
-        </select>
-        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-      </div>
-      {trackOptions.length === 0 && (
-        <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">No tracks created yet. Make sure a Track Template exists.</p>
-      )}
-    </div>
-  );
-
-  const difficultyField = (
-    <div>
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
-      <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-        <select
-          value={questionForm.difficulty}
-          onChange={(e) => updateFormField('difficulty', e.target.value)}
-          className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-        >
-          <option className={dropdownOptionClass}>Easy</option>
-          <option className={dropdownOptionClass}>Medium</option>
-          <option className={dropdownOptionClass}>Hard</option>
-        </select>
-        <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-      </div>
-    </div>
-  );
-
-  const explanationField = (
-    <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
-      <input
-        value={questionForm.explanation}
-        onChange={(e) => updateFormField('explanation', e.target.value)}
-        placeholder="Explain why this option is correct"
-        className={questionFormInputClass}
-      />
-    </div>
-  );
-
-  const tagsField = (
-    <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
-      <div className="mt-1 flex gap-2">
-        <input
-          value={questionForm.tagInput}
-          onChange={(e) => updateFormField('tagInput', e.target.value)}
-          placeholder="Add keyword tag..."
-          className={questionFormInputClass}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
-        />
-        <button
-          type="button"
-          onClick={handleAddTag}
-          className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold border border-[#3C83F6]/20 transition-colors shadow-sm"
-        >
-          Add
-        </button>
-      </div>
-      {questionForm.tags.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {questionForm.tags.map((tag) => (
-            <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200">
-              {tag}
-              <button type="button" onClick={() => handleRemoveTag(tag)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                <FiX className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const descriptionField = (
-    <div className="md:col-span-2">
-      <label className="admin-micro-label text-black/45 dark:text-white/45">
-        {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}
-      </label>
-      <textarea
-        value={questionForm.problemDescription}
-        onChange={(e) => updateFormField('problemDescription', e.target.value)}
-        rows={4}
-        placeholder={isNotesCategory ? 'Describe what this note covers...' : isMcqCategory ? 'Optional supporting text...' : 'Describe the problem statement in detail...'}
-        className={questionFormInputClass}
-      />
-    </div>
-  );
-
-  const dynamicHostField = (
-    <div className="md:col-span-2 pt-2">
-      <DynamicQuestionFormHost
-        categoryType={categoryType}
-        formData={questionForm}
-        onChange={updateFormField}
-        onTestCaseChange={handleUpdateTestCase}
-        onAddTestCase={handleAddTestCase}
-        onRemoveTestCase={handleRemoveTestCase}
-        onMcqOptionChange={handleUpdateMcqOption}
-        expandedSections={expandedFormSections}
-        onToggleSection={toggleFormSection}
-      />
-    </div>
-  );
-
   if (!mounted || categoriesLoading || questionsLoading) {
     return <LoadingScreen />;
   }
@@ -596,194 +710,38 @@ export const QuestionBankCategoryDetailPage = () => {
                     </button>
                   </div>
                   {bulkForms.map((form, index) => (
-                    <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
-                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div className="md:col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
-                          <input value={form.title} onChange={(e) => updateBulkFormField(index, 'title', e.target.value)} placeholder="JFS / SERVLET / JDBC" className={questionFormInputClass} />
-                        </div>
-                        <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
-                          <select value={form.difficulty} onChange={(e) => updateBulkFormField(index, 'difficulty', e.target.value)} className={questionFormInputClass}>
-                            <option className={dropdownOptionClass}>Easy</option>
-                            <option className={dropdownOptionClass}>Medium</option>
-                            <option className={dropdownOptionClass}>Hard</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
-                          <input
-                            value={form.tagInput}
-                            onChange={(e) => updateBulkFormField(index, 'tagInput', e.target.value)}
-                            onBlur={() => {
-                              const tags = form.tagInput.split(',').map((tag) => tag.trim()).filter(Boolean);
-                              updateBulkFormField(index, 'tags', tags);
-                            }}
-                            placeholder="JFS, SERVLET"
-                            className={questionFormInputClass}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">{isMcqCategory ? 'Question Prompt*' : isNotesCategory ? 'Notes Description*' : 'Problem Description*'}</label>
-                          <textarea value={form.problemDescription} onChange={(e) => updateBulkFormField(index, 'problemDescription', e.target.value)} rows={3} className={questionFormInputClass} />
-                        </div>
-                        {isMcqCategory && (
-                          <>
-                            {form.options.map((option, optionIndex) => (
-                              <div key={option.label}>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Option {option.label}*</label>
-                                <input
-                                  value={option.text}
-                                  onChange={(e) => {
-                                    const options = form.options.map((opt, i) => (i === optionIndex ? { ...opt, text: e.target.value } : opt));
-                                    updateBulkFormField(index, 'options', options);
-                                  }}
-                                  placeholder={`Enter option ${option.label} text`}
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                            ))}
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Correct Option*</label>
-                              <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                                <select
-                                  value={form.correctOption}
-                                  onChange={(e) => updateBulkFormField(index, 'correctOption', e.target.value)}
-                                  className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                                >
-                                  {['A', 'B', 'C', 'D'].map((label) => (
-                                    <option key={label} className={dropdownOptionClass}>{label}</option>
-                                  ))}
-                                </select>
-                                <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                              </div>
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
-                              <input
-                                value={form.explanation || ''}
-                                onChange={(e) => updateBulkFormField(index, 'explanation', e.target.value)}
-                                placeholder="Explain why this option is correct"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                          </>
-                        )}
-                        {isCodingCategory && (
-                          <>
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Input Format*</label>
-                              <textarea
-                                value={form.inputFormat}
-                                onChange={(e) => updateBulkFormField(index, 'inputFormat', e.target.value)}
-                                rows={2}
-                                placeholder="Describe the input expected by the program"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Output Format*</label>
-                              <textarea
-                                value={form.outputFormat}
-                                onChange={(e) => updateBulkFormField(index, 'outputFormat', e.target.value)}
-                                rows={2}
-                                placeholder="Describe the output the program should produce"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Input*</label>
-                                <textarea
-                                  value={form.visibleTestCases?.[0]?.input || ''}
-                                  onChange={(e) => {
-                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Input shown to students"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Output*</label>
-                                <textarea
-                                  value={form.visibleTestCases?.[0]?.output || ''}
-                                  onChange={(e) => {
-                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Expected output shown to students"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Input*</label>
-                                <textarea
-                                  value={form.hiddenTestCases?.[0]?.input || ''}
-                                  onChange={(e) => {
-                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Input used during final evaluation"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Output*</label>
-                                <textarea
-                                  value={form.hiddenTestCases?.[0]?.output || ''}
-                                  onChange={(e) => {
-                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Expected output used during final evaluation"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {isNotesCategory && (
-                          <div className="md:col-span-2">
-                            <label className="admin-micro-label text-black/45 dark:text-white/45">Markdown Body*</label>
-                            <textarea
-                              value={form.markdownBody}
-                              onChange={(e) => updateBulkFormField(index, 'markdownBody', e.target.value)}
-                              rows={4}
-                              placeholder="Paste markdown content for this note"
-                              className={questionFormInputClass}
-                            />
-                          </div>
-                        )}
-                      </div>
+                    <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-4 space-y-3">
+                      <p className="text-xs font-bold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
+                      <QuestionFormFields
+                        formData={form}
+                        onChange={(fieldOrObject, val) => updateBulkFormField(index, fieldOrObject, val)}
+                        onTestCaseChange={(section, testCaseIndex, field, value) => handleUpdateBulkTestCase(index, section, testCaseIndex, field, value)}
+                        onAddTestCase={(section) => handleAddBulkTestCase(index, section)}
+                        onRemoveTestCase={(section, testCaseIndex) => handleRemoveBulkTestCase(index, section, testCaseIndex)}
+                        onMcqOptionChange={(optionIndex, value) => handleUpdateBulkMcqOption(index, optionIndex, value)}
+                        expandedSections={bulkExpandedSections[index] || { visible: false, hidden: false, reference: false }}
+                        onToggleSection={(sectionKey) => toggleBulkFormSection(index, sectionKey)}
+                        categoryType={categoryType}
+                        dropdownOptionClass={dropdownOptionClass}
+                        questionFormInputClass={questionFormInputClass}
+                      />
                     </div>
                   ))}
                 </div>
               ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {isMcqCategory ? (
-                  <>
-                    {descriptionField}
-                    {dynamicHostField}
-                    {explanationField}
-                    {titleField}
-                    {tagsField}
-                  </>
-                ) : (
-                  <>
-                    {titleField}
-                    {difficultyField}
-                    {tagsField}
-                    {descriptionField}
-                    {dynamicHostField}
-                  </>
-                )}
-              </div>
+                <QuestionFormFields
+                  formData={questionForm}
+                  onChange={updateFormField}
+                  onTestCaseChange={handleUpdateTestCase}
+                  onAddTestCase={handleAddTestCase}
+                  onRemoveTestCase={handleRemoveTestCase}
+                  onMcqOptionChange={handleUpdateMcqOption}
+                  expandedSections={expandedFormSections}
+                  onToggleSection={toggleFormSection}
+                  categoryType={categoryType}
+                  dropdownOptionClass={dropdownOptionClass}
+                  questionFormInputClass={questionFormInputClass}
+                />
               )}
 
               {formError && (
