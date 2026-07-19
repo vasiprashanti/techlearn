@@ -437,6 +437,25 @@ export default function InterviewDsaQuestionDetail() {
           -ms-overflow-style: none !important;
           scrollbar-width: none !important;
         }
+        .thin-scrollbar::-webkit-scrollbar {
+          width: 4px !important;
+          height: 4px !important;
+        }
+        .thin-scrollbar::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .thin-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5) !important;
+          border-radius: 2px !important;
+        }
+        .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.8) !important;
+        }
+        .thin-scrollbar {
+          -ms-overflow-style: auto !important;
+          scrollbar-width: thin !important;
+          scrollbar-color: rgba(156, 163, 175, 0.5) transparent !important;
+        }
       `}</style>
       {!isDailyMode && (
         <div className="w-full text-left mb-3">
@@ -474,11 +493,11 @@ export default function InterviewDsaQuestionDetail() {
             </div>
 
             {/* Problem Statement Card (Middle 30%) */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-[30%] overflow-y-auto shrink-0 text-left flex flex-col no-scrollbar">
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-[30%] overflow-y-auto shrink-0 text-left flex flex-col thin-scrollbar">
               <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                 Problem Statement
               </h2>
-              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                   {question.description || `**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`}
                 </ReactMarkdown>
@@ -487,13 +506,13 @@ export default function InterviewDsaQuestionDetail() {
 
             {/* Input & Output Format (Bottom 55% split) */}
             {(question.inputFormat || question.outputFormat) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:h-[50%] lg:min-h-[50%] shrink-0 min-h-0 overflow-y-auto no-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full lg:h-[50%] lg:min-h-[50%] shrink-0 min-h-0 overflow-y-auto thin-scrollbar">
                 {question.inputFormat && (
-                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 thin-scrollbar">
                     <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                       Input Format
                     </h2>
-                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                         {question.inputFormat}
                       </ReactMarkdown>
@@ -501,11 +520,11 @@ export default function InterviewDsaQuestionDetail() {
                   </div>
                 )}
                 {question.outputFormat && (
-                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 no-scrollbar">
+                  <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 thin-scrollbar">
                     <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                       Output Format
                     </h2>
-                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto no-scrollbar">
+                    <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                         {question.outputFormat}
                       </ReactMarkdown>
