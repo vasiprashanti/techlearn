@@ -389,6 +389,13 @@ export default function DailyChallengeTest() {
     };
   }, [announceClipboardBlocked]);
 
+  // Lock page-level scrolling for this page
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   const moveToResult = (resultPayload) => {
     localStorage.removeItem(`daily-challenge-draft-${linkId}`);
     setDailyChallengeSession(linkId, {
@@ -745,25 +752,6 @@ export default function DailyChallengeTest() {
           -ms-overflow-style: none !important;
           scrollbar-width: none !important;
         }
-        .thin-scrollbar::-webkit-scrollbar {
-          width: 4px !important;
-          height: 4px !important;
-        }
-        .thin-scrollbar::-webkit-scrollbar-track {
-          background: transparent !important;
-        }
-        .thin-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.5) !important;
-          border-radius: 2px !important;
-        }
-        .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(156, 163, 175, 0.8) !important;
-        }
-        .thin-scrollbar {
-          -ms-overflow-style: auto !important;
-          scrollbar-width: thin !important;
-          scrollbar-color: rgba(156, 163, 175, 0.5) transparent !important;
-        }
       `}</style>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-black/5 dark:border-white/10 bg-white/40 dark:bg-gray-900/60 px-6 backdrop-blur-xl">
         <div className="flex items-center gap-3">
@@ -888,7 +876,7 @@ export default function DailyChallengeTest() {
       <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
           {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-hidden rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
+            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-y-auto minimal-scrollbar rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
           >
             {challenge?.problems?.length > 1 && (
               <div className="flex border-b border-white/5 pb-2 mb-1 gap-2 overflow-x-auto select-none shrink-0 no-scrollbar">
@@ -908,11 +896,11 @@ export default function DailyChallengeTest() {
             </div>
 
             {/* Problem Statement Card (Middle 30%) */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors lg:h-[30%] lg:min-h-0 overflow-hidden shrink-0 text-left flex flex-col thin-scrollbar">
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors h-[150px] lg:h-[30%] lg:min-h-[130px] overflow-hidden shrink-0 text-left flex flex-col">
               <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                 Problem Statement
               </h2>
-              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
+              <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto minimal-scrollbar pr-1">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                   {problem.description || `**${problem.problemTitle || "Problem"}**\n\nProblem statement will be added here.`}
                 </ReactMarkdown>
@@ -920,28 +908,53 @@ export default function DailyChallengeTest() {
             </div>
 
             {/* Input & Output Format (Bottom 55% split) */}
-            <div className="grid grid-cols-2 gap-3 w-full flex-1 shrink min-h-0 overflow-hidden">
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 thin-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full shrink-0 h-[180px] lg:h-[30%] lg:min-h-[140px] overflow-hidden">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 h-full overflow-hidden">
                 <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                   Input Format
                 </h2>
-                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
+                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto minimal-scrollbar pr-1">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                     {problem.inputDescription || "Refer to problem statement."}
                   </ReactMarkdown>
                 </div>
               </div>
 
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 thin-scrollbar">
+              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors text-left flex flex-col min-h-0 h-full overflow-hidden">
                 <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
                   Output Format
                 </h2>
-                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto thin-scrollbar">
+                <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto minimal-scrollbar pr-1">
                   <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
                     {problem.outputDescription || "Return expected output."}
                   </ReactMarkdown>
                 </div>
               </div>
+            </div>
+
+            {/* Visible Test Cases Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0 text-left">
+              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
+                Visible Test Cases
+              </h2>
+              {problem.visibleTestCases?.length ? (
+                <div className="space-y-2">
+                  {problem.visibleTestCases.map((testCase, index) => (
+                    <div key={`${index}-${testCase.input}`} className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#020b23]/60 p-2.5">
+                      <div>
+                        <p className="text-[9px] font-bold uppercase text-slate-500 dark:text-[#78b3de] mb-1">Input {index + 1}</p>
+                        <pre className="text-[11px] whitespace-pre-wrap break-words text-[#0d2a57] dark:text-slate-200 font-mono">{testCase.input || "No input"}</pre>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold uppercase text-slate-500 dark:text-[#78b3de] mb-1">Expected Output</p>
+                        <pre className="text-[11px] whitespace-pre-wrap break-words text-[#0d2a57] dark:text-slate-200 font-mono">{testCase.expectedOutput ?? testCase.output ?? "Not provided"}</pre>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">No visible test cases were provided for this question.</p>
+              )}
             </div>
 
           </aside>
