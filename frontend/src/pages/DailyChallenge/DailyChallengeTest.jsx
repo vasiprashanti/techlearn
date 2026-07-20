@@ -876,7 +876,7 @@ export default function DailyChallengeTest() {
       <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
           {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
+            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-y-auto minimal-scrollbar rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
           >
             {challenge?.problems?.length > 1 && (
               <div className="flex border-b border-white/5 pb-2 mb-1 gap-2 overflow-x-auto select-none shrink-0 no-scrollbar">
@@ -932,14 +932,13 @@ export default function DailyChallengeTest() {
               </div>
             </div>
 
-            {/* Visible Test Cases Card - stretches to fill remaining space */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors flex-1 min-h-0 flex flex-col overflow-hidden text-left">
-              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2 shrink-0">
+            {/* Visible Test Cases Card */}
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0 text-left">
+              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
                 Visible Test Cases
               </h2>
-              <div className="flex-1 min-h-0 overflow-y-auto minimal-scrollbar">
               {problem.visibleTestCases?.length ? (
-                <div className="space-y-2 pr-1">
+                <div className="space-y-2">
                   {problem.visibleTestCases.map((testCase, index) => (
                     <div key={`${index}-${testCase.input}`} className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#020b23]/60 p-2.5">
                       <div>
@@ -956,7 +955,6 @@ export default function DailyChallengeTest() {
               ) : (
                 <p className="text-xs text-slate-500 dark:text-slate-400">No visible test cases were provided for this question.</p>
               )}
-              </div>
             </div>
 
           </aside>
