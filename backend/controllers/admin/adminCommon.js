@@ -149,6 +149,7 @@ export const listKnownQuestionCategories = async () => {
     subtitle: category.description || "",
     icon: category.icon || "chart",
     categoryType: category.categoryType,
+    mcqSection: category.mcqSection || (/aptitude/i.test(`${category.title} ${category.slug}`) ? "Aptitude" : "Technical"),
     status: category.status,
     visibility: category.visibility || "Both",
     usage: category.usage || category.visibility || "Both",

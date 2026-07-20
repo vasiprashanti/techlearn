@@ -29,6 +29,11 @@ const categorySchema = new mongoose.Schema(
       set: normalizeCategoryType,
       required: [true, 'categoryType is required'],
     },
+    mcqSection: {
+      type: String,
+      enum: ['Technical', 'Aptitude'],
+      default: 'Technical',
+    },
     status: {
       type: String,
       enum: ['Active', 'Draft', 'Archived'],

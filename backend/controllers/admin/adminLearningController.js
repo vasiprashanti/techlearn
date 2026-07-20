@@ -224,6 +224,7 @@ export const listQuestionCategories = async (req, res) => {
           active,
           icon: category.icon,
           categoryType: category.categoryType,
+          mcqSection: category.mcqSection,
           status: category.status,
           visibility: category.visibility || "Both",
           usage: category.usage || category.visibility || "Both",
@@ -252,7 +253,7 @@ const normalizeCategoryStatus = (status, fallback = "Draft") => {
 
 export const createQuestionCategory = async (req, res) => {
   try {
-    const { title, subtitle, icon, status, visibility, usage, batches, bannerImage, defaultIcon } = req.body;
+    const { title, subtitle, icon, status, visibility, usage, batches, bannerImage, defaultIcon, mcqSection } = req.body;
     const categoryType = normalizeCategoryType(req.body.categoryType);
 
     if (!title?.trim()) {
@@ -298,6 +299,7 @@ export const createQuestionCategory = async (req, res) => {
       description: subtitle || "",
       icon: icon || "chart",
       categoryType,
+      mcqSection: categoryType === "MCQ" && mcqSection === "Aptitude" ? "Aptitude" : "Technical",
       status: normalizeCategoryStatus(status),
       usage: resolvedUsage,
       visibility: resolvedUsage,
@@ -327,6 +329,7 @@ export const createQuestionCategory = async (req, res) => {
         active: 0,
         icon: category.icon,
         categoryType: category.categoryType,
+        mcqSection: category.mcqSection,
         status: category.status,
         visibility: category.visibility,
         usage: category.usage,
@@ -385,6 +388,9 @@ export const updateQuestionCategory = async (req, res) => {
     category.description = nextSubtitle;
     category.icon = nextIcon;
     category.status = nextStatus;
+    if (category.categoryType === "MCQ" && req.body.mcqSection !== undefined) {
+      category.mcqSection = req.body.mcqSection === "Aptitude" ? "Aptitude" : "Technical";
+    }
 
     if (req.body.usage !== undefined) {
       category.usage = req.body.usage;
@@ -454,6 +460,7 @@ export const updateQuestionCategory = async (req, res) => {
         subtitle: category.description,
         icon: category.icon,
         categoryType: category.categoryType,
+        mcqSection: category.mcqSection,
         status: category.status,
         visibility: category.visibility,
         usage: category.usage,
@@ -1271,8 +1278,13 @@ export const assignTrackTemplateDay = async (req, res) => {
 
     const normalizedDayNumber = Number(dayNumber);
     const questionDocs = await Question.find({ _id: { $in: requestedQuestionIds } })
-      .select("_id xpValue xp_value xp points categoryType")
+      .select("_id xpValue xp_value xp points categoryType categoryId categoryTitle categorySlug")
       .lean();
+    const categoryIds = questionDocs.map((question) => question.categoryId).filter(Boolean);
+    const questionCategories = await Category.find({ _id: { $in: categoryIds } })
+      .select("_id title slug mcqSection")
+      .lean();
+    const categoryById = new Map(questionCategories.map((category) => [String(category._id), category]));
     const questionXpById = new Map(
       questionDocs.map((question) => [
         String(question._id),
@@ -1299,7 +1311,12 @@ export const assignTrackTemplateDay = async (req, res) => {
         const qDoc = questionDocs.find((q) => String(q._id) === String(id));
         let resolvedTaskType = "Coding";
         if (qDoc?.categoryType === "MCQ") {
-          resolvedTaskType = taskType === "Aptitude" || taskType === "Core CS" ? taskType : "MCQ";
+          const category = categoryById.get(String(qDoc.categoryId || ""));
+          const isAptitudeCategory = category?.mcqSection === "Aptitude"
+            || /aptitude/i.test(`${category?.title || qDoc.categoryTitle || ""} ${category?.slug || qDoc.categorySlug || ""}`);
+          resolvedTaskType = isAptitudeCategory
+            ? "Aptitude"
+            : (taskType === "Core CS" ? "Core CS" : "MCQ");
         } else {
           resolvedTaskType = taskType === "SQL" || taskType === "Debugging" ? taskType : "Coding";
         }

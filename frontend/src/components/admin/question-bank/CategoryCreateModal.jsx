@@ -6,6 +6,7 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
   const [form, setForm] = useState({
     title: '',
     categoryType: 'Coding',
+    mcqSection: 'Technical',
     status: 'Draft',
     usage: 'Both',
     visibility: 'Both',
@@ -41,6 +42,7 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
       setForm({
         title: editingCategory.title || '',
         categoryType: editingCategory.categoryType || 'Coding',
+        mcqSection: editingCategory.mcqSection || (/aptitude/i.test(`${editingCategory.title || ''} ${editingCategory.slug || ''}`) ? 'Aptitude' : 'Technical'),
         status: editingCategory.status || 'Draft',
         usage: editingCategory.usage || editingCategory.visibility || 'Both',
         visibility: editingCategory.usage || editingCategory.visibility || 'Both',
@@ -53,6 +55,7 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
       setForm({
         title: '',
         categoryType: 'Coding',
+        mcqSection: 'Technical',
         status: 'Draft',
         usage: 'Both',
         visibility: 'Both',
@@ -93,6 +96,7 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
       const formData = new FormData();
       formData.append('title', form.title.trim());
       formData.append('categoryType', form.categoryType);
+      formData.append('mcqSection', form.mcqSection);
       formData.append('status', form.status);
       formData.append('usage', form.usage);
       formData.append('visibility', form.usage);
@@ -164,6 +168,23 @@ export const CategoryCreateModal = ({ isOpen, editingCategory, onSave, onClose }
                 </div>
               </div>
             </div>
+
+            {form.categoryType === 'MCQ' && (
+              <div>
+                <label className="admin-micro-label text-black/45 dark:text-white/45">Daily Task Section</label>
+                <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43]">
+                  <select
+                    value={form.mcqSection}
+                    onChange={(e) => setForm(prev => ({ ...prev, mcqSection: e.target.value }))}
+                    className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                  >
+                    <option className={dropdownOptionClass} value="Technical">Technical MCQ</option>
+                    <option className={dropdownOptionClass} value="Aptitude">Aptitude</option>
+                  </select>
+                  <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="admin-micro-label text-black/45 dark:text-white/45">Category Title*</label>

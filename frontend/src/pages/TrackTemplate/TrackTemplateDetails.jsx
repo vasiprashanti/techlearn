@@ -50,6 +50,12 @@ const slugifyCategory = (value) =>
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
 
+const resolveMcqSection = (category) =>
+  category?.mcqSection === 'Aptitude'
+  || /aptitude/i.test(`${category?.title || ''} ${category?.slug || ''}`)
+    ? 'Aptitude'
+    : 'Technical';
+
 const difficultyPillClass = (difficulty) => {
   if (difficulty === 'Easy') return 'bg-[#16a34a] text-white';
   if (difficulty === 'Medium') return 'bg-[#dbe7ff] text-[#3c83f6]';
@@ -124,20 +130,24 @@ export default function TrackTemplateDetails() {
   }, [trackDetail, location.state, templateId]);
 
   // Helper to determine if track has MCQ and/or Coding category elements
-  const { hasMcq, hasCoding } = useMemo(() => {
+  const { hasMcq, hasCoding, hasAptitudeMcq } = useMemo(() => {
     const categories = track?.category
       ? track.category.split(',').map((c) => c.trim().toLowerCase())
       : [];
     
     let mcq = false;
     let coding = false;
+    let aptitudeMcq = false;
 
     categories.forEach((catName) => {
       const dbCat = allCategories.find(
         (c) => (c.title && c.title.toLowerCase() === catName) || c.slug === slugifyCategory(catName)
       );
       if (dbCat) {
-        if (dbCat.categoryType === 'MCQ') mcq = true;
+        if (dbCat.categoryType === 'MCQ') {
+          mcq = true;
+          if (resolveMcqSection(dbCat) === 'Aptitude') aptitudeMcq = true;
+        }
         if (dbCat.categoryType === 'Coding') coding = true;
       }
     });
@@ -145,15 +155,15 @@ export default function TrackTemplateDetails() {
     const fallbackMcq = categories.includes('mcq') || categories.includes('aptitude') || categories.includes('core cs');
     const fallbackCoding = categories.includes('coding') || categories.includes('debugging');
 
-    return { hasMcq: mcq || fallbackMcq, hasCoding: coding || fallbackCoding };
+    return { hasMcq: mcq || fallbackMcq, hasCoding: coding || fallbackCoding, hasAptitudeMcq: aptitudeMcq || categories.includes('aptitude') };
   }, [track?.category, allCategories]);
 
   const defaultTaskType = useMemo(() => {
     if (hasMcq && !hasCoding) {
-      return 'MCQ';
+      return hasAptitudeMcq ? 'Aptitude' : 'MCQ';
     }
     return 'Coding';
-  }, [hasMcq, hasCoding]);
+  }, [hasMcq, hasCoding, hasAptitudeMcq]);
 
   const categorySlug = useMemo(() => {
     if (!track || !track.category) return null;
@@ -197,11 +207,16 @@ export default function TrackTemplateDetails() {
      );
 
       const qCatType = (question.categoryType || dbCat?.categoryType || "").toUpperCase();
+      const mcqSection = resolveMcqSection(dbCat || {
+        title: question.categoryTitle || question.track,
+        slug: question.categorySlug,
+      });
       if (isTaskTypeCoding) {
         return qCatType === 'CODING' || ['coding', 'debugging'].includes(qCatName) || (!['mcq', 'aptitude', 'core cs'].includes(qCatName) && qCatType !== 'MCQ');
       }
       if (isTaskTypeMcq) {
-        return qCatType === 'MCQ' || ['mcq', 'aptitude', 'core cs'].includes(qCatName);
+        if (!(qCatType === 'MCQ' || ['mcq', 'aptitude', 'core cs'].includes(qCatName))) return false;
+        return taskTypeLower === 'aptitude' ? mcqSection === 'Aptitude' : mcqSection === 'Technical';
       }
 
       return true;

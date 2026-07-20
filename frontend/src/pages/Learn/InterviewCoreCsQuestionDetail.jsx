@@ -341,13 +341,8 @@ export default function InterviewCoreCsQuestionDetail() {
               </div>
             )}
             <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
-              {question.question}
+              {question.description || question.question}
             </h2>
-            {question.description && (
-              <p className="mt-4 text-sm md:text-base text-gray-600 dark:text-gray-300 select-none whitespace-pre-line text-left border-t border-black/5 dark:border-white/5 pt-4 leading-relaxed">
-                {question.description}
-              </p>
-            )}
           </div>
 
           {/* Options Grid (2x2 options layout) */}
