@@ -230,6 +230,7 @@ export const getTodayDailyTasks = async (req, res) => {
         taskType: t.taskType,
         title: q?.title || `${t.taskType} Task`,
         xpValue: Number(t.xpValue || 0),
+        xpEarned: t.xpEarned || 0,
         status: t.status,
         completedAt: t.completedAt,
         selectedOption: t.selectedOption || "",
