@@ -250,6 +250,11 @@ export default function Dashboard() {
           setIsFullyCompleted(payload.data.isFullyCompleted);
           setTaskProgress(payload.data.progressPercent);
 
+          if (!payload.data.isFullyCompleted && payload.data.dayNumber) {
+            const seenKey = `daily-task-completed-seen-day-${payload.data.dayNumber}`;
+            localStorage.removeItem(seenKey);
+          }
+
           if (payload.data.isFullyCompleted && payload.data.dayNumber) {
             const seenKey = `daily-task-completed-seen-day-${payload.data.dayNumber}`;
             const alreadySeen = localStorage.getItem(seenKey);
