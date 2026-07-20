@@ -879,17 +879,20 @@ export default function DailyChallengeTest() {
                 {problem.problemTitle}
               </h1>
               <div className="flex flex-wrap items-center gap-1.5 text-[10px] pl-2 font-semibold">
-                {problem.tags && problem.tags.length > 0 ? (
-                  problem.tags.map((tag, idx) => (
-                    <span key={idx} className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
-                      {tag}
+                {(() => {
+                  const tags = (problem.tags || problem.content?.tags || []).filter(t => t && String(t).trim());
+                  return tags.length > 0 ? (
+                    tags.map((tag, idx) => (
+                      <span key={idx} className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                      {problem.categoryTitle || problem.content?.categoryTitle || problem.trackType || 'Coding'}
                     </span>
-                  ))
-                ) : (
-                  <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
-                    {problem.categoryTitle || problem.trackType || 'Coding'}
-                  </span>
-                )}
+                  );
+                })()}
                 <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5 font-semibold">
                   {problem.difficulty || 'Easy'}
                 </span>

@@ -59,12 +59,14 @@ export const mapQuestionToProblem = (question) => ({
   inputDescription: question.inputFormat || "Refer to the prompt for input details.",
   outputDescription: question.outputFormat || "Return the expected output for the given input.",
   categoryType: question.categoryType || "Coding",
-  tags: question.tags || [],
+  tags: (question.tags || []).filter(t => t && String(t).trim()),
   categoryTitle: question.categoryTitle || "",
+  starterCode: question.content?.starterCode || {},
   content: {
     options: question.content?.options || question.options || [],
-    tags: question.tags || [],
+    tags: (question.tags || []).filter(t => t && String(t).trim()),
     categoryTitle: question.categoryTitle || "",
+    starterCode: question.content?.starterCode || {},
   },
   visibleTestCases: (question.visibleTestCases?.length ? question.visibleTestCases : question.content?.visibleTestCases || []).map((testCase) => ({
     input: testCase.input || "",

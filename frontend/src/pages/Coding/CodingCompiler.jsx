@@ -624,27 +624,20 @@ const CodingCompiler = ({ user, contestData }) => {
               <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300 bg-[#14532d] text-[#86efac] border-[#166534]">
                 {PROBLEM?.difficulty || "Medium"}
               </span>
-              {PROBLEM?.timeLimit && (
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  {PROBLEM.timeLimit / 1000} sec
-                </span>
-              )}
-              {PROBLEM?.memoryLimit && (
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                  {PROBLEM.memoryLimit} MB
-                </span>
-              )}
-              {((PROBLEM?.tags && PROBLEM.tags.length > 0) || (PROBLEM?.content?.tags && PROBLEM.content.tags.length > 0)) ? (
-                (PROBLEM.tags || PROBLEM.content.tags).map((tag, idx) => (
-                  <span key={idx} className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
-                    {tag}
+              {(() => {
+                const tags = (PROBLEM?.tags || PROBLEM?.content?.tags || []).filter(t => t && String(t).trim());
+                return tags.length > 0 ? (
+                  tags.map((tag, idx) => (
+                    <span key={idx} className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
+                    {PROBLEM?.categoryTitle || PROBLEM?.content?.categoryTitle || PROBLEM?.trackType || PROBLEM?.categoryType || 'Coding'}
                   </span>
-                ))
-              ) : (
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
-                  {PROBLEM?.categoryTitle || PROBLEM?.trackType || PROBLEM?.categoryType || 'Coding'}
-                </span>
-              )}
+                );
+              })()}
             </div>
           </div>
 
