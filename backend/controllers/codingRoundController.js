@@ -30,6 +30,68 @@ import UserProgress from "../models/UserProgress.js";
 import { calculateChallengeXP } from "../services/xpService.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 
+export const mergeCodingRoundQuestionsData = async (codingRound) => {
+  if (!codingRound || !codingRound.problems) return codingRound;
+  
+  const round = typeof codingRound.toObject === "function" ? codingRound.toObject() : { ...codingRound };
+
+  // Collect all question IDs: per-problem + root-level fallback
+  const allIds = new Set();
+  for (const p of round.problems) {
+    if (p.questionId) allIds.add(String(p.questionId?._id || p.questionId));
+  }
+  // Root-level questionId (used as fallback for old data where per-problem questionId is undefined)
+  const rootQId = round.questionId?._id || round.questionId;
+  if (rootQId) allIds.add(String(rootQId));
+
+  if (allIds.size === 0) return round;
+
+  const questions = await Question.find({ _id: { $in: [...allIds] } }).lean();
+  const questionsMap = new Map(questions.map(q => [String(q._id), q]));
+
+  // Resolve root questionId to full doc if populated
+  const rootQDoc = rootQId ? questionsMap.get(String(rootQId)) : null;
+
+  round.problems = round.problems.map(prob => {
+    // Find the matching Question document: per-problem ID first, then root fallback
+    const probQId = prob.questionId?._id || prob.questionId;
+    const qDoc = (probQId ? questionsMap.get(String(probQId)) : null) || rootQDoc;
+    
+    if (!qDoc) return prob;
+
+    // Inject tags (filter empty strings)
+    if (!prob.tags || prob.tags.filter(t => t && String(t).trim()).length === 0) {
+      prob.tags = (qDoc.tags || []).filter(t => t && String(t).trim());
+      prob.categoryTitle = qDoc.categoryTitle || "";
+    }
+
+    // Inject starterCode
+    const qStarterCode = qDoc.content?.starterCode || {};
+    const hasStarterKeys = (obj) => obj && typeof obj === "object" && 
+      Object.values(obj).some(v => v && typeof v === "object" && v.code);
+
+    if (!hasStarterKeys(prob.starterCode)) {
+      prob.starterCode = qStarterCode;
+    }
+
+    // Ensure content subdocument exists and is enriched
+    if (!prob.content || typeof prob.content !== "object") {
+      prob.content = {};
+    }
+    if (!prob.content.tags || prob.content.tags.filter(t => t && String(t).trim()).length === 0) {
+      prob.content.tags = (qDoc.tags || []).filter(t => t && String(t).trim());
+      prob.content.categoryTitle = qDoc.categoryTitle || "";
+    }
+    if (!hasStarterKeys(prob.content.starterCode)) {
+      prob.content.starterCode = qStarterCode;
+    }
+
+    return prob;
+  });
+
+  return round;
+};
+
 const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
   const email =
     req.body?.studentEmail ||
@@ -397,13 +459,18 @@ const finalizeDailyChallengeAttempt = async ({
     if (submission.problemCodes) {
       for (const [key, codeVal] of submission.problemCodes.entries()) {
         const cleanCode = (codeVal || "").trim();
+        const problemIndex = parseInt(key);
+        const problem = codingRound.problems[problemIndex];
+        const lang = submission.problemLanguages?.get(key) || "python";
+        const problemStarter = problem?.starterCode?.[lang]?.code || problem?.content?.starterCode?.[lang]?.code || "";
         const isNotAttempted = !cleanCode ||
           cleanCode.startsWith("//") ||
           cleanCode.startsWith("#") ||
           cleanCode.startsWith("--") ||
           cleanCode === "def solve():\n    pass" ||
           cleanCode === "def solve():" ||
-          (cleanCode.includes("pass") && cleanCode.length < 50);
+          (cleanCode.includes("pass") && cleanCode.length < 50) ||
+          cleanCode === problemStarter.trim();
 
         if (!isNotAttempted) {
           hasAttemptedAny = true;
@@ -588,7 +655,8 @@ export const getOneCodingRound = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Coding round not found" });
     }
-    res.status(200).json({ success: true, data: codingRound });
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+    res.status(200).json({ success: true, data: mergedCodingRound });
   } catch (error) {
     console.error("Error fetching coding round:", error);
     res.status(500).json({
@@ -811,9 +879,11 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       await submission.save();
     }
 
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+
     res.json({
       success: true,
-      codingRound,
+      codingRound: mergedCodingRound,
       attempt: responseAttempt ? buildAttemptPayload(responseAttempt) : null,
       message: "Access granted. You can now attempt the coding round.",
       note: "This is your only attempt. Make sure to complete it before the time limit.",
@@ -904,12 +974,14 @@ export const startDailyChallengeAttempt = async (req, res) => {
       studentEmail: normalizedEmail,
     }).lean();
 
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+
     return res.status(200).json({
       success: true,
       message: attempt.startedAt ? "Daily Challenge session ready." : "Daily Challenge started.",
       data: {
         attempt: buildAttemptPayload(attempt),
-        codingRound,
+        codingRound: mergedCodingRound,
         instructions: DAILY_CHALLENGE_RULES,
         savedAnswers: submission ? {
           problemCodes: submission.problemCodes instanceof Map ? Object.fromEntries(submission.problemCodes) : (submission.problemCodes || {}),
@@ -989,13 +1061,15 @@ async function processUnsubmittedSolutions(codingRound, submission, solutions) {
       }
     } else {
       const trimmed = submittedCode ? submittedCode.trim() : "";
+      const problemStarter = problem.starterCode?.[language]?.code || problem.content?.starterCode?.[language]?.code || "";
       const isStarter = !trimmed ||
         trimmed.startsWith("//") ||
         trimmed.startsWith("#") ||
         trimmed.startsWith("--") ||
         trimmed === "def solve():\n    pass" ||
         trimmed === "def solve():" ||
-        (trimmed.includes("pass") && trimmed.length < 50);
+        (trimmed.includes("pass") && trimmed.length < 50) ||
+        trimmed === problemStarter.trim();
 
       if (isStarter) {
         submission.problemScores.set(idxStr, 0);

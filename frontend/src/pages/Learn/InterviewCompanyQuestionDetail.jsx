@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft, CheckCircle, Play, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Play, X, ChevronDown } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { practiceAPI } from '../../services/practiceApi';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,9 +16,7 @@ const difficultyPillClass = {
 
 const LANGUAGES = {
   python: { id: "python", name: "Python", monacoLanguage: "python", starter: "# Write your Python solution here\n" },
-  javascript: { id: "javascript", name: "JavaScript", monacoLanguage: "javascript", starter: "// Write your JavaScript solution here\n" },
-  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" },
-  sql: { id: "sql", name: "SQL", monacoLanguage: "sql", starter: "-- Write your SQL query here\nSELECT * FROM users;\n" }
+  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" }
 };
 
 export default function InterviewCompanyQuestionDetail() {
@@ -85,7 +83,7 @@ export default function InterviewCompanyQuestionDetail() {
           const inputFormatText = data.inputFormat || '';
           const outputFormatText = data.outputFormat || '';
 
-          const pythonStarter = data.content?.starterCode?.python?.code || LANGUAGES.python.starter;
+          const pythonStarter = data.content?.starterCode?.python?.code || data.solutionCode || LANGUAGES.python.starter;
 
           setQuestion({
             id: String(data._id),
@@ -101,7 +99,8 @@ export default function InterviewCompanyQuestionDetail() {
             statement: descriptionText
               ? `## Problem\n\n${descriptionText}\n\n${inputFormatText ? `### Input Format\n${inputFormatText}\n\n` : ''}${outputFormatText ? `### Output Format\n${outputFormatText}` : ''}`
               : `## Problem\n\n**${data.title}** (Topic: ${data.categoryTitle || 'Company'})\n\nProblem statement will be added here.`,
-            starterCode: pythonStarter
+            starterCode: data.content?.starterCode,
+            tags: data.tags || []
           });
 
           setCode(pythonStarter);
@@ -382,9 +381,17 @@ export default function InterviewCompanyQuestionDetail() {
                 </h1>
 
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
-                    {question.subtitle}
-                  </span>
+                  {question.tags && question.tags.length > 0 ? (
+                    question.tags.map((tag, idx) => (
+                      <span key={idx} className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                      {question.subtitle}
+                    </span>
+                  )}
                   <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
                     {question.difficulty}
                   </span>
@@ -406,21 +413,24 @@ export default function InterviewCompanyQuestionDetail() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                   <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                     <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
-                    <select
-                      value={selectedLanguage}
-                      onChange={(e) => {
-                        const nextLang = e.target.value;
-                        setSelectedLanguage(nextLang);
-                        setCode(LANGUAGES[nextLang].starter);
-                      }}
-                      className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                    >
-                      {Object.values(LANGUAGES).map((lang) => (
-                        <option key={lang.id} value={lang.id}>
-                          {lang.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative inline-block">
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => {
+                          const nextLang = e.target.value;
+                          setSelectedLanguage(nextLang);
+                          setCode(question?.starterCode?.[nextLang]?.code || question?.solutionCode || LANGUAGES[nextLang]?.starter);
+                        }}
+                        className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"
+                      >
+                        {Object.values(LANGUAGES).map((lang) => (
+                          <option key={lang.id} value={lang.id}>
+                            {lang.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                    </div>
                   </div>
                   <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
                     <button

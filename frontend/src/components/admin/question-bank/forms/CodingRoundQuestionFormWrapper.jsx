@@ -27,7 +27,7 @@ export const CodingRoundQuestionFormWrapper = ({
             onChange={(e) => onChange('inputFormat', e.target.value)}
             rows={2}
             placeholder="Describe input format"
-            className={textareaClass}
+            className={`${textareaClass} scrollbar-hide`}
           />
         </div>
 
@@ -38,29 +38,7 @@ export const CodingRoundQuestionFormWrapper = ({
             onChange={(e) => onChange('outputFormat', e.target.value)}
             rows={2}
             placeholder="Describe output format"
-            className={textareaClass}
-          />
-        </div>
-
-        <div>
-          <label className="admin-micro-label text-black/45 dark:text-white/45">Time Limit (seconds)</label>
-          <input
-            type="number"
-            min="1"
-            value={formData.timeLimit || '1'}
-            onChange={(e) => onChange('timeLimit', e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className="admin-micro-label text-black/45 dark:text-white/45">Memory Limit (MB)</label>
-          <input
-            type="number"
-            min="1"
-            value={formData.memoryLimit || '256'}
-            onChange={(e) => onChange('memoryLimit', e.target.value)}
-            className={inputClass}
+            className={`${textareaClass} scrollbar-hide`}
           />
         </div>
       </div>
@@ -118,15 +96,6 @@ export const CodingRoundQuestionFormWrapper = ({
                       className={textareaClass}
                     />
                   </div>
-                </div>
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation (optional)</label>
-                  <input
-                    value={testCase.explanation || ''}
-                    onChange={(e) => onTestCaseChange('visibleTestCases', index, 'explanation', e.target.value)}
-                    placeholder="Brief explanation..."
-                    className={inputClass}
-                  />
                 </div>
               </div>
             ))}
@@ -195,15 +164,6 @@ export const CodingRoundQuestionFormWrapper = ({
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation (optional)</label>
-                  <input
-                    value={testCase.explanation || ''}
-                    onChange={(e) => onTestCaseChange('hiddenTestCases', index, 'explanation', e.target.value)}
-                    placeholder="Brief explanation..."
-                    className={inputClass}
-                  />
-                </div>
               </div>
             ))}
             <button
@@ -217,59 +177,50 @@ export const CodingRoundQuestionFormWrapper = ({
         )}
       </section>
 
-      {/* Reference Solution */}
+      {/* Starter Code */}
       <section className="rounded-2xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] overflow-hidden shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)]">
         <button
           type="button"
-          onClick={() => onToggleSection('reference')}
+          onClick={() => onToggleSection('starter')}
           className="w-full px-4 py-3 border-b border-black/10 dark:border-white/15 flex items-center justify-between hover:bg-black/[0.02] dark:hover:bg-white/[0.03] transition-colors"
         >
-          <h3 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-white">Reference Solution</h3>
+          <h3 className="text-sm font-semibold tracking-tight text-slate-800 dark:text-white">Starter Code</h3>
           <FiChevronDown
-            className={`w-4 h-4 text-black/55 dark:text-white/60 transition-transform ${expandedSections?.reference ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-black/55 dark:text-white/60 transition-transform ${expandedSections?.starter ? 'rotate-180' : ''}`}
           />
         </button>
-        {expandedSections?.reference && (
-          <div className="px-4 py-3 space-y-2 bg-white/40 dark:bg-black/10">
+        {expandedSections?.starter && (
+          <div className="px-4 py-3 space-y-4 bg-white/40 dark:bg-black/10">
             <div>
-              <label className="admin-micro-label text-black/45 dark:text-white/45">Language</label>
-              <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                <select
-                  value={formData.referenceLanguage || 'C++'}
-                  onChange={(e) => onChange('referenceLanguage', e.target.value)}
-                  className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                >
-                  <option className={dropdownOptionClass}>C++</option>
-                  <option className={dropdownOptionClass}>Python</option>
-                  <option className={dropdownOptionClass}>Java</option>
-                  <option className={dropdownOptionClass}>JavaScript</option>
-                </select>
-                <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-              </div>
-            </div>
-            <div>
-              <label className="admin-micro-label text-black/45 dark:text-white/45">Solution Code</label>
+              <label className="admin-micro-label text-black/45 dark:text-white/45">Python Starter Code</label>
               <textarea
-                value={formData.solutionCode || ''}
-                onChange={(e) => onChange('solutionCode', e.target.value)}
+                value={formData.starterCode?.python?.code || ''}
+                onChange={(e) => onChange('starterCode', {
+                  ...formData.starterCode,
+                  python: { code: e.target.value }
+                })}
                 rows={6}
-                placeholder="Paste reference solution code"
+                placeholder="# Write your Python starter template here"
                 className={`${textareaClass} font-mono`}
               />
             </div>
             <div>
-              <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation / Editorial</label>
+              <label className="admin-micro-label text-black/45 dark:text-white/45">Java Starter Code</label>
               <textarea
-                value={formData.editorial || ''}
-                onChange={(e) => onChange('editorial', e.target.value)}
-                rows={3}
-                placeholder="Add editorial notes"
-                className={textareaClass}
+                value={formData.starterCode?.java?.code || ''}
+                onChange={(e) => onChange('starterCode', {
+                  ...formData.starterCode,
+                  java: { code: e.target.value }
+                })}
+                rows={6}
+                placeholder="public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}"
+                className={`${textareaClass} font-mono`}
               />
             </div>
           </div>
         )}
       </section>
+
     </div>
   );
 };

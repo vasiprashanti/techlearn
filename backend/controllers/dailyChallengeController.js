@@ -1,4 +1,5 @@
 import CodingRound from "../models/CodingRound.js";
+import { mergeCodingRoundQuestionsData } from "./codingRoundController.js";
 import {
   DAILY_CHALLENGE_RULES,
   getAttemptTimeRemainingSeconds,
@@ -107,11 +108,14 @@ export const getDailyChallengeByLink = async (req, res) => {
       });
     }
 
+    // Dynamically merge tags, categoryTitle and starterCode from Question documents
+    const mergedRound = await mergeCodingRoundQuestionsData(codingRound);
+
     return res.status(200).json({
       success: true,
       data: {
-        ...codingRound,
-        durationMinutes: codingRound.duration,
+        ...mergedRound,
+        durationMinutes: mergedRound.duration,
         instructions: DAILY_CHALLENGE_RULES,
         attempt: attempt
           ? {
