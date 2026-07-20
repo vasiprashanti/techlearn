@@ -613,10 +613,10 @@ const CodingCompiler = ({ user, contestData }) => {
       </nav>
 
       {/* MAIN CONTENT */}
-      <div className="flex flex-1 pt-5 overflow-auto">
+      <div className="flex flex-1 pt-5 overflow-hidden h-[calc(100vh-4.5rem)]">
         {/* LEFT PANEL */}
         {/* LEFT PANEL */}
-        <div className="w-1/2 bg-[#0f172a] p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5">
+        <div className="w-1/2 bg-[#0f172a] p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5 minimal-scrollbar">
           {/* Header Card */}
           <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] p-6 rounded-xl border border-gray-300 dark:border-gray-700">
             <h1 className="text-2xl font-extrabold mb-3 dark:text-white tracking-tight">
@@ -633,63 +633,69 @@ const CodingCompiler = ({ user, contestData }) => {
           </div>
 
           {/* Problem Statement Card */}
-          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+          <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors h-[165px] overflow-hidden flex flex-col">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 shrink-0">
               Problem Statement
             </h2>
-            <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px]">
-              {PROBLEM.description || "No description available"}
-            </p>
-            {/* Render a custom list block for operator helpers if present */}
-            {PROBLEM.problemTitle === "Arithmetic Calculator" && (
-              <ul className="list-none pl-0 mt-4 flex flex-col gap-2">
-                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">+</b> Addition
-                </li>
-                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">-</b> Subtraction
-                </li>
-                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">*</b> Multiplication
-                </li>
-                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">/</b> Integer Division
-                </li>
-                <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                  <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">%</b> Modulo
-                </li>
-              </ul>
-            )}
+            <div className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] flex-1 overflow-y-auto minimal-scrollbar pr-1">
+              <p className="m-0">
+                {PROBLEM.description || "No description available"}
+              </p>
+              {/* Render a custom list block for operator helpers if present */}
+              {PROBLEM.problemTitle === "Arithmetic Calculator" && (
+                <ul className="list-none pl-0 mt-4 flex flex-col gap-2">
+                  <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">+</b> Addition
+                  </li>
+                  <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">-</b> Subtraction
+                  </li>
+                  <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">*</b> Multiplication
+                  </li>
+                  <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">/</b> Integer Division
+                  </li>
+                  <li className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                    <b className="inline-block min-w-[24px] text-center bg-gray-700 text-white px-2 py-0.5 rounded font-mono text-xs">%</b> Modulo
+                  </li>
+                </ul>
+              )}
+            </div>
           </div>
 
           {/* Input & Output Format Grid */}
-          <div className="grid grid-cols-2 gap-5">
-            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+          <div className="grid grid-cols-2 gap-5 h-[150px]">
+            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors flex flex-col h-full overflow-hidden">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 shrink-0">
                 Input Format
               </h2>
-              <ul className="list-none pl-0 flex flex-col gap-2">
-                {(Array.isArray(PROBLEM.inputFormat)
-                  ? PROBLEM.inputFormat
-                  : PROBLEM.inputDescription
-                  ? PROBLEM.inputDescription.split("\n")
-                  : ["No input format specified"]
-                ).map((line, i) => (
-                  <li key={i} className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0043A1]"></span>
-                    {line}
-                  </li>
-                ))}
-              </ul>
+              <div className="flex-1 overflow-y-auto minimal-scrollbar pr-1">
+                <ul className="list-none pl-0 flex flex-col gap-2">
+                  {(Array.isArray(PROBLEM.inputFormat)
+                    ? PROBLEM.inputFormat
+                    : PROBLEM.inputDescription
+                    ? PROBLEM.inputDescription.split("\n")
+                    : ["No input format specified"]
+                  ).map((line, i) => (
+                    <li key={i} className="flex items-center gap-3 text-[14.5px] text-gray-700 dark:text-gray-300 bg-[#111827] p-2 px-3 rounded-lg border border-gray-200 dark:border-gray-800">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#0043A1]"></span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4">
+            <div className="bg-[#1e293b] border border-gray-300 dark:border-gray-700 rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors flex flex-col h-full overflow-hidden">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider border-l-4 border-[#0043A1] pl-3 mb-4 shrink-0">
                 Output Format
               </h2>
-              <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px]">
-                {PROBLEM.outputFormat || PROBLEM.outputDescription || "Print the result after performing the operation."}
-              </p>
+              <div className="flex-1 overflow-y-auto minimal-scrollbar pr-1">
+                <p className="leading-relaxed text-gray-700 dark:text-gray-300 text-[14.5px] m-0">
+                  {PROBLEM.outputFormat || PROBLEM.outputDescription || "Print the result after performing the operation."}
+                </p>
+              </div>
             </div>
           </div>
 
