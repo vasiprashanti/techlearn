@@ -8,14 +8,6 @@ import { useParams } from "react-router-dom";
 
 // --- FIXED LANGUAGES CONFIG ---
 const LANGUAGES = {
-  javascript: {
-    id: "javascript",
-    name: "JavaScript",
-    icon: "/javascript.png",
-    extension: ".js",
-    defaultCode: `// Write your code here\n`,
-    monacoLanguage: "javascript",
-  },
   python: {
     id: "python",
     name: "Python",
@@ -31,14 +23,6 @@ const LANGUAGES = {
     extension: ".java",
     defaultCode: `// Write your code here\npublic class Main {\n    public static void main(String[] args) {\n        // your code here\n    }\n}\n`,
     monacoLanguage: "java",
-  },
-  sql: {
-    id: "sql",
-    name: "SQL",
-    icon: "/sql.png",
-    extension: ".sql",
-    defaultCode: `-- Write your SQL query here\nSELECT * FROM users;\n`,
-    monacoLanguage: "sql",
   },
 };
 
@@ -191,15 +175,28 @@ const CodingCompiler = ({ user, contestData }) => {
       .toString()
       .padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
+  // Load starter code when current problem or selected language changes
+  useEffect(() => {
+    if (PROBLEM) {
+      const isChallengeMcq = String(PROBLEM.categoryType || "").toUpperCase() === "MCQ";
+      if (isChallengeMcq) {
+        setCode("");
+      } else {
+        const starter = PROBLEM.starterCode?.[selectedLang]?.code || PROBLEM.content?.starterCode?.[selectedLang]?.code || PROBLEM.solutionCode || LANGUAGES[selectedLang]?.defaultCode || "";
+        setCode(starter);
+      }
+    }
+  }, [PROBLEM, currentProblemIndex, selectedLang]);
+
   const handleReset = () => {
-    setCode(LANGUAGES[selectedLang].defaultCode);
+    const starter = PROBLEM?.starterCode?.[selectedLang]?.code || PROBLEM?.content?.starterCode?.[selectedLang]?.code || PROBLEM?.solutionCode || LANGUAGES[selectedLang]?.defaultCode || "";
+    setCode(starter);
     setOutput("");
   };
 
   const handleNextQuestion = () => {
     setCurrentProblemIndex((prev) => (prev + 1) % problems.length);
     setOutput("");
-    setCode(LANGUAGES[selectedLang].defaultCode);
   };
 
   const handleRun = async () => {
@@ -407,7 +404,8 @@ const CodingCompiler = ({ user, contestData }) => {
 
   const handleLanguageChange = (lang) => {
     setSelectedLang(lang);
-    setCode(LANGUAGES[lang].defaultCode);
+    const starter = PROBLEM?.starterCode?.[lang]?.code || PROBLEM?.content?.starterCode?.[lang]?.code || PROBLEM?.solutionCode || LANGUAGES[lang]?.defaultCode || "";
+    setCode(starter);
     setShowDropdown(false);
   };
 
@@ -618,17 +616,35 @@ const CodingCompiler = ({ user, contestData }) => {
         {/* LEFT PANEL */}
         <div className="w-1/2 bg-[#0f172a] p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5 minimal-scrollbar">
           {/* Header Card */}
-          <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] p-6 rounded-xl border border-gray-300 dark:border-gray-700">
-            <h1 className="text-2xl font-extrabold mb-3 dark:text-white tracking-tight">
+          <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] p-6 rounded-xl border border-gray-300 dark:border-gray-700 items-start text-left flex flex-col gap-1.5">
+            <h1 className="text-2xl font-extrabold mb-1 dark:text-white tracking-tight pl-2">
               {PROBLEM.problemTitle || PROBLEM.title || "Problem"}
             </h1>
-            <div className="flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300 bg-[#14532d] text-[#86efac] border-[#166534]">Easy</span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">1 sec</span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">256 MB</span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Data Types</span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Operators</span>
-              <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">Day 1</span>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold pl-2">
+              <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300 bg-[#14532d] text-[#86efac] border-[#166534]">
+                {PROBLEM?.difficulty || "Medium"}
+              </span>
+              {PROBLEM?.timeLimit && (
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                  {PROBLEM.timeLimit / 1000} sec
+                </span>
+              )}
+              {PROBLEM?.memoryLimit && (
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-white/30 dark:bg-white/5 px-2.5 py-0.5 font-semibold text-gray-700 dark:text-gray-300">
+                  {PROBLEM.memoryLimit} MB
+                </span>
+              )}
+              {((PROBLEM?.tags && PROBLEM.tags.length > 0) || (PROBLEM?.content?.tags && PROBLEM.content.tags.length > 0)) ? (
+                (PROBLEM.tags || PROBLEM.content.tags).map((tag, idx) => (
+                  <span key={idx} className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
+                    {tag}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2.5 py-0.5 font-semibold">
+                  {PROBLEM?.categoryTitle || PROBLEM?.trackType || PROBLEM?.categoryType || 'Coding'}
+                </span>
+              )}
             </div>
           </div>
 

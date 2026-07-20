@@ -38,6 +38,10 @@ const createQuestionForm = (track = '') => ({
   referenceLanguage: 'C++',
   solutionCode: '',
   editorial: '',
+  starterCode: {
+    python: { code: '' },
+    java: { code: '' },
+  },
 });
 
 const formFromQuestion = (question) => ({
@@ -71,6 +75,10 @@ const formFromQuestion = (question) => ({
   referenceLanguage: question.referenceLanguage || 'C++',
   solutionCode: question.solutionCode || '',
   editorial: question.editorial || '',
+  starterCode: {
+    python: { code: question.content?.starterCode?.python?.code || '' },
+    java: { code: question.content?.starterCode?.java?.code || '' },
+  },
 });
 
 export const QuestionBankCategoryDetailPage = () => {
@@ -237,6 +245,101 @@ export const QuestionBankCategoryDetailPage = () => {
     setBulkForms((prev) => prev.map((form, formIndex) => (formIndex === index ? { ...form, [field]: value } : form)));
   };
 
+  const [expandedBulkFormSections, setExpandedBulkFormSections] = useState({});
+
+  const toggleBulkFormSection = (index, section) => {
+    setExpandedBulkFormSections((prev) => {
+      const current = prev[index] || { visible: false, hidden: false, reference: false, starter: false };
+      return {
+        ...prev,
+        [index]: {
+          ...current,
+          [section]: !current[section],
+        },
+      };
+    });
+  };
+
+  const handleUpdateBulkTestCase = (index, field, tcIndex, prop, value) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        const list = [...(form[field] || [])];
+        list[tcIndex] = { ...list[tcIndex], [prop]: value };
+        return { ...form, [field]: list };
+      })
+    );
+  };
+
+  const handleAddBulkTestCase = (index, field) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        return {
+          ...form,
+          [field]: [...(form[field] || []), createTestCase()],
+        };
+      })
+    );
+  };
+
+  const handleRemoveBulkTestCase = (index, field, tcIndex) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        return {
+          ...form,
+          [field]: (form[field] || []).filter((_, i) => i !== tcIndex),
+        };
+      })
+    );
+  };
+
+  const handleUpdateBulkMcqOption = (index, optionIndex, text) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        const options = form.options.map((opt, i) =>
+          i === optionIndex ? { ...opt, text } : opt
+        );
+        return { ...form, options };
+      })
+    );
+  };
+
+  const handleAddBulkTag = (index) => {
+    const val = (bulkForms[index]?.tagInput || '').trim();
+    if (!val) return;
+    if (bulkForms[index]?.tags?.includes(val)) {
+      setBulkForms((prev) =>
+        prev.map((form, idx) => (idx === index ? { ...form, tagInput: '' } : form))
+      );
+      return;
+    }
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        return {
+          ...form,
+          tags: [...(form.tags || []), val],
+          tagInput: '',
+        };
+      })
+    );
+  };
+
+  const handleRemoveBulkTag = (index, tag) => {
+    setBulkForms((prev) =>
+      prev.map((form, idx) => {
+        if (idx !== index) return form;
+        return {
+          ...form,
+          tags: (form.tags || []).filter((t) => t !== tag),
+        };
+      })
+    );
+  };
+
   const toggleFormSection = (sectionKey) => {
     setExpandedFormSections((prev) => ({
       ...prev,
@@ -383,6 +486,7 @@ export const QuestionBankCategoryDetailPage = () => {
       referenceLanguage: questionForm.referenceLanguage,
       solutionCode: isCodingCategory ? questionForm.solutionCode : '',
       editorial: questionForm.editorial,
+      starterCode: isCodingCategory ? questionForm.starterCode : undefined,
       options: isMcqCategory ? questionForm.options : [],
       correctOption: isMcqCategory ? questionForm.correctOption : '',
       explanation: isMcqCategory ? questionForm.explanation : '',
@@ -489,14 +593,14 @@ export const QuestionBankCategoryDetailPage = () => {
   );
 
   const tagsField = (
-    <div className="md:col-span-2">
+    <div className={isMcqCategory ? "md:col-span-2" : ""}>
       <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
-      <div className="mt-1 flex gap-2">
+      <div className="mt-1 flex gap-2 w-full">
         <input
           value={questionForm.tagInput}
           onChange={(e) => updateFormField('tagInput', e.target.value)}
           placeholder="Add keyword tag..."
-          className={questionFormInputClass}
+          className={`${questionFormInputClass} flex-grow flex-1`}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); } }}
         />
         <button
@@ -525,7 +629,7 @@ export const QuestionBankCategoryDetailPage = () => {
   const descriptionField = (
     <div className="md:col-span-2">
       <label className="admin-micro-label text-black/45 dark:text-white/45">
-        {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Description*'}
+        {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Statement*'}
       </label>
       <textarea
         value={questionForm.problemDescription}
@@ -595,174 +699,139 @@ export const QuestionBankCategoryDetailPage = () => {
                       Generate Forms
                     </button>
                   </div>
-                  {bulkForms.map((form, index) => (
-                    <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
-                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <div className="md:col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
-                          <input value={form.title} onChange={(e) => updateBulkFormField(index, 'title', e.target.value)} placeholder="JFS / SERVLET / JDBC" className={questionFormInputClass} />
-                        </div>
-                        <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
-                          <select value={form.difficulty} onChange={(e) => updateBulkFormField(index, 'difficulty', e.target.value)} className={questionFormInputClass}>
+                  {bulkForms.map((form, index) => {
+                    const formTitleField = (
+                      <div className="md:col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Topic*</label>
+                        <input
+                          value={form.title}
+                          onChange={(e) => updateBulkFormField(index, 'title', e.target.value)}
+                          placeholder="Enter one-word topic"
+                          className={questionFormInputClass}
+                        />
+                      </div>
+                    );
+
+                    const formDifficultyField = (
+                      <div>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Difficulty*</label>
+                        <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
+                          <select
+                            value={form.difficulty}
+                            onChange={(e) => updateBulkFormField(index, 'difficulty', e.target.value)}
+                            className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                          >
                             <option className={dropdownOptionClass}>Easy</option>
                             <option className={dropdownOptionClass}>Medium</option>
                             <option className={dropdownOptionClass}>Hard</option>
                           </select>
+                          <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                         </div>
-                        <div>
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
+                      </div>
+                    );
+
+                    const formExplanationField = (
+                      <div className="md:col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
+                        <input
+                          value={form.explanation}
+                          onChange={(e) => updateBulkFormField(index, 'explanation', e.target.value)}
+                          placeholder="Explain why this option is correct"
+                          className={questionFormInputClass}
+                        />
+                      </div>
+                    );
+
+                    const formTagsField = (
+                      <div className={isMcqCategory ? "md:col-span-2" : ""}>
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">Tags</label>
+                        <div className="mt-1 flex gap-2 w-full">
                           <input
-                            value={form.tagInput}
+                            value={form.tagInput || ''}
                             onChange={(e) => updateBulkFormField(index, 'tagInput', e.target.value)}
-                            onBlur={() => {
-                              const tags = form.tagInput.split(',').map((tag) => tag.trim()).filter(Boolean);
-                              updateBulkFormField(index, 'tags', tags);
-                            }}
-                            placeholder="JFS, SERVLET"
-                            className={questionFormInputClass}
+                            placeholder="Add keyword tag..."
+                            className={`${questionFormInputClass} flex-grow flex-1`}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBulkTag(index); } }}
                           />
+                          <button
+                            type="button"
+                            onClick={() => handleAddBulkTag(index)}
+                            className="px-5 py-2.5 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] text-white text-sm font-semibold border border-[#3C83F6]/20 transition-colors shadow-sm"
+                          >
+                            Add
+                          </button>
                         </div>
-                        <div className="md:col-span-2">
-                          <label className="admin-micro-label text-black/45 dark:text-white/45">{isMcqCategory ? 'Question Prompt*' : isNotesCategory ? 'Notes Description*' : 'Problem Description*'}</label>
-                          <textarea value={form.problemDescription} onChange={(e) => updateBulkFormField(index, 'problemDescription', e.target.value)} rows={3} className={questionFormInputClass} />
-                        </div>
-                        {isMcqCategory && (
-                          <>
-                            {form.options.map((option, optionIndex) => (
-                              <div key={option.label}>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Option {option.label}*</label>
-                                <input
-                                  value={option.text}
-                                  onChange={(e) => {
-                                    const options = form.options.map((opt, i) => (i === optionIndex ? { ...opt, text: e.target.value } : opt));
-                                    updateBulkFormField(index, 'options', options);
-                                  }}
-                                  placeholder={`Enter option ${option.label} text`}
-                                  className={questionFormInputClass}
-                                />
-                              </div>
+                        {(form.tags || []).length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {(form.tags || []).map((tag) => (
+                              <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-black/10 dark:border-white/10 px-2.5 py-1 text-xs bg-white/70 dark:bg-white/10 text-slate-700 dark:text-slate-200">
+                                {tag}
+                                <button type="button" onClick={() => handleRemoveBulkTag(index, tag)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                                  <FiX className="w-3 h-3" />
+                                </button>
+                              </span>
                             ))}
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Correct Option*</label>
-                              <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                                <select
-                                  value={form.correctOption}
-                                  onChange={(e) => updateBulkFormField(index, 'correctOption', e.target.value)}
-                                  className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
-                                >
-                                  {['A', 'B', 'C', 'D'].map((label) => (
-                                    <option key={label} className={dropdownOptionClass}>{label}</option>
-                                  ))}
-                                </select>
-                                <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
-                              </div>
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
-                              <input
-                                value={form.explanation || ''}
-                                onChange={(e) => updateBulkFormField(index, 'explanation', e.target.value)}
-                                placeholder="Explain why this option is correct"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                          </>
-                        )}
-                        {isCodingCategory && (
-                          <>
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Input Format*</label>
-                              <textarea
-                                value={form.inputFormat}
-                                onChange={(e) => updateBulkFormField(index, 'inputFormat', e.target.value)}
-                                rows={2}
-                                placeholder="Describe the input expected by the program"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                            <div>
-                              <label className="admin-micro-label text-black/45 dark:text-white/45">Output Format*</label>
-                              <textarea
-                                value={form.outputFormat}
-                                onChange={(e) => updateBulkFormField(index, 'outputFormat', e.target.value)}
-                                rows={2}
-                                placeholder="Describe the output the program should produce"
-                                className={questionFormInputClass}
-                              />
-                            </div>
-                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Input*</label>
-                                <textarea
-                                  value={form.visibleTestCases?.[0]?.input || ''}
-                                  onChange={(e) => {
-                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Input shown to students"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Visible Test Output*</label>
-                                <textarea
-                                  value={form.visibleTestCases?.[0]?.output || ''}
-                                  onChange={(e) => {
-                                    const visibleTestCases = [{ ...(form.visibleTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                    updateBulkFormField(index, 'visibleTestCases', visibleTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Expected output shown to students"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Input*</label>
-                                <textarea
-                                  value={form.hiddenTestCases?.[0]?.input || ''}
-                                  onChange={(e) => {
-                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), input: e.target.value }];
-                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Input used during final evaluation"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                              <div>
-                                <label className="admin-micro-label text-black/45 dark:text-white/45">Hidden Test Output*</label>
-                                <textarea
-                                  value={form.hiddenTestCases?.[0]?.output || ''}
-                                  onChange={(e) => {
-                                    const hiddenTestCases = [{ ...(form.hiddenTestCases?.[0] || createTestCase()), output: e.target.value }];
-                                    updateBulkFormField(index, 'hiddenTestCases', hiddenTestCases);
-                                  }}
-                                  rows={2}
-                                  placeholder="Expected output used during final evaluation"
-                                  className={questionFormInputClass}
-                                />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                        {isNotesCategory && (
-                          <div className="md:col-span-2">
-                            <label className="admin-micro-label text-black/45 dark:text-white/45">Markdown Body*</label>
-                            <textarea
-                              value={form.markdownBody}
-                              onChange={(e) => updateBulkFormField(index, 'markdownBody', e.target.value)}
-                              rows={4}
-                              placeholder="Paste markdown content for this note"
-                              className={questionFormInputClass}
-                            />
                           </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+
+                    const formDescriptionField = (
+                      <div className="md:col-span-2">
+                        <label className="admin-micro-label text-black/45 dark:text-white/45">
+                          {isNotesCategory ? 'Notes description*' : isMcqCategory ? 'Question prompt' : 'Problem Statement*'}
+                        </label>
+                        <textarea
+                          value={form.problemDescription}
+                          onChange={(e) => updateBulkFormField(index, 'problemDescription', e.target.value)}
+                          rows={4}
+                          placeholder={isNotesCategory ? 'Describe what this note covers...' : isMcqCategory ? 'Optional supporting text...' : 'Describe the problem statement in detail...'}
+                          className={questionFormInputClass}
+                        />
+                      </div>
+                    );
+
+                    const formDynamicHostField = (
+                      <div className="md:col-span-2 pt-2">
+                        <DynamicQuestionFormHost
+                          categoryType={categoryType}
+                          formData={form}
+                          onChange={(field, val) => updateBulkFormField(index, field, val)}
+                          onTestCaseChange={(field, tcIndex, prop, val) => handleUpdateBulkTestCase(index, field, tcIndex, prop, val)}
+                          onAddTestCase={(field) => handleAddBulkTestCase(index, field)}
+                          onRemoveTestCase={(field, tcIndex) => handleRemoveBulkTestCase(index, field, tcIndex)}
+                          onMcqOptionChange={(optionIndex, text) => handleUpdateBulkMcqOption(index, optionIndex, text)}
+                          expandedSections={expandedBulkFormSections[index] || {}}
+                          onToggleSection={(section) => toggleBulkFormSection(index, section)}
+                        />
+                      </div>
+                    );
+
+                    return (
+                      <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-white/70 dark:bg-white/5 p-4 space-y-4">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[#3C83F6] dark:text-[#bceaff]">Question {index + 1}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {isMcqCategory ? (
+                            <>
+                              {formDescriptionField}
+                              {formDynamicHostField}
+                              {formExplanationField}
+                              {formTitleField}
+                              {formTagsField}
+                            </>
+                          ) : (
+                            <>
+                              {formTitleField}
+                              {formDifficultyField}
+                              {formTagsField}
+                              {formDescriptionField}
+                              {formDynamicHostField}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -827,6 +896,13 @@ export const QuestionBankCategoryDetailPage = () => {
                 <h3 className="text-xl font-bold text-[#3C83F6] dark:text-[#bceaff] mt-1">
                   {viewQuestion.title || 'Untitled Question'}
                 </h3>
+                {viewQuestion.tags && viewQuestion.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {viewQuestion.tags.map(tag => (
+                      <span key={tag} className="rounded-full bg-[#dbeafe] dark:bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-[#1d4ed8] dark:text-[#bceaff]">{tag}</span>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => setViewQuestion(null)}
@@ -838,7 +914,7 @@ export const QuestionBankCategoryDetailPage = () => {
 
             <div className="space-y-4 text-sm text-slate-800 dark:text-slate-200">
               <div>
-                <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Description</h4>
+                <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Problem Statement</h4>
                 <p className="mt-1 whitespace-pre-line leading-relaxed">{viewQuestion.description || 'No description provided.'}</p>
               </div>
 
@@ -847,28 +923,64 @@ export const QuestionBankCategoryDetailPage = () => {
                 <>
                   {viewQuestion.inputFormat && (
                     <div>
-                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium">Input Format</h4>
-                      <p className="mt-1 leading-relaxed">{viewQuestion.inputFormat}</p>
+                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium font-bold">Input Format</h4>
+                      <p className="mt-1 leading-relaxed bg-black/5 dark:bg-black/25 p-2 rounded-xl border border-black/5 dark:border-white/5">{viewQuestion.inputFormat}</p>
                     </div>
                   )}
                   {viewQuestion.outputFormat && (
                     <div>
-                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium">Output Format</h4>
-                      <p className="mt-1 leading-relaxed">{viewQuestion.outputFormat}</p>
+                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium font-bold">Output Format</h4>
+                      <p className="mt-1 leading-relaxed bg-black/5 dark:bg-black/25 p-2 rounded-xl border border-black/5 dark:border-white/5">{viewQuestion.outputFormat}</p>
                     </div>
                   )}
                   {Array.isArray(viewQuestion.visibleTestCases) && viewQuestion.visibleTestCases.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium">Visible Test Cases</h4>
+                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium font-bold">Visible Test Cases</h4>
                       <div className="mt-2 space-y-2">
                         {viewQuestion.visibleTestCases.map((tc, index) => (
-                          <div key={index} className="rounded-xl border border-black/5 dark:border-white/5 bg-slate-50 dark:bg-white/5 p-3 text-xs font-mono">
+                          <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/25 p-3 text-xs font-mono">
                             <p className="font-semibold text-slate-600 dark:text-slate-400 mb-1">Test Case #{index + 1}</p>
                             <p><strong>Input:</strong> {tc.input}</p>
                             <p className="mt-1"><strong>Output:</strong> {tc.output}</p>
-                            {tc.explanation && <p className="mt-1 italic text-slate-400">Explanation: {tc.explanation}</p>}
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+                  {Array.isArray(viewQuestion.hiddenTestCases) && viewQuestion.hiddenTestCases.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium font-bold">Hidden Test Cases</h4>
+                      <div className="mt-2 space-y-2">
+                        {viewQuestion.hiddenTestCases.map((tc, index) => (
+                          <div key={index} className="rounded-xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/25 p-3 text-xs font-mono">
+                            <p className="font-semibold text-slate-600 dark:text-slate-400 mb-1">Hidden Test Case #{index + 1}</p>
+                            <p><strong>Input:</strong> {tc.input}</p>
+                            <p className="mt-1"><strong>Output:</strong> {tc.output}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {viewQuestion.content?.starterCode && (
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium font-bold">Starter Code</h4>
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {viewQuestion.content.starterCode.python?.code && (
+                          <div className="rounded-xl border border-black/10 dark:border-white/10 bg-slate-50 dark:bg-black/25 p-3 flex flex-col">
+                            <span className="text-[11px] font-bold text-[#3C83F6] dark:text-[#bceaff] mb-1">Python</span>
+                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto bg-black/10 p-2 rounded scrollbar-hide">
+                              {viewQuestion.content.starterCode.python.code}
+                            </pre>
+                          </div>
+                        )}
+                        {viewQuestion.content.starterCode.java?.code && (
+                          <div className="rounded-xl border border-black/10 dark:border-white/15 bg-slate-50 dark:bg-black/25 p-3 flex flex-col">
+                            <span className="text-[11px] font-bold text-[#3C83F6] dark:text-[#bceaff] mb-1">Java</span>
+                            <pre className="text-xs font-mono overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto bg-black/10 p-2 rounded scrollbar-hide">
+                              {viewQuestion.content.starterCode.java.code}
+                            </pre>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

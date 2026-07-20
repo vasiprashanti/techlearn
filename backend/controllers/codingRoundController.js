@@ -30,6 +30,52 @@ import UserProgress from "../models/UserProgress.js";
 import { calculateChallengeXP } from "../services/xpService.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 
+export const mergeCodingRoundQuestionsData = async (codingRound) => {
+  if (!codingRound || !codingRound.problems) return codingRound;
+  
+  const round = typeof codingRound.toObject === "function" ? codingRound.toObject() : codingRound;
+  const questionIds = round.problems.map(p => p.questionId).filter(Boolean);
+  if (round.questionId) {
+    questionIds.push(round.questionId);
+  }
+
+  if (questionIds.length > 0) {
+    const questions = await Question.find({ _id: { $in: questionIds } }).lean();
+    const questionsMap = new Map(questions.map(q => [String(q._id), q]));
+
+    if (round.questionId) {
+      const qDoc = questionsMap.get(String(round.questionId));
+      if (qDoc) {
+        round.questionId = qDoc;
+      }
+    }
+
+    round.problems = round.problems.map(prob => {
+      const qDoc = questionsMap.get(String(prob.questionId)) || round.questionId;
+      if (qDoc && typeof qDoc === "object") {
+        if (!prob.tags || prob.tags.length === 0) {
+          prob.tags = qDoc.tags || [];
+          prob.categoryTitle = qDoc.categoryTitle || "";
+        }
+        if (!prob.starterCode || Object.keys(prob.starterCode).length === 0) {
+          prob.starterCode = qDoc.content?.starterCode || qDoc.starterCode || {};
+        }
+        if (prob.content) {
+          if (!prob.content.tags || prob.content.tags.length === 0) {
+            prob.content.tags = qDoc.tags || [];
+            prob.content.categoryTitle = qDoc.categoryTitle || "";
+          }
+          if (!prob.content.starterCode || Object.keys(prob.content.starterCode).length === 0) {
+            prob.content.starterCode = qDoc.content?.starterCode || qDoc.starterCode || {};
+          }
+        }
+      }
+      return prob;
+    });
+  }
+  return round;
+};
+
 const buildChallengeRateLimitKey = (req, includeAttempt = false) => {
   const email =
     req.body?.studentEmail ||
@@ -588,7 +634,8 @@ export const getOneCodingRound = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Coding round not found" });
     }
-    res.status(200).json({ success: true, data: codingRound });
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+    res.status(200).json({ success: true, data: mergedCodingRound });
   } catch (error) {
     console.error("Error fetching coding round:", error);
     res.status(500).json({
@@ -811,9 +858,11 @@ export const verifyOTPAndGetCodingRound = async (req, res) => {
       await submission.save();
     }
 
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+
     res.json({
       success: true,
-      codingRound,
+      codingRound: mergedCodingRound,
       attempt: responseAttempt ? buildAttemptPayload(responseAttempt) : null,
       message: "Access granted. You can now attempt the coding round.",
       note: "This is your only attempt. Make sure to complete it before the time limit.",
@@ -904,12 +953,14 @@ export const startDailyChallengeAttempt = async (req, res) => {
       studentEmail: normalizedEmail,
     }).lean();
 
+    const mergedCodingRound = await mergeCodingRoundQuestionsData(codingRound);
+
     return res.status(200).json({
       success: true,
       message: attempt.startedAt ? "Daily Challenge session ready." : "Daily Challenge started.",
       data: {
         attempt: buildAttemptPayload(attempt),
-        codingRound,
+        codingRound: mergedCodingRound,
         instructions: DAILY_CHALLENGE_RULES,
         savedAnswers: submission ? {
           problemCodes: submission.problemCodes instanceof Map ? Object.fromEntries(submission.problemCodes) : (submission.problemCodes || {}),

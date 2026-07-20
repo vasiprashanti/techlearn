@@ -107,6 +107,33 @@ export const getDailyChallengeByLink = async (req, res) => {
       });
     }
 
+    // Dynamically merge tags, categoryTitle and starterCode from populated questionId if not present on problems
+    if (codingRound && codingRound.problems) {
+      codingRound.problems = codingRound.problems.map(prob => {
+        const refQuestion = codingRound.questionId;
+        if (refQuestion) {
+          if (!prob.tags || prob.tags.length === 0) {
+            prob.tags = refQuestion.tags || [];
+            prob.categoryTitle = refQuestion.categoryTitle || "";
+          }
+          // Merge starterCode
+          if (!prob.starterCode || Object.keys(prob.starterCode).length === 0) {
+            prob.starterCode = refQuestion.content?.starterCode || refQuestion.starterCode || {};
+          }
+          if (prob.content) {
+            if (!prob.content.tags || prob.content.tags.length === 0) {
+              prob.content.tags = refQuestion.tags || [];
+              prob.content.categoryTitle = refQuestion.categoryTitle || "";
+            }
+            if (!prob.content.starterCode || Object.keys(prob.content.starterCode).length === 0) {
+              prob.content.starterCode = refQuestion.content?.starterCode || refQuestion.starterCode || {};
+            }
+          }
+        }
+        return prob;
+      });
+    }
+
     return res.status(200).json({
       success: true,
       data: {

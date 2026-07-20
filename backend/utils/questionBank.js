@@ -106,6 +106,22 @@ export const buildCentralQuestionPayload = async ({ category, body = {}, existin
     content.memoryLimit = memoryLimit;
     content.referenceSolution = buildReferenceSolution(body.referenceLanguage, body.solutionCode);
     content.solutionNotes = String(body.editorial ?? content.solutionNotes ?? "");
+
+    if (body.starterCode) {
+      const mergedStarter = { ...(content.starterCode || {}) };
+      for (const lang of ['cpp', 'python', 'java', 'javascript', 'c', 'csharp', 'go', 'rust']) {
+        if (body.starterCode[lang] !== undefined) {
+          const incomingVal = body.starterCode[lang];
+          if (incomingVal === null || incomingVal === '') {
+            delete mergedStarter[lang];
+          } else {
+            const codeStr = typeof incomingVal === 'object' ? (incomingVal.code || '') : incomingVal;
+            mergedStarter[lang] = { code: String(codeStr), version: 1 };
+          }
+        }
+      }
+      content.starterCode = mergedStarter;
+    }
   }
 
   if (categoryType === "MCQ") {

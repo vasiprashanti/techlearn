@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Play, SendHorizontal, Clock } from "lucide-react";
+import { Play, SendHorizontal, Clock, ChevronDown } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 import { dailyChallengeAPI } from "../../services/dailyChallengeApi";
 import {
@@ -12,12 +12,6 @@ import {
 } from "../../lib/dailyChallengeSession";
 
 const LANGUAGES = {
-  javascript: {
-    id: "javascript",
-    name: "JavaScript",
-    monacoLanguage: "javascript",
-    starter: "// Write your solution here\n",
-  },
   python: {
     id: "python",
     name: "Python",
@@ -30,12 +24,6 @@ const LANGUAGES = {
     monacoLanguage: "java",
     starter:
       "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n",
-  },
-  sql: {
-    id: "sql",
-    name: "SQL",
-    monacoLanguage: "sql",
-    starter: "-- Write your SQL query here\nSELECT * FROM users;\n",
   },
 };
 
@@ -60,7 +48,7 @@ export default function DailyChallengeTest() {
   const [attempt, setAttempt] = useState(session?.attempt || null);
   const [selectedLanguage, setSelectedLanguage] = useState("python");
   const [code, setCode] = useState(LANGUAGES.python.starter);
-  const [output, setOutput] = useState("Output will appear here...");
+  const [output, setOutput] = useState("");
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [runsLeft, setRunsLeft] = useState(null);
@@ -114,7 +102,8 @@ export default function DailyChallengeTest() {
         if (isChallengeMcq) {
           setCode("");
         } else {
-          setCode(LANGUAGES[selectedLanguage]?.starter || "");
+          const starter = problem?.starterCode?.[selectedLanguage]?.code || problem?.content?.starterCode?.[selectedLanguage]?.code || problem?.solutionCode || LANGUAGES[selectedLanguage]?.starter || "";
+          setCode(starter);
         }
       }
     }
@@ -135,7 +124,7 @@ export default function DailyChallengeTest() {
 
   const handleLanguageChange = (newLang) => {
     setSelectedLanguage(newLang);
-    const starter = LANGUAGES[newLang]?.starter || "";
+    const starter = problem?.starterCode?.[newLang]?.code || problem?.content?.starterCode?.[newLang]?.code || problem?.solutionCode || LANGUAGES[newLang]?.starter || "";
     setCode(starter);
     setSolutions((prev) => ({
       ...prev,
@@ -885,13 +874,25 @@ export default function DailyChallengeTest() {
             )}
 
             {/* Header Card (Top 15%) */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-0 flex flex-col justify-center gap-1.5">
-              <h1 className="text-sm font-extrabold mb-1.5 text-[#0d2a57] dark:text-white tracking-tight leading-tight">
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-0 flex flex-col justify-center items-start text-left gap-1.5">
+              <h1 className="text-sm font-extrabold mb-1.5 text-[#0d2a57] dark:text-white tracking-tight leading-tight pl-2">
                 {problem.problemTitle}
               </h1>
-              <div className="flex flex-wrap gap-1.5 text-[10px] font-semibold">
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5">Easy</span>
-                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5">Coding Round</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] pl-2 font-semibold">
+                {problem.tags && problem.tags.length > 0 ? (
+                  problem.tags.map((tag, idx) => (
+                    <span key={idx} className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                    {problem.categoryTitle || problem.trackType || 'Coding'}
+                  </span>
+                )}
+                <span className="rounded-full border border-black/5 dark:border-white/10 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5 font-semibold">
+                  {problem.difficulty || 'Easy'}
+                </span>
               </div>
             </div>
 
@@ -938,16 +939,28 @@ export default function DailyChallengeTest() {
                 Visible Test Cases
               </h2>
               {problem.visibleTestCases?.length ? (
-                <div className="space-y-2">
-                  {problem.visibleTestCases.map((testCase, index) => (
-                    <div key={`${index}-${testCase.input}`} className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg border border-black/5 dark:border-white/10 bg-white/40 dark:bg-[#020b23]/60 p-2.5">
-                      <div>
-                        <p className="text-[9px] font-bold uppercase text-slate-500 dark:text-[#78b3de] mb-1">Input {index + 1}</p>
-                        <pre className="text-[11px] whitespace-pre-wrap break-words text-[#0d2a57] dark:text-slate-200 font-mono">{testCase.input || "No input"}</pre>
-                      </div>
-                      <div>
-                        <p className="text-[9px] font-bold uppercase text-slate-500 dark:text-[#78b3de] mb-1">Expected Output</p>
-                        <pre className="text-[11px] whitespace-pre-wrap break-words text-[#0d2a57] dark:text-slate-200 font-mono">{testCase.expectedOutput ?? testCase.output ?? "Not provided"}</pre>
+                <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1 minimal-scrollbar">
+                  {problem.visibleTestCases.map((tc, index) => (
+                    <div key={index} className="space-y-2">
+                      <p className="text-[10px] font-bold text-slate-500 mb-1">Test Case #{index + 1}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                          <div className="px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <span>Input</span>
+                          </div>
+                          <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
+                            {tc.input || ""}
+                          </pre>
+                        </div>
+
+                        <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                          <div className="px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <span>Output</span>
+                          </div>
+                          <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
+                            {tc.expectedOutput || tc.output || "Not provided"}
+                          </pre>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -966,18 +979,21 @@ export default function DailyChallengeTest() {
                 <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
                   
-                  <select
-                    value={selectedLanguage}
-                    onChange={(event) => handleLanguageChange(event.target.value)}
-                    disabled={isDone || running || submitting}
-                    className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    {Object.values(LANGUAGES).map((language) => (
-                      <option key={language.id} value={language.id}>
-                        {language.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative inline-block">
+                    <select
+                      value={selectedLanguage}
+                      onChange={(event) => handleLanguageChange(event.target.value)}
+                      disabled={isDone || running || submitting}
+                      className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"
+                    >
+                      {Object.values(LANGUAGES).map((language) => (
+                        <option key={language.id} value={language.id}>
+                          {language.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                  </div>
                 </div>
 
                 {/* Run / Submit buttons */}
@@ -1092,7 +1108,7 @@ export default function DailyChallengeTest() {
                 Terminal
               </div>
               <pre className="flex-grow overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed bg-white/60 dark:bg-black/35 p-2 rounded-none border border-black/5 dark:border-gray-700 text-gray-800 dark:text-emerald-400">
-                {output}
+                {output || 'Run your code to see result output here.'}
               </pre>
             </section>
           </div>

@@ -88,7 +88,14 @@ module.exports = {
         },
         '.text-gradient': {
           '@apply bg-clip-text text-transparent bg-gradient-to-r from-primary-blue to accent-blue': {},
-        }
+        },
+        '.scrollbar-hide': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+        },
       })
     }
   ]

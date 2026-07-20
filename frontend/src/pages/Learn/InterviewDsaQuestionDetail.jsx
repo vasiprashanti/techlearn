@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowLeft, CheckCircle, Play } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Play, ChevronDown } from 'lucide-react';
 import UserSidebarLayout from '../../components/Dashboard/UserSidebarLayout';
 import { interviewQuestionsCatalog } from '../../data/adminQuestionBankData';
 import { practiceAPI } from '../../services/practiceApi';
@@ -18,9 +18,7 @@ const dsaDetailsById = {
 
 const LANGUAGES = {
   python: { id: "python", name: "Python", monacoLanguage: "python", starter: "# Write your Python solution here\n" },
-  javascript: { id: "javascript", name: "JavaScript", monacoLanguage: "javascript", starter: "// Write your JavaScript solution here\n" },
-  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" },
-  sql: { id: "sql", name: "SQL", monacoLanguage: "sql", starter: "-- Write your SQL query here\nSELECT * FROM users;\n" }
+  java: { id: "java", name: "Java", monacoLanguage: "java", starter: "public class Main {\n  public static void main(String[] args) {\n    // Write your solution here\n  }\n}\n" }
 };
 
 export default function InterviewDsaQuestionDetail() {
@@ -160,7 +158,10 @@ export default function InterviewDsaQuestionDetail() {
             solutionCode: data.solutionCode || '',
             inputFormat: data.inputFormat || '',
             outputFormat: data.outputFormat || '',
-            topic: 'DSA'
+            topic: 'DSA',
+            starterCode: data.content?.starterCode,
+            tags: data.tags || [],
+            visibleTestCases: data.visibleTestCases || data.content?.visibleTestCases || []
           });
         }
         if (!cancelled) setLoading(false);
@@ -183,10 +184,10 @@ export default function InterviewDsaQuestionDetail() {
         statement: question.description
           ? `## Problem\n\n${question.description}\n\n${question.inputFormat ? `### Input Format\n${question.inputFormat}\n\n` : ''}${question.outputFormat ? `### Output Format\n${question.outputFormat}` : ''}`
           : `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`,
-        starterCode: question.solutionCode || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
+        starterCode: question.starterCode?.[selectedLanguage]?.code || question.solutionCode || LANGUAGES[selectedLanguage]?.starter || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
       }
     );
-  }, [question]);
+  }, [question, selectedLanguage]);
 
   const [code, setCode] = useState(details?.starterCode || '');
   const [output, setOutput] = useState('');
@@ -465,15 +466,23 @@ export default function InterviewDsaQuestionDetail() {
             className="w-full lg:w-[35%] xl:w-[40%] h-[360px] lg:h-full flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 minimal-scrollbar"
           >
             {/* Header Card (Top 15%) */}
-            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center gap-1.5">
-              <h1 className="text-sm font-extrabold tracking-tight text-[#0d2a57] dark:text-white leading-tight">
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center items-start text-left gap-1.5">
+              <h1 className="text-sm font-extrabold tracking-tight text-[#0d2a57] dark:text-white leading-tight pl-2">
                 {question.title}
               </h1>
 
               <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
-                  {question.subtitle}
-                </span>
+                {question.tags && question.tags.length > 0 ? (
+                  question.tags.map((tag, idx) => (
+                    <span key={idx} className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                      {tag}
+                    </span>
+                  ))
+                ) : (
+                  <span className="rounded-full border border-white/5 bg-[#0043A1]/20 text-[#93c5fd] border-[#0043A1]/40 px-2 py-0.5 font-semibold">
+                    {question.subtitle}
+                  </span>
+                )}
                 <span className="rounded-full border border-white/5 bg-[#14532d] text-[#86efac] border-[#166534] px-2 py-0.5 font-semibold">
                   {question.difficulty}
                 </span>
@@ -500,7 +509,7 @@ export default function InterviewDsaQuestionDetail() {
                     </h2>
                     <div className="prose prose-slate max-w-none dark:prose-invert text-xs leading-normal flex-1 overflow-y-auto minimal-scrollbar pr-1">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                      {question.inputFormat || "Refer to the problem statement and visible test case input."}
+                      {question.inputFormat || "Standard input format according to the problem constraints."}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -517,52 +526,41 @@ export default function InterviewDsaQuestionDetail() {
               </div>
 
             {/* Sample Testcases */}
-              <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0">
-                <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
-                  Visible Test Cases
-                </h2>
-                {question.visibleTestCases?.length ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                    <div className="flex justify-between items-center px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      <span>Input</span>
-                      <button 
-                        onClick={() => {
-                          const text = question.visibleTestCases[0]?.input || "";
-                          navigator.clipboard.writeText(text);
-                        }}
-                        className="bg-[#0043A1] text-white border-none px-2 py-0.5 rounded text-[9px] font-semibold hover:bg-[#003680] transition active:scale-95"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
-                      {question.visibleTestCases[0]?.input || ""}
-                    </pre>
-                  </div>
+            <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/35 dark:bg-[#001233]/45 rounded-xl p-3 hover:border-gray-400 dark:hover:border-zinc-500 transition-colors shrink-0">
+              <h2 className="text-[10px] font-bold text-[#0d2a57] dark:text-white uppercase tracking-wider pl-1 mb-2">
+                Visible Test Cases
+              </h2>
+              {question.visibleTestCases?.length ? (
+                <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1 minimal-scrollbar">
+                  {question.visibleTestCases.map((tc, index) => (
+                    <div key={index} className="space-y-2">
+                      <p className="text-[10px] font-bold text-slate-500 mb-1">Test Case #{index + 1}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                          <div className="px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <span>Input</span>
+                          </div>
+                          <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
+                            {tc.input || ""}
+                          </pre>
+                        </div>
 
-                  <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-                    <div className="flex justify-between items-center px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                      <span>Output</span>
-                      <button 
-                        onClick={() => {
-                          const text = question.visibleTestCases[0]?.output || question.visibleTestCases[0]?.expectedOutput || "";
-                          navigator.clipboard.writeText(text);
-                        }}
-                        className="bg-[#0043A1] text-white border-none px-2 py-0.5 rounded text-[9px] font-semibold hover:bg-[#003680] transition active:scale-95"
-                      >
-                        Copy
-                      </button>
+                        <div className="bg-white/60 dark:bg-[#111827] border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
+                          <div className="px-3 py-1.5 bg-gray-100 dark:bg-[#1f2937] border-b border-gray-300 dark:border-gray-700 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            <span>Output</span>
+                          </div>
+                          <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
+                            {tc.output || tc.expectedOutput || ""}
+                          </pre>
+                        </div>
+                      </div>
                     </div>
-                    <pre className="p-2.5 text-[11px] font-mono text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-[#0b0f19] overflow-x-auto whitespace-pre-wrap no-scrollbar">
-                      {question.visibleTestCases[0]?.output || question.visibleTestCases[0]?.expectedOutput || ""}
-                    </pre>
-                  </div>
+                  ))}
                 </div>
-                ) : (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">No visible test cases were provided for this question.</p>
-                )}
-              </div>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">No visible test cases were provided for this question.</p>
+              )}
+            </div>
           </aside>
 
           {/* Right Panel - Divided into 2 cards (ratio 2:1, outer cards rounded, inner modules sharp) */}
@@ -572,21 +570,24 @@ export default function InterviewDsaQuestionDetail() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 shrink-0 border-b border-black/5 dark:border-white/5 pb-2">
                 <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
                   <span className="text-sm font-semibold text-[#0d2a57] dark:text-[#8fd9ff]">Code Editor</span>
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => {
-                      const nextLang = e.target.value;
-                      setSelectedLanguage(nextLang);
-                      setCode(LANGUAGES[nextLang].starter);
-                    }}
-                    className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  >
-                    {Object.values(LANGUAGES).map((lang) => (
-                      <option key={lang.id} value={lang.id}>
-                        {lang.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative inline-block">
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => {
+                        const nextLang = e.target.value;
+                        setSelectedLanguage(nextLang);
+                        setCode(question?.starterCode?.[nextLang]?.code || question?.solutionCode || LANGUAGES[nextLang]?.starter);
+                      }}
+                      className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"
+                    >
+                      {Object.values(LANGUAGES).map((lang) => (
+                        <option key={lang.id} value={lang.id}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+                  </div>
                 </div>
                 
                 {/* Run / Submit buttons in Top Right Corner of Editor Card */}

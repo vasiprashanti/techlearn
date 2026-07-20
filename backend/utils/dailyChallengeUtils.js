@@ -59,8 +59,12 @@ export const mapQuestionToProblem = (question) => ({
   inputDescription: question.inputFormat || "Refer to the prompt for input details.",
   outputDescription: question.outputFormat || "Return the expected output for the given input.",
   categoryType: question.categoryType || "Coding",
+  tags: question.tags || [],
+  categoryTitle: question.categoryTitle || "",
   content: {
     options: question.content?.options || question.options || [],
+    tags: question.tags || [],
+    categoryTitle: question.categoryTitle || "",
   },
   visibleTestCases: (question.visibleTestCases?.length ? question.visibleTestCases : question.content?.visibleTestCases || []).map((testCase) => ({
     input: testCase.input || "",
