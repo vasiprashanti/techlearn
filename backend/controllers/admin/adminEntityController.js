@@ -1751,9 +1751,9 @@ todayXp = todayChallengeXp + todayTaskXp;
         dailyTasks: [],
         dailyChallenge: [],
         metrics: {
-          coding: { score: 0, accuracy: 0, count: 0, xp: 0 },
-          mcq: { score: 0, accuracy: 0, count: 0, xp: 0 },
-          sql: { score: 0, accuracy: 0, count: 0, xp: 0 },
+          coding: { score: 0, accuracy: 0, count: 0, xp: 0, earnedScore: 0, maxScore: 0 },
+          mcq: { score: 0, accuracy: 0, count: 0, xp: 0, earnedScore: 0, maxScore: 0 },
+          sql: { score: 0, accuracy: 0, count: 0, xp: 0, earnedScore: 0, maxScore: 0 },
           totalScore: 0,
           totalXp: 0,
         },
@@ -1767,6 +1767,8 @@ todayXp = todayChallengeXp + todayTaskXp;
         metric.accuracy += Number(item.accuracy || 0);
         metric.count += 1;
         metric.xp += Number(item.xp || 0);
+        metric.earnedScore += Number(item.earnedScore || 0);
+        metric.maxScore += Number(item.maxScore || 0);
         dayReport.metrics.totalScore += Number(item.score || 0);
         dayReport.metrics.totalXp += Number(item.xp || 0);
       };
@@ -1834,15 +1836,29 @@ todayXp = todayChallengeXp + todayTaskXp;
             const rawType = String(task.taskType || question.categoryType || question.trackType || "Coding").toLowerCase();
             const type = rawType === "sql" ? "sql" : (rawType === "mcq" || rawType === "aptitude" || rawType === "core cs" ? "mcq" : "coding");
             const accuracy = Number(task.accuracy ?? (task.isCorrect === true ? 100 : 0));
+            const configuredTask = activeDailyTaskTemplate?.dayAssignments
+              ?.find((entry) => entry.dayNumber === day)
+              ?.tasks?.find((entry) => String(entry.questionId?._id || entry.questionId) === String(task.questionId?._id || task.questionId));
+            const maxScore = Number(configuredTask?.xpValue || 0) || calculateTaskXP({
+              taskType: task.taskType,
+              difficulty: question.difficulty || "Easy",
+              accuracy: 100,
+            });
             addReportItem(dayReport, "dailyTasks", {
               source: "Daily Task",
               type,
+              questionId: String(task.questionId?._id || task.questionId),
               title: question.title || "Daily Task question",
               language: task.language || "",
               code: task.code || "",
               score: accuracy,
               accuracy,
               xp: Number(task.xpEarned || 0),
+              earnedScore: Math.round((accuracy / 100) * maxScore),
+              maxScore,
+              executionTime: 0,
+              memoryUsed: 0,
+              testCases: [],
               selectedOption: type === "mcq" ? toAnswerLabel(task.selectedOption) : "",
               correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
               status: task.status || "Not Started",
@@ -1904,7 +1920,8 @@ todayXp = todayChallengeXp + todayTaskXp;
 
         let dayTaskSubs = allCombinedSubs.filter(sub => {
           const subId = String(sub.questionId?._id || sub.questionId || sub.collegeMcqId?._id || sub.collegeMcqId || sub.questionBankId || sub._id);
-          return assignedTaskIdsForDay.has(subId);
+          const matchesWorkingDay = !sub.workingDay || Number(sub.workingDay) === day;
+          return assignedTaskIdsForDay.has(subId) && matchesWorkingDay;
         });
 
         if (dayTaskSubs.length === 0 && !dayAttempt) {
@@ -1912,6 +1929,25 @@ todayXp = todayChallengeXp + todayTaskXp;
           const dayStart = new Date(releaseStart.getTime() + (day - 1) * 24 * 60 * 60 * 1000);
           const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
           dayTaskSubs = allCombinedSubs.filter(sub => sub.date >= dayStart && sub.date <= dayEnd && sub.challengeType !== "daily_challenge" && !sub.codingRoundId);
+        }
+
+        // DailyTaskAttempt stores one row per assigned question, while Submission
+        // stores the richer execution payload. Merge them so every coding answer
+        // remains visible with its code and execution details.
+        if (dayAttempt && dayTaskSubs.length > 0) {
+          dayReport.dailyTasks.forEach((item) => {
+            if (item.type !== "coding" && item.type !== "sql") return;
+            const submission = dayTaskSubs.find((entry) =>
+              String(entry.questionId?._id || entry.questionId || entry.questionBankId || "") === String(item.questionId || "")
+            );
+            if (!submission) return;
+            item.language = submission.language || item.language;
+            item.code = submission.submittedCode || submission.code || item.code;
+            item.testCases = submission.finalSubmissionResults?.testCaseDetails || submission.testCaseResults || [];
+            item.executionTime = Number(submission.executionTime || item.testCases.reduce((sum, result) => sum + Number(result.executionTime || 0), 0));
+            item.memoryUsed = Number(submission.memoryUsed || item.testCases.reduce((max, result) => Math.max(max, Number(result.memoryUsed || 0)), 0));
+            item.status = submission.status || item.status;
+          });
         }
 
         // Older task attempts may not have a DailyTaskAttempt document. Keep those
@@ -1948,6 +1984,11 @@ todayXp = todayChallengeXp + todayTaskXp;
             const rawType = String(question.categoryType || question.trackType || submission.categoryType || submission.track || "Coding").toLowerCase();
             const type = rawType === "sql" ? "sql" : (rawType === "mcq" || rawType === "aptitude" || rawType === "core cs" ? "mcq" : "coding");
             const score = Number(submission.accuracyScore ?? submission.accuracy ?? submission.totalScore ?? (submission.isCorrect ? 100 : 0));
+            const maxScore = calculateTaskXP({
+              taskType: type,
+              difficulty: question.difficulty || "Easy",
+              accuracy: 100,
+            });
             addReportItem(dayReport, "dailyTasks", {
               source: "Daily Task",
               type,
@@ -1957,6 +1998,11 @@ todayXp = todayChallengeXp + todayTaskXp;
               score,
               accuracy: score,
               xp: Number(submission.xpEarned || 0),
+              earnedScore: Math.round((score / 100) * maxScore),
+              maxScore,
+              executionTime: Number(submission.executionTime || (submission.finalSubmissionResults?.testCaseDetails || []).reduce((sum, result) => sum + Number(result.executionTime || 0), 0)),
+              memoryUsed: Number(submission.memoryUsed || (submission.finalSubmissionResults?.testCaseDetails || []).reduce((max, result) => Math.max(max, Number(result.memoryUsed || 0)), 0)),
+              testCases: submission.finalSubmissionResults?.testCaseDetails || submission.testCaseResults || [],
               selectedOption: type === "mcq" ? toAnswerLabel(submission.selectedAnswer) : "",
               correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
               status: submission.status || "Submitted",
@@ -2308,6 +2354,9 @@ todayXp = todayChallengeXp + todayTaskXp;
               ? Math.round((testResults.filter((result) => result.passed).length / testResults.length) * 100)
               : score;
             const difficultyXp = { Easy: 25, Medium: 50, Hard: 90 }[question.difficulty] || 25;
+            const maxScore = type === "coding"
+              ? ({ Easy: 10, Medium: 20, Hard: 30 }[question.difficulty] || 10)
+              : (type === "sql" ? 10 : 1);
             addReportItem(dayReport, "dailyChallenge", {
               source: "Daily Challenge",
               type,
@@ -2317,10 +2366,14 @@ todayXp = todayChallengeXp + todayTaskXp;
               score,
               accuracy,
               xp: Math.round((score / 100) * difficultyXp),
+              earnedScore: Math.round((score / 100) * maxScore),
+              maxScore,
               selectedOption: type === "mcq" ? toAnswerLabel(getMapValue(studentChallengeSub.problemCodes, String(index))) : "",
               correctAnswer: type === "mcq" ? toAnswerLabel(question.content?.correctOption) : "",
               status: getMapValue(studentChallengeSub.problemSubmitted, String(index)) ? "Submitted" : "Not submitted",
               testCases: testResults,
+              executionTime: testResults.reduce((sum, result) => sum + Number(result.executionTime || 0), 0),
+              memoryUsed: testResults.reduce((max, result) => Math.max(max, Number(result.memoryUsed || 0)), 0),
             });
           });
         }

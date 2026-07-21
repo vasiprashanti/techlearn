@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import {
   getAdminMetrics,
   getCourseTopicsForDashboard,
@@ -22,6 +23,16 @@ import {
 } from "../controllers/fileUploadController.js";
 
 const adminRouter = express.Router();
+const courseBannerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!String(file.mimetype || "").startsWith("image/")) {
+      return cb(new Error("Banner must be an image file"));
+    }
+    cb(null, true);
+  },
+});
 
 // Admin metrics route (protected)
 adminRouter.get("/dashboard/stats", protect, isAdmin, getAdminMetrics);
@@ -33,8 +44,8 @@ adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
 adminRouter.put("/topic/:topicId", protect, isAdmin, upload.any(), editTopicDetails);
 adminRouter.delete("/topic/:topicId", protect, isAdmin, deleteTopic);
 
-adminRouter.post("/course-initiate", protect, isAdmin, upload.single("bannerFile"), createCourseShell);
-adminRouter.put("/:courseId", protect, isAdmin, upload.single("bannerFile"), updateCourseShell);
+adminRouter.post("/course-initiate", protect, isAdmin, courseBannerUpload.single("bannerFile"), createCourseShell);
+adminRouter.put("/:courseId", protect, isAdmin, courseBannerUpload.single("bannerFile"), updateCourseShell);
 
 adminRouter.post("/:courseId/topics", protect, isAdmin, addMultipleTopics);
 

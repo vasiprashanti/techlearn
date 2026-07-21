@@ -132,6 +132,7 @@ const OnlineCompiler = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [code, setCode] = useState(() => initialDraftRef.current?.code || LANGUAGES.html.defaultCode);
   const [output, setOutput] = useState('');
+  const [customInput, setCustomInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [editorTheme, setEditorTheme] = useState(theme === 'dark' ? 'vs-dark' : 'light');
   const [activeView, setActiveView] = useState('editor'); // 'editor' or 'preview'
@@ -250,7 +251,7 @@ const OnlineCompiler = () => {
       const result = await compilerAPI.compileCode({
         language: selectedLanguage,
         source_code: code,
-        stdin: ''
+        stdin: customInput
       });
 
       // Format the output
@@ -676,7 +677,7 @@ const OnlineCompiler = () => {
                           </button>
                         </div>
                       </div>
-                      <div className="h-[calc(100%-4rem)] overflow-hidden">
+                      <div className="h-[calc(100%-4rem)] overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
                             srcDoc={getPreviewContent()}
@@ -685,11 +686,15 @@ const OnlineCompiler = () => {
                             title="Live Preview"
                           />
                         ) : (
-                          <div className="h-full p-4 overflow-auto">
-                            <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
-                              {renderOutput(output)}
-                            </pre>
-                          </div>
+                          <>
+                            <div className="shrink-0 border-b border-white/10 dark:border-gray-700/20 p-3">
+                              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Input</label>
+                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={4} placeholder="Enter stdin values here, one line at a time" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
+                            </div>
+                            <div className="min-h-0 flex-1 p-4 overflow-auto">
+                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">{renderOutput(output)}</pre>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -784,7 +789,7 @@ const OnlineCompiler = () => {
                           </button>
                         </div>
                       </div>
-                      <div className="h-[calc(100%-3.5rem)] overflow-hidden">
+                      <div className="h-[calc(100%-3.5rem)] overflow-hidden flex flex-col">
                         {currentLanguage.isWebLanguage ? (
                           <iframe
                             srcDoc={getPreviewContent()}
@@ -793,11 +798,15 @@ const OnlineCompiler = () => {
                             title="Live Preview"
                           />
                         ) : (
-                          <div className="h-full p-4 overflow-auto">
-                            <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">
-                              {renderOutput(output)}
-                            </pre>
-                          </div>
+                          <>
+                            <div className="shrink-0 border-b border-white/10 dark:border-gray-700/20 p-3">
+                              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300">Custom Input</label>
+                              <textarea value={customInput} onChange={(event) => setCustomInput(event.target.value)} rows={3} placeholder="Enter stdin values here" className="w-full resize-y rounded-lg border border-gray-300/70 bg-white/70 px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:border-blue-500 dark:border-gray-700 dark:bg-gray-950/60 dark:text-gray-100" />
+                            </div>
+                            <div className="min-h-0 flex-1 p-4 overflow-auto">
+                              <pre className="text-sm text-gray-900 dark:text-gray-100 font-mono whitespace-pre-wrap">{renderOutput(output)}</pre>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>

@@ -301,7 +301,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
 
             {/* Sub-tabs selection row */}
             <div className="flex border-b border-black/10 dark:border-white/10 overflow-x-auto minimal-scrollbar">
-              {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Daily Performance'].map(tab => (
+              {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -523,7 +523,8 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                   }
                   return <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-3 space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="font-semibold">{item.title}</span><span className="text-slate-400">{item.source} · {item.language || item.type}</span></div>
-                    <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-500 dark:text-slate-400"><span>Score <strong className="text-slate-800 dark:text-white">{item.score}%</strong></span><span>Accuracy <strong className="text-slate-800 dark:text-white">{item.accuracy}%</strong></span><span>XP <strong className="text-slate-800 dark:text-white">{item.xp}</strong></span></div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] text-slate-500 dark:text-slate-400"><span>Score <strong className="text-slate-800 dark:text-white">{item.earnedScore || 0}/{item.maxScore || 0}</strong></span><span>Accuracy <strong className="text-slate-800 dark:text-white">{item.accuracy}%</strong></span><span>XP <strong className="text-slate-800 dark:text-white">{item.xp}</strong></span><span>Time <strong className="text-slate-800 dark:text-white">{item.executionTime ? `${item.executionTime} ms` : '—'}</strong></span><span>Memory <strong className="text-slate-800 dark:text-white">{item.memoryUsed ? `${item.memoryUsed} KB` : '—'}</strong></span></div>
+                    {item.testCases?.length > 0 && <div className="text-[11px] text-slate-500 dark:text-slate-400">Test cases: <strong className="text-slate-800 dark:text-white">{item.testCases.filter((result) => result.passed).length}/{item.testCases.length} passed</strong></div>}
                     {item.code && <pre className="max-h-40 overflow-auto rounded-md bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200 whitespace-pre-wrap">{item.code}</pre>}
                   </div>;
                 };
@@ -688,7 +689,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               )}
 
               {/* TAB 5: DAILY PERFORMANCE MATRIX */}
-              {activeTab === 'Daily Performance' && (
+              {activeTab === 'Day-wise Performance' && (
                 <div className="space-y-4">
                   <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Day-wise Performance</h3>
                   <div className="max-h-[55vh] overflow-auto minimal-scrollbar rounded-xl border border-black/5 dark:border-white/10">
@@ -700,7 +701,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                         {Object.values(batchStudentData?.dayWiseStudentReport || {}).filter((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0).map((day) => (
                           <tr key={day.dayNumber} className="border-t border-black/5 dark:border-white/10">
                             <td className="p-3 font-semibold">Day {day.dayNumber}</td>
-                            {['coding', 'mcq', 'sql'].map((type) => <td key={type} className="p-3">{day.metrics[type].score || 0}% <span className="text-slate-400">({day.metrics[type].accuracy || 0}% acc.)</span></td>)}
+                            {['coding', 'mcq', 'sql'].map((type) => <td key={type} className="p-3">{type === 'coding' ? `${day.metrics[type].earnedScore || 0} / ${day.metrics[type].maxScore || 0}` : `${day.metrics[type].score || 0}%`} <span className="text-slate-400">({day.metrics[type].accuracy || 0}% acc.)</span></td>)}
                             <td className="p-3 font-semibold">{day.metrics.totalScore || 0}</td><td className="p-3 font-semibold text-blue-600 dark:text-blue-300">{day.metrics.totalXp || 0} XP</td>
                           </tr>
                         ))}
