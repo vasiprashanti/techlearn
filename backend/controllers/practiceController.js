@@ -528,10 +528,18 @@ export const recordPracticeSubmission = async (req, res) => {
                   // Award XP only for correct tasks in this track
                   const { calculateTaskXP, TASK_XP } = await import("../services/xpService.js");
                   let totalXpAdded = 0;
+                  const trackedTasks = attempt.tasksProgress.filter((progressTask) => isSameTrack(progressTask.taskType));
+                  const trackedQuestions = await Question.find({
+                    _id: { $in: trackedTasks.map((progressTask) => progressTask.questionId).filter(Boolean) },
+                  }).select("_id difficulty").lean();
+                  const difficultyByQuestionId = new Map(
+                    trackedQuestions.map((trackedQuestion) => [String(trackedQuestion._id), trackedQuestion.difficulty || "Easy"])
+                  );
                   
                   attempt.tasksProgress.forEach((t) => {
                     if (isSameTrack(t.taskType)) {
-                      let xpEarned = calculateTaskXP({ taskType: t.taskType, hintsUsed: t.hintsUsed });
+                      const difficulty = difficultyByQuestionId.get(String(t.questionId)) || "Easy";
+                      let xpEarned = calculateTaskXP({ taskType: t.taskType, difficulty, hintsUsed: t.hintsUsed });
                       let earned = 0;
                       if (t.taskType === "Coding" || t.taskType === "SQL") {
                         const acc = typeof t.accuracy === "number" ? t.accuracy : (t.isCorrect ? 100 : 0);

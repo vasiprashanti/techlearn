@@ -383,7 +383,8 @@ export const submitDailyTask = async (req, res) => {
     const isValidAttempt = task.isCorrect === true || accuracy > 0;
     let xpEarned = 0;
     if (isValidAttempt) {
-      xpEarned = Number(configuredTask?.xpValue || 0) > 0
+      const usesDifficultyBasedMcqXp = ["MCQ", "Aptitude", "Core CS"].includes(taskType);
+      xpEarned = !usesDifficultyBasedMcqXp && Number(configuredTask?.xpValue || 0) > 0
         ? Number(configuredTask.xpValue)
         : calculateTaskXP({ taskType, difficulty, accuracy });
     }

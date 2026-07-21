@@ -223,7 +223,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
       
-      <div className="relative w-full max-w-3xl rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-3xl max-h-[90vh] rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0a1737] shadow-2xl overflow-hidden flex flex-col">
         {/* Top Accent line */}
         <div className="h-1.5 w-full bg-blue-500" />
 
@@ -249,7 +249,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading student registry report...</p>
           </div>
         ) : (
-          <div className="flex flex-col p-6 space-y-5">
+          <div className="flex flex-col p-6 space-y-5 overflow-y-auto min-h-0 minimal-scrollbar">
             
             {/* College, Batch, Track Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5">
@@ -691,7 +691,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               {activeTab === 'Daily Performance' && (
                 <div className="space-y-4">
                   <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Day-wise Performance</h3>
-                  <div className="overflow-x-auto rounded-xl border border-black/5 dark:border-white/10">
+                  <div className="max-h-[55vh] overflow-auto minimal-scrollbar rounded-xl border border-black/5 dark:border-white/10">
                     <table className="w-full min-w-[760px] text-left text-xs">
                       <thead className="bg-slate-50 dark:bg-white/5 text-[10px] uppercase tracking-wider text-slate-400">
                         <tr><th className="p-3">Day</th><th className="p-3">Coding</th><th className="p-3">MCQ</th><th className="p-3">SQL</th><th className="p-3">Total Score</th><th className="p-3">Total XP</th></tr>

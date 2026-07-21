@@ -865,7 +865,7 @@ export default function DailyChallengeTest() {
       <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden overflow-y-auto p-4 gap-3">
           {/* Left Panel - Contains active problem description and list tabs if multiple questions exist */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-y-auto minimal-scrollbar rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3"
+            className="w-full lg:w-[35%] xl:w-[40%] h-[420px] lg:h-full flex flex-col shrink-0 overflow-y-auto minimal-scrollbar scroll-pb-10 rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 pb-10 gap-3"
           >
             {challenge?.problems?.length > 1 && (
               <div className="flex border-b border-white/5 pb-2 mb-1 gap-2 overflow-x-auto select-none shrink-0 no-scrollbar">
