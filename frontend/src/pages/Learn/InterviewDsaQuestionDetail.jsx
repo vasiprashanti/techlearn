@@ -293,12 +293,53 @@ export default function InterviewDsaQuestionDetail() {
         language: selectedLanguage,
         finalize: false,
       });
-      const passed = Number(res?.passedTestCases || 0);
-      const total = Number(res?.totalTestCases || 0);
-      const accuracy = Number(res?.accuracy || 0);
-      const detail = total > 0 ? `${passed}/${total} test cases passed (${accuracy}% accuracy).` : 'Code submitted for evaluation.';
-      setOutput(detail);
-      setIsLastSubmissionCorrect(Boolean(res?.isCorrect));
+
+      // res is the full payload: { success, data: submission, compileSuccess, errorType, ... }
+      const submission = res?.data || res;
+      const outputLines = [];
+
+      if (res?.compileSuccess === false) {
+        // Compilation or runtime error — show full error details
+        outputLines.push('❌ ' + (res.errorType || 'Execution failed.'));
+        if (res.errorMessage) {
+          outputLines.push(res.errorMessage);
+        }
+        setIsLastSubmissionCorrect(false);
+      } else {
+        // Successful compilation — show test case results
+        const passed = Number(submission?.passedTestCases || 0);
+        const total = Number(submission?.totalTestCases || 0);
+        outputLines.push(`✅ Code executed successfully.`);
+
+        if (res?.consoleOutput) {
+          outputLines.push(`\nConsole Output:\n${res.consoleOutput}`);
+        }
+        if (res?.executionTime != null) {
+          outputLines.push(`Execution Time: ${res.executionTime}s`);
+        }
+        if (res?.memory != null) {
+          outputLines.push(`Memory Usage: ${res.memory} KB`);
+        }
+
+        if (total > 0) {
+          outputLines.push(`\nTest Cases: ${passed}/${total} passed`);
+          const visibleResults = (submission?.testCaseResults || []).filter(tc => tc.visible);
+          visibleResults.forEach((tc, idx) => {
+            outputLines.push(
+              `  Test ${idx + 1}: ${tc.passed ? '✅ Passed' : '❌ Failed'}\n` +
+              `    Expected: ${tc.expectedOutput ?? 'N/A'}\n` +
+              (!tc.passed ? `    Actual: ${tc.actualOutput ?? '(empty)'}\n` : '') +
+              (tc.executionTime ? `    Time: ${tc.executionTime}s` : '')
+            );
+          });
+        } else {
+          outputLines.push('Code submitted for evaluation.');
+        }
+
+        setIsLastSubmissionCorrect(Boolean(submission?.isCorrect));
+      }
+
+      setOutput(outputLines.join('\n'));
     } catch (error) {
       setOutput(`Execution failed: ${error?.message || 'Unknown error occurred'}`);
     } finally {
@@ -321,20 +362,54 @@ export default function InterviewDsaQuestionDetail() {
         language: selectedLanguage,
         finalize: false,
       });
-      const passed = Number(res?.passedTestCases || 0);
-      const total = Number(res?.totalTestCases || 0);
-      const accuracy = Number(res?.accuracy || 0);
-      if (res?.isCorrect) {
-        setOutput(`Submission successful! ${passed}/${total} test cases passed.`);
-        setIsLastSubmissionCorrect(true);
-      } else if (passed > 0) {
-        setOutput(`Partial submission saved. ${passed}/${total} test cases passed (${accuracy}% accuracy).`);
+
+      const submission = res?.data || res;
+      const outputLines = [];
+
+      if (res?.compileSuccess === false) {
+        // Compilation or runtime error — do not count as submitted
+        outputLines.push('❌ Submission blocked — ' + (res.errorType || 'Execution failed.'));
+        if (res.errorMessage) {
+          outputLines.push(res.errorMessage);
+        }
         setIsLastSubmissionCorrect(false);
       } else {
-        setOutput(total > 0 ? `Submission saved. 0/${total} test cases passed.` : 'Submission saved for evaluation.');
-        setIsLastSubmissionCorrect(false);
+        const passed = Number(submission?.passedTestCases || 0);
+        const total = Number(submission?.totalTestCases || 0);
+        const accuracy = Number(submission?.accuracy || 0);
+
+        if (submission?.isCorrect) {
+          outputLines.push(`✅ Submission successful! ${passed}/${total} test cases passed.`);
+          setIsLastSubmissionCorrect(true);
+        } else if (passed > 0) {
+          outputLines.push(`⚠️ Partial submission saved. ${passed}/${total} test cases passed (${accuracy}% accuracy).`);
+          setIsLastSubmissionCorrect(false);
+        } else {
+          outputLines.push(total > 0 ? `❌ Submission saved. 0/${total} test cases passed.` : 'Submission saved for evaluation.');
+          setIsLastSubmissionCorrect(false);
+        }
+
+        if (res?.consoleOutput) {
+          outputLines.push(`\nConsole Output:\n${res.consoleOutput}`);
+        }
+
+        if (total > 0) {
+          outputLines.push(`\nVisible Test Cases:`);
+          const visibleResults = (submission?.testCaseResults || []).filter(tc => tc.visible);
+          visibleResults.forEach((tc, idx) => {
+            outputLines.push(
+              `  Test ${idx + 1}: ${tc.passed ? '✅ Passed' : '❌ Failed'}\n` +
+              `    Expected: ${tc.expectedOutput ?? 'N/A'}\n` +
+              (!tc.passed ? `    Actual: ${tc.actualOutput ?? '(empty)'}\n` : '') +
+              (tc.executionTime ? `    Time: ${tc.executionTime}s` : '')
+            );
+          });
+        }
+
+        window.dispatchEvent(new CustomEvent('xpUpdated'));
       }
-      window.dispatchEvent(new CustomEvent('xpUpdated'));
+
+      setOutput(outputLines.join('\n'));
     } catch (error) {
       setOutput(`Submission failed: ${error?.message || 'Unknown error occurred'}`);
     }

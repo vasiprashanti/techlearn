@@ -51,7 +51,12 @@ export const practiceAPI = {
       headers: buildHeaders(),
       body: JSON.stringify({ questionId, track, isCorrect, code, language, selectedAnswer, finalize }),
     });
-    return handleResponse(response);
+    // Return full payload (not just .data) so compile context fields are accessible alongside submission
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.message || `Request failed with status ${response.status}`);
+    }
+    return payload;
   },
 };
 

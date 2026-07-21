@@ -13,7 +13,7 @@ import {
   verifyOTP,
   sendOTPEmail,
 } from "../utils/mcqCodingUtils.js";
-import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
+import { testCodeWithJudge0, LANGUAGE_IDS, extractLineNumber, normalizeOutput } from "../utils/judgeUtil.js";
 import {
   DAILY_CHALLENGE_RULES,
   ensureDailyChallengeAttempt,
@@ -1400,47 +1400,108 @@ export const submitCodingRoundAnswers = async (req, res) => {
       ];
       totalTests = allTestCases.length;
 
-      for (let i = 0; i < totalTests; i++) {
-        const testCase = allTestCases[i];
+      let isCompiledSuccessfully = true;
 
-        try {
-          const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
-          const testResult = await testCodeWithJudge0(
-            submittedCode,
-            languageId,
-            testCase.input,
-            targetExpectedOutput
-          );
+      // Compile check with first test case
+      const firstTC = allTestCases[0];
+      let firstTestResult = null;
+      if (firstTC) {
+        const targetExpectedOutput = firstTC.expectedOutput !== undefined ? firstTC.expectedOutput : firstTC.output;
+        firstTestResult = await testCodeWithJudge0(
+          submittedCode,
+          languageId,
+          firstTC.input,
+          targetExpectedOutput
+        );
 
-          const passed = testResult.success && testResult.outputMatches;
+        const statusId = firstTestResult.statusId;
+        const isCompileError = statusId === 6;
+        const isRuntimeError = statusId >= 7 && statusId <= 12;
+
+        if (isCompileError || isRuntimeError) {
+          isCompiledSuccessfully = false;
+          const errorType = isCompileError ? "Compilation Error" : "Runtime Error";
+          for (const tc of allTestCases) {
+            testCaseDetails.push({
+              index: tc.index,
+              visible: tc.visible,
+              passed: false,
+              expectedOutput: tc.expectedOutput !== undefined ? tc.expectedOutput : tc.output,
+              actualOutput: firstTestResult.actualOutput || firstTestResult.output || "",
+              status: `${errorType}: ${firstTestResult.statusDescription || "Failed"}`,
+              error: firstTestResult.error || "",
+              executionTime: 0,
+              memoryUsed: 0,
+            });
+          }
+          testsPassed = 0;
+          testsFailed = allTestCases.length;
+        }
+      }
+
+      if (isCompiledSuccessfully) {
+        if (firstTC && firstTestResult) {
+          const targetExpectedOutput = firstTC.expectedOutput !== undefined ? firstTC.expectedOutput : firstTC.output;
+          const passed = firstTestResult.success && firstTestResult.outputMatches;
           if (passed) {
             testsPassed++;
           } else {
             testsFailed++;
           }
           testCaseDetails.push({
-            index: testCase.index,
-            visible: testCase.visible,
+            index: firstTC.index,
+            visible: firstTC.visible,
             passed,
             expectedOutput: targetExpectedOutput || "",
-            actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
-            status: testResult.statusDescription || "",
-            executionTime: Number(testResult.executionTime || 0),
-            memoryUsed: Number(testResult.memory || 0),
+            actualOutput: passed ? undefined : (firstTestResult.actualOutput || firstTestResult.output || ""),
+            status: firstTestResult.statusDescription || "",
+            executionTime: Number(firstTestResult.executionTime || 0),
+            memoryUsed: Number(firstTestResult.memory || 0),
           });
-        } catch (error) {
-          const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
-          testsFailed++;
-          testCaseDetails.push({
-            index: testCase.index,
-            visible: testCase.visible,
-            passed: false,
-            expectedOutput: targetExpectedOutput || "",
-            actualOutput: "",
-            status: error?.message || "Execution Error",
-            executionTime: 0,
-            memoryUsed: 0,
-          });
+        }
+
+        // Loop remaining test cases
+        for (let i = 1; i < totalTests; i++) {
+          const testCase = allTestCases[i];
+          try {
+            const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
+            const testResult = await testCodeWithJudge0(
+              submittedCode,
+              languageId,
+              testCase.input,
+              targetExpectedOutput
+            );
+
+            const passed = testResult.success && testResult.outputMatches;
+            if (passed) {
+              testsPassed++;
+            } else {
+              testsFailed++;
+            }
+            testCaseDetails.push({
+              index: testCase.index,
+              visible: testCase.visible,
+              passed,
+              expectedOutput: targetExpectedOutput || "",
+              actualOutput: passed ? undefined : (testResult.actualOutput || testResult.output || ""),
+              status: testResult.statusDescription || "",
+              executionTime: Number(testResult.executionTime || 0),
+              memoryUsed: Number(testResult.memory || 0),
+            });
+          } catch (error) {
+            const targetExpectedOutput = testCase.expectedOutput !== undefined ? testCase.expectedOutput : testCase.output;
+            testsFailed++;
+            testCaseDetails.push({
+              index: testCase.index,
+              visible: testCase.visible,
+              passed: false,
+              expectedOutput: targetExpectedOutput || "",
+              actualOutput: "",
+              status: error?.message || "Execution Error",
+              executionTime: 0,
+              memoryUsed: 0,
+            });
+          }
         }
       }
     }
@@ -1865,32 +1926,120 @@ export const runCodingRoundAnswers = async (req, res) => {
       const visibleTestCases = (problem.visibleTestCases && problem.visibleTestCases.length > 0)
         ? problem.visibleTestCases
         : ((question?.visibleTestCases?.length ? question.visibleTestCases : question?.content?.visibleTestCases) || []);
-      const simpleInput = customInput !== undefined ? customInput : (visibleTestCases.length > 0 ? visibleTestCases[0].input : "");
+      const hasCustomInput = customInput !== undefined;
+      const simpleInput = hasCustomInput ? customInput : (visibleTestCases.length > 0 ? visibleTestCases[0].input : "");
       
       try {
-        const result = await testCodeWithJudge0(
+        // Step 1: Compile the code using simpleInput
+        const firstResult = await testCodeWithJudge0(
           submittedCode,
           languageId,
           simpleInput,
-          "" // No expected output check needed
+          ""
         );
 
-        // Compile success means status is not Compilation Error (6)
-        const compileSuccess = result.statusId !== 6;
+        const statusId = firstResult.statusId;
+        const isCompileError = statusId === 6;
+        const isRuntimeError = statusId >= 7 && statusId <= 12;
+
+        if (isCompileError || isRuntimeError) {
+          const errorType = isCompileError ? "Compilation Error" : "Runtime Error";
+          const errMessage = firstResult.error || "";
+          const lineNum = extractLineNumber(errMessage);
+          
+          runResults.push({
+            problemIndex,
+            language,
+            runsLeft: 999,
+            compileSuccess: false,
+            error: `Type: ${errorType}\n` +
+                   `Status: ${firstResult.statusDescription || "Failed"}\n` +
+                   (lineNum ? `Line Number: ${lineNum}\n` : "") +
+                   `Error Message:\n${errMessage}`,
+            feedback: errorType,
+            statusDescription: firstResult.statusDescription,
+            actualOutput: firstResult.actualOutput
+          });
+          continue;
+        }
+
+        // Step 2: Run against all visible test cases
+        const visibleTestResults = [];
+        let passedCount = 0;
+
+        for (let idx = 0; idx < visibleTestCases.length; idx++) {
+          const tc = visibleTestCases[idx];
+          let tcResult;
+
+          if (idx === 0 && !hasCustomInput) {
+            const expectedOutput = tc.expectedOutput !== undefined ? tc.expectedOutput : tc.output;
+            const actualNormalized = normalizeOutput(firstResult.actualOutput);
+            const expectedNormalized = normalizeOutput(expectedOutput);
+            const passed = firstResult.success && (actualNormalized === expectedNormalized);
+
+            tcResult = {
+              input: tc.input || "",
+              expectedOutput: expectedOutput || "",
+              actualOutput: firstResult.actualOutput || "",
+              passed,
+              executionTime: firstResult.executionTime,
+              memory: firstResult.memory,
+              error: firstResult.error,
+              statusDescription: firstResult.statusDescription
+            };
+          } else {
+            const expectedOutput = tc.expectedOutput !== undefined ? tc.expectedOutput : tc.output;
+            const runRes = await testCodeWithJudge0(
+              submittedCode,
+              languageId,
+              tc.input || "",
+              expectedOutput || ""
+            );
+            tcResult = {
+              input: tc.input || "",
+              expectedOutput: expectedOutput || "",
+              actualOutput: runRes.actualOutput || "",
+              passed: runRes.passed,
+              executionTime: runRes.executionTime,
+              memory: runRes.memory,
+              error: runRes.error,
+              statusDescription: runRes.statusDescription
+            };
+          }
+
+          if (tcResult.passed) {
+            passedCount++;
+          }
+          visibleTestResults.push(tcResult);
+        }
+
+        const passedSummary = `${passedCount}/${visibleTestCases.length} test cases passed`;
+        let testCaseSummary = "";
+        if (visibleTestResults.length > 0) {
+          testCaseSummary = "\nVisible Test Cases:\n" + visibleTestResults.map((tc, idx) => {
+            return `  Test ${idx + 1}: ${tc.passed ? "✅ Passed" : "❌ Failed"}\n` +
+                   `    Input: ${tc.input}\n` +
+                   `    Expected: ${tc.expectedOutput}\n` +
+                   `    Actual: ${tc.actualOutput}\n` +
+                   (tc.executionTime ? `    Execution Time: ${tc.executionTime}s\n` : "") +
+                   (tc.memory ? `    Memory Used: ${tc.memory} KB\n` : "") +
+                   (tc.error ? `    Error: ${tc.error}\n` : "");
+          }).join("\n");
+        }
 
         runResults.push({
           problemIndex,
           language,
-          runsLeft: 999, // Unlimited runs support
-          compileSuccess,
-          actualOutput: result.actualOutput,
-          error: result.error,
-          executionTime: result.executionTime,
-          memory: result.memory,
-          statusDescription: result.statusDescription,
-          feedback: compileSuccess 
-            ? (result.statusId === 3 ? "Code compiled and executed successfully!" : `Run finished with status: ${result.statusDescription}`)
-            : `Compilation Error`
+          runsLeft: 999,
+          compileSuccess: true,
+          consoleOutput: firstResult.actualOutput || "",
+          executionTime: firstResult.executionTime,
+          memory: firstResult.memory,
+          statusDescription: firstResult.statusDescription,
+          feedback: `Code compiled and executed successfully! ${passedSummary}`,
+          visibleTestResults,
+          // Keep actualOutput for backward compatibility with frontend
+          actualOutput: `Console Output: ${firstResult.actualOutput || "(empty)"}\nExecution Time: ${firstResult.executionTime || 0}s\nMemory Usage: ${firstResult.memory || 0} KB${testCaseSummary}`
         });
       } catch (error) {
         console.error(`Error during simple execution:`, error);
