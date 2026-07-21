@@ -169,7 +169,6 @@ const testCodeWithJudge0 = async (
       passed: false, // Always false on error
       outputMatches: false,
       actualOutput: "",
-      expectedOutput,
       error: isRateLimited
         ? "Compiler service is rate limited right now. Please wait a minute and try again."
         : `API Error: ${apiMessage}`,
@@ -181,5 +180,11 @@ const testCodeWithJudge0 = async (
   }
 };
 
-export { testCodeWithJudge0, executeCodeWithJudge0, normalizeOutput, LANGUAGE_IDS };
+const extractLineNumber = (errorStr) => {
+  if (!errorStr) return null;
+  const lineMatch = errorStr.match(/line\s+(\d+)/i) || errorStr.match(/:(\d+):/);
+  return lineMatch ? Number(lineMatch[1]) : null;
+};
+
+export { testCodeWithJudge0, executeCodeWithJudge0, normalizeOutput, LANGUAGE_IDS, extractLineNumber };
 

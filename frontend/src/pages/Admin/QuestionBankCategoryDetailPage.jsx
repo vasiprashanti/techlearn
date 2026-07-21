@@ -425,6 +425,7 @@ export const QuestionBankCategoryDetailPage = () => {
         referenceLanguage: form.referenceLanguage,
         solutionCode: isCodingCategory ? form.solutionCode : '',
         editorial: form.editorial,
+        starterCode: isCodingCategory ? form.starterCode : undefined,
         options: isMcqCategory ? form.options : [],
         correctOption: isMcqCategory ? form.correctOption : '',
         explanation: isMcqCategory ? form.explanation : '',

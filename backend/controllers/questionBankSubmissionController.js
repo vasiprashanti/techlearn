@@ -5,7 +5,7 @@ import Category from "../models/Category.js";
 import Student from "../models/Student.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
 import Batch from "../models/Batch.js";
-import { testCodeWithJudge0, LANGUAGE_IDS } from "../utils/judgeUtil.js";
+import { testCodeWithJudge0, LANGUAGE_IDS, extractLineNumber, normalizeOutput } from "../utils/judgeUtil.js";
 import { normalizeCategoryType } from "../utils/questionBank.js";
 import mongoose from "mongoose";
 import rateLimit from "express-rate-limit";
@@ -171,6 +171,7 @@ const executeCode = async (code, language, testCase, timeLimit, memoryLimit) => 
         executionTime: judgeRes.executionTime || 0,
         memoryUsed: judgeRes.memoryUsed || 0,
         status: judgeRes.statusDescription || judgeRes.statusId || "Error",
+        statusId: judgeRes.statusId,
         output: judgeRes.actualOutput || judgeRes.output || "",
         error: judgeRes.error || judgeRes.compileOutput || null,
       };
@@ -178,6 +179,7 @@ const executeCode = async (code, language, testCase, timeLimit, memoryLimit) => 
       return {
         error: error.message,
         status: "Error",
+        statusId: null,
         passed: false,
       };
     }
@@ -350,26 +352,97 @@ export const runCode = [
       const runResults = [];
       let passedCount = 0;
 
-      for (let i = 0; i < visibleTestCases.length; i++) {
-        const testCase = visibleTestCases[i];
-        const result = await executeCode(
-          code,
-          language,
-          testCase,
-          submission.snapshotTimeLimit,
-          submission.snapshotMemoryLimit
-        );
+      // Guard: if no test cases, run a basic compile check with empty input
+      const compileCheckInput = visibleTestCases.length > 0 ? visibleTestCases[0] : { input: "", output: "" };
+      const firstResult = await executeCode(
+        code,
+        language,
+        compileCheckInput,
+        submission.snapshotTimeLimit,
+        submission.snapshotMemoryLimit
+      );
 
-        runResults.push({
-          testCaseIndex: i,
-          passed: result.passed,
-          executionTime: result.executionTime,
-          memoryUsed: result.memoryUsed,
-          status: result.status,
+      const compileStatusId = firstResult.statusId;
+      const isCompileError = compileStatusId === 6;
+      const isRuntimeError = compileStatusId >= 7 && compileStatusId <= 12;
+
+      if (isCompileError || isRuntimeError) {
+        // Halt and display complete error details
+        const errorType = isCompileError ? "Compilation Error" : "Runtime Error";
+        const errMessage = firstResult.error || "";
+        const lineNum = extractLineNumber(errMessage);
+
+        submission.runCount = (submission.runCount || 0) + 1;
+        await submission.save();
+
+        return res.json({
+          success: false,
+          error: {
+            type: errorType,
+            message: `Type: ${errorType}\n` +
+                     `Status: ${firstResult.status || "Failed"}\n` +
+                     (lineNum ? `Line Number: ${lineNum}\n` : "") +
+                     `Error Message:\n${errMessage}`,
+            lineNumber: lineNum,
+            status: firstResult.status
+          },
+          message: errorType,
+          data: {
+            submissionId: submission._id,
+            runCount: submission.runCount,
+            testCaseResults: [{
+              testCaseIndex: 0,
+              passed: false,
+              executionTime: 0,
+              memoryUsed: 0,
+              status: firstResult.status,
+              error: errMessage
+            }],
+            feedback: errorType,
+            passingCount: 0,
+            totalVisibleTestCases: visibleTestCases.length
+          }
         });
+      }
 
-        if (result.passed) {
+      // Step 2: Program compiles successfully — run all visible test cases
+      if (visibleTestCases.length > 0) {
+        // Re-use the first result to avoid a duplicate Judge0 call
+        runResults.push({
+          testCaseIndex: 0,
+          passed: firstResult.passed,
+          executionTime: firstResult.executionTime,
+          memoryUsed: firstResult.memoryUsed,
+          status: firstResult.status,
+          actualOutput: firstResult.passed ? undefined : firstResult.output,
+        });
+        if (firstResult.passed) {
           passedCount++;
+        }
+
+        // Run remaining test cases
+        for (let i = 1; i < visibleTestCases.length; i++) {
+          const testCase = visibleTestCases[i];
+          const result = await executeCode(
+            code,
+            language,
+            testCase,
+            submission.snapshotTimeLimit,
+            submission.snapshotMemoryLimit
+          );
+
+          runResults.push({
+            testCaseIndex: i,
+            passed: result.passed,
+            executionTime: result.executionTime,
+            memoryUsed: result.memoryUsed,
+            status: result.status,
+            actualOutput: result.passed ? undefined : result.output,
+          });
+
+          if (result.passed) {
+            passedCount++;
+          }
         }
       }
 
@@ -386,6 +459,9 @@ export const runCode = [
           feedback: `${passedCount}/${visibleTestCases.length} test cases passed`,
           passingCount: passedCount,
           totalVisibleTestCases: visibleTestCases.length,
+          consoleOutput: firstResult.output || "",
+          executionTime: firstResult.executionTime || 0,
+          memoryUsed: firstResult.memoryUsed || 0
         },
       });
     } catch (error) {
@@ -415,6 +491,11 @@ export const submitSolution = [
 
       if (submission.studentId.toString() !== studentId.toString()) {
         return res.status(403).json({ success: false, message: "Unauthorized" });
+      }
+
+      const question = await Question.findById(submission.questionId).lean();
+      if (!question) {
+        return res.status(404).json({ success: false, message: "Associated question not found" });
       }
 
       // Check if already submitted
@@ -463,30 +544,90 @@ export const submitSolution = [
       const testCaseDetails = [];
       let passedCount = 0;
       let totalExecutionTime = 0;
+      let isCompiledSuccessfully = true;
 
-      for (const testCase of allTestCases) {
-        const result = await executeCode(
+      // Compile check with first test case
+      const firstTestCase = allTestCases[0];
+      let firstResult = null;
+      if (firstTestCase) {
+        firstResult = await executeCode(
           code,
           language,
-          testCase,
+          firstTestCase,
           submission.snapshotTimeLimit,
           submission.snapshotMemoryLimit
         );
 
-        testCaseDetails.push({
-          index: testCase.index,
-          visible: testCase.visible,
-          passed: result.passed,
-          executionTime: result.executionTime,
-          memoryUsed: result.memoryUsed,
-          expectedOutput: testCase.output,
-          actualOutput: result.passed ? undefined : result.output,
-        });
+        const statusId = firstResult.statusId;
+        const isCompileError = statusId === 6;
+        const isRuntimeError = statusId >= 7 && statusId <= 12;
 
-        if (result.passed) {
-          passedCount++;
+        if (isCompileError || isRuntimeError) {
+          isCompiledSuccessfully = false;
+          const errorType = isCompileError ? "Compilation Error" : "Runtime Error";
+          for (const tc of allTestCases) {
+            testCaseDetails.push({
+              index: tc.index,
+              visible: tc.visible,
+              passed: false,
+              executionTime: 0,
+              memoryUsed: 0,
+              expectedOutput: tc.output,
+              actualOutput: firstResult.actualOutput || firstResult.output || "",
+              error: firstResult.error || "",
+              status: `${errorType}: ${firstResult.status || "Failed"}`
+            });
+          }
+          passedCount = 0;
+          totalExecutionTime = 0;
         }
-        totalExecutionTime += result.executionTime || 0;
+      }
+
+      if (isCompiledSuccessfully) {
+        if (firstTestCase && firstResult) {
+          testCaseDetails.push({
+            index: firstTestCase.index,
+            visible: firstTestCase.visible,
+            passed: firstResult.passed,
+            executionTime: firstResult.executionTime,
+            memoryUsed: firstResult.memoryUsed,
+            expectedOutput: firstTestCase.output,
+            actualOutput: firstResult.passed ? undefined : (firstResult.actualOutput || firstResult.output || ""),
+            status: firstResult.status
+          });
+          if (firstResult.passed) {
+            passedCount++;
+          }
+          totalExecutionTime += firstResult.executionTime || 0;
+        }
+
+        // Loop remaining test cases
+        for (let idx = 1; idx < allTestCases.length; idx++) {
+          const testCase = allTestCases[idx];
+          const result = await executeCode(
+            code,
+            language,
+            testCase,
+            submission.snapshotTimeLimit,
+            submission.snapshotMemoryLimit
+          );
+
+          testCaseDetails.push({
+            index: testCase.index,
+            visible: testCase.visible,
+            passed: result.passed,
+            executionTime: result.executionTime,
+            memoryUsed: result.memoryUsed,
+            expectedOutput: testCase.output,
+            actualOutput: result.passed ? undefined : (result.actualOutput || result.output || ""),
+            status: result.status
+          });
+
+          if (result.passed) {
+            passedCount++;
+          }
+          totalExecutionTime += result.executionTime || 0;
+        }
       }
 
       // Determine final status

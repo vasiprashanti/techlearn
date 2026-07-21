@@ -433,17 +433,50 @@ export default function DailyChallengeTest() {
         setDailyChallengeSession(linkId, { attempt: response.data.attempt });
       }
 
-      const outputLines = [
-        result?.compileSuccess ? "✅ Code executed successfully." : "❌ Execution failed.",
-        result?.feedback || "",
-      ].filter(Boolean);
+      const outputLines = [];
 
-      if (typeof result?.actualOutput === "string" && result.actualOutput.length > 0) {
-        outputLines.push(`Output: ${result.actualOutput}`);
-      }
+      if (!result?.compileSuccess) {
+        // Compilation or runtime error — show full error details
+        outputLines.push("❌ " + (result?.feedback || "Execution failed."));
+        if (result?.error) {
+          outputLines.push(result.error);
+        }
+      } else {
+        // Successful execution
+        outputLines.push("✅ " + (result?.feedback || "Code executed successfully."));
 
-      if (result?.error) {
-        outputLines.push(`Error: ${result.error}`);
+        // Console output
+        if (result?.consoleOutput) {
+          outputLines.push(`\nConsole Output:\n${result.consoleOutput}`);
+        } else if (typeof result?.actualOutput === "string" && result.actualOutput.length > 0) {
+          // Backward compatibility — actualOutput may be the pre-formatted full string
+          outputLines.push(result.actualOutput);
+        }
+
+        // Execution metrics
+        if (result?.executionTime != null) {
+          outputLines.push(`Execution Time: ${result.executionTime}s`);
+        }
+        if (result?.memory != null) {
+          outputLines.push(`Memory Usage: ${result.memory} KB`);
+        }
+
+        // Visible test case results
+        if (Array.isArray(result?.visibleTestResults) && result.visibleTestResults.length > 0) {
+          const passedCount = result.visibleTestResults.filter(t => t.passed).length;
+          const totalCount = result.visibleTestResults.length;
+          outputLines.push(`\nTest Cases: ${passedCount}/${totalCount} passed`);
+          result.visibleTestResults.forEach((tc, idx) => {
+            outputLines.push(
+              `  Test ${idx + 1}: ${tc.passed ? "✅ Passed" : "❌ Failed"}\n` +
+              `    Input: ${tc.input ?? "N/A"}\n` +
+              `    Expected: ${tc.expectedOutput ?? "N/A"}\n` +
+              `    Actual: ${tc.actualOutput ?? "(empty)"}` +
+              (tc.executionTime ? `\n    Time: ${tc.executionTime}s` : "") +
+              (tc.error ? `\n    Error: ${tc.error}` : "")
+            );
+          });
+        }
       }
 
       setOutput(outputLines.join("\n"));

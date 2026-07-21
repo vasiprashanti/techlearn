@@ -301,38 +301,106 @@ export const recordPracticeSubmission = async (req, res) => {
         const validTestCases = allTestCases.filter(tc => tc.input?.trim() || tc.output?.trim());
 
         if (validTestCases.length > 0) {
-          const { testCodeWithJudge0, LANGUAGE_IDS } = await import("../utils/judgeUtil.js");
+          const { testCodeWithJudge0, LANGUAGE_IDS, extractLineNumber } = await import("../utils/judgeUtil.js");
           const langId = LANGUAGE_IDS[String(language || "").toLowerCase()] || 71; // Default to Python
 
-          for (const tc of validTestCases) {
-            try {
-              const judgeRes = await testCodeWithJudge0(code, langId, tc.input, tc.output);
-              if (judgeRes.passed) passedTestCases += 1;
-              testCaseResults.push({
-                index: tc.index,
-                visible: tc.visible,
-                passed: Boolean(judgeRes.passed),
-                expectedOutput: tc.output || "",
-                actualOutput: judgeRes.passed ? undefined : (judgeRes.actualOutput || judgeRes.output || ""),
-                status: judgeRes.statusDescription || "",
-                executionTime: Number(judgeRes.executionTime || 0),
-              });
-            } catch (error) {
+          // Step 1: Compile check — run first test case to detect errors early
+          const firstTC = validTestCases[0];
+          const firstResult = await testCodeWithJudge0(code, langId, firstTC.input, firstTC.output);
+
+          const compileStatusId = firstResult.statusId;
+          const isCompileError = compileStatusId === 6;
+          const isRuntimeError = compileStatusId >= 7 && compileStatusId <= 12;
+
+          if (isCompileError || isRuntimeError) {
+            // Fast-fail: mark all test cases as failed without extra Judge0 calls
+            const errorType = isCompileError ? "Compilation Error" : "Runtime Error";
+            const errMessage = firstResult.error || "";
+            const lineNum = extractLineNumber(errMessage);
+
+            for (const tc of validTestCases) {
               testCaseResults.push({
                 index: tc.index,
                 visible: tc.visible,
                 passed: false,
                 expectedOutput: tc.output || "",
                 actualOutput: "",
-                status: error?.message || "Execution Error",
+                status: `${errorType}: ${firstResult.statusDescription || "Failed"}`,
                 executionTime: 0,
+                error: errMessage,
               });
             }
+            totalTestCases = validTestCases.length;
+            passedTestCases = 0;
+            evaluatedAccuracy = 0;
+            evaluatedScore = 0;
+            isCorrect = false;
+
+            // Attach rich error context to be returned with the submission
+            req._compileError = {
+              compileSuccess: false,
+              errorType,
+              errorMessage: `Type: ${errorType}\nStatus: ${firstResult.statusDescription || "Failed"}\n` +
+                            (lineNum ? `Line Number: ${lineNum}\n` : "") +
+                            `Error Message:\n${errMessage}`,
+              lineNumber: lineNum,
+            };
+          } else {
+            // Step 2: Code compiled — include first result and run remaining test cases
+            // Re-use firstResult for TC[0] to avoid a redundant Judge0 call
+            if (firstResult.passed) passedTestCases += 1;
+            testCaseResults.push({
+              index: firstTC.index,
+              visible: firstTC.visible,
+              passed: Boolean(firstResult.passed),
+              expectedOutput: firstTC.output || "",
+              actualOutput: firstResult.passed ? undefined : (firstResult.actualOutput || ""),
+              status: firstResult.statusDescription || "",
+              executionTime: Number(firstResult.executionTime || 0),
+              memory: Number(firstResult.memory || 0),
+            });
+
+            for (let i = 1; i < validTestCases.length; i++) {
+              const tc = validTestCases[i];
+              try {
+                const judgeRes = await testCodeWithJudge0(code, langId, tc.input, tc.output);
+                if (judgeRes.passed) passedTestCases += 1;
+                testCaseResults.push({
+                  index: tc.index,
+                  visible: tc.visible,
+                  passed: Boolean(judgeRes.passed),
+                  expectedOutput: tc.output || "",
+                  actualOutput: judgeRes.passed ? undefined : (judgeRes.actualOutput || ""),
+                  status: judgeRes.statusDescription || "",
+                  executionTime: Number(judgeRes.executionTime || 0),
+                  memory: Number(judgeRes.memory || 0),
+                });
+              } catch (error) {
+                testCaseResults.push({
+                  index: tc.index,
+                  visible: tc.visible,
+                  passed: false,
+                  expectedOutput: tc.output || "",
+                  actualOutput: "",
+                  status: error?.message || "Execution Error",
+                  executionTime: 0,
+                });
+              }
+            }
+
+            totalTestCases = validTestCases.length;
+            evaluatedAccuracy = Math.round((passedTestCases / totalTestCases) * 100);
+            evaluatedScore = evaluatedAccuracy / 100;
+            isCorrect = passedTestCases === totalTestCases;
+
+            // Attach success context
+            req._compileError = {
+              compileSuccess: true,
+              consoleOutput: firstResult.actualOutput || "",
+              executionTime: firstResult.executionTime || 0,
+              memory: firstResult.memory || 0,
+            };
           }
-          totalTestCases = validTestCases.length;
-          evaluatedAccuracy = Math.round((passedTestCases / totalTestCases) * 100);
-          evaluatedScore = evaluatedAccuracy / 100;
-          isCorrect = passedTestCases === totalTestCases;
         } else {
           isCorrect = true;
           evaluatedAccuracy = 100;
@@ -602,7 +670,12 @@ export const recordPracticeSubmission = async (req, res) => {
       console.error("Streak update error in practice submission:", streakErr);
     }
 
-    return res.status(201).json({ success: true, data: submission });
+    return res.status(201).json({
+      success: true,
+      data: submission,
+      // Compile context — always present for DSA coding questions
+      ...(req._compileError !== undefined ? req._compileError : {}),
+    });
   } catch (error) {
     console.error("recordPracticeSubmission error:", error);
     return res.status(500).json({ success: false, message: "Failed to record practice submission." });
