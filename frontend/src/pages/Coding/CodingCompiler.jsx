@@ -614,7 +614,7 @@ const CodingCompiler = ({ user, contestData }) => {
       <div className="flex flex-1 pt-5 overflow-hidden h-[calc(100vh-4.5rem)]">
         {/* LEFT PANEL */}
         {/* LEFT PANEL */}
-        <div className="w-1/2 bg-[#0f172a] p-6 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5 minimal-scrollbar">
+        <div className="w-1/2 bg-[#0f172a] p-6 pb-10 scroll-pb-10 overflow-y-auto border-r border-gray-300 dark:border-gray-700 flex flex-col gap-5 minimal-scrollbar">
           {/* Header Card */}
           <div className="bg-gradient-to-br from-[#1e293b] to-[#0f172a] p-6 rounded-xl border border-gray-300 dark:border-gray-700 items-start text-left flex flex-col gap-1.5">
             <h1 className="text-2xl font-extrabold mb-1 dark:text-white tracking-tight pl-2">
