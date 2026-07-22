@@ -107,14 +107,14 @@ const createMarkdownComponents = (compact = false) => {
     ? 'text-[11px] font-bold text-[#001862] dark:text-white/65 mt-5 mb-2 uppercase tracking-widest'
     : 'text-[13px] font-bold text-[#001862] dark:text-white/65 mt-6 mb-3 uppercase tracking-widest';
   const paragraphClass = compact
-    ? 'text-[#001862] dark:text-white/75 leading-6 text-sm mb-4 font-normal'
-    : 'text-[#001862] dark:text-white/75 leading-[1.8] text-base md:text-lg mb-6 font-light';
+    ? 'text-[#001862] dark:text-white leading-6 text-sm mb-4 font-normal'
+    : 'text-[#001862] dark:text-white leading-[1.8] text-base md:text-lg mb-6 font-light';
   const listClass = compact
-    ? 'list-decimal list-outside ml-5 flex flex-col gap-2 my-5 text-[#001862] dark:text-white/75 text-sm font-normal'
-    : 'list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-[#001862] dark:text-white/75 text-base md:text-lg font-light';
+    ? 'list-decimal list-outside ml-5 flex flex-col gap-2 my-5 text-[#001862] dark:text-white text-sm font-normal'
+    : 'list-decimal list-outside ml-6 flex flex-col gap-3 my-8 text-[#001862] dark:text-white text-base md:text-lg font-light';
   const listItemClass = compact
-    ? 'flex items-start gap-3 text-sm text-[#001862] dark:text-white/75 font-normal'
-    : 'flex items-start gap-4 text-base md:text-lg text-[#001862] dark:text-white/75 font-light';
+    ? 'flex items-start gap-3 text-sm text-[#001862] dark:text-white font-normal'
+    : 'flex items-start gap-4 text-base md:text-lg text-[#001862] dark:text-white font-light';
   const listBulletClass = compact
     ? 'w-1.5 h-1.5 rounded-full bg-[#3C83F6] dark:bg-white/50 mt-[0.45rem] shrink-0 shadow-sm'
     : 'w-1.5 h-1.5 rounded-full bg-[#3C83F6] dark:bg-white/50 mt-[0.6rem] shrink-0 shadow-sm';

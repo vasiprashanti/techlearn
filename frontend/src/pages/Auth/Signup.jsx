@@ -187,7 +187,7 @@ export default function Signup() {
                   required
                   className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
                               ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
-                  placeholder="e.g. Angad Kumar"
+                  placeholder="e.g. John Smith"
                   value={formData.fullName}
                   onChange={handleChange}
                 />
