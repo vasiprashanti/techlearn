@@ -2756,24 +2756,6 @@ export const updateBatchAdmin = async (req, res) => {
               { session }
             );
           }
-          if (req.body.programSelection === "Full Stack Project Program" || req.body.programSelection === "Both") {
-            const publishedProject = await Project.findOne({ status: "Published" });
-            if (publishedProject) {
-              const batchStudents = await Student.find({ batchId }).select("_id").lean();
-              for (const st of batchStudents) {
-                const activeProjAssignment = await StudentProject.findOne({ student_id: st._id, status: "Active" });
-                if (!activeProjAssignment) {
-                  await StudentProject.create({
-                    student_id: st._id,
-                    project_id: publishedProject._id,
-                    status: "Active",
-                    current_day: 1,
-                    progress_percentage: 0,
-                  });
-                }
-              }
-            }
-          }
         }
       });
     } finally {
@@ -3185,22 +3167,7 @@ export const updateStudentAdmin = async (req, res) => {
       });
     }
 
-    // Auto-assign active project if switching to Project Sprint or Both and no active assignment exists
-    if (update.programSelection === "Full Stack Project Program" || update.programSelection === "Both") {
-      const activeProjAssignment = await StudentProject.findOne({ student_id: student._id, status: "Active" });
-      if (!activeProjAssignment) {
-        const publishedProject = await Project.findOne({ status: "Published" });
-        if (publishedProject) {
-          await StudentProject.create({
-            student_id: student._id,
-            project_id: publishedProject._id,
-            status: "Active",
-            current_day: 1,
-            progress_percentage: 0,
-          });
-        }
-      }
-    }
+
 
     await writeAuditLog({
       verb: "Updated",
