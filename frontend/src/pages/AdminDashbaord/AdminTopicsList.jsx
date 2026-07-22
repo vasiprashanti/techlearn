@@ -5,6 +5,7 @@ import { HiOutlineUpload } from "react-icons/hi";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useTheme } from "../../context/ThemeContext";
 import { FiArrowLeft, FiEdit2, FiSave, FiAward, FiFileText, FiTrash2, FiPlus, FiChevronDown } from "react-icons/fi";
+import { prepareBannerImage } from "../../utils/bannerImage";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -395,7 +396,8 @@ const AdminTopicsList = () => {
       }
 
       if (bannerFile) {
-        formData.append("bannerFile", bannerFile);
+        const preparedBanner = await prepareBannerImage(bannerFile);
+        formData.append("bannerFile", preparedBanner);
       }
 
       await axios.put(
@@ -411,7 +413,7 @@ const AdminTopicsList = () => {
       window.location.reload();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Failed to update course details.");
+      alert(err.response?.data?.message || err.message || "Failed to update course details.");
     }
   };
 

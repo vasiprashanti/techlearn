@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
 import { FiChevronDown, FiPlus, FiTrash2, FiEdit2, FiBookOpen, FiSearch } from "react-icons/fi";
+import { prepareBannerImage } from "../../utils/bannerImage";
 
 const getCourseTheme = (level) => {
   const lvl = (level || '').toLowerCase();
@@ -169,7 +170,14 @@ export default function Courses() {
     }
 
     if (bannerFile) {
-      formData.append("bannerFile", bannerFile);
+      try {
+        const preparedBanner = await prepareBannerImage(bannerFile);
+        formData.append("bannerFile", preparedBanner);
+      } catch (err) {
+        setFormError(err.message);
+        setSaving(false);
+        return;
+      }
     }
 
     try {

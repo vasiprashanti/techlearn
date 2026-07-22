@@ -24,17 +24,24 @@ const uploadCourseBanner = async (file) => {
 
   if (!fileBuffer) return null;
 
-  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  const hasCloudinaryCredentials = Boolean(
+    process.env.CLOUDINARY_URL ||
+    (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+  );
+
+  if (!hasCloudinaryCredentials) {
     return {
       secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
     };
   }
 
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
-  });
+  if (!process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+  }
 
   return new Promise((resolve, reject) => {
     cloudinary.uploader

@@ -25,7 +25,7 @@ import {
 const adminRouter = express.Router();
 const courseBannerUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!String(file.mimetype || "").startsWith("image/")) {
       return cb(new Error("Banner must be an image file"));
@@ -33,6 +33,16 @@ const courseBannerUpload = multer({
     cb(null, true);
   },
 });
+
+const parseCourseBanner = (req, res, next) => {
+  courseBannerUpload.single("bannerFile")(req, res, (error) => {
+    if (!error) return next();
+    const message = error.code === "LIMIT_FILE_SIZE"
+      ? "Banner image is too large. Please upload an image smaller than 3 MB."
+      : error.message || "Banner image upload failed.";
+    return res.status(400).json({ success: false, message });
+  });
+};
 
 // Admin metrics route (protected)
 adminRouter.get("/dashboard/stats", protect, isAdmin, getAdminMetrics);
@@ -44,8 +54,8 @@ adminRouter.get("/:courseId", protect, isAdmin, getCourseTopicsForDashboard);
 adminRouter.put("/topic/:topicId", protect, isAdmin, upload.any(), editTopicDetails);
 adminRouter.delete("/topic/:topicId", protect, isAdmin, deleteTopic);
 
-adminRouter.post("/course-initiate", protect, isAdmin, courseBannerUpload.single("bannerFile"), createCourseShell);
-adminRouter.put("/:courseId", protect, isAdmin, courseBannerUpload.single("bannerFile"), updateCourseShell);
+adminRouter.post("/course-initiate", protect, isAdmin, parseCourseBanner, createCourseShell);
+adminRouter.put("/:courseId", protect, isAdmin, parseCourseBanner, updateCourseShell);
 
 adminRouter.post("/:courseId/topics", protect, isAdmin, addMultipleTopics);
 
