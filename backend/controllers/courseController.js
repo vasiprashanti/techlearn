@@ -29,11 +29,11 @@ const uploadCourseBanner = async (file) => {
     (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
   );
 
-  if (!hasCloudinaryCredentials) {
-    return {
-      secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
-    };
-  }
+  const databaseFallback = () => ({
+    secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
+  });
+
+  if (!hasCloudinaryCredentials) return databaseFallback();
 
   if (!process.env.CLOUDINARY_URL) {
     cloudinary.config({
@@ -43,22 +43,27 @@ const uploadCourseBanner = async (file) => {
     });
   }
 
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(
-        {
-          resource_type: "auto",
-          folder: "techlearn/courses",
-          use_filename: true,
-          unique_filename: true,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      )
-      .end(fileBuffer);
-  });
+  try {
+    return await new Promise((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            resource_type: "auto",
+            folder: "techlearn/courses",
+            use_filename: true,
+            unique_filename: true,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        )
+        .end(fileBuffer);
+    });
+  } catch (error) {
+    console.warn("Course banner Cloudinary upload failed; using database fallback:", error.message);
+    return databaseFallback();
+  }
 };
 
 // admin specific functions
