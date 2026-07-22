@@ -10,7 +10,7 @@ export const useQuestionBankCategories = () => {
     setLoading(true);
     setError('');
     try {
-      const remoteCategories = await questionBankApi.listCategories();
+      const remoteCategories = await questionBankApi.listCategories({ includeDrafts: true });
       setCategories(Array.isArray(remoteCategories) ? remoteCategories : []);
     } catch (fetchError) {
       setError(fetchError.message || 'Failed to load question categories.');
