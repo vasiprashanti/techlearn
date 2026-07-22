@@ -164,6 +164,16 @@ const BatchDetails = () => {
     };
   }, [batchDetail, location.state, batchId]);
 
+  const collegesList = useMemo(() => {
+    if (Array.isArray(batch?.collegesList) && batch.collegesList.length > 0) {
+      return batch.collegesList;
+    }
+    if (batch?.college) {
+      return String(batch.college).split(',').map((c) => c.trim()).filter(Boolean);
+    }
+    return [];
+  }, [batch?.collegesList, batch?.college]);
+
   useEffect(() => {
     const activeId = batch?.attachedCourse?._id || batch?.attachedCourse?.id || batch?.attachedCourse;
     setSelectedAttachedCourseId(activeId ? String(activeId) : '');
@@ -402,7 +412,8 @@ const BatchDetails = () => {
       .filter((student) => {
         const matchesSearch = !q ||
           (student.name || '').toLowerCase().includes(q) ||
-          (student.email || '').toLowerCase().includes(q);
+          (student.email || '').toLowerCase().includes(q) ||
+          (student.college || '').toLowerCase().includes(q);
         const matchesStatus = studentStatusFilter === 'All Status' || student.status === studentStatusFilter;
         return matchesSearch && matchesStatus;
       })
@@ -695,39 +706,101 @@ const BatchDetails = () => {
               Back to Batches
             </button>
 
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white flex items-center justify-center text-xl font-semibold shadow-sm">
-                {batch.name?.charAt(0) || 'B'}
-              </div>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-black/90 dark:text-white">{batch.name || batch.id}</h2>
-                <p className="mt-0.5 text-xs sm:text-sm text-black/55 dark:text-white/55 flex flex-wrap items-center gap-2.5">
-                  <span className="inline-flex items-center gap-1.5"><FiBriefcase className="w-3.5 h-3.5" />{batch.college}</span>
-                  <span>•</span>
-                  <span className="inline-flex items-center gap-1.5"><FiCalendar className="w-3.5 h-3.5" />Started: {batch.start}</span>
-                  <span>•</span>
-                  <span>{batch.students} Students</span>
-                </p>
-              </div>
-            </div>
+            {/* Unified Batch Overview Card */}
+            <div className="bg-white dark:bg-gradient-to-br dark:from-[#0c1836] dark:via-[#0f1f43] dark:to-[#08122a] border border-black/5 dark:border-[#15366f]/60 rounded-2xl p-6 sm:p-7 shadow-lg dark:shadow-[0_12px_36px_rgba(0,0,0,0.3)] backdrop-blur-xl relative overflow-hidden space-y-6">
+              {/* Background Accent Glow */}
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiUsers className="w-4 h-4" /><span className="text-xs font-medium">Total Students</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.totalStudents ?? batch.students ?? 0}</p>
+              {/* Header Section: Avatar + Name + Status + Attached Colleges */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 dark:border-white/10 pb-5">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#3C83F6] via-[#4f8ff7] to-[#6366f1] text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-blue-500/25 shrink-0">
+                    {batch.name?.charAt(0) || 'B'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                        {batch.name || batch.id}
+                      </h2>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                        batch.status === 'Active' 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300 border-amber-500/30'
+                      }`}>
+                        {batch.status || 'Active'}
+                      </span>
+                    </div>
+
+                    {/* Attached Colleges List */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <FiBriefcase className="w-3.5 h-3.5" /> Colleges:
+                      </span>
+                      {collegesList.length > 0 ? (
+                        collegesList.map((colName, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20"
+                          >
+                            {colName}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">No college attached</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiActivity className="w-4 h-4" /><span className="text-xs font-medium">Active Students Today</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.activeStudentsToday ?? 0}</p>
-              </div>
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiTrendingUp className="w-4 h-4" /><span className="text-xs font-medium">Inactive Students Today</span></p>
-                <p className="text-xl font-semibold text-black dark:text-white leading-none">{batch.inactiveStudentsToday ?? 0}</p>
-              </div>
-              <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl p-3.5 space-y-2 hover:shadow-md transition-shadow">
-                <p className="flex items-center gap-2 text-black/55 dark:text-white/60"><FiBookOpen className="w-4 h-4" /><span className="text-xs font-medium">Current Active Track</span></p>
-                <div className="text-[12px] md:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug break-words">
-                  {batch.currentActiveTrack || batch.assignedTrack || 'None'}
+
+              {/* Metrics Grid inside Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+                {/* Duration / Dates */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiCalendar className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Batch Duration</p>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 mt-0.5 leading-tight">
+                      Start: <span className="text-slate-900 dark:text-white">{batch.start || 'TBD'}</span>
+                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 leading-tight mt-0.5">
+                      End: <span className="text-slate-700 dark:text-slate-300">{batch.end || batch.expiryDateValue || 'Ongoing'}</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* No. of Students */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiUsers className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Total Students</p>
+                    <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                      {batch.totalStudents ?? batch.students ?? 0} <span className="text-xs font-medium text-slate-400 dark:text-slate-400">Enrolled Students</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Active vs Inactive Today */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiActivity className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Today's Attendance</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                        {batch.activeStudentsToday ?? 0} Active
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap">
+                        {batch.inactiveStudentsToday ?? 0} Inactive
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -876,7 +949,7 @@ const BatchDetails = () => {
                         <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35 dark:text-white/35" />
                         <input
                            type="text"
-                           placeholder="Search students..."
+                           placeholder="Search by name, email, or college..."
                            value={tableSearch}
                            onChange={(e) => setTableSearch(e.target.value)}
                            className="pl-9 pr-3 h-10 text-sm bg-white/60 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-xl focus:outline-none focus:border-[#3C83F6]/40 dark:focus:border-white/30 text-black/80 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/35 w-full"
@@ -932,6 +1005,7 @@ const BatchDetails = () => {
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-32 whitespace-nowrap">Student Name</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student College</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task Score</th>
@@ -964,7 +1038,7 @@ const BatchDetails = () => {
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={12} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={13} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
@@ -974,6 +1048,9 @@ const BatchDetails = () => {
                                     </td>
                                     <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                       {formatEmail(student.email)}
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[140px] truncate" title={student.college || '—'}>
+                                      {student.college || '—'}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
                                       {student.todayChallengeSubmissionId ? (
@@ -1145,7 +1222,7 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[220px] min-w-[220px] border-r border-black/5 dark:border-white/5">
+                              <th className="sticky left-0 bg-slate-100 dark:bg-[#08122a] z-20 text-left text-[10px] sm:text-xs font-bold text-[#3C83F6] px-2.5 py-2 w-[220px] min-w-[220px] border-r border-black/5 dark:border-white/5">
                                 Metric
                               </th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
@@ -1228,8 +1305,8 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-50 dark:bg-slate-900/30 z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-0 py-2 whitespace-nowrap" style={{width: '2rem', minWidth: '2rem'}}>#</th>
-                              <th className="sticky bg-slate-50 dark:bg-slate-900/30 z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem'}}>Student Name</th>
+                              <th className="sticky left-0 bg-slate-100 dark:bg-[#08122a] z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-0 py-2 whitespace-nowrap" style={{width: '2rem', minWidth: '2rem'}}>#</th>
+                              <th className="sticky bg-slate-100 dark:bg-[#08122a] z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem'}}>Student Name</th>
                               <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">
