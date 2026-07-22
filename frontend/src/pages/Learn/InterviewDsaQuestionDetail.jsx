@@ -197,18 +197,13 @@ export default function InterviewDsaQuestionDetail() {
   const [showFinishModal, setShowFinishModal] = useState(false);
 
   useEffect(() => {
-    if (!isDailyMode) {
-      setCode(details?.starterCode || '');
-      setOutput('');
-    }
-  }, [questionId, details?.starterCode, isDailyMode]);
+    if (!question) return;
 
-  useEffect(() => {
     if (isDailyMode && dailySequence[currentTaskIndex]) {
       const currentTask = dailySequence[currentTaskIndex];
       if (currentTask.code) {
         setCode(currentTask.code);
-        if (currentTask.language) {
+        if (currentTask.language && LANGUAGES[currentTask.language]) {
           setSelectedLanguage(currentTask.language);
         }
         setIsLastSubmissionCorrect(currentTask.isCorrect || false);
@@ -216,10 +211,13 @@ export default function InterviewDsaQuestionDetail() {
         return;
       }
     }
-    setCode(details?.starterCode || '');
+
+    const defaultLang = selectedLanguage || 'python';
+    const defaultStarter = question.starterCode?.[defaultLang]?.code || (defaultLang === 'python' ? question.solutionCode : null) || LANGUAGES[defaultLang]?.starter || '';
+    setCode(defaultStarter);
     setIsLastSubmissionCorrect(false);
     setOutput('');
-  }, [questionId, details?.starterCode, isDailyMode, dailySequence, currentTaskIndex]);
+  }, [questionId, isDailyMode, currentTaskIndex, question]);
 
   if (loading) {
     return (
@@ -651,7 +649,8 @@ export default function InterviewDsaQuestionDetail() {
                       onChange={(e) => {
                         const nextLang = e.target.value;
                         setSelectedLanguage(nextLang);
-                        setCode(question?.starterCode?.[nextLang]?.code || question?.solutionCode || LANGUAGES[nextLang]?.starter);
+                        const nextCode = question?.starterCode?.[nextLang]?.code || (nextLang === 'python' ? question?.solutionCode : null) || LANGUAGES[nextLang]?.starter || '';
+                        setCode(nextCode);
                       }}
                       className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"
                     >

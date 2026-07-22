@@ -198,11 +198,8 @@ const BatchDetails = () => {
   }, [batchId]);
 
   const filteredBatchOptions = useMemo(() => {
-    if (!studentForm.collegeId) return batches;
-    const selectedCollege = colleges.find((college) => college.id === studentForm.collegeId);
-    if (!selectedCollege) return batches;
-    return batches.filter((b) => b.college === selectedCollege.name);
-  }, [studentForm.collegeId, batches, colleges]);
+    return batches;
+  }, [batches]);
 
   const openAddStudent = () => {
     setFormError('');
@@ -1536,7 +1533,7 @@ const BatchDetails = () => {
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">College*</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select value={studentForm.collegeId} onChange={(e) => setStudentForm((prev) => ({ ...prev, collegeId: e.target.value, batchId: '' }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
+                    <select value={studentForm.collegeId} onChange={(e) => setStudentForm((prev) => ({ ...prev, collegeId: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
                       <option className={dropdownOptionClass} value="">Select college</option>
                       {colleges.map((college) => <option className={dropdownOptionClass} key={college.id} value={college.id}>{college.name}</option>)}
                     </select>
