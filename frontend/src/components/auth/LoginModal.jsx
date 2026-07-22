@@ -205,7 +205,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-md mx-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg rounded-xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20"
+          className="relative w-full max-w-md mx-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg rounded-xl p-6 shadow-xl border border-white/20 dark:border-gray-700/20"
         >
           <button
             onClick={handleClose}
@@ -216,27 +216,27 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
           {forgotPasswordMode ? (
             <>
-              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">
+              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-4 text-center">
                 Forgot Password
               </h2>
 
               {forgotPasswordMessage && (
-                <p className="text-green-600 text-sm text-center mb-4">
+                <p className="text-green-600 text-xs text-center mb-3">
                   {forgotPasswordMessage}
                 </p>
               )}
               {error && (
-                <p className="text-red-600 text-sm text-center mb-4">{error}</p>
+                <p className="text-red-600 text-xs text-center mb-3">{error}</p>
               )}
 
-              <form onSubmit={handleForgotPassword} className="space-y-6">
+              <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Email
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/80 rounded-lg text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Enter your email"
                     value={forgotPasswordEmail}
                     onChange={(e) => setForgotPasswordEmail(e.target.value)}
@@ -245,7 +245,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
 
                 <button
                   type="submit"
-                  className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors shadow-sm"
                 >
                   Send Reset Link
                 </button>
@@ -257,7 +257,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                     setError("");
                     setForgotPasswordMessage("");
                   }}
-                  className="w-full text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                  className="w-full text-blue-600 dark:text-blue-400 hover:underline text-xs mt-2"
                 >
                   Back to Login
                 </button>
@@ -265,22 +265,22 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
             </>
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">
+              <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-4 text-center">
                 Login
               </h2>
 
               {error && (
-                <p className="text-red-600 text-sm text-center mb-4">{error}</p>
+                <p className="text-red-600 text-xs text-center mb-3">{error}</p>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Email
                   </label>
                   <input
                     type="email"
-                    className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/80 rounded-lg text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="username@gmail.com"
                     value={formData.email}
                     onChange={(e) =>
@@ -289,12 +289,12 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                   />
                 </div>
                 <div className="relative">
-                  <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                     Password
                   </label>
                   <input
                     type={showPassword ? "text" : "password"}
-                    className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                    className="w-full px-3 py-2.5 bg-white/80 dark:bg-gray-800/80 rounded-lg text-sm text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
                     placeholder="Password"
                     value={formData.password}
                     onChange={(e) =>
@@ -303,49 +303,49 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup }) {
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-[calc(50%+10px)] transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                    className="absolute right-3 top-[calc(50%+9px)] transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
+                      <EyeOff className="w-4 h-4" />
                     ) : (
-                      <Eye className="w-5 h-5" />
+                      <Eye className="w-4 h-4" />
                     )}
                   </button>
                 </div>
                 <button
                   type="button"
                   onClick={() => setForgotPasswordMode(true)}
-                  className="text-center text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer w-full"
+                  className="text-right text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer w-full block -mt-1"
                 >
                   Forgot Password?
                 </button>
                 <button
                   type="submit"
-                  className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg text-sm transition-colors shadow-sm"
                 >
                   Sign in
                 </button>
 
                 {/* Google Sign-in Section */}
-                <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
-                  <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
-                  <span className="px-3 text-sm whitespace-nowrap">
+                <div className="flex items-center justify-center my-3 text-gray-500 dark:text-gray-400">
+                  <span className="border-t border-gray-300 dark:border-gray-700 w-full"></span>
+                  <span className="px-3 text-xs text-slate-400 whitespace-nowrap">
                     or continue with
                   </span>
-                  <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
+                  <span className="border-t border-gray-300 dark:border-gray-700 w-full"></span>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full flex items-center justify-center gap-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-2.5 px-3 rounded-lg text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <FcGoogle className="w-5 h-5" />
+                  <FcGoogle className="w-4 h-4" />
                   Sign in with Google
                 </button>
 
-                <p className="text-gray-700 dark:text-gray-300 text-center mt-6 text-sm">
+                <p className="text-gray-700 dark:text-gray-300 text-center mt-4 text-xs">
                   Don't have an Account?
                   <button
                     type="button"

@@ -150,7 +150,7 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-md mx-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg rounded-xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20 max-h-[90vh] overflow-y-auto"
+          className="relative w-full max-w-md mx-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg rounded-xl p-5 shadow-xl border border-white/20 dark:border-gray-700/20"
         >
           <button
             onClick={onClose}
@@ -159,17 +159,17 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
             <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
 
-          <h2 className="text-2xl font-bold text-blue-800 dark:text-blue-400 mb-6 text-center">Sign Up</h2>
+          <h2 className="text-xl font-bold text-blue-800 dark:text-blue-400 mb-3 text-center">Sign Up</h2>
 
-          {error && <p className="text-red-600 text-sm text-center mb-4">{error}</p>}
+          {error && <p className="text-red-600 text-xs text-center mb-2">{error}</p>}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-2.5">
             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Full Name</label>
               <input
                 type="text"
                 name="fullName"
-                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-white/80 dark:bg-gray-800/80 rounded-lg text-xs text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Full name"
                 value={formData.fullName}
                 onChange={handleChange}
@@ -177,24 +177,24 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Email</label>
               <input
                 type="email"
                 name="email"
-                className="w-full px-4 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 bg-white/80 dark:bg-gray-800/80 rounded-lg text-xs text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="username@gmail.com"
                 value={formData.email}
                 onChange={handleChange}
               />
             </div>
 
-             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Password</label>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  className="w-full pl-4 pr-10 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-3 pr-9 py-2 bg-white/80 dark:bg-gray-800/80 rounded-lg text-xs text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
@@ -202,34 +202,34 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
-              <div className="mt-2 space-y-1.5">
-                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {hasMinLength ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                  <span>At least 8 characters</span>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]">
+                <div className={`flex items-center gap-1 transition-colors ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasMinLength ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                  <span>8+ chars</span>
                 </div>
-                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasUppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {hasUppercase ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                  <span>At least 1 uppercase letter</span>
+                <div className={`flex items-center gap-1 transition-colors ${hasUppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasUppercase ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                  <span>1 Uppercase</span>
                 </div>
-                <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                  {hasSpecialChar ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                  <span>At least 1 special character</span>
+                <div className={`flex items-center gap-1 transition-colors ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  {hasSpecialChar ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                  <span>1 Special char</span>
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-1">Confirm Password</label>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Confirm Password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
-                  className="w-full pl-4 pr-10 py-3 bg-white/80 dark:bg-gray-800/80 rounded-lg text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-3 pr-9 py-2 bg-white/80 dark:bg-gray-800/80 rounded-lg text-xs text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -237,13 +237,13 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
                 >
-                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
               </div>
               {showMatchError && (
-                <p className="text-xs font-semibold text-red-500 mt-1.5 select-none">
+                <p className="text-[10px] font-semibold text-red-500 mt-1 select-none">
                   Passwords do not match
                 </p>
               )}
@@ -251,28 +251,28 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
 
             <button
               type="submit"
-              className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+              className="w-full bg-blue-800 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-xs transition-colors shadow-sm"
             >
               Create account
             </button>
 
             {/* Google Sign-up Section */}
-            <div className="flex items-center justify-center my-4 text-gray-500 dark:text-gray-400">
-              <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
-              <span className="px-3 text-sm whitespace-nowrap">or continue with</span>
-              <span className="border-t border-gray-400 dark:border-gray-600 w-full"></span>
+            <div className="flex items-center justify-center my-2 text-gray-500 dark:text-gray-400">
+              <span className="border-t border-gray-300 dark:border-gray-700 w-full"></span>
+              <span className="px-2 text-[10px] text-slate-400 whitespace-nowrap">or continue with</span>
+              <span className="border-t border-gray-300 dark:border-gray-700 w-full"></span>
             </div>
 
             <button
               type="button"
               onClick={handleGoogleSignUp}
-              className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-2 px-3 rounded-lg text-xs hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <FcGoogle className="w-5 h-5" />
+              <FcGoogle className="w-4 h-4" />
               Sign up with Google
             </button>
 
-            <p className="text-gray-700 dark:text-gray-300 text-center mt-6 text-sm">
+            <p className="text-gray-700 dark:text-gray-300 text-center mt-3 text-xs">
               Already have an account?
               <button
                 type="button"

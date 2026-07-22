@@ -159,7 +159,7 @@ export default function InterviewDsaQuestionDetail() {
             inputFormat: data.inputFormat || '',
             outputFormat: data.outputFormat || '',
             topic: 'DSA',
-            starterCode: data.content?.starterCode,
+            starterCode: data.starterCode || data.content?.starterCode || {},
             tags: data.tags || [],
             visibleTestCases: data.visibleTestCases || data.content?.visibleTestCases || []
           });

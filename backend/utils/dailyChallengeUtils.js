@@ -194,6 +194,14 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     studentContext = { student: null, studentEmail: "", accessSource: "guest" };
   }
 
+  // Block access if student/user is assigned to Project Sprint only
+  const studentProgram = studentContext.student?.programSelection || user?.programSelection;
+  if (studentProgram === "Full Stack Project Program") {
+    const error = new Error("Daily Challenge access is not enabled for accounts assigned to Project Sprint. Only Placement Sprint or Both are allowed.");
+    error.statusCode = 403;
+    throw error;
+  }
+
   const batch = studentContext.student
     ? await Batch.findById(studentContext.student.batchId)
     : await ensureDemoBatch();
