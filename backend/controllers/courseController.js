@@ -12,6 +12,15 @@ import {
   parseMcqMarkdownFile,
 } from "../config/unifiedMarkdownParser.js";
 
+const detectBannerMimeType = (buffer) => {
+  if (!buffer || buffer.length < 4) return null;
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "image/jpeg";
+  if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return "image/png";
+  if (buffer.subarray(0, 4).toString("ascii") === "GIF8") return "image/gif";
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP") return "image/webp";
+  return null;
+};
+
 const uploadCourseBanner = async (file) => {
   let fileBuffer = file?.buffer;
   if (!fileBuffer && file?.path) {
@@ -24,13 +33,20 @@ const uploadCourseBanner = async (file) => {
 
   if (!fileBuffer) return null;
 
+  const detectedMimeType = detectBannerMimeType(fileBuffer);
+  if (!detectedMimeType) {
+    const error = new Error("Banner must be a valid PNG, JPEG, WebP, or GIF image.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   const hasCloudinaryCredentials = Boolean(
     process.env.CLOUDINARY_URL ||
     (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
   );
 
   const databaseFallback = () => ({
-    secure_url: `data:${file.mimetype || "application/octet-stream"};base64,${fileBuffer.toString("base64")}`,
+    secure_url: `data:${detectedMimeType};base64,${fileBuffer.toString("base64")}`,
   });
 
   if (!hasCloudinaryCredentials) return databaseFallback();
@@ -137,7 +153,7 @@ export const createCourseShell = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       message: "Failed to create course",
       error: error.message,
       details: error.stack, // Remove this in production
@@ -301,7 +317,7 @@ export const updateCourseShell = async (req, res) => {
       course,
     });
   } catch (error) {
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       message: "Failed to update course",
       error: error.message,
     });

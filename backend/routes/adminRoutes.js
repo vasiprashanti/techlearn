@@ -27,7 +27,8 @@ const courseBannerUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (!String(file.mimetype || "").startsWith("image/")) {
+    const mimeType = String(file.mimetype || "").toLowerCase();
+    if (mimeType && !mimeType.startsWith("image/") && mimeType !== "application/octet-stream") {
       return cb(new Error("Banner must be an image file"));
     }
     cb(null, true);
