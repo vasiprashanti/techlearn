@@ -69,6 +69,7 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     avatar: user?.avatar || user?.photoUrl || "",
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
+    programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
     streak: linkedStudent?.streak || 0,
   };
 };
@@ -87,7 +88,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar photoUrl email firstName lastName name role").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -128,7 +129,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak").lean()
+      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak programSelection").lean()
       : null;
     const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
     const latestDailyChallenge = linkedStudent?._id

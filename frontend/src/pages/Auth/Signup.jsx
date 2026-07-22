@@ -152,40 +152,40 @@ export default function Signup() {
   }, [theme, handleGoogleResponse]);
 
   return (
-    <div className="flex items-center justify-center px-4 min-h-screen pt-24 pb-12">
-      <div className={`w-full max-w-xl backdrop-blur-lg rounded-xl p-6 shadow-xl z-10 border text-left
+    <div className="flex items-center justify-center px-4 min-h-screen pt-20 pb-6">
+      <div className={`w-full max-w-lg backdrop-blur-lg rounded-xl p-4 sm:p-5 shadow-xl z-10 border text-left
                       ${theme === 'dark' ? 
-                        'bg-gray-900/80 text-gray-100 border-gray-800' : 
-                        'bg-white/70 text-gray-900 border-gray-200'}`}>
+                        'bg-gray-900/90 text-gray-100 border-gray-800' : 
+                        'bg-white/80 text-gray-900 border-gray-200'}`}>
 
-        <h2 className={`text-2xl font-bold mb-2 text-center ${theme === 'dark' ? 'text-blue-400' : 'text-blue-800'}`}>
+        <h2 className={`text-xl font-bold mb-0.5 text-center ${theme === 'dark' ? 'text-blue-400' : 'text-blue-800'}`}>
           Student Sign Up
         </h2>
-        <p className="text-xs text-center text-slate-500 dark:text-slate-400 mb-4">
+        <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 mb-2.5">
           Complete your profile registration to access your personalized learning track.
         </p>
 
         {error && (
-          <p className="text-sm text-center font-semibold mb-4 text-red-500 bg-red-500/10 py-2 rounded-lg border border-red-500/20">
+          <p className="text-xs text-center font-semibold mb-2.5 text-red-500 bg-red-500/10 py-1.5 px-2 rounded-md border border-red-500/20">
             {error}
           </p>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
+        <form onSubmit={handleSubmit} className="space-y-2">
           
           {/* Section 1: Basic Info */}
-          <div className="border-b border-black/5 dark:border-white/5 pb-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">1. Personal Information</h3>
-            <div className="space-y-3">
+          <div className="border-b border-black/5 dark:border-white/5 pb-2.5">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">1. Personal Information</h3>
+            <div className="space-y-2">
               <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                   Full Name *
                 </label>
                 <input
                   type="text"
                   name="fullName"
                   required
-                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                  className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                               ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                   placeholder="e.g. John Smith"
                   value={formData.fullName}
@@ -193,16 +193,16 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Email Address *
                   </label>
                   <input
                     type="email"
                     name="email"
                     required
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                    className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                 ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                     placeholder="name@gmail.com"
                     value={formData.email}
@@ -210,14 +210,14 @@ export default function Signup() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Mobile Number *
                   </label>
                   <input
                     type="tel"
                     name="mobileNumber"
                     required
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                    className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                 ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                     placeholder="e.g. 9876543210"
                     value={formData.mobileNumber}
@@ -226,9 +226,9 @@ export default function Signup() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Password *
                   </label>
                   <div className="relative">
@@ -236,7 +236,7 @@ export default function Signup() {
                       type={showPassword ? "text" : "password"}
                       name="password"
                       required
-                      className={`w-full pl-3 pr-10 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                      className={`w-full pl-2.5 pr-8 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                   ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                       placeholder="Min 8 characters"
                       value={formData.password}
@@ -245,28 +245,28 @@ export default function Signup() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
                     >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
-                  <div className="mt-2 space-y-1.5">
-                    <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {hasMinLength ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                      <span>At least 8 characters</span>
+                  <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px]">
+                    <div className={`flex items-center gap-1 transition-colors ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {hasMinLength ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                      <span>8+ chars</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasUppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {hasUppercase ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                      <span>At least 1 uppercase letter</span>
+                    <div className={`flex items-center gap-1 transition-colors ${hasUppercase ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {hasUppercase ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                      <span>1 Uppercase</span>
                     </div>
-                    <div className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {hasSpecialChar ? <Check size={12} className="stroke-[3]" /> : <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 ml-1 mr-0.5"></span>}
-                      <span>At least 1 special character</span>
+                    <div className={`flex items-center gap-1 transition-colors ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {hasSpecialChar ? <Check size={10} className="stroke-[3]" /> : <span className="inline-block w-1 h-1 rounded-full bg-gray-400 dark:bg-gray-500"></span>}
+                      <span>1 Special char</span>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Confirm Password *
                   </label>
                   <div className="relative">
@@ -274,7 +274,7 @@ export default function Signup() {
                       type={showConfirmPassword ? "text" : "password"}
                       name="confirmPassword"
                       required
-                      className={`w-full pl-3 pr-10 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                      className={`w-full pl-2.5 pr-8 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                   ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                       placeholder="Confirm password"
                       value={formData.confirmPassword}
@@ -283,13 +283,13 @@ export default function Signup() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
                     >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                   {showMatchError && (
-                    <p className="text-xs font-semibold text-red-500 mt-1.5 select-none">
+                    <p className="text-[10px] font-semibold text-red-500 mt-1 select-none">
                       Passwords do not match
                     </p>
                   )}
@@ -299,18 +299,18 @@ export default function Signup() {
           </div>
 
           {/* Section 2: College & Academic Info */}
-          <div className="border-b border-black/5 dark:border-white/5 pb-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">2. College & Academic Information</h3>
-            <div className="space-y-3">
+          <div className="border-b border-black/5 dark:border-white/5 pb-2.5">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">2. College & Academic Information</h3>
+            <div className="space-y-2">
               <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                   College Name *
                 </label>
                 <input
                   type="text"
                   name="collegeName"
                   required
-                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                  className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                               ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                   placeholder="e.g. IIT Delhi"
                   value={formData.collegeName}
@@ -318,16 +318,16 @@ export default function Signup() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Degree / Branch *
                   </label>
                   <input
                     type="text"
                     name="degreeBranch"
                     required
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                    className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                 ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                     placeholder="e.g. B.Tech CSE"
                     value={formData.degreeBranch}
@@ -335,13 +335,13 @@ export default function Signup() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
                     Graduation Year *
                   </label>
                   <select
                     name="graduationYear"
                     required
-                    className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                    className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                                 ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                     value={formData.graduationYear}
                     onChange={handleChange}
@@ -357,20 +357,20 @@ export default function Signup() {
           </div>
 
           {/* Section 3: Program & Commitment */}
-          <div className="space-y-4 pb-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">3. Program Selection & Readiness</h3>
+          <div className="space-y-2 pb-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">3. Program Selection & Readiness</h3>
             
             <div>
-              <span className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-300">
+              <span className="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">
                 Which program are you joining? *
               </span>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
                 {['Placement Sprint', 'Full Stack Project Program', 'Both'].map((program) => (
                   <label 
                     key={program} 
-                    className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer hover:bg-blue-500/5 transition text-sm
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer hover:bg-blue-500/5 transition text-[11px]
                                 ${formData.programSelection === program 
-                                  ? 'border-blue-500 bg-blue-500/10' 
+                                  ? 'border-blue-500 bg-blue-500/10 font-medium' 
                                   : (theme === 'dark' ? 'border-gray-700' : 'border-gray-300')}`}
                   >
                     <input
@@ -379,23 +379,23 @@ export default function Signup() {
                       value={program}
                       checked={formData.programSelection === program}
                       onChange={handleChange}
-                      className="text-blue-500 focus:ring-blue-500"
+                      className="text-blue-500 focus:ring-blue-500 h-3 w-3"
                     />
-                    <span>{program}</span>
+                    <span className="truncate">{program}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">
-                  Are you preparing for placements? *
+                <label className="block text-[11px] font-semibold mb-0.5 text-slate-600 dark:text-slate-300">
+                  Placement readiness? *
                 </label>
                 <select
                   name="placementReadiness"
                   required
-                  className={`w-full px-3 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm
+                  className={`w-full px-2.5 py-1.5 rounded-md border focus:ring-1 focus:ring-blue-500 focus:outline-none text-xs
                               ${theme === 'dark' ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-900 border-gray-300'}`}
                   value={formData.placementReadiness}
                   onChange={handleChange}
@@ -408,19 +408,19 @@ export default function Signup() {
               </div>
 
               <div>
-                <span className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-300">
-                  Can you commit 30–90 minutes daily? *
+                <span className="block text-[11px] font-semibold mb-1 text-slate-600 dark:text-slate-300">
+                  Commit 30–90 min daily? *
                 </span>
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-center pt-0.5">
                   {['Yes', 'No'].map((option) => (
-                    <label key={option} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <label key={option} className="flex items-center gap-1 text-xs cursor-pointer">
                       <input
                         type="radio"
                         name="dailyCommitment"
                         value={option}
                         checked={formData.dailyCommitment === option}
                         onChange={handleChange}
-                        className="text-blue-500 focus:ring-blue-500"
+                        className="text-blue-500 focus:ring-blue-500 h-3 w-3"
                       />
                       <span>{option}</span>
                     </label>
@@ -430,7 +430,7 @@ export default function Signup() {
             </div>
 
             {/* Declaration */}
-            <div className={`p-3 rounded-lg border flex gap-3 text-xs leading-5
+            <div className={`p-2 rounded-md border flex gap-2 text-[11px] leading-4
                             ${theme === 'dark' ? 'border-gray-800 bg-gray-900/30' : 'border-gray-200 bg-slate-50'}`}>
               <input
                 type="checkbox"
@@ -438,7 +438,7 @@ export default function Signup() {
                 id="declarationAccepted"
                 checked={formData.declarationAccepted}
                 onChange={handleChange}
-                className="mt-1 text-blue-500 focus:ring-blue-500 h-4 w-4 rounded shrink-0 cursor-pointer"
+                className="mt-0.5 text-blue-500 focus:ring-blue-500 h-3.5 w-3.5 rounded shrink-0 cursor-pointer"
               />
               <label htmlFor="declarationAccepted" className="text-slate-600 dark:text-slate-300 cursor-pointer select-none">
                 I understand that this program requires daily participation and consistent effort. *
@@ -448,7 +448,7 @@ export default function Signup() {
 
           <button
             type="submit"
-            className={`w-full font-bold py-2.5 px-4 rounded-lg transition-colors shadow-md transform active:scale-[0.99] text-sm
+            className={`w-full font-bold py-2 px-4 rounded-md transition-colors shadow-sm transform active:scale-[0.99] text-xs mt-1
                       ${theme === 'dark' ? 
                         'bg-blue-600 hover:bg-blue-500 text-white' : 
                         'bg-blue-800 hover:bg-blue-700 text-white'}`}
@@ -456,20 +456,20 @@ export default function Signup() {
             Create account
           </button>
 
-          <div className={`flex items-center justify-center my-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className={`flex items-center justify-center my-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
             <span className={`border-t w-full ${theme === 'dark' ? 'border-gray-800' : 'border-gray-300'}`}></span>
-            <span className="px-2 text-xs text-slate-400 whitespace-nowrap">or continue with</span>
+            <span className="px-2 text-[10px] text-slate-400 whitespace-nowrap">or continue with</span>
             <span className={`border-t w-full ${theme === 'dark' ? 'border-gray-800' : 'border-gray-300'}`}></span>
           </div>
 
-          <div className="flex justify-center mt-2">
-            <div className={`rounded-lg p-1.5 border hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center 
+          <div className="flex justify-center">
+            <div className={`rounded-md p-1 border hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center 
                             ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-300'}`}>
               <div id="googleSignupDiv"></div>
             </div>
           </div>
 
-          <p className={`text-center mt-4 text-xs ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+          <p className={`text-center mt-2 text-[11px] ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
             Already have an account?{' '}
             <button 
               type="button"

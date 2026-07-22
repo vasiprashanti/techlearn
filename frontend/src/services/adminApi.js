@@ -339,7 +339,10 @@ export const adminAPI = {
     return unwrapData(payload);
   },
 
-  getQuestionCategories: () => request('/admin/questions/categories'),
+  getQuestionCategories: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/admin/questions/categories${query ? `?${query}` : ''}`);
+  },
   createQuestionCategory: (body) => request('/admin/questions/categories', { method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body) }),
   updateQuestionCategory: (categoryId, body) => request(`/admin/questions/categories/${categoryId}`, { method: 'PUT', body: body instanceof FormData ? body : JSON.stringify(body) }),
   getQuestionCategoryUsage: (categoryId) => request(`/admin/questions/categories/${categoryId}/usage`),

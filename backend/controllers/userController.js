@@ -241,22 +241,7 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Auto-assign project if they joined Full Stack Project Program or Both
-    if (newUser.programSelection === "Full Stack Project Program" || newUser.programSelection === "Both") {
-      const defaultProject = await ensureDefaultProjectExists();
-      if (defaultProject) {
-        await StudentProject.findOneAndUpdate(
-          { student_id: student._id, project_id: defaultProject._id, status: "Active" },
-          {
-            $setOnInsert: {
-              current_day: 1,
-              progress_percentage: 0,
-            },
-          },
-          { upsert: true, new: true }
-        );
-      }
-    }
+
 
     res.status(201).json({
       message: "User registered successfully",

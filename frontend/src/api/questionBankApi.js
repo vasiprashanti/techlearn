@@ -1,7 +1,7 @@
 import { adminAPI } from '../services/adminApi';
 
 export const questionBankApi = {
-  listCategories: () => adminAPI.getQuestionCategories(),
+  listCategories: (params = {}) => adminAPI.getQuestionCategories(params),
   createCategory: (payload) => adminAPI.createQuestionCategory(payload),
   updateCategory: (categoryId, payload) => adminAPI.updateQuestionCategory(categoryId, payload),
   deleteCategory: (categoryId) => adminAPI.deleteQuestionCategory(categoryId),

@@ -5,6 +5,13 @@ import Submission from "../models/Submission.js";
 import Student from "../models/Student.js";
 import mongoose from "mongoose";
 import readline from "readline";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -17,10 +24,10 @@ const askQuestion = (query) => {
 
 const run = async () => {
   try {
-    await connectDB();
-
     const emailInput = await askQuestion("Enter the student email to reset daily challenge: ");
     const email = emailInput.trim().toLowerCase();
+
+    await connectDB();
 
     if (!email) {
       console.log("No email provided. Exiting.");

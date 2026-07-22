@@ -97,6 +97,8 @@ const CollegeDetails = () => {
         code: stateCollege.code || '',
         city: stateCollege.city || '',
         activeBatches: stateCollege.activeBatches || 0,
+        contactPerson: stateCollege.contactPerson || '',
+        contactEmail: stateCollege.contactEmail || '',
         submissionRate: stateCollege.submissionRate || 0,
         batches: Array.isArray(stateCollege.batches) ? stateCollege.batches.map(normalizeBatchRow) : [],
       };
@@ -107,6 +109,8 @@ const CollegeDetails = () => {
       name: collegeId?.split('-')[0] || 'College',
       code: '',
       city: '',
+      contactPerson: '',
+      contactEmail: '',
       status: 'Active',
       totalStudents: 0,
       activeStudents: 0,
@@ -441,39 +445,123 @@ const CollegeDetails = () => {
                   Back to Colleges
                 </button>
 
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#3C83F6] to-[#5f98ef] text-white flex items-center justify-center text-3xl font-semibold shadow-md">
-                    {college.name?.charAt(0) || 'C'}
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-semibold tracking-tight text-black/90 dark:text-white">{college.name}</h2>
-                    <p className="mt-1 text-lg text-black/55 dark:text-white/55">{college.code || college.id} {college.city ? `· ${college.city}` : ''}</p>
-                  </div>
-                  <span className={`ml-auto inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(college.status)}`}>
-                    {college.status}
-                  </span>
-                </div>
+                {/* Unified College Overview Card */}
+                <div className="bg-white dark:bg-gradient-to-br dark:from-[#0c1836] dark:via-[#0f1f43] dark:to-[#08122a] border border-black/5 dark:border-[#15366f]/60 rounded-2xl p-6 sm:p-7 shadow-lg dark:shadow-[0_12px_36px_rgba(0,0,0,0.3)] backdrop-blur-xl relative overflow-hidden space-y-6">
+                  {/* Background Accent Glow */}
+                  <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-                  <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
-                    <p className="flex items-center gap-2 text-sm leading-snug text-black/55 dark:text-white/55 min-h-[34px]"><FiUsers className="w-4 h-4 shrink-0" />Total Students</p>
-                    <p className="mt-2 text-3xl font-semibold text-black dark:text-white leading-none">{college.totalStudents}</p>
+                  {/* Header Section: Avatar + Name + Status + Code & Location */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/5 dark:border-white/10 pb-5">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#3C83F6] via-[#4f8ff7] to-[#6366f1] text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-blue-500/25 shrink-0">
+                        {college.name?.charAt(0) || 'C'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white truncate">
+                            {college.name}
+                          </h2>
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                            college.status === 'Active'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-500/30'
+                              : 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300 border-amber-500/30'
+                          }`}>
+                            {college.status || 'Active'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          {college.code && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20 font-semibold">
+                              Code: {college.code}
+                            </span>
+                          )}
+                          {college.city && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-500/10 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300 border border-slate-500/20">
+                              Location: {college.city}
+                            </span>
+                          )}
+                          {college.contactPerson && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-500/10 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300 border border-slate-500/20">
+                              Contact: {college.contactPerson}
+                            </span>
+                          )}
+                          {college.contactEmail && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-500/10 text-slate-700 dark:bg-slate-700/40 dark:text-slate-300 border border-slate-500/20">
+                              Email: {college.contactEmail}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
-                    <p className="flex items-center gap-2 text-sm leading-snug text-black/55 dark:text-white/55 min-h-[34px]"><FiActivity className="w-4 h-4 shrink-0" />Active Students Today</p>
-                    <p className="mt-2 text-3xl font-semibold text-black dark:text-white leading-none">{college.activeStudents}</p>
-                  </div>
-                  <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
-                    <p className="flex items-center gap-2 text-sm leading-snug text-black/55 dark:text-white/55 min-h-[34px]"><FiLayers className="w-4 h-4 shrink-0" />Active Batches</p>
-                    <p className="mt-2 text-3xl font-semibold text-black dark:text-white leading-none">{college.activeBatches}</p>
-                  </div>
-                  <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
-                    <p className="flex items-center gap-2 text-sm leading-snug text-black/55 dark:text-white/55 min-h-[34px]"><FiTrendingUp className="w-4 h-4 shrink-0" />Average Score</p>
-                    <p className="mt-2 text-3xl font-semibold text-black dark:text-white leading-none">{college.avgScore}%</p>
-                  </div>
-                  <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl p-4 min-h-[110px] flex flex-col justify-between">
-                    <p className="flex items-center gap-2 text-sm leading-snug text-black/55 dark:text-white/55 min-h-[34px]"><FiBarChart2 className="w-4 h-4 shrink-0" />Submission Rate</p>
-                    <p className="mt-2 text-3xl font-semibold text-black dark:text-white leading-none">{college.submissionRate}%</p>
+
+                  {/* 5 Stat Metrics Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                    {/* Total Students */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                      <div className="p-2.5 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                        <FiUsers className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 leading-tight">Total Students</p>
+                        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                          {college.totalStudents}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Active Students Today */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                      <div className="p-2.5 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                        <FiActivity className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 leading-tight">Active Today</p>
+                        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                          {college.activeStudents}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Active Batches */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                      <div className="p-2.5 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                        <FiLayers className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 leading-tight">Active Batches</p>
+                        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                          {college.activeBatches}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Average Score */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                      <div className="p-2.5 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                        <FiTrendingUp className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 leading-tight">Avg Score</p>
+                        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                          {college.avgScore}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Submission Rate */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                      <div className="p-2.5 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                        <FiBarChart2 className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300 leading-tight">Submission Rate</p>
+                        <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                          {college.submissionRate}%
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -490,38 +578,38 @@ const CollegeDetails = () => {
                   </div>
 
                   <div className="bg-white/70 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-2xl overflow-hidden">
-                    <div className="grid grid-cols-[minmax(0,1.3fr)_100px_110px_100px_190px] gap-3 px-5 py-3 text-sm font-semibold text-black/50 dark:text-white/50 border-b border-black/5 dark:border-white/10">
-                      <span>Batch Name</span>
-                      <span>Students</span>
-                      <span>Avg Score</span>
-                      <span>Status</span>
-                      <span className="text-right">Actions</span>
-                    </div>
+                    <div className="grid grid-cols-[minmax(0,1.25fr)_0.55fr_0.7fr_0.7fr_1.05fr] items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-3 text-xs sm:text-sm font-semibold text-black/50 dark:text-white/50 border-b border-black/5 dark:border-white/10">
+                          <span className="text-left">Batch Name</span>
+                          <span className="text-center">Students</span>
+                          <span className="text-center">Avg Score</span>
+                          <span className="text-center">Status</span>
+                          <span className="text-center">Actions</span>
+                        </div>
 
                     {college.batches.length === 0 ? (
                       <div className="px-5 py-7 text-center text-black/45 dark:text-white/45 text-sm">No batches mapped to this college yet.</div>
                     ) : (
                       college.batches.map((batch) => (
-                        <div key={batch.id} className="grid grid-cols-[minmax(0,1.3fr)_100px_110px_100px_190px] gap-3 px-5 py-4 text-base text-black/80 dark:text-white border-b border-black/5 dark:border-white/10 last:border-b-0">
-                          <span className="font-semibold truncate">{batch.name}</span>
-                          <span>{batch.students}</span>
-                          <span>{batch.avgScore}%</span>
-                          <span>
-                            <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(batch.status)}`}>
+                        <div key={batch.id} className="grid grid-cols-[minmax(0,1.25fr)_0.55fr_0.7fr_0.7fr_1.05fr] items-center gap-1.5 sm:gap-2.5 px-3 sm:px-5 py-3.5 text-xs sm:text-sm text-black/80 dark:text-white border-b border-black/5 dark:border-white/10 last:border-b-0">
+                          <span className="font-semibold truncate text-left" title={batch.name}>{batch.name}</span>
+                          <span className="text-center tabular-nums">{batch.students}</span>
+                          <span className="text-center tabular-nums">{batch.avgScore}%</span>
+                          <span className="flex justify-center">
+                            <span className={`inline-flex min-w-[50px] items-center justify-center rounded-full px-1.5 sm:px-2 py-1.5 text-[10px] sm:text-[11px] font-semibold leading-none ${statusPillClass(batch.status)}`}>
                               {batch.status}
                             </span>
                           </span>
-                          <span className="flex items-center justify-end gap-2">
+                          <span className="flex items-center justify-center gap-1.5 sm:gap-2">
                             <button
                               onClick={() => navigate(`/batches/${batch.id}`, { state: { batch } })}
-                              className="inline-flex items-center gap-1.5 text-sm text-[#3C83F6] dark:text-blue-300 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
+                              className="inline-flex items-center gap-0.5 sm:gap-1 text-[11px] sm:text-sm text-[#3C83F6] dark:text-blue-300 hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
                             >
                               View
                               <FiArrowUpRight className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => openEditBatch(batch.id)}
-                              className="w-9 h-9 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
+                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-white/60 dark:hover:bg-white/10 inline-flex items-center justify-center transition-colors"
                               aria-label={`Edit ${batch.name}`}
                             >
                               <FiEdit2 className="w-4 h-4" />
@@ -531,7 +619,7 @@ const CollegeDetails = () => {
                                 setBatchFormError('');
                                 setPendingDeleteBatch(batch);
                               }}
-                              className="w-9 h-9 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
+                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border border-black/10 dark:border-white/20 bg-white/40 dark:bg-white/5 text-black/65 dark:text-white/75 hover:bg-red-500/10 hover:text-red-500 inline-flex items-center justify-center transition-colors"
                               aria-label={`Delete ${batch.name}`}
                             >
                               <FiTrash2 className="w-4 h-4" />

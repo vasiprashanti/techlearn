@@ -15,6 +15,7 @@ import User from "../../models/User.js";
 import UserProgress from "../../models/UserProgress.js";
 import DailyChallengeAttempt from "../../models/DailyChallengeAttempt.js";
 import StudentProject from "../../models/StudentProject.js";
+import Project from "../../models/Project.js";
 import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
@@ -407,6 +408,8 @@ export const getCollegeDetail = async (req, res) => {
         code: college.code || "",
         city: college.city || "",
         status: college.status || "Active",
+        contactPerson: college.contactPerson || "",
+        contactEmail: college.contactEmail || "",
         totalStudents: students.length,
         activeStudents,
         activeBatches: batches.filter((batch) => batch.status === BATCH_STATUS.ACTIVE).length,
@@ -821,22 +824,27 @@ export const getBatchDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Batch not found." });
     }
 
-    const students = await Student.find({ batchId }).lean();
+    const students = await Student.find({ batchId }).populate("collegeId", "name").lean();
     const studentIds = students.map((s) => s._id);
+
+    const allCollegesList = await College.find().select("name").lean();
+    const collegeMap = new Map(allCollegesList.map((c) => [String(c._id), c.name]));
 
     const studentEmails = students
       .map((student) => String(student.email || "").trim().toLowerCase())
       .filter(Boolean);
 
     const users = studentEmails.length
-      ? await User.find({ email: { $in: studentEmails } }).select("_id email").lean()
+      ? await User.find({ email: { $in: studentEmails } }).select("_id email collegeName collegeId").lean()
       : [];
 
     const userEmailToIdMap = new Map();
+    const userEmailToUserMap = new Map();
     const userIds = [];
     users.forEach(u => {
       const email = String(u.email || "").trim().toLowerCase();
       userEmailToIdMap.set(email, u._id);
+      userEmailToUserMap.set(email, u);
       userIds.push(u._id);
     });
 
@@ -2396,10 +2404,20 @@ todayXp = todayChallengeXp + todayTaskXp;
       }
 
 
+      const studentUser = userEmailToUserMap.get(studentEmail);
+      const collegeNameResolved =
+        student.collegeName ||
+        (student.collegeId?.name ? student.collegeId.name : (student.collegeId ? collegeMap.get(String(student.collegeId._id || student.collegeId)) : null)) ||
+        studentUser?.collegeName ||
+        (studentUser?.collegeId?.name ? studentUser.collegeId.name : (studentUser?.collegeId ? collegeMap.get(String(studentUser.collegeId._id || studentUser.collegeId)) : null)) ||
+        (batch.collegeId?.name || (batch.collegeIds && batch.collegeIds.length > 0 ? (batch.collegeIds[0]?.name || collegeMap.get(String(batch.collegeIds[0]))) : null)) ||
+        "—";
+
       return {
         id: student._id,
         name: student.name,
         email: student.email,
+        college: collegeNameResolved,
         todayScore,
         todayScoresDetail,
         todayXp,
@@ -2538,6 +2556,9 @@ todayXp = todayChallengeXp + todayTaskXp;
         name: batch.name,
         collegeId: batch.collegeId?._id || null,
         collegeIds: (batch.collegeIds || []).filter(Boolean).map((c) => String(c._id || c)),
+        collegesList: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
+          ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College")
+          : (batch.collegeId?.name ? [batch.collegeId.name] : []),
         college: batch.collegeIds && batch.collegeIds.filter(Boolean).length > 0
           ? batch.collegeIds.filter(Boolean).map((c) => c.name || "Unknown College").join(", ")
           : (batch.collegeId?.name || "Unknown College"),
@@ -2555,6 +2576,7 @@ todayXp = todayChallengeXp + todayTaskXp;
         batchSize: typeof batch.batchSize === "number" ? batch.batchSize : null,
         status: batch.status,
         start: formatDateLabel(batch.startDate),
+        end: batch.expiryDate ? formatDateLabel(batch.expiryDate) : (batch.endDate ? formatDateLabel(batch.endDate) : "Ongoing"),
         startDateValue: batch.startDate ? new Date(batch.startDate).toISOString().slice(0, 10) : "",
         expiryDateValue: batch.expiryDate ? new Date(batch.expiryDate).toISOString().slice(0, 10) : "",
         students: students.length,
@@ -3218,6 +3240,8 @@ export const updateStudentAdmin = async (req, res) => {
         },
       });
     }
+
+
 
     await writeAuditLog({
       verb: "Updated",

@@ -16,6 +16,9 @@ import {
   FiChevronDown,
   FiChevronRight,
   FiClock,
+  FiCalendar,
+  FiCheckCircle,
+  FiTag,
 } from 'react-icons/fi';
 import { PiBrainLight } from 'react-icons/pi';
 import { useTheme } from '../../context/ThemeContext';
@@ -780,39 +783,113 @@ export default function TrackTemplateDetails() {
               Back to Track Templates
             </button>
 
-            <div className="pt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <div className="w-16 h-16 rounded-xl bg-[#d7e2ff] dark:bg-[#1d3768] flex items-center justify-center shadow-sm">
-                  <Icon className="w-8 h-8 text-[#2563eb] dark:text-blue-300" />
-                </div>
-                <div>
-                  <h2 className="text-2xl md:text-[1.8rem] font-bold tracking-tight text-[#0b1b38] dark:text-white">{track.name}</h2>
-                  <p className="mt-0.5 text-sm md:text-base text-[#5d748f] dark:text-slate-300">
-                    {track.description} 
-                    <span className="mx-2">·</span>
-                    {track.totalDays} days
-                  </p>
-                  <p className="mt-1 text-xs md:text-sm text-[#5d748f] dark:text-slate-300 font-medium">
-                    {assignedDateText}
-                  </p>
+            {/* Unified Track Template Overview Card */}
+            <div className="bg-white dark:bg-gradient-to-br dark:from-[#0c1836] dark:via-[#0f1f43] dark:to-[#08122a] border border-black/5 dark:border-[#15366f]/60 rounded-2xl p-6 sm:p-7 shadow-lg dark:shadow-[0_12px_36px_rgba(0,0,0,0.3)] backdrop-blur-xl relative overflow-hidden space-y-6">
+              {/* Background Accent Glow */}
+              <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header Section: Avatar + Name + Type + Status + Categories + Description + Schedule Note */}
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 border-b border-black/5 dark:border-white/10 pb-5">
+                <div className="flex items-start gap-4 min-w-0">
+                  <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-[#3C83F6] via-[#4f8ff7] to-[#6366f1] text-white flex items-center justify-center shadow-md shadow-blue-500/25 shrink-0 mt-1">
+                    <Icon className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        {track.name}
+                      </h2>
+
+                      {/* Track Type Badge */}
+                      <span className="px-3 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20">
+                        {track.trackType || 'Daily Task'}
+                      </span>
+
+                      {/* Status Badge */}
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                        track.status === 'Active'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 border-emerald-500/30'
+                          : 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300 border-amber-500/30'
+                      }`}>
+                        {track.status || 'Active'}
+                      </span>
+                    </div>
+
+                    {/* Question Categories Added */}
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <span className="text-xs font-medium text-slate-400 dark:text-slate-400 flex items-center gap-1">
+                        <FiTag className="w-3.5 h-3.5" /> Question Categories:
+                      </span>
+                      {track.category ? (
+                        String(track.category).split(',').map((catName, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-500/20"
+                          >
+                            {catName.trim()}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-400">All Categories</span>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {track.description && (
+                      <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl pt-1">
+                        {track.description}
+                      </p>
+                    )}
+
+                    {/* Schedule info text */}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-500/20 text-xs font-semibold mt-1">
+                      <FiClock className="w-3.5 h-3.5 shrink-0" />
+                      <span>Schedule starts when assigned to batch</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 self-start md:self-auto md:ml-auto">
-                <span className={`inline-flex min-w-[48px] items-center justify-center rounded-full px-2 py-1.5 text-[11px] font-semibold leading-none ${statusPillClass(track.status)}`}>
-                  {track.status}
-                </span>
-              </div>
-            </div>
+              {/* 3 Stat Metrics Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+                {/* Total Days */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiCalendar className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Total Days</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                      {track.totalDays} <span className="text-xs font-medium text-slate-400">Days</span>
+                    </p>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
-                <p className="text-sm text-[#5f7491] dark:text-slate-300">Total Days</p>
-                <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{track.totalDays}</p>
-              </div>
-              <div className="rounded-xl bg-white/95 dark:bg-[#0f274f] border border-black/10 dark:border-white/10 px-4 py-3">
-                <p className="text-sm text-[#5f7491] dark:text-slate-300">Questions Assigned</p>
-                <p className="mt-1 text-3xl font-bold text-[#0b1b38] dark:text-white">{trackDetail?.questionsAssigned ?? track.questionsAssigned ?? 0}</p>
+                {/* Questions Assigned */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiCheckCircle className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Questions Assigned</p>
+                    <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                      {trackDetail?.questionsAssigned ?? track.questionsAssigned ?? 0} <span className="text-xs font-medium text-slate-400">Questions</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Default Release Time */}
+                <div className="flex items-center gap-3.5 p-4 rounded-xl bg-slate-500/5 dark:bg-[#071330]/70 border border-slate-200/60 dark:border-[#1e3a70]/50 transition-all hover:border-[#3C83F6]/30">
+                  <div className="p-3 rounded-xl bg-[#3C83F6]/10 text-[#3C83F6] dark:bg-blue-500/15 dark:text-blue-400 shrink-0">
+                    <FiClock className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400/90">Default Release Time</p>
+                    <p className="text-base sm:text-lg font-bold text-slate-900 dark:text-white mt-0.5 leading-none">
+                      {track.releaseTime || trackDetail?.releaseTime || '00:00 AM'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 

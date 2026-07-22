@@ -232,8 +232,9 @@ export default function DailyChallengeTest() {
             const isSavedSubmitted = savedAnswers?.problemSubmitted?.[idx.toString()];
             const draft = savedDraft?.[idx];
 
+            const defaultStarter = prob.starterCode?.python?.code || prob.content?.starterCode?.python?.code || prob.solutionCode || LANGUAGES.python.starter;
             initialSolutions[idx] = {
-              code: draft?.code !== undefined ? draft.code : (savedCode !== undefined ? savedCode : (prob.categoryType === "MCQ" ? "" : LANGUAGES.python.starter)),
+              code: draft?.code !== undefined ? draft.code : (savedCode !== undefined ? savedCode : (prob.categoryType === "MCQ" ? "" : defaultStarter)),
               language: draft?.language || savedLang || "python"
             };
 

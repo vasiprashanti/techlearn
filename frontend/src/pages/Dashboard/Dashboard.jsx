@@ -118,8 +118,8 @@ export default function Dashboard() {
   const loadProjectData = async () => {
     try {
       const res = await getStudentActiveProject();
-      if (res && res.success && res.dashboardMode === "project" && res.hasActiveProject) {
-        setHasActiveProject(true);
+      if (res && res.success) {
+        setHasActiveProject(!!res.hasActiveProject);
         setProjectData(res);
       } else {
         setHasActiveProject(false);
@@ -574,14 +574,29 @@ export default function Dashboard() {
     !leaderboardLoading &&
     (!leaderboardEntries.length || leaderboardEntries.every((entry) => Number(entry.totalXp || 0) === 0));
 
-  const projectStats = hasActiveProject && projectData ? [
-    { title: 'Project XP', value: projectData.projectXpEarned.toLocaleString(), icon: <PixelStar /> },
-    { title: 'Tasks Done', value: `${projectData.projectCompletedTotal}/${projectData.totalProjectTasks}`, icon: <PixelQuestion /> },
-    { title: 'Project Progress', value: `${projectData.projectOverallProgress}%`, icon: <PixelArrow /> },
-    { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
-  ] : null;
+  const userProgramSelection = displayUser?.programSelection || user?.programSelection || projectData?.dashboardMode || (() => {
+    try {
+      return JSON.parse(localStorage.getItem("userData") || "{}").programSelection || "";
+    } catch {
+      return "";
+    }
+  })();
 
-  const retroStats = hasActiveProject && projectData ? projectStats : [
+  const isProjectSprintUser = userProgramSelection === "Full Stack Project Program" || projectData?.dashboardMode === "project";
+
+  const projectStats = hasActiveProject && projectData?.project ? [
+    { title: 'Project XP', value: (projectData.projectXpEarned || 0).toLocaleString(), icon: <PixelStar /> },
+    { title: 'Tasks Done', value: `${projectData.projectCompletedTotal || 0}/${projectData.totalProjectTasks || 0}`, icon: <PixelQuestion /> },
+    { title: 'Project Progress', value: `${projectData.projectOverallProgress || 0}%`, icon: <PixelArrow /> },
+    { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
+  ] : [
+    { title: 'Project XP', value: (progress?.projectXP || 0).toLocaleString(), icon: <PixelStar /> },
+    { title: 'Tasks Done', value: '0/0', icon: <PixelQuestion /> },
+    { title: 'Project Progress', value: '0%', icon: <PixelArrow /> },
+    { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
+  ];
+
+  const retroStats = isProjectSprintUser ? projectStats : [
     { title: 'Total XP', value: progress.xp.toLocaleString(), icon: <PixelStar /> },
     { title: 'Total Solved', value: progress.completed.toString(), icon: <PixelQuestion /> },
     {
@@ -681,7 +696,7 @@ export default function Dashboard() {
               
               {/* Daily Challenge Card / Project Hero - Spans 5/8 width on lg */}
               <div className="w-full lg:col-span-5 order-1 lg:order-none flex flex-col">
-                {hasActiveProject && projectData ? (
+                {hasActiveProject && projectData?.project ? (
                   <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
                     <div
                       className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
@@ -733,6 +748,66 @@ export default function Dashboard() {
                           </button>
                           <button
                             onClick={() => navigate('/dashboard/project/day-notes')}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            Start Lesson <ChevronRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : isProjectSprintUser ? (
+                  <div className="rounded-xl flex flex-col justify-between relative overflow-hidden p-4 sm:p-5 md:p-6 min-h-[220px] lg:h-[250px] shadow-lg border border-[#15366f]/45 group w-full">
+                    <div
+                      className="absolute inset-0 z-0 scale-102 group-hover:scale-100 transition-transform duration-500 ease-out"
+                      style={{
+                        backgroundImage: `url(${heroBg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    />
+                    <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/95 via-black/60 to-black/20" />
+
+                    {/* Top Header Row */}
+                    <div className="z-10 flex flex-wrap items-center justify-between gap-2 w-full shrink-0 sm:flex-nowrap">
+                      <h1 className="font-pixel-header text-[9px] sm:text-[10.5px] md:text-[11.5px] tracking-wider text-white drop-shadow-md leading-tight text-left">
+                        FULL STACK PROJECT PROGRAM
+                      </h1>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
+                          <Clock className="w-3.5 h-3.5 shrink-0" />
+                          <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
+                        </span>
+                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-amber-300 bg-black/55 backdrop-blur-md px-2 py-1 border border-amber-500/30 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
+                          <span>NO ACTIVE PROJECT</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Row */}
+                    <div className="z-10 flex flex-1 flex-col justify-end text-left w-full mt-4 sm:mt-5 text-white">
+                      <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={pixelStarImg}
+                            alt="XP"
+                            className="w-7 h-7 object-contain select-none"
+                            style={{ imageRendering: 'pixelated' }}
+                          />
+                          <span className="font-pixel-header text-[8px] sm:text-[9px] text-[#8fd9ff] drop-shadow-md">
+                            {(progress?.projectXP || 0).toLocaleString()} XP
+                          </span>
+                        </div>
+
+                        <div className="flex w-full flex-col justify-end gap-2 sm:w-auto sm:flex-row">
+                          <button
+                            onClick={() => setToast({ show: true, message: "No active project assigned yet.", type: "info" })}
+                            className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
+                          >
+                            View Project <ChevronRight className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => setToast({ show: true, message: "No active project assigned yet.", type: "info" })}
                             className="bg-white text-[#0a1128] hover:bg-slate-100 active:bg-slate-200 px-4 py-2 rounded-md font-press-start text-[10px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 transform hover:-translate-y-0.5 shadow-md"
                           >
                             Start Lesson <ChevronRight className="w-3 h-3" />
@@ -945,13 +1020,13 @@ export default function Dashboard() {
                       <PlaceholderBar className="h-2 w-full rounded-full" />
                     </div>
                   </>
-                ) : hasActiveProject && projectData ? (
+                ) : hasActiveProject && projectData?.project ? (
                   <>
                     {/* Header */}
                     <div className="flex items-center justify-between shrink-0 mb-1 text-left">
                       <div className="flex items-center gap-1.5">
                         <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
-                          TODAY'S TASKS (DAY {projectData.assignment.current_day})
+                          TODAY'S TASKS (DAY {projectData.assignment?.current_day || 1})
                         </h3>
                       </div>
                       <span className="font-pixel-header text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
@@ -1016,6 +1091,46 @@ export default function Dashboard() {
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-blue-500 to-[#3C83F6] shadow-[0_0_8px_#3C83F6] transition-all duration-500"
                           style={{ width: `${projectData.projectDayProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </>
+                ) : isProjectSprintUser ? (
+                  <>
+                    {/* Header */}
+                    <div className="flex items-center justify-between shrink-0 mb-1 text-left">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="font-pixel-header text-[9.5px] md:text-[11.5px] tracking-wider text-black/70 dark:text-[#8fd9ff]">
+                          TODAY'S TASKS (DAY 1)
+                        </h3>
+                      </div>
+                      <span className="font-pixel-header text-[10px] sm:text-xs text-[#3C83F6] dark:text-[#8fd9ff] leading-tight font-normal">
+                        0/0
+                      </span>
+                    </div>
+
+                    {/* Minimal Unassigned Task Content */}
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-3">
+                      <h4 className="font-pixel-header text-xs md:text-sm font-bold text-[#00113b] dark:text-[#8fd9ff]">
+                        No Active Project Assigned
+                      </h4>
+                      <p className="font-press-start text-[10px] sm:text-xs text-[#00113b]/60 dark:text-[#81bde6]/70 mt-1 leading-relaxed">
+                        Your daily project tasks will appear here once a project is assigned.
+                      </p>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="mt-1 shrink-0 w-full text-left">
+                      <div className="flex justify-between items-center font-press-start mb-0.5">
+                        <span className="text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">PROGRESS</span>
+                        <span className="font-pixel-header text-[10px] sm:text-xs font-medium text-[#00113b]/70 dark:text-[#81bde6] leading-tight">
+                          0%
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full border border-black/5 bg-black/15 shadow-inner dark:border-white/5 dark:bg-black/40">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-[#3C83F6]"
+                          style={{ width: `0%` }}
                         />
                       </div>
                     </div>

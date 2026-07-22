@@ -197,7 +197,8 @@ const uploadResourceFile = async (file) => {
 
 export const listQuestionCategories = async (req, res) => {
   try {
-    const categories = await listKnownQuestionCategories();
+    const includeDrafts = req.query.includeDrafts === "true" || req.query.includeAll === "true" || req.query.all === "true";
+    const categories = await listKnownQuestionCategories({ includeDrafts });
     const data = await Promise.all(
       categories.map(async (category) => {
         const questionFilter = {

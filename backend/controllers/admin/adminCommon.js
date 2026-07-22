@@ -140,8 +140,13 @@ export const slugifyCategory = (value) =>
     .replace(/^-+|-+$/g, "")
     .replace(/-{2,}/g, "-");
 
-export const listKnownQuestionCategories = async () => {
-  const storedCategories = await Category.find({ visibility: { $ne: "private" } }).sort({ createdAt: 1 }).lean();
+export const listKnownQuestionCategories = async (options = {}) => {
+  const { includeDrafts = false } = options;
+  const filter = { visibility: { $ne: "private" } };
+  if (!includeDrafts) {
+    filter.status = "Active";
+  }
+  const storedCategories = await Category.find(filter).sort({ createdAt: 1 }).lean();
   return storedCategories.map((category) => ({
     id: category._id,
     slug: category.slug,
