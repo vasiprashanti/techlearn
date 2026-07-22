@@ -14,6 +14,7 @@ import {
   updateProjectDay,
   deleteProjectDay,
   createProjectTask,
+  createProjectTasksBulk,
   getProjectTasksByDay,
   updateProjectTask,
   deleteProjectTask,
@@ -59,6 +60,7 @@ router.delete("/days/:id", protect, isAdmin, deleteProjectDay);
 router.post("/days/:id/duplicate", protect, isAdmin, duplicateProjectDay);
 
 // Project Tasks routes
+router.post("/tasks/bulk", protect, isAdmin, createProjectTasksBulk);
 router.post("/tasks", protect, isAdmin, createProjectTask);
 router.get("/days/:dayId/tasks", protect, isAdmin, getProjectTasksByDay);
 router.put("/tasks/:id", protect, isAdmin, updateProjectTask);

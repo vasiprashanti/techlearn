@@ -14,7 +14,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
   const [notesMarkdown, setNotesMarkdown] = useState("");
 
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState({ task_description: "", xp_value: "" });
+  const [bulkTasks, setBulkTasks] = useState("");
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingTask, setEditingTask] = useState({ task_description: "", xp_value: "" });
   const [isSavingTask, setIsSavingTask] = useState(false);
@@ -141,18 +141,15 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
   };
 
   // Task creation
-  const handleCreateTask = async (e) => {
+  const handleCreateTasks = async (e) => {
     e.preventDefault();
-    const { task_description, xp_value } = newTask;
+    const taskDescriptions = bulkTasks
+      .split(/\||\r?\n/)
+      .map((description) => description.trim())
+      .filter(Boolean);
 
-    if (!task_description.trim()) {
-      setError("Task description is required.");
-      return;
-    }
-
-    const xpNum = Number(xp_value);
-    if (isNaN(xpNum) || xpNum < 0) {
-      setError("XP value must be a positive number (>= 0).");
+    if (!taskDescriptions.length) {
+      setError("Enter at least one task.");
       return;
     }
 
@@ -160,18 +157,17 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
     setError("");
     setSuccess("");
     try {
-      await adminAPI.createProjectTask({
+      const result = await adminAPI.createProjectTasksBulk({
         project_day_id: dayId,
-        task_description: task_description.trim(),
-        xp_value: xpNum
+        task_descriptions: taskDescriptions,
       });
-      setNewTask({ task_description: "", xp_value: "" });
-      setSuccess("Task created successfully!");
-      fetchDayData();
+      setBulkTasks("");
+      setSuccess(result.message || `${taskDescriptions.length} tasks created successfully!`);
+      await fetchDayData();
       if (onSave) onSave();
       setTimeout(() => setSuccess(""), 2500);
     } catch (err) {
-      setError(err.message || "Failed to create task.");
+      setError(err.message || "Failed to create tasks.");
     } finally {
       setIsSavingTask(false);
     }
@@ -356,41 +352,30 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
             </h4>
 
             {/* Task Creation Form */}
-            <form onSubmit={handleCreateTask} className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end">
-              <div className="sm:col-span-2">
-                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                  Task Description*
-                </label>
-                <input
-                  type="text"
-                  value={newTask.task_description}
-                  onChange={(e) => setNewTask({ ...newTask, task_description: e.target.value })}
-                  placeholder="e.g. Write integration test"
-                  className={inputClass}
-                  required
-                />
-              </div>
+            <form onSubmit={handleCreateTasks} className="space-y-2">
               <div>
                 <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                  XP Value*
+                  Bulk Tasks*
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={newTask.xp_value}
-                  onChange={(e) => setNewTask({ ...newTask, xp_value: e.target.value })}
-                  placeholder="e.g. 50"
-                  className={inputClass}
+                <textarea
+                  rows="5"
+                  value={bulkTasks}
+                  onChange={(e) => setBulkTasks(e.target.value)}
+                  placeholder={"Setup Spring Boot | Configure MySQL | Create Login API\n\nor enter one task per line"}
+                  className={`${inputClass} min-h-[110px] resize-y`}
                   required
                 />
+                <p className="mt-1.5 text-[10px] font-medium text-slate-400">
+                  Separate tasks using a | character or a new line. Each entry becomes an individual checkbox task.
+                </p>
               </div>
               <button
                 type="submit"
                 disabled={isSavingTask}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-xl font-bold text-xs h-[34px] shadow-sm flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-xl font-bold text-xs h-[34px] shadow-sm inline-flex items-center justify-center gap-1 transition-all disabled:opacity-50"
               >
                 <FiPlus className="w-3.5 h-3.5" />
-                Add
+                {isSavingTask ? "Adding..." : "Add Tasks"}
               </button>
             </form>
 

@@ -328,7 +328,7 @@ export default function InterviewAptitudeQuestionDetail() {
                 Question {currentTaskIndex + 1} of {dailySequence.length}
               </div>
             )}
-            <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
+            <h2 className="text-base md:text-lg font-medium text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
               {question.description || question.title}
             </h2>
           </div>

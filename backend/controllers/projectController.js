@@ -621,6 +621,43 @@ export const createProjectTask = async (req, res) => {
   }
 };
 
+export const createProjectTasksBulk = async (req, res) => {
+  try {
+    const { project_day_id, task_descriptions } = req.body;
+    const descriptions = (Array.isArray(task_descriptions) ? task_descriptions : [])
+      .map((description) => String(description || "").trim())
+      .filter(Boolean);
+
+    if (!project_day_id) {
+      return res.status(400).json({ success: false, message: "Project day is required." });
+    }
+    if (!descriptions.length) {
+      return res.status(400).json({ success: false, message: "Enter at least one task." });
+    }
+    if (descriptions.length > 100) {
+      return res.status(400).json({ success: false, message: "A maximum of 100 tasks can be added at once." });
+    }
+
+    const tasks = await ProjectTask.insertMany(
+      descriptions.map((task_description) => ({
+        project_day_id,
+        task_description,
+        xp_value: 0,
+      })),
+    );
+
+    return res.status(201).json({
+      success: true,
+      tasks,
+      count: tasks.length,
+      message: `${tasks.length} task${tasks.length === 1 ? "" : "s"} created successfully.`,
+    });
+  } catch (err) {
+    console.error("Bulk Create Project Tasks Error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 export const getProjectTasksByDay = async (req, res) => {
   try {
     const { dayId } = req.params;

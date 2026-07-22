@@ -484,6 +484,7 @@ export const adminAPI = {
   duplicateProjectDay: (id) => request(`/admin/projects/days/${id}/duplicate`, { method: 'POST' }),
 
   createProjectTask: (body) => request('/admin/projects/tasks', { method: 'POST', body: JSON.stringify(body) }),
+  createProjectTasksBulk: (body) => request('/admin/projects/tasks/bulk', { method: 'POST', body: JSON.stringify(body) }),
   updateProjectTask: (id, body) => request(`/admin/projects/tasks/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteProjectTask: (id) => request(`/admin/projects/tasks/${id}`, { method: 'DELETE' }),
   getProjectTasksByDay: (dayId) => request(`/admin/projects/days/${dayId}/tasks`),
