@@ -983,7 +983,7 @@ const BatchDetails = () => {
                           <option className={dropdownOptionClass} value="score-asc">Lowest Score</option>
                           <option className={dropdownOptionClass} value="xp-desc">Highest XP</option>
                           <option className={dropdownOptionClass} value="xp-asc">Lowest XP</option>
-                          <option className={dropdownOptionClass} value="rank-asc">Leaderboard Rank</option>
+                          <option className={dropdownOptionClass} value="rank-asc">Rank</option>
                         </select>
                         <FiChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/45 dark:text-white/60" />
                       </div>
@@ -999,21 +999,20 @@ const BatchDetails = () => {
 
                   <div className="bg-white dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[1400px] table-auto">
+                      <table className="w-full min-w-[1280px] table-auto">
                         <thead>
                           <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-8 whitespace-nowrap">#</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 w-32 whitespace-nowrap">Student Name</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student Email</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student College</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
+                            <th className="sticky left-0 z-30 w-8 bg-slate-50 dark:bg-[#0b1833] text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">#</th>
+                            <th className="sticky left-8 z-30 w-32 bg-slate-50 dark:bg-[#0b1833] text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 whitespace-nowrap border-r border-black/5 dark:border-white/10">Name</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Rank</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task Score</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-emerald-600 dark:text-emerald-300">Today's Task XP</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge Score</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap text-blue-600 dark:text-blue-300">Today's Challenge XP</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap font-bold">Total XP</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Leaderboard Rank</th>
+                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Student College</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Last Attempt Date/Time</th>
-                            <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Status</th>
                             <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2.5 py-2 whitespace-nowrap">Actions</th>
                           </tr>
                         </thead>
@@ -1032,51 +1031,27 @@ const BatchDetails = () => {
                                 }}
                                 role={isPlaceholder ? undefined : 'button'}
                                 tabIndex={isPlaceholder ? undefined : 0}
-                                className={`border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors ${isPlaceholder ? '' : 'cursor-pointer focus:outline-none focus:bg-black/[0.03] dark:focus:bg-white/[0.05]'}`}
+                                className={`group border-b border-black/5 dark:border-white/10 last:border-b-0 hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors ${isPlaceholder ? '' : 'cursor-pointer focus:outline-none focus:bg-black/[0.03] dark:focus:bg-white/[0.05]'}`}
                               >
-                                <td className="px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 dark:text-white/50 whitespace-nowrap">
+                                <td className="sticky left-0 z-20 w-8 bg-white px-2 py-2 text-center text-[11px] sm:text-xs font-semibold text-black/45 whitespace-nowrap group-hover:bg-slate-50 dark:bg-[#0f1f43] dark:text-white/50 dark:group-hover:bg-[#14264b]">
                                   {isPlaceholder ? '-' : index + 1}
                                 </td>
                                 {isPlaceholder ? (
-                                  <td colSpan={13} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
+                                  <td colSpan={11} className="px-2 py-2 text-[11px] sm:text-xs font-medium text-black/45 dark:text-white/50 text-center whitespace-nowrap">
                                     No enrolled students
                                   </td>
                                 ) : (
                                   <>
-                                    <td className="px-2 py-2 text-center text-[11px] sm:text-xs font-medium text-black/85 dark:text-white/85 whitespace-nowrap max-w-[120px] truncate" title={student.name}>
+                                    <td className="sticky left-8 z-20 w-32 max-w-[128px] truncate border-r border-black/5 bg-white px-3 py-2 text-left text-[11px] sm:text-xs font-medium text-black/85 whitespace-nowrap group-hover:bg-slate-50 dark:border-white/10 dark:bg-[#0f1f43] dark:text-white/85 dark:group-hover:bg-[#14264b]" title={student.name}>
                                       {student.name}
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                      {formatEmail(student.email)}
-                                    </td>
-                                    <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[140px] truncate" title={student.college || '—'}>
-                                      {student.college || '—'}
-                                    </td>
-                                    <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
-                                      {student.todayChallengeSubmissionId ? (
-                                        <button
-                                          type="button"
-                                          onClick={(event) => {
-                                            event.stopPropagation();
-                                            setSelectedChallengeScore({
-                                            studentName: student.name,
-                                            email: student.email,
-                                            submissionId: student.todayChallengeSubmissionId,
-                                            scoresDetail: student.todayChallengeScoresDetail,
-                                            });
-                                          }}
-                                          className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
-                                        >
-                                          View score
-                                        </button>
-                                      ) : (
-                                        <span className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500">—</span>
-                                      )}
-                                    </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
-                                        {student.todayChallengeXp ? `+${student.todayChallengeXp} XP` : '—'}
+                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
+                                        {student.status || 'Not Started'}
                                       </span>
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                      {student.leaderboardRank && student.leaderboardRank !== '—' && student.leaderboardRank !== '-' ? `#${student.leaderboardRank}` : '—'}
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
                                       {student.todayScore === 'View Scores' ? (
@@ -1105,19 +1080,40 @@ const BatchDetails = () => {
                                         {student.todayTaskXp ? `+${student.todayTaskXp} XP` : '—'}
                                       </span>
                                     </td>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap relative">
+                                      {student.todayChallengeSubmissionId ? (
+                                        <button
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            setSelectedChallengeScore({
+                                            studentName: student.name,
+                                            email: student.email,
+                                            submissionId: student.todayChallengeSubmissionId,
+                                            scoresDetail: student.todayChallengeScoresDetail,
+                                            });
+                                          }}
+                                          className="text-[11px] sm:text-xs font-semibold text-blue-600 hover:text-blue-700 underline dark:text-blue-300 dark:hover:text-blue-200"
+                                        >
+                                          View score
+                                        </button>
+                                      ) : (
+                                        <span className="text-[11px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500">—</span>
+                                      )}
+                                    </td>
+                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
+                                      <span className="text-[11px] sm:text-xs font-semibold text-blue-600 dark:text-blue-300">
+                                        {student.todayChallengeXp ? `+${student.todayChallengeXp} XP` : '—'}
+                                      </span>
+                                    </td>
                                     <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                       {student.totalXp || 0} XP
                                     </td>
-                                    <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                      {student.leaderboardRank && student.leaderboardRank !== '—' && student.leaderboardRank !== '-' ? `#${student.leaderboardRank}` : '—'}
+                                    <td className="px-2.5 py-2 text-center text-[10px] sm:text-[11px] font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap max-w-[140px] truncate" title={student.college || '—'}>
+                                      {student.college || '—'}
                                     </td>
                                     <td className="px-2.5 py-2 text-center text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap">
                                       {formatLastAttempt(student.lastAttemptAt)}
-                                    </td>
-                                    <td className="px-2.5 py-2 text-center whitespace-nowrap">
-                                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusPillClass(student.status)}`}>
-                                        {student.status || 'Not Started'}
-                                      </span>
                                     </td>
                                     <td className="px-2.5 py-2 text-center whitespace-nowrap">
                                       <div className="flex items-center justify-center gap-1.5">
@@ -1155,7 +1151,7 @@ const BatchDetails = () => {
                           })}
                           {filteredStudents.length === 0 && (
                             <tr>
-                              <td colSpan={13} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
+                              <td colSpan={12} className="px-6 py-10 text-center text-sm text-black/40 dark:text-white/40">
                                 No students match your search query.
                               </td>
                             </tr>
