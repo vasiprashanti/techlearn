@@ -625,7 +625,7 @@ export default function InterviewSqlQuestionDetail() {
               }}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#0043A1]/15 dark:border-white/10 bg-[#0043A1]/5 dark:bg-white/5 px-4 py-1.5 text-xs font-semibold text-[#0043A1] dark:text-gray-300 hover:bg-[#0043A1]/10 dark:hover:bg-white/10 transition-all duration-200 active:scale-[0.98]"
             >
-              Back
+              Previous
             </button>
 
             {/* Daily Tasks X/N centered between them */}

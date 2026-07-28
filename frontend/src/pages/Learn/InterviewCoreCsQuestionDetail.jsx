@@ -423,7 +423,7 @@ export default function InterviewCoreCsQuestionDetail() {
                   }}
                   className="inline-flex w-32 justify-center items-center gap-2 rounded-xl border border-[#2563eb]/20 dark:border-gray-700 bg-[#2563eb]/5 dark:bg-black/35 px-4 py-2.5 text-sm font-semibold text-[#2563eb] dark:text-gray-300 hover:bg-[#2563eb]/15 dark:hover:bg-black/50 shadow-sm transition-all duration-200"
                 >
-                  Back
+                  Previous
                 </button>
 
                 {!showFeedback && !isCurrentQuestionCompleted ? (
