@@ -79,6 +79,9 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             const match = table.find(s => String(s.id || s._id) === String(studentId));
             if (match) {
               setBatchStudentData(match);
+              if (typeof match.accuracy === 'number' && studentBasic && studentBasic.accuracy !== match.accuracy) {
+                studentBasic.accuracy = match.accuracy;
+              }
               const firstAttemptedDay = Object.values(match.dayWiseStudentReport || {}).find((day) =>
                 (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0
               );
@@ -160,7 +163,9 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const batch = studentDetails?.batch || studentDetails?.batchId?.name || studentBasic?.batch || 'Not Assigned';
   const streak = studentDetails?.streak || studentBasic?.streak || 0;
   const status = studentDetails?.status || studentBasic?.status || 'Active';
-  const accuracy = studentDetails?.accuracy || studentBasic?.accuracy || 0;
+  const accuracy = typeof batchStudentData?.accuracy === 'number'
+    ? batchStudentData.accuracy
+    : (typeof studentDetails?.accuracy === 'number' ? studentDetails.accuracy : (studentBasic?.accuracy || 0));
   const rank = context === 'batch'
     ? (batchRank !== '_' ? batchRank : '_')
     : (batchStudentData?.leaderboardRank || '_');
@@ -249,75 +254,77 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Loading student registry report...</p>
           </div>
         ) : (
-          <div className="flex flex-col p-6 space-y-5 overflow-y-auto min-h-0 minimal-scrollbar">
-            
-            {/* College, Batch, Track Details */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 dark:bg-white/5 p-4 rounded-xl border border-black/5 dark:border-white/5">
-              <div>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">College</span>
-                <span className="block mt-0.5 font-semibold text-xs truncate">{college}</span>
+          <div className="flex flex-col flex-1 min-h-0">
+            {/* Header & Sub-tabs static container */}
+            <div className="px-6 pt-5 pb-3 space-y-4 border-b border-black/10 dark:border-white/10 shrink-0 bg-white dark:bg-[#0a1737]">
+              {/* College, Batch, Track Details */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-black/5 dark:border-white/5">
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">College</span>
+                  <span className="block mt-0.5 font-semibold text-xs truncate">{college}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Batch</span>
+                  <span className="block mt-0.5 font-semibold text-xs truncate">{batch}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Selected Track</span>
+                  <span className="block mt-0.5 font-bold text-xs text-blue-600 dark:text-blue-400 truncate">{track}</span>
+                </div>
               </div>
-              <div>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Batch</span>
-                <span className="block mt-0.5 font-semibold text-xs truncate">{batch}</span>
+
+              {/* Quick KPI stats row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                  <FiAward className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Rank</span>
+                    <span className="block font-extrabold text-xs text-blue-700 dark:text-blue-300">#{rank}</span>
+                  </div>
+                </div>
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                  <FiTrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Total XP</span>
+                    <span className="block font-extrabold text-xs text-blue-700 dark:text-blue-300">{totalXp} XP</span>
+                  </div>
+                </div>
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                  <FiTarget className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Accuracy</span>
+                    <span className="block font-extrabold text-xs text-blue-700 dark:text-blue-300">{accuracy}%</span>
+                  </div>
+                </div>
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 p-2.5 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
+                  <FiActivity className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div>
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Streak</span>
+                    <span className="block font-extrabold text-xs text-blue-700 dark:text-blue-300">{streak} Days</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-white/45">Selected Track</span>
-                <span className="block mt-0.5 font-bold text-xs text-blue-600 dark:text-blue-400 truncate">{track}</span>
+
+              {/* Sub-tabs selection row */}
+              <div className="flex -mb-3 pt-1 overflow-x-auto minimal-scrollbar gap-1">
+                {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-2 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
+                      activeTab === tab
+                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Quick KPI stats row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
-                <FiAward className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div>
-                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Rank</span>
-                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">#{rank}</span>
-                </div>
-              </div>
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
-                <FiTrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div>
-                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Total XP</span>
-                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{totalXp} XP</span>
-                </div>
-              </div>
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
-                <FiTarget className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div>
-                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Accuracy</span>
-                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{accuracy}%</span>
-                </div>
-              </div>
-              <div className="bg-blue-50/50 dark:bg-blue-950/20 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30 flex items-center gap-3">
-                <FiActivity className="w-6 h-6 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div>
-                  <span className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-white/45">Streak</span>
-                  <span className="block font-extrabold text-sm text-blue-700 dark:text-blue-300">{streak} Days</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sub-tabs selection row */}
-            <div className="flex border-b border-black/10 dark:border-white/10 overflow-x-auto minimal-scrollbar">
-              {['Overview', 'Day-wise Report', 'Coding Submissions', 'MCQ Summary', 'Day-wise Performance'].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-2 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
-                    activeTab === tab
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content screens */}
-            <div className="flex-1">
+            {/* Tab content scrollable body */}
+            <div className="flex-1 overflow-y-auto p-6 min-h-0 minimal-scrollbar">
               
               {/* TAB 1: OVERVIEW */}
               {activeTab === 'Overview' && (
@@ -504,39 +511,119 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                 const dayReports = batchStudentData?.dayWiseStudentReport || {};
                 const dayReport = dayReports[selectedDay] || { dailyTasks: [], dailyChallenge: [], metrics: { coding: {}, mcq: {}, sql: {}, totalScore: 0, totalXp: 0 } };
                 const allItems = [...dayReport.dailyTasks, ...dayReport.dailyChallenge];
-                const renderSubmission = (item, index) => {
+                const mcqItems = allItems.filter(item => item.type === 'mcq');
+                const complexItems = allItems.filter(item => item.type !== 'mcq');
+
+                const renderComplexSubmission = (item, index) => {
                   const itemId = `${item.source}-${item.title}-${index}`;
-                  if (item.type === 'mcq') {
-                    const expanded = expandedMcqId === itemId;
-                    return <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03]">
-                      <button type="button" onClick={() => setExpandedMcqId(expanded ? null : itemId)} className="w-full px-3 py-2.5 flex items-center justify-between gap-3 text-left text-xs">
-                        <span><span className="font-semibold">{item.title}</span><span className="ml-2 text-slate-400">{item.source}</span></span>
-                        <FiChevronDown className={`shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                      </button>
-                      {expanded && <div className="px-3 pb-3 grid grid-cols-2 gap-2 border-t border-black/5 dark:border-white/10 pt-2 text-[11px] text-slate-600 dark:text-slate-300">
-                        <span>Selected: <strong>{item.selectedOption || 'Not answered'}</strong></span>
-                        <span>Correct: <strong>{item.correctAnswer || 'Not available'}</strong></span>
-                        <span>Score: <strong>{item.score}%</strong></span>
-                        <span>Accuracy: <strong>{item.accuracy}%</strong></span>
-                      </div>}
-                    </div>;
-                  }
-                  return <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-3 space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="font-semibold">{item.title}</span><span className="text-slate-400">{item.source} · {item.language || item.type}</span></div>
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] text-slate-500 dark:text-slate-400"><span>Score <strong className="text-slate-800 dark:text-white">{item.earnedScore || 0}/{item.maxScore || 0}</strong></span><span>Accuracy <strong className="text-slate-800 dark:text-white">{item.accuracy}%</strong></span><span>XP <strong className="text-slate-800 dark:text-white">{item.xp}</strong></span><span>Time <strong className="text-slate-800 dark:text-white">{item.executionTime ? `${item.executionTime} ms` : '—'}</strong></span><span>Memory <strong className="text-slate-800 dark:text-white">{item.memoryUsed ? `${item.memoryUsed} KB` : '—'}</strong></span></div>
-                    {item.testCases?.length > 0 && <div className="text-[11px] text-slate-500 dark:text-slate-400">Test cases: <strong className="text-slate-800 dark:text-white">{item.testCases.filter((result) => result.passed).length}/{item.testCases.length} passed</strong></div>}
-                    {item.code && <pre className="max-h-40 overflow-auto rounded-md bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200 whitespace-pre-wrap">{item.code}</pre>}
-                  </div>;
+                  return (
+                    <div key={itemId} className="rounded-lg border border-black/5 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] p-3 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="font-semibold">{item.title}</span>
+                        <span className="text-slate-400">{item.source} · {item.language || item.type?.toUpperCase()}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] text-center text-slate-500 dark:text-slate-400">
+                        <span>Score <strong className="block text-slate-800 dark:text-white">{item.earnedScore || 0}/{item.maxScore || 0}</strong></span>
+                        <span>Accuracy <strong className="block text-slate-800 dark:text-white">{item.accuracy}%</strong></span>
+                        <span>XP <strong className="block text-slate-800 dark:text-white">{item.xp}</strong></span>
+                        <span>Time <strong className="block text-slate-800 dark:text-white">{item.executionTime ? `${item.executionTime} ms` : '—'}</strong></span>
+                        <span>Memory <strong className="block text-slate-800 dark:text-white">{item.memoryUsed ? `${item.memoryUsed} KB` : '—'}</strong></span>
+                      </div>
+                      {item.testCases?.length > 0 && (
+                        <div className="text-[11px] text-center text-slate-500 dark:text-slate-400">
+                          Test cases: <strong className="text-slate-800 dark:text-white">{item.testCases.filter((result) => result.passed).length}/{item.testCases.length} passed</strong>
+                        </div>
+                      )}
+                      {item.code && (
+                        <pre className="max-h-40 overflow-auto rounded-md bg-slate-950 p-3 text-[11px] leading-relaxed text-emerald-200 whitespace-pre-wrap">{item.code}</pre>
+                      )}
+                    </div>
+                  );
                 };
-                return <div className="space-y-4">
-                  <div className="flex gap-2 overflow-x-auto minimal-scrollbar pb-1">
-                    {Array.from({ length: 30 }, (_, index) => index + 1).map((day) => <button key={day} type="button" onClick={() => setSelectedDay(day)} className={`shrink-0 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${selectedDay === day ? 'border-blue-500 bg-blue-500 text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-slate-300 hover:border-blue-400'}`}>Day {day}</button>)}
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex gap-2 overflow-x-auto minimal-scrollbar pb-1">
+                      {Array.from({ length: 30 }, (_, index) => index + 1).map((day) => (
+                        <button key={day} type="button" onClick={() => setSelectedDay(day)} className={`shrink-0 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${selectedDay === day ? 'border-blue-500 bg-blue-500 text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-slate-300 hover:border-blue-400'}`}>
+                          Day {day}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                      {[['Coding', dayReport.metrics.coding], ['MCQ', dayReport.metrics.mcq], ['SQL', dayReport.metrics.sql], ['Total XP', { score: dayReport.metrics.totalScore, accuracy: dayReport.metrics.totalXp }]].map(([label, metric]) => (
+                        <div key={label} className="rounded-xl border border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3 flex flex-col items-center justify-center">
+                          <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">{label}</span>
+                          <span className="mt-1 block text-sm font-extrabold text-blue-600 dark:text-blue-300">{label === 'Total XP' ? `${metric.accuracy || 0} XP` : `${metric.score || 0}%`}</span>
+                          {label !== 'Total XP' && <span className="text-[10px] text-slate-400">{metric.accuracy || 0}% accuracy</span>}
+                        </div>
+                      ))}
+                    </div>
+
+                    {allItems.length ? (
+                      <div className="space-y-4">
+                        {/* MCQ Table Section */}
+                        {mcqItems.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Multiple Choice Questions</h4>
+                            <div className="border border-black/5 dark:border-white/10 rounded-xl overflow-hidden bg-white/60 dark:bg-white/[0.03]">
+                              <table className="w-full text-left border-collapse text-xs table-fixed">
+                                <thead>
+                                  <tr className="bg-slate-50 dark:bg-white/5 border-b border-black/5 dark:border-white/10 text-[10px] uppercase tracking-wider text-slate-400">
+                                    <th className="p-2.5 w-[20%]">Question ID</th>
+                                    <th className="p-2.5 w-[50%]">Question Prompt</th>
+                                    <th className="p-2.5 text-center w-[15%]">Correct</th>
+                                    <th className="p-2.5 text-center w-[15%]">Selected</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {mcqItems.map((item, idx) => {
+                                    const qIdDisplay = item.questionId ? String(item.questionId).slice(-6).toUpperCase() : `Q${idx + 1}`;
+                                    const promptSnippet = item.title ? (item.title.length > 45 ? `${item.title.slice(0, 45)}...` : item.title) : '—';
+                                    const isCorrect = item.selectedOption && item.correctAnswer && item.selectedOption === item.correctAnswer;
+                                    return (
+                                      <tr key={idx} className="border-b border-black/5 dark:border-white/10 last:border-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.01]">
+                                        <td className="p-2.5 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{qIdDisplay}</td>
+                                        <td className="p-2.5 font-medium text-slate-800 dark:text-white truncate" title={item.title}>{promptSnippet}</td>
+                                        <td className="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{item.correctAnswer || '—'}</td>
+                                        <td className="p-2.5 text-center font-bold">
+                                          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] ${
+                                            !item.selectedOption || item.selectedOption === 'Not answered'
+                                              ? 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400'
+                                              : isCorrect
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                          }`}>
+                                            {item.selectedOption || 'Not answered'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Coding / SQL Detailed Expandable Items */}
+                        {complexItems.length > 0 && (
+                          <div className="space-y-3">
+                            {mcqItems.length > 0 && (
+                              <h4 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Coding & SQL Questions</h4>
+                            )}
+                            {complexItems.map(renderComplexSubmission)}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-black/10 dark:border-white/15 px-4 py-10 text-center text-xs italic text-slate-400">
+                        No submissions recorded for Day {selectedDay}.
+                      </div>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[['Coding', dayReport.metrics.coding], ['MCQ', dayReport.metrics.mcq], ['SQL', dayReport.metrics.sql], ['Total XP', { score: dayReport.metrics.totalScore, accuracy: dayReport.metrics.totalXp }]].map(([label, metric]) => <div key={label} className="rounded-xl border border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3"><span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">{label}</span><span className="mt-1 block text-sm font-extrabold text-blue-600 dark:text-blue-300">{label === 'Total XP' ? `${metric.accuracy || 0} XP` : `${metric.score || 0}%`}</span>{label !== 'Total XP' && <span className="text-[10px] text-slate-400">{metric.accuracy || 0}% accuracy</span>}</div>)}
-                  </div>
-                  {allItems.length ? <div className="space-y-3">{allItems.map(renderSubmission)}</div> : <div className="rounded-xl border border-dashed border-black/10 dark:border-white/15 px-4 py-10 text-center text-xs italic text-slate-400">No submissions recorded for Day {selectedDay}.</div>}
-                </div>;
+                );
               })()}
 
               {/* TAB 3: CODING SUBMISSIONS WITH MANUAL SCORING */}
@@ -692,20 +779,41 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               {activeTab === 'Day-wise Performance' && (
                 <div className="space-y-4">
                   <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-400">Day-wise Performance</h3>
-                  <div className="max-h-[55vh] overflow-auto minimal-scrollbar rounded-xl border border-black/5 dark:border-white/10">
-                    <table className="w-full min-w-[760px] text-left text-xs">
-                      <thead className="bg-slate-50 dark:bg-white/5 text-[10px] uppercase tracking-wider text-slate-400">
-                        <tr><th className="p-3">Day</th><th className="p-3">Coding</th><th className="p-3">MCQ</th><th className="p-3">SQL</th><th className="p-3">Total Score</th><th className="p-3">Total XP</th></tr>
+                  <div className="rounded-xl border border-black/5 dark:border-white/10 overflow-hidden bg-white/60 dark:bg-white/[0.03]">
+                    <table className="w-full text-left text-xs border-collapse table-fixed">
+                      <thead className="bg-slate-50 dark:bg-white/5 text-[10px] uppercase tracking-wider text-slate-400 border-b border-black/5 dark:border-white/10">
+                        <tr>
+                          <th className="p-2.5 w-[14%]">Day</th>
+                          <th className="p-2.5 w-[22%]">Coding</th>
+                          <th className="p-2.5 w-[18%]">MCQ</th>
+                          <th className="p-2.5 w-[18%]">SQL</th>
+                          <th className="p-2.5 w-[14%] font-semibold">Total Score</th>
+                          <th className="p-2.5 w-[14%] font-semibold">Total XP</th>
+                        </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="divide-y divide-black/5 dark:divide-white/10">
                         {Object.values(batchStudentData?.dayWiseStudentReport || {}).filter((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0).map((day) => (
-                          <tr key={day.dayNumber} className="border-t border-black/5 dark:border-white/10">
-                            <td className="p-3 font-semibold">Day {day.dayNumber}</td>
-                            {['coding', 'mcq', 'sql'].map((type) => <td key={type} className="p-3">{type === 'coding' ? `${day.metrics[type].earnedScore || 0} / ${day.metrics[type].maxScore || 0}` : `${day.metrics[type].score || 0}%`} <span className="text-slate-400">({day.metrics[type].accuracy || 0}% acc.)</span></td>)}
-                            <td className="p-3 font-semibold">{day.metrics.totalScore || 0}</td><td className="p-3 font-semibold text-blue-600 dark:text-blue-300">{day.metrics.totalXp || 0} XP</td>
+                          <tr key={day.dayNumber} className="hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+                            <td className="p-2.5 font-bold text-slate-800 dark:text-white">Day {day.dayNumber}</td>
+                            <td className="p-2.5 text-slate-700 dark:text-slate-300">
+                              <span className="font-semibold">{day.metrics.coding?.earnedScore || 0}/{day.metrics.coding?.maxScore || 0}</span>
+                              <span className="block text-[10px] text-slate-400">{day.metrics.coding?.accuracy || 0}% acc.</span>
+                            </td>
+                            <td className="p-2.5 text-slate-700 dark:text-slate-300">
+                              <span className="font-semibold">{day.metrics.mcq?.score || 0}%</span>
+                              <span className="block text-[10px] text-slate-400">{day.metrics.mcq?.accuracy || 0}% acc.</span>
+                            </td>
+                            <td className="p-2.5 text-slate-700 dark:text-slate-300">
+                              <span className="font-semibold">{day.metrics.sql?.score || 0}%</span>
+                              <span className="block text-[10px] text-slate-400">{day.metrics.sql?.accuracy || 0}% acc.</span>
+                            </td>
+                            <td className="p-2.5 font-bold text-slate-800 dark:text-white">{day.metrics.totalScore || 0}</td>
+                            <td className="p-2.5 font-bold text-blue-600 dark:text-blue-400">{day.metrics.totalXp || 0} XP</td>
                           </tr>
                         ))}
-                        {!Object.values(batchStudentData?.dayWiseStudentReport || {}).some((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0) && <tr><td colSpan={6} className="p-8 text-center italic text-slate-400">No assessment attempts recorded yet.</td></tr>}
+                        {!Object.values(batchStudentData?.dayWiseStudentReport || {}).some((day) => (day.dailyTasks?.length || 0) + (day.dailyChallenge?.length || 0) > 0) && (
+                          <tr><td colSpan={6} className="p-8 text-center italic text-slate-400">No assessment attempts recorded yet.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -762,100 +870,147 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
       {selectedMcqDay && (
         <div className="fixed inset-0 z-[160] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm" onClick={() => setSelectedMcqDay(null)} />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden text-left animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
             
             <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex items-center justify-between shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">MCQ Performance - Day {selectedMcqDay}</h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">MCQ Details - Day {selectedMcqDay}</h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{name}</p>
               </div>
               <button onClick={() => setSelectedMcqDay(null)} className="text-sm font-semibold text-slate-400 hover:text-slate-600">Close</button>
             </div>
 
-            <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
-              {/* Daily Tasks MCQ */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
-                  Daily Tasks MCQ ({batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—'})
-                </h3>
-                {(() => {
-                  const titles = getMcqTitlesForDay("Daily Task", selectedMcqDay);
-                  const taskMcq = batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—';
-                  if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily task MCQs completed or assigned on this day.</p>;
-                  
-                  const parts = taskMcq.split('/');
-                  const attempted = parts[0] !== '—';
-                  const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
-                  
-                  return (
-                    <div className="space-y-2">
-                      {titles.map((title, idx) => {
-                        let statusTag = "Not attempted";
-                        let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
-                        
-                        if (attempted) {
-                          if (idx < correctCount) {
-                            statusTag = "Correct";
-                            tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
-                          } else {
-                            statusTag = "Incorrect";
-                            tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
-                          }
-                        }
-                        
-                        return (
-                          <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
-                            <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
+            <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0 minimal-scrollbar">
+              {(() => {
+                const dayReports = batchStudentData?.dayWiseStudentReport || {};
+                const dayReport = dayReports[selectedMcqDay] || { dailyTasks: [], dailyChallenge: [] };
+                const dayMcqs = [...(dayReport.dailyTasks || []), ...(dayReport.dailyChallenge || [])].filter(item => item.type === 'mcq');
 
-              {/* Daily Challenge MCQ */}
-              <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
-                  Daily Challenge MCQ ({getChallengeMcqStats(selectedMcqDay)})
-                </h3>
-                {(() => {
-                  const titles = getMcqTitlesForDay("Daily Challenge", selectedMcqDay);
-                  const challengeMcq = getChallengeMcqStats(selectedMcqDay);
-                  if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily challenge MCQs completed or assigned on this day.</p>;
-                  
-                  const parts = challengeMcq.split('/');
-                  const attempted = parts[0] !== '—';
-                  const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
-                  
+                if (dayMcqs.length > 0) {
                   return (
-                    <div className="space-y-2">
-                      {titles.map((title, idx) => {
-                        let statusTag = "Not attempted";
-                        let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
-                        
-                        if (attempted) {
-                          if (idx < correctCount) {
-                            statusTag = "Correct";
-                            tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
-                          } else {
-                            statusTag = "Incorrect";
-                            tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
-                          }
-                        }
-                        
-                        return (
-                          <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
-                            <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
-                          </div>
-                        );
-                      })}
+                    <div className="border border-black/10 dark:border-white/10 rounded-xl overflow-hidden bg-white/60 dark:bg-white/[0.03]">
+                      <table className="w-full text-left border-collapse text-xs table-fixed">
+                        <thead>
+                          <tr className="bg-slate-50 dark:bg-white/5 border-b border-black/10 dark:border-white/10 text-[10px] uppercase tracking-wider text-slate-400">
+                            <th className="p-2.5 w-[20%]">Question ID</th>
+                            <th className="p-2.5 w-[50%]">Question Prompt</th>
+                            <th className="p-2.5 text-center w-[15%]">Correct</th>
+                            <th className="p-2.5 text-center w-[15%]">Selected</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dayMcqs.map((item, idx) => {
+                            const qIdDisplay = item.questionId ? String(item.questionId).slice(-6).toUpperCase() : `Q${idx + 1}`;
+                            const promptSnippet = item.title ? (item.title.length > 45 ? `${item.title.slice(0, 45)}...` : item.title) : '—';
+                            const isCorrect = item.selectedOption && item.correctAnswer && item.selectedOption === item.correctAnswer;
+                            return (
+                              <tr key={idx} className="border-b border-black/5 dark:border-white/10 last:border-0 hover:bg-black/[0.01] dark:hover:bg-white/[0.01]">
+                                <td className="p-2.5 font-mono text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{qIdDisplay}</td>
+                                <td className="p-2.5 font-medium text-slate-800 dark:text-white truncate" title={item.title}>{promptSnippet}</td>
+                                <td className="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{item.correctAnswer || '—'}</td>
+                                <td className="p-2.5 text-center font-bold">
+                                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] ${
+                                    !item.selectedOption || item.selectedOption === 'Not answered'
+                                      ? 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400'
+                                      : isCorrect
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                  }`}>
+                                    {item.selectedOption || 'Not answered'}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   );
-                })()}
-              </div>
+                }
+
+                // Fallback to title lists if item-level mcq is empty
+                return (
+                  <>
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
+                        Daily Tasks MCQ ({batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—'})
+                      </h3>
+                      {(() => {
+                        const titles = getMcqTitlesForDay("Daily Task", selectedMcqDay);
+                        const taskMcq = batchStudentData?.dayWiseHistoryTasksDetail?.[selectedMcqDay]?.mcq || '—';
+                        if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily task MCQs completed or assigned on this day.</p>;
+                        
+                        const parts = taskMcq.split('/');
+                        const attempted = parts[0] !== '—';
+                        const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
+                        
+                        return (
+                          <div className="space-y-2">
+                            {titles.map((title, idx) => {
+                              let statusTag = "Not attempted";
+                              let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
+                              if (attempted) {
+                                if (idx < correctCount) {
+                                  statusTag = "Correct";
+                                  tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+                                } else {
+                                  statusTag = "Incorrect";
+                                  tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+                                }
+                              }
+                              return (
+                                <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+                                  <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800 pb-1">
+                        Daily Challenge MCQ ({getChallengeMcqStats(selectedMcqDay)})
+                      </h3>
+                      {(() => {
+                        const titles = getMcqTitlesForDay("Daily Challenge", selectedMcqDay);
+                        const challengeMcq = getChallengeMcqStats(selectedMcqDay);
+                        if (titles.length === 0) return <p className="text-xs italic text-slate-400">No daily challenge MCQs completed or assigned on this day.</p>;
+                        
+                        const parts = challengeMcq.split('/');
+                        const attempted = parts[0] !== '—';
+                        const correctCount = attempted ? parseInt(parts[0], 10) || 0 : 0;
+                        
+                        return (
+                          <div className="space-y-2">
+                            {titles.map((title, idx) => {
+                              let statusTag = "Not attempted";
+                              let tagClass = "bg-slate-100 text-slate-650 dark:bg-white/5 dark:text-slate-400";
+                              if (attempted) {
+                                if (idx < correctCount) {
+                                  statusTag = "Correct";
+                                  tagClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
+                                } else {
+                                  statusTag = "Incorrect";
+                                  tagClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
+                                }
+                              }
+                              return (
+                                <div key={idx} className="flex justify-between items-center text-xs py-1.5 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+                                  <span className="font-semibold text-slate-700 dark:text-slate-350">{title}</span>
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tagClass}`}>{statusTag}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

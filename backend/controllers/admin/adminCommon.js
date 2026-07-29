@@ -287,34 +287,67 @@ export const computeAdminMetrics = async () => {
         },
       },
     ]),
-    Submission.aggregate([
-      { $sort: { submittedAt: -1 } },
-      {
-        $lookup: {
-          from: "students",
-          localField: "studentId",
-          foreignField: "_id",
-          as: "student",
-        },
-      },
-      { $unwind: { path: "$student", preserveNullAndEmptyArrays: true } },
+    Student.aggregate([
+      { $match: { status: "Active" } },
       {
         $lookup: {
           from: "colleges",
-          localField: "student.collegeId",
+          localField: "collegeId",
           foreignField: "_id",
           as: "college",
         },
       },
       { $unwind: { path: "$college", preserveNullAndEmptyArrays: true } },
       {
-        $group: {
-          _id: "$studentId",
-          name: { $first: "$student.name" },
-          college: { $first: "$college.name" },
-          score: { $avg: "$totalScore" },
+        $lookup: {
+          from: "submissions",
+          localField: "_id",
+          foreignField: "studentId",
+          as: "practiceSubs",
         },
       },
+      {
+        $addFields: {
+          practiceAvg: {
+            $cond: [
+              { $gt: [{ $size: "$practiceSubs" }, 0] },
+              {
+                $avg: {
+                  $map: {
+                    input: "$practiceSubs",
+                    as: "sub",
+                    in: {
+                      $ifNull: [
+                        "$$sub.accuracyScore",
+                        { $ifNull: ["$$sub.accuracy", "$$sub.totalScore"] }
+                      ]
+                    }
+                  }
+                }
+              },
+              null
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          name: 1,
+          college: "$college.name",
+          score: {
+            $ifNull: [
+              "$overallAccuracy",
+              {
+                $ifNull: [
+                  "$practiceAvg",
+                  0
+                ]
+              }
+            ]
+          }
+        }
+      },
+      { $match: { score: { $gt: 0 } } },
       { $sort: { score: -1 } },
       { $limit: 5 },
     ]),
