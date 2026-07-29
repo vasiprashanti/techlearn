@@ -718,9 +718,6 @@ export default function Dashboard() {
                           <Clock className="w-3.5 h-3.5 shrink-0" />
                           <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
                         </span>
-                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                          <span>{projectData.project.daysRemaining} DAYS LEFT</span>
-                        </span>
                       </div>
                     </div>
 
@@ -778,9 +775,6 @@ export default function Dashboard() {
                           <Clock className="w-3.5 h-3.5 shrink-0" />
                           <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
                         </span>
-                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-amber-300 bg-black/55 backdrop-blur-md px-2 py-1 border border-amber-500/30 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                          <span>NO ACTIVE PROJECT</span>
-                        </span>
                       </div>
                     </div>
 
@@ -837,9 +831,6 @@ export default function Dashboard() {
                         <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md flex items-center justify-center gap-1 shadow-sm">
                           <Clock className="w-3.5 h-3.5 shrink-0" />
                           <span className="whitespace-nowrap leading-none">{todayFormatted.toUpperCase()} IST</span>
-                        </span>
-                        <span className="font-press-start text-[9px] sm:text-[10px] tracking-[0.12em] uppercase font-bold text-white bg-black/55 backdrop-blur-md px-2 py-1 border border-white/10 rounded-md shadow-sm flex items-center justify-center whitespace-nowrap leading-none">
-                          <span>Resets in 14h 22m</span>
                         </span>
                       </div>
                     </div>
