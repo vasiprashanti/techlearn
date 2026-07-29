@@ -2,7 +2,15 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { adminAPI } from "../../services/adminApi";
 import MarkdownContent from "../../pages/Learn/MarkdownContent";
-import { FiSave, FiUpload, FiTrash2, FiEdit2, FiCheck, FiX, FiPlus, FiBookOpen, FiDownload, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import { FiSave, FiUpload, FiTrash2, FiBookOpen, FiDownload, FiCheckSquare, FiEye, FiX, FiList } from "react-icons/fi";
+
+const parseTasksFromMarkdown = (markdown) => {
+  if (!markdown || typeof markdown !== "string") return [];
+  const rawSections = markdown.split(/(?:\r?\n|^)\s*(?:---|[*]{3,}|_{3,})\s*(?:\r?\n|$)/);
+  return rawSections
+    .map((section) => section.trim())
+    .filter((section) => section.length > 0);
+};
 
 export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay, deletingDay = false }) {
   const [loading, setLoading] = useState(true);
@@ -13,19 +21,18 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [notesMarkdown, setNotesMarkdown] = useState("");
 
+  const [tasksMarkdown, setTasksMarkdown] = useState("");
   const [tasks, setTasks] = useState([]);
-  const [bulkTasks, setBulkTasks] = useState("");
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const [editingTask, setEditingTask] = useState({ task_description: "", xp_value: "" });
   const [isSavingTask, setIsSavingTask] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState(null);
+
   const [studentsHaveStarted, setStudentsHaveStarted] = useState(false);
   const [pendingNotesMarkdown, setPendingNotesMarkdown] = useState("");
   const [notesAction, setNotesAction] = useState("");
   const [showNotesConfirm, setShowNotesConfirm] = useState(false);
   const [showDeleteDayConfirm, setShowDeleteDayConfirm] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(true);
+  
+  // Modal states for View buttons
+  const [viewModalType, setViewModalType] = useState(null); // 'notes' | 'tasks' | null
 
   useEffect(() => {
     if (dayId) {
@@ -41,6 +48,7 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
       if (res.success) {
         setTopicTitle(res.day.topic_title || "");
         setNotesMarkdown(res.day.notes_markdown || "");
+        setTasksMarkdown(res.day.tasks_markdown || "");
         setTasks(res.tasks || []);
         setStudentsHaveStarted(Boolean(res.studentsHaveStarted));
       }
@@ -140,109 +148,73 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
     URL.revokeObjectURL(url);
   };
 
-  // Task creation
-  const handleCreateTasks = async (e) => {
+  // Day Tasks Markdown Handlers
+  const saveTasksMarkdown = async (text, successMsg = "Day tasks updated successfully!") => {
+    setIsSavingTask(true);
+    setError("");
+    setSuccess("");
+    try {
+      const res = await adminAPI.updateProjectDay(dayId, { tasks_markdown: text });
+      setTasksMarkdown(text);
+      if (res.tasks) {
+        setTasks(res.tasks);
+      }
+      setSuccess(successMsg);
+      if (onSave) onSave();
+      setTimeout(() => setSuccess(""), 2500);
+    } catch (err) {
+      setError(err.message || "Failed to save tasks markdown.");
+    } finally {
+      setIsSavingTask(false);
+    }
+  };
+
+  const handleSaveTasksSubmit = (e) => {
     e.preventDefault();
-    const taskDescriptions = bulkTasks
-      .split(/\||\r?\n/)
-      .map((description) => description.trim())
-      .filter(Boolean);
+    saveTasksMarkdown(tasksMarkdown, "Day tasks markdown saved and tasks generated!");
+  };
 
-    if (!taskDescriptions.length) {
-      setError("Enter at least one task.");
+  const handleTaskFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".md")) {
+      setError("Please upload a valid Markdown (.md) file.");
       return;
     }
 
-    setIsSavingTask(true);
     setError("");
     setSuccess("");
-    try {
-      const result = await adminAPI.createProjectTasksBulk({
-        project_day_id: dayId,
-        task_descriptions: taskDescriptions,
-      });
-      setBulkTasks("");
-      setSuccess(result.message || `${taskDescriptions.length} tasks created successfully!`);
-      await fetchDayData();
-      if (onSave) onSave();
-      setTimeout(() => setSuccess(""), 2500);
-    } catch (err) {
-      setError(err.message || "Failed to create tasks.");
-    } finally {
-      setIsSavingTask(false);
-    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      setTasksMarkdown(text);
+      await saveTasksMarkdown(text, "Tasks markdown uploaded and tasks generated!");
+    };
+    reader.onerror = () => {
+      setError("Error reading the tasks markdown file.");
+    };
+    reader.readAsText(file);
   };
 
-  // Task editing triggers
-  const startEditTask = (task) => {
-    setEditingTaskId(task._id);
-    setEditingTask({ task_description: task.task_description, xp_value: task.xp_value });
+  const handleDownloadTasksMarkdown = () => {
+    if (!tasksMarkdown) return;
+    const blob = new Blob([tasksMarkdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `day-${String(dayNumber).padStart(2, "0")}-tasks.md`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
-  const cancelEditTask = () => {
-    setEditingTaskId(null);
-    setEditingTask({ task_description: "", xp_value: "" });
+  const handleDeleteTasksMarkdown = async () => {
+    if (!tasksMarkdown) return;
+    await saveTasksMarkdown("", "Day tasks markdown cleared.");
   };
 
-  const handleUpdateTask = async (taskId) => {
-    const { task_description, xp_value } = editingTask;
-
-    if (!task_description.trim()) {
-      setError("Task description is required.");
-      return;
-    }
-
-    const xpNum = Number(xp_value);
-    if (isNaN(xpNum) || xpNum < 0) {
-      setError("XP value must be a positive number (>= 0).");
-      return;
-    }
-
-    setIsSavingTask(true);
-    setError("");
-    setSuccess("");
-    try {
-      await adminAPI.updateProjectTask(taskId, {
-        task_description: task_description.trim(),
-        xp_value: xpNum
-      });
-      setEditingTaskId(null);
-      setSuccess("Task updated successfully!");
-      fetchDayData();
-      if (onSave) onSave();
-      setTimeout(() => setSuccess(""), 2500);
-    } catch (err) {
-      setError(err.message || "Failed to update task.");
-    } finally {
-      setIsSavingTask(false);
-    }
-  };
-
-  // Task deletion
-  const handleDeleteClick = (task) => {
-    setTaskToDelete(task);
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDeleteTask = async () => {
-    if (!taskToDelete) return;
-
-    setError("");
-    setSuccess("");
-    try {
-      await adminAPI.deleteProjectTask(taskToDelete._id);
-      setSuccess("Task deleted successfully.");
-      setShowDeleteConfirm(false);
-      setTaskToDelete(null);
-      fetchDayData();
-      if (onSave) onSave();
-      setTimeout(() => setSuccess(""), 2500);
-    } catch (err) {
-      setError(err.message || "Failed to delete task.");
-      setShowDeleteConfirm(false);
-      setTaskToDelete(null);
-    }
-  };
+  const parsedPreviewTasks = parseTasksFromMarkdown(tasksMarkdown);
 
   const inputClass = "w-full px-3 py-2 text-xs rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all";
 
@@ -270,252 +242,269 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
         </div>
       )}
 
-      {/* Main Split Grid */}
-      <div className={`grid grid-cols-1 gap-6 ${previewOpen ? "lg:grid-cols-2" : ""}`}>
+      {/* Main Grid: 2 Side-by-Side Cards with Equal Height */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         
-        {/* Left Side: Information, Topic and Markdown Upload */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_18px_rgba(0,0,0,0.015)] space-y-4">
-            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
-              <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider">
-                Day {dayNumber} Information
-              </h4>
+        {/* Card 1: Day Information */}
+        <div className="bg-white dark:bg-[#0f274f] border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-full space-y-5">
+          <div className="space-y-5 flex-1 flex flex-col justify-between">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-extrabold text-xs">
+                  {dayNumber}
+                </div>
+                <h4 className="text-xs font-extrabold text-[#0c1833] dark:text-white uppercase tracking-wider">
+                  Day {dayNumber} Information
+                </h4>
+              </div>
+              <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-black/5 dark:border-white/5">
+                General Info
+              </span>
             </div>
 
-            <form onSubmit={handleSaveTitle} className="flex gap-2 items-end">
-              <div className="flex-1">
-                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                  Topic Title*
+            {/* Section 1: Topic Title */}
+            <form onSubmit={handleSaveTitle} className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block text-[11px]">
+                  Topic Title <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={topicTitle}
-                  onChange={(e) => setTopicTitle(e.target.value)}
-                  placeholder="e.g. Introduction to Routing"
-                  className={inputClass}
-                  required
-                />
+                {topicTitle && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    ✓ Title Set
+                  </span>
+                )}
               </div>
-              <button
-                type="submit"
-                disabled={isSavingTitle}
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white p-2.5 rounded-xl text-xs font-bold flex items-center justify-center h-[34px] shadow-sm transition"
-                title="Save Title"
-              >
-                <FiSave className="w-4 h-4" />
-              </button>
+              <input
+                type="text"
+                value={topicTitle}
+                onChange={(e) => setTopicTitle(e.target.value)}
+                placeholder="e.g. Introduction to Routing & Controllers"
+                className={`${inputClass} text-xs py-2.5`}
+                required
+              />
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <p className="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                  💡 Displayed as the primary heading on the student dashboard.
+                </p>
+                <button
+                  type="submit"
+                  disabled={isSavingTitle}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-sm transition-all h-[34px] active:scale-95 ml-auto"
+                  title="Save Topic Title"
+                >
+                  <FiSave className="w-3.5 h-3.5" />
+                  <span>{isSavingTitle ? "Saving..." : "Save Title"}</span>
+                </button>
+              </div>
             </form>
 
-            <div className="pt-3 border-t border-black/5 dark:border-white/5">
-              <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                Lesson Notes (.md)
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="cursor-pointer bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-3 py-2 rounded-xl text-xs font-semibold text-blue-500 hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center gap-1.5 shadow-sm">
-                  <FiUpload className="text-sm" />
-                  <input
-                    type="file"
-                    accept=".md"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  {notesMarkdown ? "Replace Markdown" : "Upload Markdown"}
+            {/* Section 2: Lesson Notes */}
+            <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block text-[11px]">
+                  Lesson Notes (.md)
                 </label>
-                {notesMarkdown && (
-                  <>
-                    <button type="button" onClick={handleDownloadNotes} className="inline-flex items-center gap-1.5 rounded-xl border border-black/10 bg-white px-3 py-2 text-xs font-semibold text-blue-500 shadow-sm transition hover:bg-black/5 dark:border-white/15 dark:bg-[#0f1f43]" title="Download Markdown">
-                      <FiDownload className="text-sm" /> Download
-                    </button>
-                    <button type="button" onClick={handleDeleteNotes} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs font-semibold text-rose-500 transition hover:bg-rose-500/10" title="Delete Markdown">
-                      <FiTrash2 className="text-sm" /> Delete
-                    </button>
-                  </>
-                )}
-                <span className="text-[10px] text-slate-400 font-medium">
-                  {notesMarkdown ? "Markdown stored in database" : "No notes uploaded yet"}
+                <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${notesMarkdown ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-slate-100 dark:bg-white/5 text-slate-400"}`}>
+                  {notesMarkdown ? "Notes Uploaded" : "No File Uploaded"}
                 </span>
               </div>
-            </div>
-
-            <div className="pt-3 border-t border-black/5 dark:border-white/5">
-              <button type="button" onClick={() => setShowDeleteDayConfirm(true)} disabled={deletingDay} className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-500 transition hover:text-rose-600 disabled:opacity-50">
-                <FiTrash2 className="w-3.5 h-3.5" />
-                {deletingDay ? "Deleting day..." : "Delete Day"}
-              </button>
-            </div>
-          </div>
-
-          {/* Tasks CRUD Panel */}
-          <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_18px_rgba(0,0,0,0.015)] space-y-4">
-            <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider border-b border-black/5 dark:border-white/5 pb-3">
-              Tasks Checklist
-            </h4>
-
-            {/* Task Creation Form */}
-            <form onSubmit={handleCreateTasks} className="space-y-2">
-              <div>
-                <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block mb-1">
-                  Bulk Tasks*
-                </label>
-                <textarea
-                  rows="5"
-                  value={bulkTasks}
-                  onChange={(e) => setBulkTasks(e.target.value)}
-                  placeholder={"Setup Spring Boot | Configure MySQL | Create Login API\n\nor enter one task per line"}
-                  className={`${inputClass} min-h-[110px] resize-y`}
-                  required
-                />
-                <p className="mt-1.5 text-[10px] font-medium text-slate-400">
-                  Separate tasks using a | character or a new line. Each entry becomes an individual checkbox task.
-                </p>
-              </div>
-              <button
-                type="submit"
-                disabled={isSavingTask}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-xl font-bold text-xs h-[34px] shadow-sm inline-flex items-center justify-center gap-1 transition-all disabled:opacity-50"
-              >
-                <FiPlus className="w-3.5 h-3.5" />
-                {isSavingTask ? "Adding..." : "Add Tasks"}
-              </button>
-            </form>
-
-            {/* Tasks List */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-              {tasks.length === 0 ? (
-                <p className="text-center py-6 text-xs text-slate-400 font-medium">
-                  No tasks created for this day.
-                </p>
-              ) : (
-                tasks.map((task, i) => (
-                  <div key={task._id} className="bg-slate-50 dark:bg-black/10 border border-black/5 dark:border-white/5 p-3 rounded-xl flex items-center justify-between gap-4">
-                    {editingTaskId === task._id ? (
-                      <div className="flex-1 grid grid-cols-4 gap-2 items-end">
-                        <input
-                          type="text"
-                          value={editingTask.task_description}
-                          onChange={(e) => setEditingTask({ ...editingTask, task_description: e.target.value })}
-                          className="col-span-2 px-2 py-1 text-xs border rounded bg-white dark:bg-[#0f1f43] dark:border-white/10 dark:text-white"
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          value={editingTask.xp_value}
-                          onChange={(e) => setEditingTask({ ...editingTask, xp_value: e.target.value })}
-                          className="px-2 py-1 text-xs border rounded bg-white dark:bg-[#0f1f43] dark:border-white/10 dark:text-white"
-                        />
-                        <div className="flex gap-1 justify-end">
-                          <button
-                            onClick={() => handleUpdateTask(task._id)}
-                            className="p-1.5 text-emerald-600 hover:bg-emerald-500/10 rounded"
-                            title="Save"
-                          >
-                            <FiCheck className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={cancelEditTask}
-                            className="p-1.5 text-slate-400 hover:bg-slate-500/10 rounded"
-                            title="Cancel"
-                          >
-                            <FiX className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+              
+              {/* Active Notes File Status Bar */}
+              {notesMarkdown ? (
+                <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 rounded-xl p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <FiBookOpen className="text-base" />
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex-1">
-                          <p className="text-xs font-bold text-slate-800 dark:text-white">
-                            Task {i + 1}: {task.task_description}
-                          </p>
-                          <span className="text-[10px] font-semibold text-slate-400">
-                            Reward: <strong className="text-blue-500 font-bold">{task.xp_value} XP</strong>
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => startEditTask(task)}
-                            className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-500/5 rounded-lg transition"
-                            title="Edit Task"
-                          >
-                            <FiEdit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(task)}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/5 rounded-lg transition"
-                            title="Delete Task"
-                          >
-                            <FiTrash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </>
-                    )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                          Day {dayNumber} Lesson Notes
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          {notesMarkdown.length} bytes • Markdown ready
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                ))
+
+                  {/* Actions Bar */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-blue-500/15">
+                    <button
+                      type="button"
+                      onClick={() => setViewModalType("notes")}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white py-2 text-xs font-bold shadow-sm transition hover:bg-blue-700 active:scale-95"
+                    >
+                      <FiEye className="text-sm" />
+                      <span>View Content</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadNotes}
+                      className="inline-flex items-center justify-center p-2 rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] text-slate-700 dark:text-slate-200 shadow-sm transition hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95"
+                      title="Download Notes"
+                    >
+                      <FiDownload className="text-sm" />
+                    </button>
+                    <label className="cursor-pointer inline-flex items-center justify-center p-2 rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] text-blue-500 shadow-sm transition hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95" title="Replace File">
+                      <FiUpload className="text-sm" />
+                      <input type="file" accept=".md" className="hidden" onChange={handleFileUpload} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleDeleteNotes}
+                      className="inline-flex items-center justify-center p-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition shadow-sm active:scale-95"
+                      title="Delete Notes"
+                    >
+                      <FiTrash2 className="text-sm" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-50/70 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-xl p-4 text-center space-y-3">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    No lesson notes uploaded yet for Day {dayNumber}.
+                  </p>
+                  <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-4 py-2 rounded-xl text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10 transition shadow-sm active:scale-95">
+                    <FiUpload className="text-sm" />
+                    <input type="file" accept=".md" className="hidden" onChange={handleFileUpload} />
+                    <span>Upload Notes (.md)</span>
+                  </label>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right Side: Markdown Preview Panel */}
-        {previewOpen && <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-5 shadow-[0_4px_24px_rgba(0,0,0,0.015)] flex flex-col h-full min-h-[500px]">
-          <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3 mb-4">
-            <h4 className="text-xs font-bold text-[#0c1833] dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <FiBookOpen className="text-blue-500" />
-              Markdown Notes Preview
-            </h4>
-            <button type="button" onClick={() => setPreviewOpen(false)} className="p-1 text-slate-400 transition hover:text-blue-500" title="Collapse preview"><FiChevronUp /></button>
-          </div>
+        {/* Card 2: Day Tasks (Markdown) Workflow Panel */}
+        <div className="bg-white dark:bg-[#0f274f] border border-black/10 dark:border-white/10 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-full space-y-5">
+          <div className="space-y-5 flex-1 flex flex-col justify-between">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3 shrink-0">
+              <h4 className="text-xs font-extrabold text-[#0c1833] dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <FiCheckSquare className="text-base" />
+                </div>
+                Day Tasks (Markdown)
+              </h4>
+              <span className="text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-extrabold px-3 py-1 rounded-full border border-blue-500/20">
+                {parsedPreviewTasks.length} {parsedPreviewTasks.length === 1 ? "Task" : "Tasks"} Created
+              </span>
+            </div>
 
-          <div className="flex-1 overflow-y-auto border border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-black/10 rounded-xl p-6 prose dark:prose-invert max-w-none max-h-[550px] admin-dashboard-typography">
-            {notesMarkdown ? (
-              <MarkdownContent>{notesMarkdown}</MarkdownContent>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20">
-                <FiBookOpen className="w-10 h-10 mb-2 opacity-50 text-slate-400" />
-                <p className="text-xs font-semibold max-w-[280px]">
-                  No markdown notes uploaded for this day. Upload a .md file on the left side to preview the layout.
-                </p>
+            <form onSubmit={handleSaveTasksSubmit} className="space-y-4 flex-1 flex flex-col justify-between">
+              <div className="space-y-2 flex-1 flex flex-col">
+                <div className="flex items-center justify-between">
+                  <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block text-[11px]">
+                    Tasks Markdown Content <span className="text-rose-500">*</span>
+                  </label>
+                </div>
+                <textarea
+                  rows="5"
+                  value={tasksMarkdown}
+                  onChange={(e) => setTasksMarkdown(e.target.value)}
+                  placeholder={`Build the login page\n\n---\n\nCreate authentication API\n\n---\n\nConnect frontend and backend`}
+                  className={`${inputClass} flex-1 min-h-[140px] resize-y font-mono text-xs leading-relaxed border-black/10 dark:border-white/15`}
+                />
+                
+                {/* Hint Text + Save Button Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                  <p className="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink whitespace-nowrap">
+                    💡 Separate tasks using <code className="bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded text-blue-600 dark:text-blue-400 font-bold">---</code> line breaks.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={isSavingTask}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm inline-flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 active:scale-95 shrink-0 ml-auto"
+                  >
+                    <FiSave className="w-3.5 h-3.5" />
+                    <span>{isSavingTask ? "Saving..." : "Save Tasks"}</span>
+                  </button>
+                </div>
               </div>
-            )}
+
+              {/* Action Toolbar (Mirrors Lesson Notes Structure) */}
+              <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider block text-[11px]">
+                    Generated Tasks Checklist
+                  </label>
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${tasksMarkdown ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" : "bg-slate-100 dark:bg-white/5 text-slate-400"}`}>
+                    {tasksMarkdown ? `${parsedPreviewTasks.length} Tasks Ready` : "No Tasks Created"}
+                  </span>
+                </div>
+
+                {tasksMarkdown ? (
+                  <div className="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/20 rounded-xl p-3.5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                          <FiCheckSquare className="text-base" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                            Day {dayNumber} Task Checklist
+                          </p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            {parsedPreviewTasks.length} auto-generated student tasks
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions Bar */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-blue-500/15">
+                      <button
+                        type="button"
+                        onClick={() => setViewModalType("tasks")}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white py-2 text-xs font-bold shadow-sm transition hover:bg-blue-700 active:scale-95"
+                      >
+                        <FiEye className="text-sm" />
+                        <span>View Content</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadTasksMarkdown}
+                        className="inline-flex items-center justify-center p-2 rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] text-slate-700 dark:text-slate-200 shadow-sm transition hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95"
+                        title="Download Tasks Markdown"
+                      >
+                        <FiDownload className="text-sm" />
+                      </button>
+                      <label className="cursor-pointer inline-flex items-center justify-center p-2 rounded-xl border border-black/10 dark:border-white/15 bg-white dark:bg-[#0f1f43] text-blue-500 shadow-sm transition hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95" title="Upload / Replace Tasks (.md)">
+                        <FiUpload className="text-sm" />
+                        <input type="file" accept=".md" className="hidden" onChange={handleTaskFileUpload} />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleDeleteTasksMarkdown}
+                        className="inline-flex items-center justify-center p-2 rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition shadow-sm active:scale-95"
+                        title="Clear Tasks Markdown"
+                      >
+                        <FiTrash2 className="text-sm" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50/70 dark:bg-black/20 border border-black/5 dark:border-white/5 rounded-xl p-4 text-center space-y-3">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Write tasks above or upload a markdown file.
+                    </p>
+                    <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-white dark:bg-[#0f1f43] border border-black/10 dark:border-white/15 px-4 py-2 rounded-xl text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/10 transition shadow-sm active:scale-95">
+                      <FiUpload className="text-sm" />
+                      <input type="file" accept=".md" className="hidden" onChange={handleTaskFileUpload} />
+                      <span>Upload Tasks (.md)</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </form>
           </div>
-        </div>}
+        </div>
 
       </div>
 
-      {!previewOpen && (
-        <button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-500 transition hover:text-blue-600">
-          <FiChevronDown /> Show Markdown Preview
-        </button>
-      )}
-
-      {/* Delete Task Confirmation Modal */}
-      {showDeleteConfirm && taskToDelete && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => { setShowDeleteConfirm(false); setTaskToDelete(null); }} />
-          <div className="relative w-full max-w-md rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0a1737]/95 shadow-2xl overflow-hidden p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-rose-500 dark:text-rose-400">Delete Task?</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              Are you sure you want to delete <strong className="text-slate-800 dark:text-white">&ldquo;{taskToDelete.task_description}&rdquo;</strong>? This action cannot be undone.
-              {studentsHaveStarted && <span className="mt-2 block font-semibold text-amber-600 dark:text-amber-400">This change may affect active students.</span>}
-            </p>
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
-              <button 
-                onClick={() => { setShowDeleteConfirm(false); setTaskToDelete(null); }} 
-                className="px-4 py-2 rounded-xl text-sm font-medium border border-black/10 dark:border-white/15 text-slate-500 hover:bg-black/5 dark:hover:bg-white/5 transition"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDeleteTask} 
-                className="px-4 py-2 rounded-xl text-sm font-medium bg-rose-500 hover:bg-rose-600 text-white transition shadow-sm"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
+      {/* Confirmation Modals */}
       {showNotesConfirm && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowNotesConfirm(false)} />
@@ -542,6 +531,90 @@ export default function DayConfiguration({ dayId, dayNumber, onSave, onDeleteDay
             </div>
           </div>
         </div>, document.body
+      )}
+
+      {/* Scrollable View Content Popup Modal */}
+      {viewModalType && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewModalType(null)} />
+          <div className="relative w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-[#0f274f] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 px-6 py-4 bg-slate-50/50 dark:bg-black/20 shrink-0">
+              <div className="flex items-center gap-2">
+                {viewModalType === "notes" ? (
+                  <>
+                    <FiBookOpen className="text-blue-500 text-lg" />
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                      Day {dayNumber} Lesson Notes Preview
+                    </h3>
+                  </>
+                ) : (
+                  <>
+                    <FiCheckSquare className="text-blue-500 text-lg" />
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                      Day {dayNumber} Generated Checklist Preview ({parsedPreviewTasks.length} Tasks)
+                    </h3>
+                  </>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewModalType(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition"
+              >
+                <FiX className="text-lg" />
+              </button>
+            </div>
+
+            {/* Modal Body — Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              {viewModalType === "notes" ? (
+                <div className="prose dark:prose-invert max-w-none admin-dashboard-typography">
+                  <MarkdownContent>{notesMarkdown}</MarkdownContent>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                      Student Task Checklist
+                    </span>
+                    <span className="text-xs text-blue-500 font-bold">
+                      {parsedPreviewTasks.length} Task{parsedPreviewTasks.length === 1 ? "" : "s"} Total
+                    </span>
+                  </div>
+                  {parsedPreviewTasks.map((taskText, i) => (
+                    <div
+                      key={i}
+                      className="bg-slate-50 dark:bg-[#0f1f43] border border-black/5 dark:border-white/10 p-3.5 rounded-xl flex items-start gap-3 shadow-sm"
+                    >
+                      <div className="w-4 h-4 rounded border-2 border-slate-400 dark:border-slate-500 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-100 block whitespace-pre-wrap leading-relaxed">
+                          {taskText}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold text-blue-500 bg-blue-500/10 px-2.5 py-0.5 rounded-full shrink-0">
+                        Task {i + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end border-t border-black/5 dark:border-white/10 px-6 py-3 bg-slate-50/50 dark:bg-black/20 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewModalType(null)}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
     </div>

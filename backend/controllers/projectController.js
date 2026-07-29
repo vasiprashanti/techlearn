@@ -200,31 +200,6 @@ export const updateProject = async (req, res) => {
     if (description) project.description = description;
     if (category) project.category = category;
     if (xp_requirement !== undefined) project.xp_requirement = Number(xp_requirement);
-    if (status === "Published") {
-      const days = await ProjectDay.find({ project_id: project._id }).select("_id notes_markdown").lean();
-      const dayIds = days.map((day) => day._id);
-      const taskCounts = await ProjectTask.aggregate([
-        { $match: { project_day_id: { $in: dayIds } } },
-        { $group: { _id: "$project_day_id", count: { $sum: 1 } } },
-      ]);
-      const taskCountByDay = new Map(taskCounts.map((entry) => [entry._id.toString(), entry.count]));
-      const emptyDays = days.length !== project.duration_days;
-      const missingNotes = days.some((day) => !day.notes_markdown?.trim());
-      const missingTasks = days.some((day) => !taskCountByDay.get(day._id.toString()));
-
-      if (emptyDays || missingNotes || missingTasks) {
-        const errors = [];
-        if (emptyDays) errors.push("all project days must be present");
-        if (missingNotes) errors.push("each day needs markdown notes");
-        if (missingTasks) errors.push("each day needs at least one task");
-        return res.status(400).json({
-          success: false,
-          message: `Project cannot be published: ${errors.join(", ")}.`,
-          validation: { emptyDays, missingNotes, missingTasks },
-        });
-      }
-    }
-
     if (status) project.status = status;
 
     if (req.body.overview_markdown_content !== undefined) {
@@ -454,9 +429,52 @@ export const getProjectAnalytics = async (req, res) => {
 // PROJECT DAYS CONTROLLERS
 // ==========================================
 
+// Helper to parse markdown into task sections using horizontal divider (---)
+export const parseTasksFromMarkdown = (markdown) => {
+  if (!markdown || typeof markdown !== "string") return [];
+  const rawSections = markdown.split(/(?:\r?\n|^)\s*(?:---|[*]{3,}|_{3,})\s*(?:\r?\n|$)/);
+  return rawSections
+    .map((section) => section.trim())
+    .filter((section) => section.length > 0);
+};
+
+// Helper to synchronize ProjectTask documents with tasks_markdown
+export const syncTasksFromMarkdown = async (projectDayId, tasksMarkdown) => {
+  const taskDescriptions = parseTasksFromMarkdown(tasksMarkdown);
+  const existingTasks = await ProjectTask.find({ project_day_id: projectDayId }).sort({ createdAt: 1 });
+
+  const updatedTasks = [];
+  for (let i = 0; i < taskDescriptions.length; i++) {
+    const desc = taskDescriptions[i];
+    if (i < existingTasks.length) {
+      const task = existingTasks[i];
+      task.task_description = desc;
+      await task.save();
+      updatedTasks.push(task);
+    } else {
+      const newTask = await ProjectTask.create({
+        project_day_id: projectDayId,
+        task_description: desc,
+        xp_value: 0,
+      });
+      updatedTasks.push(newTask);
+    }
+  }
+
+  // Remove extra tasks if markdown now has fewer tasks than before
+  if (existingTasks.length > taskDescriptions.length) {
+    const tasksToRemove = existingTasks.slice(taskDescriptions.length);
+    const removeIds = tasksToRemove.map((t) => t._id);
+    await ProjectTask.deleteMany({ _id: { $in: removeIds } });
+    await StudentTaskProgress.deleteMany({ project_task_id: { $in: removeIds } });
+  }
+
+  return updatedTasks;
+};
+
 export const createProjectDay = async (req, res) => {
   try {
-    const { project_id, day_number, topic_title, notes_markdown } = req.body;
+    const { project_id, day_number, topic_title, notes_markdown, tasks_markdown } = req.body;
 
     const dayExists = await ProjectDay.findOne({ project_id, day_number });
     if (dayExists) {
@@ -468,9 +486,15 @@ export const createProjectDay = async (req, res) => {
       day_number,
       topic_title,
       notes_markdown: notes_markdown || "",
+      tasks_markdown: tasks_markdown || "",
     });
 
-    return res.status(201).json({ success: true, day });
+    let tasks = [];
+    if (tasks_markdown) {
+      tasks = await syncTasksFromMarkdown(day._id, tasks_markdown);
+    }
+
+    return res.status(201).json({ success: true, day, tasks });
   } catch (err) {
     console.error("Create Project Day Error:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -481,6 +505,8 @@ export const getProjectDays = async (req, res) => {
   try {
     const { projectId } = req.params;
     const projectObjectId = new mongoose.Types.ObjectId(projectId);
+
+    const project = await Project.findById(projectId).lean();
 
     const days = await ProjectDay.aggregate([
       { $match: { project_id: projectObjectId } },
@@ -495,7 +521,7 @@ export const getProjectDays = async (req, res) => {
       {
         $addFields: {
           taskCount: { $size: "$tasks" },
-          totalXp: { $sum: "$tasks.xp_value" }
+          rawTotalXp: { $sum: "$tasks.xp_value" }
         }
       },
       {
@@ -506,7 +532,20 @@ export const getProjectDays = async (req, res) => {
       { $sort: { day_number: 1 } }
     ]);
 
-    return res.status(200).json(days);
+    const projectXp = Number(project?.project_xp ?? project?.total_xp ?? project?.xp_requirement ?? 10000);
+    const durationDays = Number(project?.duration_days || days.length || 1);
+    const dailyXp = Math.round(projectXp / (durationDays || 1));
+
+    const formattedDays = days.map((day) => {
+      const computedTotalXp = day.taskCount > 0 ? (day.rawTotalXp || dailyXp) : 0;
+      return {
+        ...day,
+        totalXp: computedTotalXp,
+        dailyXp: dailyXp,
+      };
+    });
+
+    return res.status(200).json(formattedDays);
   } catch (err) {
     console.error("Get Project Days Error:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -515,7 +554,7 @@ export const getProjectDays = async (req, res) => {
 
 export const updateProjectDay = async (req, res) => {
   try {
-    const { topic_title, notes_markdown, day_number } = req.body;
+    const { topic_title, notes_markdown, tasks_markdown, day_number } = req.body;
     const day = await ProjectDay.findById(req.params.id);
     if (!day) {
       return res.status(404).json({ success: false, message: "Day not found" });
@@ -530,11 +569,18 @@ export const updateProjectDay = async (req, res) => {
       day.day_number = day_number;
     }
 
-    if (topic_title) day.topic_title = topic_title;
+    if (topic_title !== undefined) day.topic_title = topic_title;
     if (notes_markdown !== undefined) day.notes_markdown = notes_markdown;
+    let tasks = null;
+    if (tasks_markdown !== undefined) {
+      day.tasks_markdown = tasks_markdown;
+      tasks = await syncTasksFromMarkdown(day._id, tasks_markdown);
+    } else {
+      tasks = await ProjectTask.find({ project_day_id: day._id }).sort({ createdAt: 1 }).lean();
+    }
 
     await day.save();
-    return res.status(200).json({ success: true, day });
+    return res.status(200).json({ success: true, day, tasks });
   } catch (err) {
     console.error("Update Project Day Error:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -543,15 +589,25 @@ export const updateProjectDay = async (req, res) => {
 
 export const deleteProjectDay = async (req, res) => {
   try {
-    const day = await ProjectDay.findByIdAndDelete(req.params.id);
+    const day = await ProjectDay.findById(req.params.id);
     if (!day) {
       return res.status(404).json({ success: false, message: "Day not found" });
     }
 
-    // Clean up tasks in this day
+    // Reset day content fields (preserving day_number and project_id)
+    day.topic_title = "";
+    day.notes_markdown = "";
+    day.tasks_markdown = "";
+    await day.save();
+
+    // Clean up all tasks associated with this day
     await ProjectTask.deleteMany({ project_day_id: req.params.id });
 
-    return res.status(200).json({ success: true, message: "Project day deleted successfully." });
+    return res.status(200).json({
+      success: true,
+      message: `Day ${day.day_number} content has been reset successfully.`,
+      day
+    });
   } catch (err) {
     console.error("Delete Project Day Error:", err);
     return res.status(500).json({ success: false, message: err.message });
@@ -580,9 +636,12 @@ export const duplicateProjectDay = async (req, res) => {
       day_number: newDayNumber,
       topic_title: `${sourceDay.topic_title || `Day ${sourceDay.day_number} Topic`} (Copy)`,
       notes_markdown: sourceDay.notes_markdown || "",
+      tasks_markdown: sourceDay.tasks_markdown || "",
     });
 
-    if (sourceTasks.length) {
+    if (sourceDay.tasks_markdown) {
+      await syncTasksFromMarkdown(duplicateDay._id, sourceDay.tasks_markdown);
+    } else if (sourceTasks.length) {
       await ProjectTask.insertMany(sourceTasks.map(({ task_description, xp_value }) => ({
         project_day_id: duplicateDay._id,
         task_description,

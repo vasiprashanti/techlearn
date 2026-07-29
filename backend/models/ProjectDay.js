@@ -22,6 +22,10 @@ const projectDaySchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    tasks_markdown: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true }
 );

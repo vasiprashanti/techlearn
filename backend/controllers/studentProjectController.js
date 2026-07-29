@@ -47,6 +47,14 @@ const getStudentActiveAssignment = async (userId) => {
   return { student, assignment: assignment?.project_id ? assignment : null };
 };
 
+const calculateTaskXp = (project, dayTaskCount) => {
+  if (!project || !dayTaskCount || dayTaskCount <= 0) return 0;
+  const projectXp = Number(project.project_xp ?? project.total_xp ?? project.xp_requirement ?? 10000);
+  const durationDays = Number(project.duration_days || 1);
+  const dailyXp = projectXp / (durationDays || 1);
+  return Math.round(dailyXp / dayTaskCount);
+};
+
 const getAwardedXp = (progress, taskXpById) => {
   if (!progress.xp_awarded) return 0;
   return progress.xp_awarded_value || taskXpById.get(progress.project_task_id.toString()) || 0;
@@ -79,6 +87,21 @@ export const getActiveProject = async (req, res) => {
     const allTasks = await ProjectTask.find({ project_day_id: { $in: dayIds } }).lean();
     const totalProjectTasks = allTasks.length;
 
+    // Group tasks by project_day_id to compute dynamic task XP per day
+    const tasksByDayMap = new Map();
+    allTasks.forEach(t => {
+      const dayIdStr = t.project_day_id.toString();
+      if (!tasksByDayMap.has(dayIdStr)) tasksByDayMap.set(dayIdStr, []);
+      tasksByDayMap.get(dayIdStr).push(t);
+    });
+
+    const taskXpMap = new Map();
+    allTasks.forEach(t => {
+      const dayTasks = tasksByDayMap.get(t.project_day_id.toString()) || [];
+      const computedXp = calculateTaskXp(project, dayTasks.length) || t.xp_value || 0;
+      taskXpMap.set(t._id.toString(), computedXp);
+    });
+
     // Fetch progress records
     const progressRecords = await StudentTaskProgress.find({
       student_project_id: assignment._id,
@@ -99,21 +122,29 @@ export const getActiveProject = async (req, res) => {
       await assignment.save();
     }
 
+    // Real-world daily progression: calculate max unlocked day based on assignment date (1 day per 24 hours)
+    const assignedTime = new Date(assignment.assigned_at || assignment.createdAt || Date.now()).getTime();
+    const nowTime = Date.now();
+    const daysElapsed = Math.floor((nowTime - assignedTime) / (24 * 60 * 60 * 1000));
+    const maxUnlockedDay = Math.min(Math.max(1, daysElapsed + 1), project.duration_days);
+
+    // Dynamic current_day is capped by calendar day unlock limit
+    const currentDayUnlocked = Math.min(assignment.current_day, maxUnlockedDay);
+
     // Get current day's tasks
-    const currentDayDoc = days.find(d => d.day_number === assignment.current_day);
+    const currentDayDoc = days.find(d => d.day_number === currentDayUnlocked);
     let todayTasks = [];
     if (currentDayDoc) {
       const currentTasks = allTasks.filter(t => t.project_day_id.toString() === currentDayDoc._id.toString());
       todayTasks = currentTasks.map(t => ({
         id: t._id,
         title: t.task_description,
-        xp: t.xp_value,
+        xp: taskXpMap.get(t._id.toString()) || 0,
         completed: completedTaskIds.has(t._id.toString())
       }));
     }
 
     // Calculate total project XP earned
-    const taskXpMap = new Map(allTasks.map(t => [t._id.toString(), t.xp_value]));
     let projectXpEarned = 0;
     progressRecords.forEach(p => {
       projectXpEarned += getAwardedXp(p, taskXpMap);
@@ -132,7 +163,8 @@ export const getActiveProject = async (req, res) => {
       dashboardMode: "project",
       assignment: {
         _id: assignment._id,
-        current_day: assignment.current_day,
+        current_day: currentDayUnlocked,
+        max_unlocked_day: maxUnlockedDay,
         progress_percentage: projectOverallProgress,
         status: assignment.status
       },
@@ -143,7 +175,7 @@ export const getActiveProject = async (req, res) => {
         category: project.category,
         duration_days: project.duration_days,
         xp_requirement: project.xp_requirement,
-        daysRemaining: Math.max(project.duration_days - assignment.current_day, 0)
+        daysRemaining: Math.max(project.duration_days - currentDayUnlocked, 0)
       },
       projectXpEarned,
       projectCompletedTotal,
@@ -157,7 +189,7 @@ export const getActiveProject = async (req, res) => {
       dayNotes: days.map(d => ({
         day: d.day_number,
         title: d.topic_title,
-        isLocked: d.day_number > assignment.current_day
+        isLocked: d.day_number > maxUnlockedDay
       }))
     });
   } catch (err) {
@@ -205,9 +237,14 @@ export const getDayNotes = async (req, res) => {
 
     const { assignment } = result;
 
+    // Real-world daily progression: calculate max unlocked day based on 24h intervals since assignment
+    const assignedTime = new Date(assignment.assigned_at || assignment.createdAt || Date.now()).getTime();
+    const daysElapsed = Math.floor((Date.now() - assignedTime) / (24 * 60 * 60 * 1000));
+    const maxUnlockedDay = Math.min(Math.max(1, daysElapsed + 1), assignment.project_id.duration_days);
+
     // Enforce future day lock
-    if (dayNum > assignment.current_day) {
-      return res.status(403).json({ success: false, message: "This day is locked." });
+    if (dayNum > maxUnlockedDay) {
+      return res.status(403).json({ success: false, message: `Day ${dayNum} is locked until Day ${dayNum} calendar date.` });
     }
 
     const dayDoc = await ProjectDay.findOne({
@@ -221,6 +258,7 @@ export const getDayNotes = async (req, res) => {
 
     // Fetch tasks for this day
     const dayTasks = await ProjectTask.find({ project_day_id: dayDoc._id }).lean();
+    const computedTaskXp = calculateTaskXp(assignment.project_id, dayTasks.length);
     const progressRecords = await StudentTaskProgress.find({
       student_project_id: assignment._id,
       project_task_id: { $in: dayTasks.map(t => t._id) }
@@ -232,7 +270,7 @@ export const getDayNotes = async (req, res) => {
       return {
         id: t._id,
         title: t.task_description,
-        xp: t.xp_value,
+        xp: computedTaskXp || t.xp_value || 0,
         completed: prog ? prog.completed : false
       };
     });
@@ -274,10 +312,19 @@ export const toggleTask = async (req, res) => {
       return res.status(400).json({ success: false, message: "Task does not belong to your project" });
     }
 
+    // Calculate max unlocked day based on 24h intervals since assignment
+    const assignedTime = new Date(assignment.assigned_at || assignment.createdAt || Date.now()).getTime();
+    const daysElapsed = Math.floor((Date.now() - assignedTime) / (24 * 60 * 60 * 1000));
+    const maxUnlockedDay = Math.min(Math.max(1, daysElapsed + 1), project.duration_days);
+
     // Block completion of future day tasks
-    if (dayDoc.day_number !== assignment.current_day) {
-      return res.status(403).json({ success: false, message: "Tasks can only be updated for the current project day." });
+    if (dayDoc.day_number > maxUnlockedDay) {
+      return res.status(403).json({ success: false, message: `Tasks for Day ${dayDoc.day_number} are locked until Day ${dayDoc.day_number}.` });
     }
+
+    // Compute dynamic task XP for this day
+    const dayTasksCount = await ProjectTask.countDocuments({ project_day_id: dayDoc._id });
+    const computedTaskXp = calculateTaskXp(project, dayTasksCount) || task.xp_value || 0;
 
     // Toggle completion status
     let progress = await StudentTaskProgress.findOne({
@@ -294,10 +341,10 @@ export const toggleTask = async (req, res) => {
         project_task_id: taskId,
         completed: true,
         xp_awarded: true,
-        xp_awarded_value: task.xp_value,
+        xp_awarded_value: computedTaskXp,
         completed_at: Date.now()
       });
-      xpAwardedThisTime = task.xp_value;
+      xpAwardedThisTime = computedTaskXp;
     } else {
       // Toggle
       progress.completed = !progress.completed;
@@ -306,8 +353,8 @@ export const toggleTask = async (req, res) => {
       // If marked complete again and XP was never awarded, award it
       if (progress.completed && !progress.xp_awarded) {
         progress.xp_awarded = true;
-        progress.xp_awarded_value = task.xp_value;
-        xpAwardedThisTime = task.xp_value;
+        progress.xp_awarded_value = computedTaskXp;
+        xpAwardedThisTime = computedTaskXp;
       }
     }
 
