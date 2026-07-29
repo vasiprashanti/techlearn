@@ -78,6 +78,16 @@ const studentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    accuracy: {
+      type: Number,
+      default: 0,
+    },
+
+    overallAccuracy: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );

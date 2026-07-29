@@ -151,7 +151,7 @@ const StudentModal = ({ student, onClose }) => {
 
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-black/[0.01] dark:bg-white/[0.01] p-2.5 rounded-xl text-center border border-black/[0.03] dark:border-white/[0.03]">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Progress</span>
+              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Accuracy</span>
               <span className="block font-bold text-base mt-1 text-emerald-600 dark:text-emerald-400">{student.accuracy}%</span>
             </div>
             <div className="bg-black/[0.01] dark:bg-white/[0.01] p-2.5 rounded-xl text-center border border-black/[0.03] dark:border-white/[0.03]">
@@ -789,13 +789,13 @@ const Students = () => {
               <table className="w-full min-w-[750px] table-fixed border-collapse">
                 <thead className="border-b border-black/12 dark:border-white/12">
                   <tr className="sticky top-0 bg-white/95 dark:bg-[#13264c]/95 backdrop-blur select-none">
-                    {['#', 'Student', 'Batch', 'Track', 'Progress', 'Status', 'Actions'].map((col) => {
-                      const isSortable = ['Student', 'Batch', 'Track', 'Progress', 'Status'].includes(col);
+                    {['#', 'Student', 'Batch', 'Track', 'Accuracy', 'Status', 'Actions'].map((col) => {
+                      const isSortable = ['Student', 'Batch', 'Track', 'Accuracy', 'Status'].includes(col);
                       const fieldMap = {
                         'Student': 'name',
                         'Batch': 'batch',
                         'Track': 'track',
-                        'Progress': 'accuracy',
+                        'Accuracy': 'accuracy',
                         'Status': 'status'
                       };
                       const sortField = fieldMap[col];
@@ -805,7 +805,7 @@ const Students = () => {
                       else if (col === 'Student') widthClass = 'w-[25%]';
                       else if (col === 'Batch') widthClass = 'w-[20%]';
                       else if (col === 'Track') widthClass = 'w-[14%]';
-                      else if (col === 'Progress') widthClass = 'w-[9%]';
+                      else if (col === 'Accuracy') widthClass = 'w-[9%]';
                       else if (col === 'Status') widthClass = 'w-[9%]';
                       else if (col === 'Actions') widthClass = 'w-[18%]';
 

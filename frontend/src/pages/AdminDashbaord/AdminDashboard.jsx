@@ -306,7 +306,11 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div className="text-sm font-light text-[#3C83F6] dark:text-white shrink-0 pl-2">
-                        {student.accuracy ? `${student.accuracy}% accuracy` : student.score}
+                        {typeof student.accuracy !== 'undefined' && student.accuracy !== null
+                          ? `${student.accuracy}% accuracy`
+                          : (typeof student.score === 'number'
+                              ? `${student.score}% accuracy`
+                              : (String(student.score || '').includes('%') ? `${student.score} accuracy` : `${student.score || 0}% accuracy`))}
                       </div>
                     </div>
                   ))}

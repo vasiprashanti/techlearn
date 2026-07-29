@@ -2403,6 +2403,25 @@ todayXp = todayChallengeXp + todayTaskXp;
         dayWiseStudentReport[day] = dayReport;
       }
 
+      let grandTotalAccuracy = 0;
+      let grandTotalAttemptedItems = 0;
+      Object.values(dayWiseStudentReport).forEach((dayRep) => {
+        ["dailyTasks", "dailyChallenge"].forEach((col) => {
+          (dayRep[col] || []).forEach((item) => {
+            if (typeof item.accuracy === "number") {
+              grandTotalAccuracy += item.accuracy;
+              grandTotalAttemptedItems += 1;
+            }
+          });
+        });
+      });
+      const overallAccuracy = grandTotalAttemptedItems > 0 ? Math.round(grandTotalAccuracy / grandTotalAttemptedItems) : 0;
+
+      // Persist computed accuracy back to Student so dashboard & student tables stay perfectly in sync
+      if (overallAccuracy >= 0) {
+        Student.findByIdAndUpdate(student._id, { $set: { overallAccuracy, accuracy: overallAccuracy } }, { new: true })
+          .catch((err) => console.error("Failed to update student accuracy:", err));
+      }
 
       const studentUser = userEmailToUserMap.get(studentEmail);
       const collegeNameResolved =
@@ -2418,6 +2437,7 @@ todayXp = todayChallengeXp + todayTaskXp;
         name: student.name,
         email: student.email,
         college: collegeNameResolved,
+        accuracy: overallAccuracy,
         todayScore,
         todayScoresDetail,
         todayXp,
@@ -2969,7 +2989,14 @@ export const listStudentsAdmin = async (req, res) => {
       {
         $group: {
           _id: "$studentId",
-          avgScore: { $avg: "$totalScore" },
+          avgScore: {
+            $avg: {
+              $ifNull: [
+                "$accuracyScore",
+                { $ifNull: ["$accuracy", "$totalScore"] }
+              ]
+            }
+          },
           testsTaken: { $sum: 1 },
           lastActive: { $max: "$submittedAt" },
         },
@@ -2987,8 +3014,16 @@ export const listStudentsAdmin = async (req, res) => {
       batch: student.batchId?.name || "Unknown Batch",
       track: student.primaryTrack || "General Track",
       programSelection: student.programSelection || "Placement Sprint",
-      accuracy: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
-      score: Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0)),
+      accuracy: typeof student.overallAccuracy === 'number'
+        ? Number(student.overallAccuracy)
+        : (typeof student.accuracy === 'number'
+            ? Number(student.accuracy)
+            : Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0))),
+      score: typeof student.overallAccuracy === 'number'
+        ? Number(student.overallAccuracy)
+        : (typeof student.accuracy === 'number'
+            ? Number(student.accuracy)
+            : Number((submissionMap[String(student._id)]?.avgScore || 0).toFixed(0))),
       streak: student.streak || 0,
       status: student.status,
       testsTaken: submissionMap[String(student._id)]?.testsTaken || student.testsTaken || 0,
