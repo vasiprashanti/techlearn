@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { adminAPI } from "../../services/adminApi";
 import { useTheme } from "../../context/ThemeContext";
-import { FiArrowLeft, FiSave, FiUpload, FiX, FiArchive, FiTrash2, FiEdit2, FiBookOpen, FiCopy } from "react-icons/fi";
+import { FiArrowLeft, FiSave, FiUpload, FiX, FiArchive, FiTrash2, FiEdit2, FiBookOpen, FiCopy, FiChevronDown, FiChevronUp, FiLayers, FiCheckCircle } from "react-icons/fi";
 import DayConfiguration from "../../components/AdminDashbaord/DayConfiguration";
 import StudentAssignmentPanel from "../../components/AdminDashbaord/StudentAssignmentPanel";
 import ProjectProgressMonitor from "../../components/AdminDashbaord/ProjectProgressMonitor";
@@ -75,6 +76,7 @@ export default function EditProject() {
   const [analytics, setAnalytics] = useState({ totalStudents: 0, activeStudents: 0, averageProgress: 0, averageXp: 0, completionRate: 0 });
   const [duplicatingDayId, setDuplicatingDayId] = useState(null);
   const [deletingDayId, setDeletingDayId] = useState(null);
+  const [confirmResetDay, setConfirmResetDay] = useState(null);
 
   const navigate = useNavigate();
   const { theme } = useTheme();
@@ -147,12 +149,13 @@ export default function EditProject() {
     try {
       await adminAPI.deleteProjectDay(dayId);
       await Promise.all([fetchProject(), fetchProjectDays()]);
-      setSelectedDayIndex(0);
-      setSuccess("Day and its tasks deleted successfully.");
+      setSuccess("Day content reset successfully.");
+      setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
-      setError(err.message || "Failed to delete the day.");
+      setError(err.message || "Failed to reset day content.");
     } finally {
       setDeletingDayId(null);
+      setConfirmResetDay(null);
     }
   };
 
@@ -167,6 +170,7 @@ export default function EditProject() {
           category: data.category || "Other",
           duration_days: data.duration_days || 0,
           xp_requirement: data.xp_requirement || 0,
+          project_xp: data.project_xp ?? data.total_xp ?? data.xp_requirement ?? 10000,
           status: data.status || "Draft",
           overview_markdown_file_url: data.overview_markdown_file_url || "",
           overview_markdown_content: data.overview_markdown_content || "",
@@ -179,6 +183,7 @@ export default function EditProject() {
           category: data.category || "Java Full Stack",
           duration_days: data.duration_days || "",
           xp_requirement: data.xp_requirement || "",
+          project_xp: data.project_xp ?? data.total_xp ?? data.xp_requirement ?? 10000,
           status: data.status || "Draft",
           overview_markdown_content: data.overview_markdown_content || ""
         });
@@ -224,6 +229,7 @@ export default function EditProject() {
       category: projectDetails.category,
       duration_days: projectDetails.duration_days,
       xp_requirement: projectDetails.xp_requirement,
+      project_xp: projectDetails.project_xp,
       status: projectDetails.status,
       overview_markdown_content: projectDetails.overview_markdown_content
     });
@@ -248,6 +254,8 @@ export default function EditProject() {
       formData.append("category", form.category);
       formData.append("duration_days", form.duration_days);
       formData.append("xp_requirement", form.xp_requirement || 0);
+      formData.append("project_xp", form.project_xp || form.xp_requirement || 10000);
+      formData.append("total_xp", form.project_xp || form.xp_requirement || 10000);
       formData.append("status", form.status);
       formData.append("overview_markdown_content", form.overview_markdown_content);
 
@@ -473,6 +481,13 @@ export default function EditProject() {
                           <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">{projectDetails.duration_days} Days</span>
                         </div>
                         <div>
+                          <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Project Total XP</span>
+                          <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">{(projectDetails.project_xp || projectDetails.xp_requirement || 10000).toLocaleString()} XP</span>
+                          <span className="text-[10px] text-blue-500 font-semibold block mt-0.5">
+                            Daily XP: {Math.round((projectDetails.project_xp || projectDetails.xp_requirement || 10000) / (projectDetails.duration_days || 1)).toLocaleString()} XP/day
+                          </span>
+                        </div>
+                        <div>
                           <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Certificate XP Requirement</span>
                           <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">{projectDetails.xp_requirement} XP</span>
                         </div>
@@ -484,7 +499,7 @@ export default function EditProject() {
                           <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Status</span>
                           <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">{projectDetails.status}</span>
                         </div>
-                        <div>
+                        <div className="md:col-span-2">
                           <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider mb-1">Overview Markdown File</span>
                           <span className="text-slate-800 dark:text-slate-100 font-bold text-sm">
                             {existingFileUrl ? existingFileUrl : "No file uploaded"}
@@ -528,6 +543,18 @@ export default function EditProject() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
+                            <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Project Total XP*</label>
+                            <input
+                              type="number"
+                              name="project_xp"
+                              min="0"
+                              value={form.project_xp}
+                              onChange={handleInputChange}
+                              className={categoryFormInputClass}
+                              required
+                            />
+                          </div>
+                          <div>
                             <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Certificate XP Req*</label>
                             <input
                               type="number"
@@ -539,6 +566,9 @@ export default function EditProject() {
                               required
                             />
                           </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="admin-micro-label text-slate-400 font-bold uppercase tracking-wider">Category*</label>
                             <select
@@ -676,94 +706,164 @@ export default function EditProject() {
             )}
 
             {activeTab === "Days & Tasks" && (
-              <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)] space-y-4">
+              <div className="bg-white dark:bg-[#0f274f] border border-white/40 dark:border-white/5 rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.015)] space-y-5">
                 {success && (
                   <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-3.5 rounded-xl text-xs font-semibold">
                     {success}
                   </div>
                 )}
-                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
-                  <h3 className="text-sm font-bold text-[#0c1833] dark:text-white uppercase tracking-wider">
-                    Days Checklist & Configuration
-                  </h3>
+
+                {/* Section Title & Summary */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#0c1833] dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <FiLayers className="text-blue-500" />
+                      Project Days & Tasks Configuration
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Configure daily lesson topics, markdown notes, and auto-generated task checklists.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <span className="px-3 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-300 rounded-full text-xs font-bold">
+                      {projectDays.length} Days Configured
+                    </span>
+                  </div>
                 </div>
 
                 {loadingDays ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <div className="text-center py-16">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-2"></div>
+                    <p className="text-xs font-semibold text-slate-400">Loading project days...</p>
                   </div>
                 ) : projectDays.length === 0 ? (
                   <p className="text-xs text-slate-400 font-medium text-center py-12">
                     No days generated for this project.
                   </p>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <div className="space-y-4">
+                    {/* Quick Navigation Day Pills */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 pt-1 [scrollbar-width:thin]">
                       {projectDays.map((day, idx) => (
                         <button
                           key={day._id}
                           type="button"
                           onClick={() => setSelectedDayIndex(idx)}
-                          className={`shrink-0 rounded-lg border px-3 py-2 text-[10px] font-bold transition ${selectedDayIndex === idx ? "border-blue-500 bg-blue-500 text-white" : "border-black/10 bg-white/70 text-slate-500 hover:border-blue-500/40 dark:border-white/10 dark:bg-black/10 dark:text-slate-300"}`}
+                          className={`shrink-0 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all flex items-center gap-2 ${
+                            selectedDayIndex === idx
+                              ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                              : "border-black/10 dark:border-white/10 bg-white/80 dark:bg-black/20 text-slate-700 dark:text-slate-200 hover:border-blue-500/40 hover:bg-slate-50"
+                          }`}
                         >
-                          Day {day.day_number}
+                          <span>Day {day.day_number}</span>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-md font-extrabold shadow-sm ${
+                            selectedDayIndex === idx
+                              ? "bg-[#0b1739] text-white"
+                              : "bg-slate-200 dark:bg-white/20 text-slate-800 dark:text-white"
+                          }`}>
+                            {day.taskCount || 0} tasks
+                          </span>
                         </button>
                       ))}
                     </div>
-                    {projectDays.map((day, idx) => {
-                      const isExpanded = selectedDayIndex === idx;
-                      return (
-                        <div
-                          key={day._id}
-                          className={`border rounded-2xl transition-all duration-300 overflow-hidden ${
-                            isExpanded
-                              ? "border-blue-500/30 bg-slate-50/35 dark:bg-black/15 shadow-sm"
-                              : "border-black/5 dark:border-white/5 bg-slate-50/10 dark:bg-black/5 hover:bg-slate-50/40 dark:hover:bg-black/10"
-                          }`}
-                        >
-                          {/* Accordion Trigger Day Card Header */}
-                          <div className="w-full p-4 flex items-center justify-between gap-4">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedDayIndex(isExpanded ? null : idx)}
-                              className="min-w-0 flex-1 text-left outline-none"
-                            >
-                              <h4 className="text-xs font-bold text-slate-800 dark:text-white">
-                                Day {day.day_number}: {day.topic_title || `Day ${day.day_number} Topic`}
-                              </h4>
-                              <p className="text-[10px] font-semibold text-slate-400 mt-1">
-                                {day.taskCount || 0} Tasks &bull; {day.totalXp || 0} XP
-                              </p>
-                            </button>
-                            
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={(event) => { event.stopPropagation(); handleDuplicateDay(day._id); }}
-                                disabled={duplicatingDayId === day._id}
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-blue-500 disabled:opacity-50"
-                              >
-                                <FiCopy className="h-3 w-3" />
-                                {duplicatingDayId === day._id ? "Duplicating..." : "Duplicate"}
-                              </button>
-                            </div>
-                          </div>
 
-                          {/* Expanded Day Details & Config Panel */}
-                          {isExpanded && (
-                            <div className="border-t border-black/5 dark:border-white/5 p-4 bg-white/40 dark:bg-black/20 rounded-b-2xl">
-                              <DayConfiguration
-                                dayId={day._id}
-                                dayNumber={day.day_number}
-                                onSave={fetchProjectDays}
-                                onDeleteDay={() => handleDeleteDay(day._id)}
-                                deletingDay={deletingDayId === day._id}
-                              />
+                    {/* Day Cards List */}
+                    <div className="space-y-3">
+                      {projectDays.map((day, idx) => {
+                        const isExpanded = selectedDayIndex === idx;
+                        const dayXpDisplay = (day.totalXp || day.dailyXp || 0).toLocaleString();
+
+                        return (
+                          <div
+                            key={day._id}
+                            className={`border rounded-2xl transition-all duration-300 overflow-hidden ${
+                              isExpanded
+                                ? "border-blue-500/40 bg-white dark:bg-[#0a1836] shadow-md ring-1 ring-blue-500/20"
+                                : "border-black/10 dark:border-white/10 bg-white/60 dark:bg-black/10 hover:border-blue-500/30 hover:bg-white dark:hover:bg-black/20"
+                            }`}
+                          >
+                            {/* Day Card Header */}
+                            <div
+                              onClick={() => setSelectedDayIndex(isExpanded ? null : idx)}
+                              className="w-full p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer select-none"
+                            >
+                              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                {/* Day Number Badge */}
+                                <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-bold transition ${
+                                  isExpanded
+                                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/30"
+                                    : "bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white"
+                                }`}>
+                                  <span className="text-[9px] uppercase tracking-wider opacity-90 font-bold leading-none text-white drop-shadow-sm">DAY</span>
+                                  <span className="text-base font-extrabold leading-tight text-white drop-shadow-sm">{String(day.day_number).padStart(2, "0")}</span>
+                                </div>
+
+                                {/* Topic Title & Meta Stats */}
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <h4 className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                                    {day.topic_title || `Day ${day.day_number} Topic`}
+                                  </h4>
+                                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                                      📋 {day.taskCount || 0} Tasks
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-300">
+                                      ⚡ {dayXpDisplay} XP
+                                    </span>
+                                    {day.taskCount > 0 ? (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                        <FiCheckCircle className="w-3 h-3" /> Configured
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-200/70 dark:bg-white/10 text-slate-500 dark:text-slate-400">
+                                        Pending Tasks
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Actions & Expand Trigger */}
+                              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+
+                                <button
+                                  type="button"
+                                  onClick={(event) => { event.stopPropagation(); setConfirmResetDay({ id: day._id, number: day.day_number }); }}
+                                  disabled={deletingDayId === day._id}
+                                  className="px-3 py-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 text-xs font-semibold inline-flex items-center gap-1.5 transition disabled:opacity-50 shadow-sm"
+                                  title="Reset Day Content"
+                                >
+                                  <FiTrash2 className="h-3.5 w-3.5 text-rose-500" />
+                                  <span>{deletingDayId === day._id ? "Resetting..." : "Delete Day"}</span>
+                                </button>
+
+                                <div className={`p-2 rounded-xl border transition ${
+                                  isExpanded
+                                    ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400"
+                                    : "bg-slate-100 dark:bg-white/5 border-transparent text-slate-400 hover:text-slate-600"
+                                }`}>
+                                  {isExpanded ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />}
+                                </div>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      );
-                    })}
+
+                            {/* Expanded Day Details & Config Panel */}
+                            {isExpanded && (
+                              <div className="border-t border-black/5 dark:border-white/5 p-5 bg-slate-50/50 dark:bg-black/20 rounded-b-2xl">
+                                <DayConfiguration
+                                  dayId={day._id}
+                                  dayNumber={day.day_number}
+                                  onSave={fetchProjectDays}
+                                  onDeleteDay={() => setConfirmResetDay({ id: day._id, number: day.day_number })}
+                                  deletingDay={deletingDayId === day._id}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -780,6 +880,43 @@ export default function EditProject() {
 
         </div>
       </main>
+
+      {/* Confirmation Modal for Resetting Day Content */}
+      {confirmResetDay && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setConfirmResetDay(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-black/10 bg-white/95 p-6 shadow-2xl dark:border-white/10 dark:bg-[#0a1737]/95 space-y-4">
+            <h2 className="text-base font-bold text-rose-500 flex items-center gap-2">
+              <FiTrash2 className="w-4 h-4" />
+              Reset Day {confirmResetDay.number} Content?
+            </h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to delete all topic titles, markdown lesson notes, and tasks for <strong>Day {confirmResetDay.number}</strong>?
+            </p>
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 text-xs font-semibold">
+              💡 The day card will remain in your project so you can configure it fresh.
+            </div>
+            <div className="flex justify-end gap-3 pt-3 border-t border-black/10 dark:border-white/10">
+              <button
+                type="button"
+                onClick={() => setConfirmResetDay(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/15 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteDay(confirmResetDay.id)}
+                disabled={deletingDayId === confirmResetDay.id}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-500 text-white hover:bg-rose-600 transition disabled:opacity-50 shadow-md"
+              >
+                {deletingDayId === confirmResetDay.id ? "Resetting..." : "Reset Day Content"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

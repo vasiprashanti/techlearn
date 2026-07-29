@@ -26,7 +26,17 @@ const projectSchema = new mongoose.Schema(
     xp_requirement: {
       type: Number,
       required: true,
-      default: 0,
+      default: 10000,
+    },
+    project_xp: {
+      type: Number,
+      default: 10000,
+      min: 0,
+    },
+    total_xp: {
+      type: Number,
+      default: 10000,
+      min: 0,
     },
     overview_markdown_content: {
       type: String,

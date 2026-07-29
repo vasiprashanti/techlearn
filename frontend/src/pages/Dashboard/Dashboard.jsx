@@ -1035,15 +1035,15 @@ export default function Dashboard() {
                     </div>
 
                     {/* Task List */}
-                    <div className="flex-1 flex flex-col gap-1.5 justify-start mt-2 mb-0.5">
+                    <div className="flex-1 flex flex-col gap-1.5 justify-start mt-2 mb-0.5 max-h-[160px] overflow-y-auto pr-1 [scrollbar-width:thin]">
                       {projectData.todayTasks && projectData.todayTasks.length > 0 ? (
                         projectData.todayTasks.map(task => (
                           <div
                             key={task.id}
                             onClick={() => handleProjectTaskToggle(task.id)}
-                            className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group"
+                            className="flex items-center justify-between w-full text-left py-2 px-3 rounded-sm border border-slate-400/60 dark:border-slate-600/60 bg-transparent hover:border-[#3C83F6] hover:shadow-[0_0_8px_rgba(60,131,246,0.3)] transition-all duration-300 cursor-pointer transform active:scale-[0.99] group gap-4"
                           >
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
                               <div
                                 className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${
                                   task.completed
@@ -1065,7 +1065,7 @@ export default function Dashboard() {
                                 {task.title}
                               </span>
                             </div>
-                            <span className="rounded-md border border-[#3C83F6]/20 bg-white/30 px-2 py-0.5 font-pixel-header text-[8px] leading-none text-[#3C83F6] dark:border-[#8fd9ff]/20 dark:bg-white/5 dark:text-[#8fd9ff]">
+                            <span className="rounded-md border border-[#3C83F6]/20 bg-white/30 px-2 py-0.5 font-pixel-header text-[8px] leading-none text-[#3C83F6] dark:border-[#8fd9ff]/20 dark:bg-white/5 dark:text-[#8fd9ff] shrink-0 ml-3">
                               +{task.xp} XP
                             </span>
                           </div>
