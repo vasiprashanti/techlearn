@@ -84,11 +84,15 @@ export const getPublicLeaderboard = async (req, res) => {
 
     const leaderboardRows = learnerRows
       .map((row) => {
-        const courseXp = isProjectUser ? 0 : sumMapValues(row.courseXP);
-        const exerciseXp = isProjectUser ? 0 : sumMapValues(row.exerciseXP);
-        const projectXp = sumMapValues(row.projectXP);
+        const userProgram = row.userId.programSelection || "Placement Sprint";
+        const isProjectOnly = userProgram === "Full Stack Project Program";
+        const isPlacementOnly = userProgram === "Placement Sprint";
+
+        const courseXp = isProjectOnly ? 0 : sumMapValues(row.courseXP);
+        const exerciseXp = isProjectOnly ? 0 : sumMapValues(row.exerciseXP);
+        const projectXp = isPlacementOnly ? 0 : sumMapValues(row.projectXP);
         const email = String(row.userId.email || "").trim().toLowerCase();
-        const assessmentXp = isProjectUser ? 0 : (collegeMcqXpByEmail.get(email) || 0);
+        const assessmentXp = isProjectOnly ? 0 : (collegeMcqXpByEmail.get(email) || 0);
         const totalXp = courseXp + exerciseXp + projectXp + assessmentXp;
 
         const completedExercises = Array.isArray(row.completedExercises)

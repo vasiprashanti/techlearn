@@ -481,24 +481,55 @@ const BatchDetails = () => {
     const table = batch.studentsTable || [];
     const isPlaceholder = table.length === 1 && table[0].name === 'No enrolled students' && table[0].email === '-';
     if (isPlaceholder) return '—';
-    const scores = [];
+    
+    const isTasks = historyKey === 'dayWiseHistoryTasks';
+    const reportCategory = isTasks ? 'dailyTasks' : 'dailyChallenge';
+    
+    const percentages = [];
+    const numerators = [];
     let maxDen = 0;
+
     table.forEach(student => {
-      const score = student[historyKey]?.[dayNum];
-      if (score && score !== 'NIL' && score !== 'NA' && score !== '—') {
-        const parts = score.split('/');
+      const scoreStr = student[historyKey]?.[dayNum];
+      if (!scoreStr || scoreStr === 'NIL' || scoreStr === 'NA' || scoreStr === '—') return;
+
+      if (scoreStr === 'View Scores') {
+        const dayReport = student.dayWiseStudentReport?.[dayNum];
+        const items = dayReport?.[reportCategory] || [];
+        if (items.length > 0) {
+          const totalEarned = items.reduce((sum, item) => sum + (item.earnedScore || 0), 0);
+          const totalMax = items.reduce((sum, item) => sum + (item.maxScore || 0), 0);
+          if (totalMax > 0) {
+            numerators.push(totalEarned);
+            if (totalMax > maxDen) maxDen = totalMax;
+            percentages.push((totalEarned / totalMax) * 100);
+          }
+        }
+      } else {
+        const parts = scoreStr.split('/');
         if (parts.length === 2) {
-          scores.push(parseFloat(parts[0]));
+          const num = parseFloat(parts[0]);
           const den = parseInt(parts[1], 10);
-          if (den > maxDen) maxDen = den;
+          if (!isNaN(num) && !isNaN(den) && den > 0) {
+            numerators.push(num);
+            if (den > maxDen) maxDen = den;
+            percentages.push((num / den) * 100);
+          }
         }
       }
     });
-    if (scores.length === 0) return '—';
-    const sum = scores.reduce((s, v) => s + v, 0);
-    const avgVal = sum / scores.length;
-    const avg = avgVal % 1 === 0 ? avgVal.toString() : avgVal.toFixed(1);
-    return `${avg}/${maxDen}`;
+
+    if (percentages.length === 0) return '—';
+
+    if (maxDen > 0 && numerators.length > 0) {
+      const avgNumVal = numerators.reduce((s, v) => s + v, 0) / numerators.length;
+      const avgNum = avgNumVal % 1 === 0 ? avgNumVal.toString() : avgNumVal.toFixed(1);
+      return `${avgNum}/${maxDen}`;
+    }
+
+    const avgPctVal = percentages.reduce((s, v) => s + v, 0) / percentages.length;
+    const avgPct = avgPctVal % 1 === 0 ? avgPctVal.toString() : avgPctVal.toFixed(1);
+    return `${avgPct}%`;
   }, [batch.studentsTable]);
 
   const filteredReportStudents = useMemo(() => {
@@ -1301,8 +1332,8 @@ const BatchDetails = () => {
                         <table className="w-full min-w-[1000px] table-auto border-collapse">
                           <thead>
                             <tr className="border-b border-black/5 dark:border-white/10 bg-slate-50/50 dark:bg-slate-900/30">
-                              <th className="sticky left-0 bg-slate-100 dark:bg-[#08122a] z-30 text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-0 py-2 whitespace-nowrap" style={{width: '2rem', minWidth: '2rem'}}>#</th>
-                              <th className="sticky bg-slate-100 dark:bg-[#08122a] z-30 text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 min-w-[130px] border-r border-black/5 dark:border-white/5 whitespace-nowrap shadow-[8px_0_12px_-12px_rgba(15,23,42,0.5)]" style={{left: '2rem'}}>Student Name</th>
+                              <th className="sticky left-0 z-30 w-8 bg-slate-50 dark:bg-[#0b1833] text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">#</th>
+                              <th className="sticky left-8 z-30 w-32 bg-slate-50 dark:bg-[#0b1833] text-left text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-3 py-2 whitespace-nowrap border-r border-black/5 dark:border-white/10">Name</th>
                               <th className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">Track Type</th>
                               {Array.from({ length: maxTrackDays }).map((_, index) => (
                                 <th key={index} className="text-center text-[10px] sm:text-xs font-semibold text-black/45 dark:text-white/50 px-2 py-2 whitespace-nowrap">

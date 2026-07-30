@@ -77,17 +77,27 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Calculate total XP by summing all categories
-  const calculateTotalXP = (courseXP, exerciseXP, projectXP) => {
+  // Calculate total XP by summing categories based on user's programSelection
+  const calculateTotalXP = (courseXP, exerciseXP, projectXP, programSelection) => {
     let total = 0;
-    if (courseXP && typeof courseXP === 'object') {
-      total += Object.values(courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    const isProjectOnly = programSelection === "Full Stack Project Program";
+    const isPlacementOnly = programSelection === "Placement Sprint";
+    // If Both (or undefined/other), include all categories.
+    // If Placement Sprint, exclude projectXP.
+    // If Full Stack Project Program, exclude placement/course/exercise XP.
+
+    if (!isProjectOnly) {
+      if (courseXP && typeof courseXP === 'object') {
+        total += Object.values(courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
+      if (exerciseXP && typeof exerciseXP === 'object') {
+        total += Object.values(exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
     }
-    if (exerciseXP && typeof exerciseXP === 'object') {
-      total += Object.values(exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
-    }
-    if (projectXP && typeof projectXP === 'object') {
-      total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+    if (!isPlacementOnly) {
+      if (projectXP && typeof projectXP === 'object') {
+        total += Object.values(projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+      }
     }
     return total;
   };
@@ -116,7 +126,8 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(updatedUser));
     }
 
-    const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP, data.projectXP, data.user?.programSelection || user?.programSelection);
+    const programSelection = data.user?.programSelection || user?.programSelection || "Placement Sprint";
+    const totalXP = calculateTotalXP(data.courseXP, data.exerciseXP, data.projectXP, programSelection);
     setXp(totalXP);
 
     const exercises = Array.isArray(data.completedExercises) ? data.completedExercises : [];
@@ -124,12 +135,16 @@ export const UserProvider = ({ children }) => {
 
     setActivities(data.calendarActivity || {});
 
+    const projectXPMap = data.projectXP || {};
+    const totalProjectXPVal = Object.values(projectXPMap).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0);
+
     setProgress({
       courseProgress: data.totalCourseProgress?.progressPercent || 0,
       goalsProgress: 40, // Placeholder
       totalExercises: data.exerciseProgress?.totalExercises || 0,
       completedExercises: data.exerciseProgress?.completedExercises || 0,
-      exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0
+      exerciseProgressPercent: data.exerciseProgress?.progressPercent || 0,
+      projectXP: totalProjectXPVal
     });
     setLatestDailyChallenge(data.latestDailyChallenge || null);
   };

@@ -281,10 +281,8 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   });
 
   if (trackTemplate) {
-    const totalTemplateDays = trackTemplate.totalDays || trackTemplate.dayAssignments?.length || 1;
-    const lookupDay = ((dayNumber - 1) % totalTemplateDays) + 1;
     const dayAssignment = (trackTemplate.dayAssignments || []).find(
-      (assignment) => Number(assignment.dayNumber) === Number(lookupDay)
+      (assignment) => Number(assignment.dayNumber) === Number(dayNumber)
     );
     const templateQuestionIds = dayAssignment?.tasks?.length
       ? dayAssignment.tasks.map((task) => task.questionId).filter(Boolean)
@@ -314,6 +312,11 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
         };
       }
     }
+
+    // If an active track template is assigned to this batch but has NO questions for today's exact dayNumber, throw error
+    const error = new Error(`No Daily Challenge questions are configured for Day ${dayNumber} in the assigned track.`);
+    error.statusCode = 404;
+    throw error;
   }
 
   let track = await Track.findOne({
@@ -323,22 +326,10 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     .populate("orderedQuestionIds")
     .lean();
 
-  console.log("[DAILY_CHALLENGE_DEBUG] Track Found (by desired type):", {
-    trackId: track?._id,
-    trackType: track?.trackType,
-    orderedQuestionIdsCount: track?.orderedQuestionIds?.length || 0,
-  });
-
   if (!track) {
     track = await Track.findOne({ batchId: batch._id })
       .populate("orderedQuestionIds")
       .lean();
-
-    console.log("[DAILY_CHALLENGE_DEBUG] Track Found (fallback - any type):", {
-      trackId: track?._id,
-      trackType: track?.trackType,
-      orderedQuestionIdsCount: track?.orderedQuestionIds?.length || 0,
-    });
   }
 
   if (!track) {
@@ -348,37 +339,17 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
   const durationMinutes = DAILY_CHALLENGE_RULES.timerLimitMinutes;
 
-  let resolvedQuestionIds = [];
-  if (batch.assignedDailyChallengeTrack) {
-    const trackTemplate = await mongoose.model("TrackTemplate")
-      .findById(batch.assignedDailyChallengeTrack)
-      .lean();
-    const totalTemplateDays = trackTemplate?.totalDays || trackTemplate?.dayAssignments?.length || 1;
-    const lookupDay = ((dayNumber - 1) % totalTemplateDays) + 1;
-    const dayAssignment = trackTemplate?.dayAssignments?.find((d) => d.dayNumber === lookupDay);
-    if (dayAssignment) {
-      if (dayAssignment.tasks && dayAssignment.tasks.length > 0) {
-        resolvedQuestionIds = dayAssignment.tasks.map((t) => t.questionId).filter(Boolean);
-      } else if (dayAssignment.questionId) {
-        resolvedQuestionIds = [dayAssignment.questionId];
-      }
-    }
-  }
+  const orderedQuestions = track.orderedQuestionIds || [];
+  const resolvedQuestion = orderedQuestions[dayNumber - 1];
+  const resolvedQuestionId = resolvedQuestion?._id || resolvedQuestion;
 
-  if (resolvedQuestionIds.length === 0) {
-    const orderedQuestions = track.orderedQuestionIds || [];
-    const resolvedQuestion = orderedQuestions[dayNumber - 1];
-    const resolvedQuestionId = resolvedQuestion?._id || resolvedQuestion;
-    if (resolvedQuestionId) {
-      resolvedQuestionIds = [resolvedQuestionId];
-    }
-  }
-
-  if (resolvedQuestionIds.length === 0) {
+  if (!resolvedQuestionId) {
     const error = new Error(`No Daily Challenge questions are configured for today (Day ${dayNumber}).`);
     error.statusCode = 404;
     throw error;
   }
+
+  const resolvedQuestionIds = [resolvedQuestionId];
 
   const questions = await Promise.all(
     resolvedQuestionIds.map(async (qId) => {

@@ -18,9 +18,13 @@ const XPDisplay = ({ points = 0, loading = false, error = null }) => {
 
     try {
       const data = await progressAPI.getUserProgress();
-      const courseXP = data.courseXP ? Object.values(data.courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
-      const exerciseXP = data.exerciseXP ? Object.values(data.exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
-      const projectXP = data.projectXP ? Object.values(data.projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0;
+      const programSelection = user?.programSelection || "Placement Sprint";
+      const isProjectOnly = programSelection === "Full Stack Project Program";
+      const isPlacementOnly = programSelection === "Placement Sprint";
+
+      const courseXP = isProjectOnly ? 0 : (data.courseXP ? Object.values(data.courseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0);
+      const exerciseXP = isProjectOnly ? 0 : (data.exerciseXP ? Object.values(data.exerciseXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0);
+      const projectXP = isPlacementOnly ? 0 : (data.projectXP ? Object.values(data.projectXP).reduce((acc, val) => acc + (typeof val === 'number' ? val : 0), 0) : 0);
       const totalXP = courseXP + exerciseXP + projectXP;
       setXpData({
         points: totalXP,
