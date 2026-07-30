@@ -554,9 +554,14 @@ export default function Dashboard() {
     rawPhotoUrl = rawPhotoUrl.replace('/avatar', '/nobackgroundavatar');
   }
   const photoUrl = rawPhotoUrl;
+  const rawProgram = displayUser?.programSelection || "Placement Sprint";
+  const formattedProgram = rawProgram === "Both" 
+    ? "Placement & Project Program" 
+    : rawProgram;
+
   const collegeName = displayUser?.collegeName && displayUser.collegeName !== "TechLearn Student"
     ? displayUser.collegeName
-    : (displayUser?.programSelection || "Placement Sprint");
+    : formattedProgram;
 
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -590,7 +595,7 @@ export default function Dashboard() {
     { title: 'Project Progress', value: `${projectData.projectOverallProgress || 0}%`, icon: <PixelArrow /> },
     { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
   ] : [
-    { title: 'Project XP', value: (progress?.projectXP || 0).toLocaleString(), icon: <PixelStar /> },
+    { title: 'Project XP', value: (xp || progress?.projectXP || 0).toLocaleString(), icon: <PixelStar /> },
     { title: 'Tasks Done', value: '0/0', icon: <PixelQuestion /> },
     { title: 'Project Progress', value: '0%', icon: <PixelArrow /> },
     { title: 'Streak', value: streak.toString(), icon: <PixelFlame /> },
