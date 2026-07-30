@@ -1861,7 +1861,7 @@ todayXp = todayChallengeXp + todayTaskXp;
               code: task.code || "",
               score: accuracy,
               accuracy,
-              xp: Number(task.xpEarned || 0),
+              xp: Number(task.xpEarned || 0) || Math.round(((accuracy || 0) / 100) * maxScore),
               earnedScore: Math.round((accuracy / 100) * maxScore),
               maxScore,
               executionTime: 0,
