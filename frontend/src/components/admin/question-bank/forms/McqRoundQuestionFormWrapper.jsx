@@ -20,10 +20,11 @@ export const McqRoundQuestionFormWrapper = ({
         {options.map((option, index) => (
           <div key={option.label}>
             <label className="admin-micro-label text-black/45 dark:text-white/45">Option {option.label}</label>
-            <input
+            <textarea
               value={option.text || ''}
               onChange={(e) => onMcqOptionChange(index, e.target.value)}
-              className={inputClass}
+              rows={2}
+              className={`${inputClass} scrollbar-hide`}
               placeholder={`Enter text for Option ${option.label}`}
             />
           </div>

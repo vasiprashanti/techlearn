@@ -308,12 +308,12 @@ const McqUpload = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {q.options.map((opt, optIndex) => (
                     <div key={optIndex}>
-                      <input
-                        type="text"
+                      <textarea
                         value={opt}
                         onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
                         placeholder={`Option ${optIndex + 1}`}
-                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                        rows={2}
+                        className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white scrollbar-hide"
                       />
                       {errors[`q-${qIndex}-opt-${optIndex}`] && (
                         <p className="text-red-500 text-sm">{errors[`q-${qIndex}-opt-${optIndex}`]}</p>
@@ -359,7 +359,7 @@ const McqUpload = () => {
                     onChange={(e) => handleQuestionChange(qIndex, "explanation", e.target.value)}
                     placeholder="Enter explanation for this question"
                     rows={2}
-                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white scrollbar-hide"
                   />
                 </div>
 
@@ -437,11 +437,14 @@ const McqUpload = () => {
                           {Array.isArray(q.options) && (
                             <ul className="list-disc ml-6 text-sm">
                               {q.options.map((opt, j) => (
-                                <li key={j} className={q.correct == j ? "font-bold text-green-600" : ""}>
+                                <li key={j} className={`whitespace-pre-line ${q.correct == j ? "font-bold text-green-600" : ""}`}>
                                   {opt}
                                 </li>
                               ))}
                             </ul>
+                          )}
+                          {q.explanation && (
+                            <p className="text-xs mt-1 text-gray-600 dark:text-gray-300 whitespace-pre-line"><strong>Explanation:</strong> {q.explanation}</p>
                           )}
                           <p className="text-xs mt-1">Difficulty: {q.difficulty}</p>
                           {Array.isArray(q.tags) && q.tags.length > 0 && (

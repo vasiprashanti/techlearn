@@ -340,7 +340,7 @@ export default function InterviewCoreCsQuestionDetail() {
                 Question {currentTaskIndex + 1} of {dailySequence.length}
               </div>
             )}
-            <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
+            <h2 className="text-base md:text-lg font-medium text-gray-900 dark:text-white leading-relaxed mt-2 select-none whitespace-pre-line">
               {question.description || question.question}
             </h2>
           </div>
@@ -373,7 +373,7 @@ export default function InterviewCoreCsQuestionDetail() {
                     (currentTask?.attempted || showFeedback) ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
                   }`}
                 >
-                  <span className="leading-tight px-6">{opt}</span>
+                  <span className="leading-tight px-6 whitespace-pre-line text-center">{opt}</span>
                   {showFeedback && idx === question.correctIndex ? (
                     <CheckCircle className="absolute right-3.5 h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                   ) : showFeedback && selectedOption === idx && selectedOption !== question.correctIndex ? (
@@ -396,7 +396,7 @@ export default function InterviewCoreCsQuestionDetail() {
               <div className={`font-semibold ${isCorrect ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
                 {isCorrect ? 'Correct!' : 'Incorrect'}
               </div>
-              <div className={`mt-1 text-sm leading-relaxed ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+              <div className={`mt-1 text-sm leading-relaxed whitespace-pre-line ${isCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                 {question.explanation}
               </div>
             </div>

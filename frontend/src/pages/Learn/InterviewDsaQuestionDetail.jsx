@@ -184,7 +184,7 @@ export default function InterviewDsaQuestionDetail() {
         statement: question.description
           ? `## Problem\n\n${question.description}\n\n${question.inputFormat ? `### Input Format\n${question.inputFormat}\n\n` : ''}${question.outputFormat ? `### Output Format\n${question.outputFormat}` : ''}`
           : `## Problem\n\n**${question.title}** (Topic: ${question.subtitle})\n\nProblem statement will be added here.`,
-        starterCode: question.starterCode?.[selectedLanguage]?.code || question.solutionCode || LANGUAGES[selectedLanguage]?.starter || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
+        starterCode: question.starterCode?.[selectedLanguage]?.code || (selectedLanguage === 'python' ? question.solutionCode : null) || LANGUAGES[selectedLanguage]?.starter || `# ${question.title}\n\n# TODO: write your solution here\n\n`,
       }
     );
   }, [question, selectedLanguage]);
@@ -213,11 +213,11 @@ export default function InterviewDsaQuestionDetail() {
     }
 
     const defaultLang = selectedLanguage || 'python';
-    const defaultStarter = question.starterCode?.[defaultLang]?.code || (defaultLang === 'python' ? question.solutionCode : null) || LANGUAGES[defaultLang]?.starter || '';
+    const defaultStarter = question.starterCode?.[defaultLang]?.code || (typeof question.starterCode === 'string' ? question.starterCode : null) || (defaultLang === 'python' ? question.solutionCode : null) || LANGUAGES[defaultLang]?.starter || '';
     setCode(defaultStarter);
     setIsLastSubmissionCorrect(false);
     setOutput('');
-  }, [questionId, isDailyMode, currentTaskIndex, question]);
+  }, [questionId, isDailyMode, currentTaskIndex, question, selectedLanguage]);
 
   if (loading) {
     return (

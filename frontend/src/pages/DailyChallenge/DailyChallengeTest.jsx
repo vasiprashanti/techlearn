@@ -828,7 +828,7 @@ export default function DailyChallengeTest() {
 
             {/* Question prompt / description card styled like the practice details question view */}
             <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-4 md:p-5 shadow-md shadow-[#2563eb]/5 text-center">
-              <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-relaxed select-none">
+              <h2 className="text-sm md:text-base font-bold text-gray-900 dark:text-white leading-relaxed select-none whitespace-pre-line">
                 {problem.problemTitle}
               </h2>
               {problem.description && (

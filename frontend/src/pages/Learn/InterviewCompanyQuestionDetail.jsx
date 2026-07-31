@@ -83,7 +83,7 @@ export default function InterviewCompanyQuestionDetail() {
           const inputFormatText = data.inputFormat || '';
           const outputFormatText = data.outputFormat || '';
 
-          const pythonStarter = data.content?.starterCode?.python?.code || data.solutionCode || LANGUAGES.python.starter;
+          const pythonStarter = data.content?.starterCode?.python?.code || data.starterCode?.python?.code || (typeof data.starterCode === 'string' ? data.starterCode : null) || data.solutionCode || LANGUAGES.python.starter;
 
           setQuestion({
             id: String(data._id),
@@ -99,7 +99,8 @@ export default function InterviewCompanyQuestionDetail() {
             statement: descriptionText
               ? `## Problem\n\n${descriptionText}\n\n${inputFormatText ? `### Input Format\n${inputFormatText}\n\n` : ''}${outputFormatText ? `### Output Format\n${outputFormatText}` : ''}`
               : `## Problem\n\n**${data.title}** (Topic: ${data.categoryTitle || 'Company'})\n\nProblem statement will be added here.`,
-            starterCode: data.content?.starterCode,
+            starterCode: data.content?.starterCode || data.starterCode,
+            solutionCode: data.solutionCode,
             tags: data.tags || []
           });
 
@@ -259,7 +260,7 @@ export default function InterviewCompanyQuestionDetail() {
 
             {/* Question text card */}
             <div className="relative w-full border border-[#2563eb]/20 dark:border-white/10 bg-[#e5f3ff]/45 dark:bg-[#091b40]/75 rounded-xl p-6 shadow-md shadow-[#2563eb]/5 text-center mb-6 mt-3">
-              <h2 className="text-base md:text-lg font-bold text-gray-900 dark:text-white leading-relaxed mt-2 select-none">
+              <h2 className="text-base md:text-lg font-medium text-gray-900 dark:text-white leading-relaxed mt-2 select-none whitespace-pre-line">
                 {question.title}
               </h2>
               {question.description && (
@@ -297,7 +298,7 @@ export default function InterviewCompanyQuestionDetail() {
                       showFeedback ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
                     }`}
                   >
-                    <span className="leading-tight px-6">{opt}</span>
+                    <span className="leading-tight px-6 whitespace-pre-line text-center">{opt}</span>
                     {showFeedback && idx === question.correctIndex ? (
                       <CheckCircle className="absolute right-3.5 h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                     ) : showFeedback && selectedOption === idx && selectedOption !== question.correctIndex ? (
@@ -320,7 +321,7 @@ export default function InterviewCompanyQuestionDetail() {
                 <div className={`font-semibold ${isLastSubmissionCorrect ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'}`}>
                   {isLastSubmissionCorrect ? 'Correct!' : 'Incorrect'}
                 </div>
-                <div className={`mt-1 text-sm leading-relaxed ${isLastSubmissionCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                <div className={`mt-1 text-sm leading-relaxed whitespace-pre-line ${isLastSubmissionCorrect ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                   {question.explanation}
                 </div>
               </div>
@@ -419,7 +420,8 @@ export default function InterviewCompanyQuestionDetail() {
                         onChange={(e) => {
                           const nextLang = e.target.value;
                           setSelectedLanguage(nextLang);
-                          setCode(question?.starterCode?.[nextLang]?.code || question?.solutionCode || LANGUAGES[nextLang]?.starter);
+                          const newStarter = question?.starterCode?.[nextLang]?.code || (typeof question?.starterCode === 'string' ? question.starterCode : null) || (nextLang === 'python' ? question?.solutionCode : null) || LANGUAGES[nextLang]?.starter;
+                          setCode(newStarter);
                         }}
                         className="appearance-none rounded-lg border border-gray-300 pl-2.5 pr-8 py-1 text-xs dark:border-gray-600 dark:bg-gray-800 dark:text-white min-w-[100px] outline-none cursor-pointer"
                       >

@@ -375,7 +375,7 @@ const UserMcq = () => {
             </div>
           </div>
 
-          <h2 className="text-xl font-medium text-gray-900 dark:text-white">
+          <h2 className="text-xl font-medium text-gray-900 dark:text-white whitespace-pre-line">
             {question.question}
           </h2>
 
@@ -403,7 +403,7 @@ const UserMcq = () => {
                   key={idx}
                   disabled={showFeedback}
                   onClick={() => handleAnswerSelect(idx)}
-                  className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-300 ${optionClass}`}
+                  className={`w-full p-4 text-left rounded-xl border-2 transition-all duration-300 whitespace-pre-line ${optionClass}`}
                 >
                   {opt}
                 </button>
@@ -421,7 +421,7 @@ const UserMcq = () => {
               <div className="font-bold mb-1">
                 {selectedAnswers[currentQuestion] === question.correct ? "✅ Correct!" : "❌ Incorrect"}
               </div>
-              <div className="text-sm leading-relaxed">
+              <div className="text-sm leading-relaxed whitespace-pre-line">
                 {question.explanation || "No explanation provided."}
               </div>
             </div>
