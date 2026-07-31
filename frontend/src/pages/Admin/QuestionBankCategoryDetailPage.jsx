@@ -584,11 +584,12 @@ export const QuestionBankCategoryDetailPage = () => {
   const explanationField = (
     <div className="md:col-span-2">
       <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
-      <input
+      <textarea
         value={questionForm.explanation}
         onChange={(e) => updateFormField('explanation', e.target.value)}
+        rows={2}
         placeholder="Explain why this option is correct"
-        className={questionFormInputClass}
+        className={`${questionFormInputClass} scrollbar-hide`}
       />
     </div>
   );
@@ -734,11 +735,12 @@ export const QuestionBankCategoryDetailPage = () => {
                     const formExplanationField = (
                       <div className="md:col-span-2">
                         <label className="admin-micro-label text-black/45 dark:text-white/45">Explanation</label>
-                        <input
+                        <textarea
                           value={form.explanation}
                           onChange={(e) => updateBulkFormField(index, 'explanation', e.target.value)}
+                          rows={2}
                           placeholder="Explain why this option is correct"
-                          className={questionFormInputClass}
+                          className={`${questionFormInputClass} scrollbar-hide`}
                         />
                       </div>
                     );
@@ -1002,9 +1004,9 @@ export const QuestionBankCategoryDetailPage = () => {
                             : 'border-black/10 dark:border-white/10 bg-slate-50 dark:bg-white/5'
                         }`}
                       >
-                        <span><strong>{opt.label}:</strong> {opt.text || '(empty)'}</span>
+                        <span className="whitespace-pre-line"><strong>{opt.label}:</strong> {opt.text || '(empty)'}</span>
                         {String(opt.label) === String(viewQuestion.correctOption) && (
-                          <span className="text-xs font-semibold uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded">Correct</span>
+                          <span className="text-xs font-semibold uppercase tracking-wider bg-emerald-600 text-white px-2 py-0.5 rounded shrink-0">Correct</span>
                         )}
                       </div>
                     ))}
@@ -1012,7 +1014,7 @@ export const QuestionBankCategoryDetailPage = () => {
                   {viewQuestion.explanation && (
                     <div className="mt-3">
                       <h4 className="text-xs font-semibold uppercase text-slate-400 dark:text-slate-500 tracking-wider font-medium">Explanation</h4>
-                      <p className="mt-1 italic text-slate-300">{viewQuestion.explanation}</p>
+                      <p className="mt-1 italic text-slate-300 whitespace-pre-line">{viewQuestion.explanation}</p>
                     </div>
                   )}
                 </div>
