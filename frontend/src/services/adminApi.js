@@ -504,4 +504,33 @@ export const adminAPI = {
   removeStudent: (projectId, studentId) => request(`/admin/projects/${projectId}/students/${studentId}/remove`, { method: 'PUT' }),
   getProjectDayDetails: (dayId) => request(`/admin/projects/days/${dayId}/details`),
   getProjectProgress: (projectId) => request(`/admin/projects/${projectId}/progress`),
+
+  // Programs API
+  getPrograms: (params = {}) => {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.programType) query.set('programType', params.programType);
+    if (params.month) query.set('month', params.month);
+    if (params.status) query.set('status', params.status);
+    if (params.sortBy) query.set('sortBy', params.sortBy);
+    if (params.sortOrder) query.set('sortOrder', params.sortOrder);
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    return request(`/admin/programs?${query.toString()}`);
+  },
+  createProgram: (body) => request('/admin/programs', { method: 'POST', body: JSON.stringify(body) }),
+  getProgramById: (id) => request(`/admin/programs/${id}`),
+  updateProgram: (id, body) => request(`/admin/programs/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteProgram: (id) => request(`/admin/programs/${id}`, { method: 'DELETE' }),
+  getAvailableProgramEntities: (programId, entityType, params = {}) => {
+    const query = new URLSearchParams();
+    if (params.search) query.set('search', params.search);
+    if (params.page) query.set('page', params.page);
+    if (params.limit) query.set('limit', params.limit);
+    return request(`/admin/programs/${programId}/available/${entityType}?${query.toString()}`);
+  },
+  attachProgramEntities: (programId, entityType, ids) =>
+    request(`/admin/programs/${programId}/attachments/${entityType}`, { method: 'POST', body: JSON.stringify({ ids }) }),
+  detachProgramEntity: (programId, entityType, entityId) =>
+    request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
 };

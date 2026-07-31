@@ -15,8 +15,9 @@
     "reconcile:submission-indexes": "node scripts/reconcile-submission-indexes.js",
     "validate:phase1": "node scripts/validate-phase1.js",
     "validate:phase1:concurrency": "node scripts/validate-analytics-concurrency.js",
-    "validate:phase2": "node scripts/validate-phase2.js"
-    ,"validate:analytics-mix": "node scripts/validate-analytics-mix.js"
+    "validate:phase2": "node scripts/validate-phase2.js",
+    "validate:analytics-mix": "node scripts/validate-analytics-mix.js",
+    "validate:program": "node scripts/validate-program-entity.js"
   },
   "keywords": [],
   "author": "",

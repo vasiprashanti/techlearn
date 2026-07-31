@@ -178,7 +178,15 @@ export default function Resources() {
       if (editingRoadmapId) {
         await adminAPI.updateRoadmap(editingRoadmapId, payload);
       } else {
-        await adminAPI.createRoadmap(payload);
+        const res = await adminAPI.createRoadmap(payload);
+        const newRoadmapId = res?.data?._id || res?._id || res?.id;
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+          const targetUrl = newRoadmapId ? `${decodeURIComponent(returnTo)}&newId=${newRoadmapId}` : decodeURIComponent(returnTo);
+          navigate(targetUrl);
+          return;
+        }
       }
       const refreshed = await adminAPI.getRoadmaps();
       setRoadmapEntries(Array.isArray(refreshed) ? refreshed : []);

@@ -306,7 +306,15 @@ export default function TrackTemplate() {
       if (editingTemplateId) {
         await adminAPI.updateTrackTemplate(editingTemplateId, payload);
       } else {
-        await adminAPI.createTrackTemplate(payload);
+        const res = await adminAPI.createTrackTemplate(payload);
+        const newTrackId = res?.data?._id || res?._id || res?.id;
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+          const targetUrl = newTrackId ? `${decodeURIComponent(returnTo)}&newId=${newTrackId}` : decodeURIComponent(returnTo);
+          navigate(targetUrl);
+          return;
+        }
       }
       await loadTrackTemplatePageData();
       closeCreateTemplateModal();

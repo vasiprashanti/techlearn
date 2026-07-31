@@ -623,7 +623,15 @@ const Batches = () => {
           }
         }
       } else {
-        await adminAPI.createBatch(payload);
+        const res = await adminAPI.createBatch(payload);
+        const newBatchId = res?.data?._id || res?._id || res?.id;
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+          const targetUrl = newBatchId ? `${decodeURIComponent(returnTo)}&newId=${newBatchId}` : decodeURIComponent(returnTo);
+          navigate(targetUrl);
+          return;
+        }
       }
 
       await loadBatchPageData();
