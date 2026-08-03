@@ -9,7 +9,7 @@ import CertificateTemplate from "../../models/CertificateTemplate.js";
 import Project from "../../models/Project.js";
 
 // Whitelist mapping for attachment entity types
-const ENTITY_CONFIG = {
+export const ENTITY_CONFIG = {
   batches: {
     model: Batch,
     fieldKey: "batchIds",
@@ -90,16 +90,14 @@ export const listPrograms = async (req, res) => {
     }
 
     // Month filter based on createdAt (expected format: YYYY-MM or MM)
-    if (month.trim()) {
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(month.trim())) {
       const parts = month.trim().split("-");
       if (parts.length === 2) {
         const year = parseInt(parts[0], 10);
         const monthNum = parseInt(parts[1], 10) - 1; // 0-indexed
-        if (!isNaN(year) && !isNaN(monthNum)) {
-          const startDate = new Date(Date.UTC(year, monthNum, 1));
-          const endDate = new Date(Date.UTC(year, monthNum + 1, 0, 23, 59, 59, 999));
-          query.createdAt = { $gte: startDate, $lte: endDate };
-        }
+        const startDate = new Date(Date.UTC(year, monthNum, 1));
+        const endDate = new Date(Date.UTC(year, monthNum + 1, 0, 23, 59, 59, 999));
+        query.createdAt = { $gte: startDate, $lte: endDate };
       }
     }
 
@@ -107,8 +105,18 @@ export const listPrograms = async (req, res) => {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
 
+    const allowedSortFields = new Set([
+      "name",
+      "programType",
+      "duration",
+      "status",
+      "visibility",
+      "createdAt",
+      "updatedAt",
+    ]);
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder === "asc" ? 1 : -1;
+    const safeSortBy = allowedSortFields.has(sortBy) ? sortBy : "createdAt";
+    sortOptions[safeSortBy] = sortOrder === "asc" ? 1 : -1;
 
     const totalPrograms = await Program.countDocuments(query);
     const rawPrograms = await Program.find(query)
@@ -449,10 +457,16 @@ export const attachEntities = async (req, res) => {
       return res.status(400).json({ success: false, message: "ids array is required and cannot be empty" });
     }
 
-    const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
-    if (validIds.length === 0) {
-      return res.status(400).json({ success: false, message: "No valid ObjectIds provided in ids array" });
+    const invalidIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Every id in ids must be a valid ObjectId",
+        invalidIds,
+      });
     }
+
+    const validIds = [...new Set(ids.map((id) => id.toString()))];
 
     const config = ENTITY_CONFIG[entityType];
 
@@ -469,8 +483,11 @@ export const attachEntities = async (req, res) => {
 
     const updatedProgram = await Program.findByIdAndUpdate(
       programId,
-      { $addToSet: updateQuery, updatedBy: req.user?._id },
-      { new: true }
+      {
+        $addToSet: updateQuery,
+        $set: { updatedBy: req.user?._id || null },
+      },
+      { new: true, runValidators: true }
     )
       .populate(config.fieldKey, config.selectFields)
       .lean();
@@ -517,8 +534,11 @@ export const detachEntity = async (req, res) => {
 
     const updatedProgram = await Program.findByIdAndUpdate(
       programId,
-      { $pull: updateQuery, updatedBy: req.user?._id },
-      { new: true }
+      {
+        $pull: updateQuery,
+        $set: { updatedBy: req.user?._id || null },
+      },
+      { new: true, runValidators: true }
     )
       .populate(config.fieldKey, config.selectFields)
       .lean();

@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import Program from "../models/Program.js";
+import { ENTITY_CONFIG } from "../controllers/admin/adminProgramController.js";
 
 dotenv.config();
 
@@ -64,6 +65,40 @@ function runValidation() {
 
     // 4. Test Schema Fields & Relationship Arrays
     console.log("4. Testing Relationship Array Definitions...");
+    const expectedRelationships = {
+      batches: { field: "batchIds", model: "Batch", label: "name" },
+      students: { field: "studentIds", model: "Student", label: "name" },
+      courses: { field: "courseIds", model: "Course", label: "title" },
+      roadmaps: { field: "roadmapIds", model: "Roadmap", label: "title" },
+      "track-templates": { field: "trackTemplateIds", model: "TrackTemplate", label: "name" },
+      certificates: { field: "certificateTemplateIds", model: "CertificateTemplate", label: "name" },
+      projects: { field: "projectIds", model: "Project", label: "title" },
+    };
+
+    const configuredTypes = Object.keys(ENTITY_CONFIG);
+    const expectedTypes = Object.keys(expectedRelationships);
+    if (configuredTypes.length !== expectedTypes.length || expectedTypes.some((type) => !ENTITY_CONFIG[type])) {
+      console.error("❌ Program controller relationship configuration is incomplete");
+      process.exit(1);
+    }
+
+    for (const [type, relationship] of Object.entries(expectedRelationships)) {
+      const config = ENTITY_CONFIG[type];
+      const schemaPath = Program.schema.path(relationship.field);
+      const configuredRef = schemaPath?.caster?.options?.ref;
+
+      if (!schemaPath || configuredRef !== relationship.model || config.fieldKey !== relationship.field) {
+        console.error(`❌ ${type} relationship is not aligned between Program schema and admin API`);
+        process.exit(1);
+      }
+
+      if (config.model.modelName !== relationship.model || config.labelField !== relationship.label) {
+        console.error(`❌ ${type} attachment mapping points to the wrong model or label field`);
+        process.exit(1);
+      }
+    }
+    console.log("✅ All 7 Program relationship mappings match the schema and admin attachment API");
+
     const dummyId = new mongoose.Types.ObjectId();
     const fullProgram = new Program({
       name: "Full Relationship Program",
@@ -98,7 +133,7 @@ function runValidation() {
       process.exit(1);
     }
 
-    console.log("\n🎉 ALL PROGRAM ENTITY SCHEMA & VALIDATION CHECKS PASSED!");
+    console.log("\n🎉 ALL PROGRAM ENTITY SCHEMA, RELATIONSHIP & VALIDATION CHECKS PASSED!");
     process.exit(0);
   } catch (error) {
     console.error("❌ Validation Failed:", error);

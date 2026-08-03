@@ -248,6 +248,7 @@ export default function ProgramDetails() {
   }
 
   const currentSection = SECTIONS.find((s) => s.key === activeTab) || SECTIONS[0];
+  const CurrentSectionIcon = currentSection.icon;
   const attachedItems = program[currentSection.field] || [];
 
   return (
@@ -415,7 +416,7 @@ export default function ProgramDetails() {
         {/* Section Attached Items List */}
         {attachedItems.length === 0 ? (
           <div className={`p-12 rounded-2xl border text-center ${isDarkMode ? 'bg-[#0c1a3a]/50 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <currentSection.icon className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
+            <CurrentSectionIcon className="w-12 h-12 text-slate-500 mx-auto mb-3 opacity-60" />
             <h3 className="text-lg font-semibold mb-1">No {currentSection.label} Attached</h3>
             <p className={`text-sm mb-6 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               Attach existing {currentSection.label.toLowerCase()} or create new ones to include in this program.

@@ -419,11 +419,9 @@ export const adminAPI = {
   issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
   revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
   restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
+  createCertificateTemplate: (body) => request('/admin/certificates/templates', { method: 'POST', body: JSON.stringify(body) }),
+  updateCertificateTemplate: (templateId, body) => request(`/admin/certificates/templates/${templateId}`, { method: 'PUT', body: JSON.stringify(body) }),
 
-  getCertificates: () => request('/admin/certificates'),
-  issueCertificate: (body) => request('/admin/certificates/issued', { method: 'POST', body: JSON.stringify(body) }),
-  revokeCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/revoke`, { method: 'PATCH' }),
-  restoreCertificate: (certificateId) => request(`/admin/certificates/issued/${certificateId}/restore`, { method: 'PATCH' }),
   saveFinalTest: (testId, body) => request(testId ? `/admin/certificates/final-tests/${testId}` : '/admin/certificates/final-tests', {
     method: testId ? 'PUT' : 'POST',
     body: JSON.stringify(body),
