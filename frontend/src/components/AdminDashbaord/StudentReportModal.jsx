@@ -31,6 +31,7 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
   const [batchTracks, setBatchTracks] = useState([]);
   const [selectedDay, setSelectedDay] = useState(1);
   const [expandedMcqId, setExpandedMcqId] = useState(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleViewCode = async (sub) => {
     setLoadingCode(true);
@@ -224,6 +225,21 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
     return track?.days?.find(d => Number(d.dayNumber) === Number(dayNum))?.mcq || [];
   };
 
+  const handleResetStudentXp = async () => {
+    if (!studentId) return;
+    setActionLoading(true);
+    try {
+      await adminAPI.resetStudentXp(studentId);
+      setBatchStudentData(prev => prev ? { ...prev, totalXp: 0 } : prev);
+      if (studentBasic) studentBasic.score = 0;
+      setShowResetConfirm(false);
+    } catch (err) {
+      alert("Failed to reset student XP: " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onClose} />
@@ -243,9 +259,20 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
               <p className="text-xs text-slate-500 dark:text-white/60 truncate mt-0.5">{email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-white/60 dark:hover:text-white text-lg w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-            <FiX />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              disabled={actionLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+              title="Reset Student XP to 0"
+            >
+              <FiRefreshCw className={`w-3.5 h-3.5 ${actionLoading ? 'animate-spin' : ''}`} />
+              Reset XP
+            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-white/60 dark:hover:text-white text-lg w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+              <FiX />
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -1145,6 +1172,47 @@ export default function StudentReportModal({ studentId, batchId, studentBasic, o
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Reset XP */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-[#0c1938] border border-black/10 dark:border-white/10 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 text-lg font-bold">
+                <FiAlertCircle />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Reset Student XP</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to reset <span className="font-semibold text-slate-900 dark:text-white">{name}</span>'s total XP to 0 in the database?
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirm(false)}
+                disabled={actionLoading}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-white rounded-lg border border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetStudentXp}
+                disabled={actionLoading}
+                className="px-4 py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 rounded-lg shadow transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {actionLoading && <FiRefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                Confirm Reset
+              </button>
             </div>
           </div>
         </div>

@@ -29,6 +29,7 @@ import {
   updateBatchAdmin,
   updateCollege,
   updateStudentAdmin,
+  resetStudentXpAdmin,
   bulkDeleteBatchesAdmin,
 } from "../controllers/admin/adminEntityController.js";
 import {
@@ -114,6 +115,7 @@ router.post("/students", createStudentAdmin);
 router.get("/students/search", searchExistingStudentsAdmin);
 router.get("/students/:studentId", getStudentDetailAdmin);
 router.put("/students/:studentId", updateStudentAdmin);
+router.post("/students/:studentId/reset-xp", resetStudentXpAdmin);
 router.patch("/students/:studentId/remove-batch", removeStudentFromBatchAdmin);
 router.delete("/students/:studentId", deleteStudentAdmin);
 

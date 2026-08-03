@@ -313,6 +313,7 @@ export const adminAPI = {
   getStudent: (studentId) => request(`/admin/students/${studentId}`),
   createStudent: (body) => request('/admin/students', { method: 'POST', body: JSON.stringify(body) }),
   updateStudent: (studentId, body) => request(`/admin/students/${studentId}`, { method: 'PUT', body: JSON.stringify(body) }),
+  resetStudentXp: (studentId) => request(`/admin/students/${studentId}/reset-xp`, { method: 'POST' }),
   removeStudentFromBatch: (studentId, batchId) => request(`/admin/students/${studentId}/remove-batch`, { method: 'PATCH', body: JSON.stringify({ batchId }) }),
   deleteStudent: (studentId) => request(`/admin/students/${studentId}`, { method: 'DELETE' }),
   bulkUploadStudents: async ({ file, collegeId, batchId, primaryTrack, status = 'Active' }) => {

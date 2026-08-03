@@ -3294,6 +3294,52 @@ export const updateStudentAdmin = async (req, res) => {
   }
 };
 
+export const resetStudentXpAdmin = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    if (!assertObjectId(studentId, "studentId", res)) return;
+
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({ success: false, message: "Student not found." });
+    }
+
+    // Reset XP in UserProgress model if userId exists
+    if (student.userId) {
+      await UserProgress.findOneAndUpdate(
+        { userId: student.userId },
+        {
+          $set: {
+            courseXP: {},
+            exerciseXP: {},
+            projectXP: {},
+            totalCourseXP: {},
+            totalExerciseXP: {},
+          },
+        }
+      );
+    }
+
+    await writeAuditLog({
+      verb: "Updated",
+      entityType: "Student",
+      entityId: student._id,
+      action: "Reset student XP",
+      detail: `Reset XP for student ${student.name}`,
+      actor: req.user,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `XP for student ${student.name} has been reset to 0.`,
+    });
+  } catch (error) {
+    console.error("resetStudentXpAdmin error:", error);
+    return res.status(500).json({ success: false, message: "Failed to reset student XP.", error: error.message });
+  }
+};
+
+
 export const removeStudentFromBatchAdmin = async (req, res) => {
   try {
     const { studentId } = req.params;
