@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import Program from "../models/Program.js";
+import User from "../models/User.js";
+import Student from "../models/Student.js";
 import { ENTITY_CONFIG } from "../controllers/admin/adminProgramController.js";
 
 dotenv.config();
@@ -98,6 +100,14 @@ function runValidation() {
       }
     }
     console.log("✅ All 7 Program relationship mappings match the schema and admin attachment API");
+
+    const userProgramPath = User.schema.path("programId");
+    const studentProgramPath = Student.schema.path("programId");
+    if (userProgramPath?.options?.ref !== "Program" || studentProgramPath?.options?.ref !== "Program") {
+      console.error("❌ User and Student program enrollment references are not configured");
+      process.exit(1);
+    }
+    console.log("✅ User and Student Program enrollment references validated");
 
     const dummyId = new mongoose.Types.ObjectId();
     const fullProgram = new Program({

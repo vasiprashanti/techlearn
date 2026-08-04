@@ -255,7 +255,7 @@ export default function ProgramDetails() {
     <div className={`min-h-screen flex ${isDarkMode ? 'bg-[#00113b] text-white' : 'bg-slate-50 text-slate-900'}`}>
       <Sidebar />
 
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main className="flex-1 min-w-0 lg:ml-64 h-screen pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
         {/* Toast Notification */}
         {toastMessage && (
           <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center justify-between animate-fadeIn">
