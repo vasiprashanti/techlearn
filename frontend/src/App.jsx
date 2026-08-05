@@ -221,7 +221,7 @@ function LayoutWrapper() {
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/');
 
-  const showFooter = !['/mcq'].includes(location.pathname) && 
+  const showFooter = !['/mcq', '/signup', '/login'].includes(location.pathname) && 
                      !location.pathname.startsWith('/coding/') && 
                      !location.pathname.startsWith('/daily-challenge/') &&
                      !isDashboardRoute &&

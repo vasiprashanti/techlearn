@@ -427,12 +427,12 @@ export default function InterviewSqlQuestionDetail() {
           </button>
         </div>
       )}
-      <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden w-full">
+      <div className="min-h-[calc(100vh-10rem)] lg:h-[calc(100vh-9rem)] flex flex-col overflow-visible lg:overflow-hidden w-full pb-4 lg:pb-0">
         {/* Workspace Body split */}
-        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden gap-4">
+        <div className="flex flex-col lg:flex-row flex-1 lg:overflow-hidden gap-4">
           {/* Left Panel - Contains ALL content inside the card */}
           <aside 
-            className="w-full lg:w-[35%] xl:w-[40%] h-[360px] lg:h-full flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 minimal-scrollbar"
+            className="w-full lg:w-[35%] xl:w-[40%] min-h-[380px] lg:h-full flex flex-col shrink-0 overflow-y-auto rounded-xl border border-black/5 bg-white/40 shadow-[0_12px_34px_rgba(60,131,246,0.08)] backdrop-blur-xl dark:border-[#15366f]/45 dark:bg-gradient-to-br dark:from-[#020b23] dark:via-[#001233] dark:to-[#0a1128] dark:shadow-[0_12px_34px_rgba(0,0,0,0.24)] p-3 gap-3 minimal-scrollbar"
           >
             {/* Header Card (Top 15%) */}
             <div className="bg-white/50 border border-black/5 dark:border-[#15366f]/45 dark:bg-[#001233]/60 p-3 rounded-xl shrink-0 lg:h-[15%] lg:min-h-[15%] flex flex-col justify-center gap-1.5">
