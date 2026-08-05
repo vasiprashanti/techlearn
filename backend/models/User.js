@@ -105,6 +105,23 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    degree: {
+      type: String,
+      default: "",
+    },
+    branch: {
+      type: String,
+      default: "",
+    },
+    learningGoal: {
+      type: String,
+      default: "",
+    },
+    personalizedDetail: {
+      type: String,
+      default: "",
+    },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
   },

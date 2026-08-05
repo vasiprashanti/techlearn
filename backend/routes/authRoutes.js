@@ -179,9 +179,59 @@ router.post("/login", async function login(req, res) {
 });
 //Tested and working fine
 
+/* ========== GOOGLE OAUTH CHECK ========== */
+router.post("/google-check", async function checkGoogleUser(req, res) {
+  const { token } = req.body;
+  try {
+    if (!token) {
+      return res.status(400).json({ message: "Missing Google token." });
+    }
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const { email, name } = ticket.getPayload();
+    const formattedEmail = normalizeEmail(email);
+    const user = await User.findOne({ email: formattedEmail });
+
+    if (user && user.collegeName) {
+      const mapped = await mapUserToStudentCohort(user);
+      const jwtToken = generateToken(mapped.user._id);
+      return res.status(200).json({
+        isExisting: true,
+        token: jwtToken,
+        user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
+      });
+    }
+
+    return res.status(200).json({
+      isExisting: false,
+      email: formattedEmail,
+      name: name || formattedEmail.split("@")[0]
+    });
+  } catch (err) {
+    console.error("Google check error:", err);
+    return res.status(401).json({ message: "Invalid Google token." });
+  }
+});
+
 /* ========== GOOGLE OAUTH ========== */
 router.post("/google", async function googleLogin(req, res) {
-  const { token } = req.body;
+  const { 
+    token, 
+    mobileNumber,
+    collegeName,
+    degree,
+    branch,
+    degreeBranch,
+    graduationYear,
+    learningGoal,
+    personalizedDetail,
+    programSelection,
+    placementReadiness,
+    dailyCommitment 
+  } = req.body;
+
   try {
     if (!token) {
       return res.status(400).json({ message: "Google login failed: missing Google token." });
@@ -212,6 +262,17 @@ router.post("/google", async function googleLogin(req, res) {
           authProvider: "google",
           photoUrl: "/profile_avatars/nobackgroundavatar1.png",
           avatar: "/profile_avatars/nobackgroundavatar1.png",
+          mobileNumber: mobileNumber || "",
+          collegeName: collegeName || "",
+          degree: degree || "",
+          branch: branch || "",
+          degreeBranch: degreeBranch || "",
+          graduationYear: graduationYear || null,
+          learningGoal: learningGoal || "",
+          personalizedDetail: personalizedDetail || "",
+          programSelection: programSelection || "Placement Sprint",
+          placementReadiness: placementReadiness || "",
+          dailyCommitment: dailyCommitment || "",
         });
       } catch (error) {
         if (error?.code === 11000) {
@@ -228,6 +289,17 @@ router.post("/google", async function googleLogin(req, res) {
       if (!user.avatar || !user.avatar.includes("/profile_avatars/")) {
         user.avatar = "/profile_avatars/nobackgroundavatar1.png";
       }
+      if (mobileNumber) user.mobileNumber = mobileNumber;
+      if (collegeName) user.collegeName = collegeName;
+      if (degree) user.degree = degree;
+      if (branch) user.branch = branch;
+      if (degreeBranch) user.degreeBranch = degreeBranch;
+      if (graduationYear) user.graduationYear = graduationYear;
+      if (learningGoal) user.learningGoal = learningGoal;
+      if (personalizedDetail) user.personalizedDetail = personalizedDetail;
+      if (programSelection) user.programSelection = programSelection;
+      if (placementReadiness) user.placementReadiness = placementReadiness;
+      if (dailyCommitment) user.dailyCommitment = dailyCommitment;
       await user.save();
     }
 
