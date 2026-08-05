@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Sidebar from '../../components/AdminDashbaord/Admin_Sidebar';
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import { adminAPI, preferRemoteData } from '../../services/adminApi';
 import { emptyCertificatesState } from '../../data/adminEmptyStates';
-import { FiSearch, FiTrash2, FiPlus } from 'react-icons/fi';
+import { FiSearch, FiTrash2, FiPlus, FiX } from 'react-icons/fi';
 
 const searchRoutes = [
   { id: 'dashboard', title: 'Dashboard', category: 'Overview' },
@@ -36,15 +36,16 @@ export default function Certificates() {
   const { theme } = useTheme();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isPageScrolled, setIsPageScrolled] = useState(false);
+  const [, setIsPageScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Issued Certificates');
   const [certificateEntries, setCertificateEntries] = useState(emptyCertificatesState.issuedCertificates);
-  const [finalTestEntries, setFinalTestEntries] = useState(emptyCertificatesState.finalTests);
+  const [, setFinalTestEntries] = useState(emptyCertificatesState.finalTests);
   const [templateEntries, setTemplateEntries] = useState(emptyCertificatesState.templates);
   const [revokeTarget, setRevokeTarget] = useState(null);
   const [revokeError, setRevokeError] = useState('');
@@ -53,8 +54,15 @@ export default function Certificates() {
   const [newAnswer, setNewAnswer] = useState('');
   const [passingPercentage, setPassingPercentage] = useState('70');
   const [timeLimitEnabled, setTimeLimitEnabled] = useState(false);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateError, setTemplateError] = useState('');
+  const [templateForm, setTemplateForm] = useState({ name: '', description: '', status: 'Active' });
   const searchInputRef = useRef(null);
   const isDarkMode = theme === 'dark';
+
+  const returnTo = searchParams.get('returnTo');
+  const returnAttachType = searchParams.get('attachType');
 
   useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
@@ -101,6 +109,13 @@ export default function Certificates() {
       setRevokeError('');
     }
   }, [revokeTarget]);
+
+  useEffect(() => {
+    if (returnTo && returnAttachType === 'certificates') {
+      setActiveTab('Templates');
+      setIsTemplateModalOpen(true);
+    }
+  }, [returnAttachType, returnTo]);
 
   const filteredRoutes = searchRoutes.filter(r =>
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -149,6 +164,60 @@ export default function Certificates() {
     setTestQuestions((prev) => prev.filter((item) => item.id !== id));
   };
 
+  const closeTemplateModal = () => {
+    setTemplateError('');
+    setIsTemplateModalOpen(false);
+    if (returnTo) {
+      navigate(decodeURIComponent(returnTo));
+    } else {
+      setSearchParams({}, { replace: true });
+    }
+  };
+
+  const saveTemplate = async (event) => {
+    event.preventDefault();
+    const name = templateForm.name.trim();
+    if (!name) {
+      setTemplateError('Template name is required.');
+      return;
+    }
+
+    try {
+      setTemplateSaving(true);
+      setTemplateError('');
+      const created = await adminAPI.createCertificateTemplate({
+        name,
+        description: templateForm.description.trim(),
+        status: templateForm.status,
+        courseIds: [],
+      });
+      const newTemplateId = created?._id || created?.id;
+
+      if (returnTo) {
+        const destination = decodeURIComponent(returnTo);
+        navigate(newTemplateId ? `${destination}&newId=${newTemplateId}` : destination);
+        return;
+      }
+
+      setTemplateEntries((prev) => [
+        {
+          id: newTemplateId || `template-${Date.now()}`,
+          name,
+          description: templateForm.description.trim(),
+          courses: 0,
+          status: templateForm.status,
+        },
+        ...prev,
+      ]);
+      setTemplateForm({ name: '', description: '', status: 'Active' });
+      setIsTemplateModalOpen(false);
+    } catch (error) {
+      setTemplateError(error?.message || 'Failed to create certificate template.');
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
   const ProfileDropdown = () => (
     <>
       <div className="fixed inset-0 z-10" onClick={() => setProfileDropdownOpen(false)} />
@@ -185,6 +254,68 @@ export default function Certificates() {
 
   return (
     <>
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/45 dark:bg-black/65 backdrop-blur-sm" onClick={closeTemplateModal} />
+          <form
+            onSubmit={saveTemplate}
+            className="relative w-full max-w-lg rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0f274f] p-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold text-[#0f1f3d] dark:text-white">Create Certificate Template</h2>
+              <button type="button" onClick={closeTemplateModal} className="p-1.5 rounded-lg text-[#5f7592] dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close">
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#5f7592] dark:text-slate-300">Template name</span>
+                <input
+                  autoFocus
+                  value={templateForm.name}
+                  onChange={(event) => setTemplateForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Placement Sprint Certificate"
+                  className="mt-1.5 w-full h-11 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-400 outline-none focus:border-[#3C83F6]"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#5f7592] dark:text-slate-300">Description</span>
+                <textarea
+                  rows="3"
+                  value={templateForm.description}
+                  onChange={(event) => setTemplateForm((prev) => ({ ...prev, description: event.target.value }))}
+                  placeholder="Optional description"
+                  className="mt-1.5 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3.5 py-3 text-sm text-[#0f1f3d] dark:text-white placeholder:text-[#6e809b] dark:placeholder:text-slate-400 outline-none focus:border-[#3C83F6]"
+                />
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold uppercase tracking-wide text-[#5f7592] dark:text-slate-300">Status</span>
+                <select
+                  value={templateForm.status}
+                  onChange={(event) => setTemplateForm((prev) => ({ ...prev, status: event.target.value }))}
+                  className="mt-1.5 w-full h-11 rounded-xl border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#122b52] px-3.5 text-sm text-[#0f1f3d] dark:text-white outline-none focus:border-[#3C83F6]"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Draft">Draft</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </label>
+            </div>
+
+            {templateError && <p className="mt-3 text-sm text-red-500">{templateError}</p>}
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button type="button" onClick={closeTemplateModal} className="h-10 px-4 rounded-xl border border-black/10 dark:border-white/10 text-sm font-medium text-[#0f1f3d] dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+                Cancel
+              </button>
+              <button type="submit" disabled={templateSaving} className="h-10 px-4 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] disabled:opacity-60 text-white text-sm font-semibold">
+                {templateSaving ? 'Saving...' : 'Create Template'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {isSearchOpen && (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 font-sans">
           <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={() => setIsSearchOpen(false)} />
@@ -393,7 +524,24 @@ export default function Certificates() {
             )}
 
             {activeTab === 'Templates' && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-[#0f1f3d] dark:text-white">Certificate Templates</h3>
+                    <p className="mt-1 text-sm text-[#5f7592] dark:text-slate-300">Reusable certificate designs for Programs.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTemplateError('');
+                      setIsTemplateModalOpen(true);
+                    }}
+                    className="h-10 px-4 rounded-xl bg-[#3C83F6] hover:bg-[#2563eb] text-white text-sm font-semibold inline-flex items-center gap-2"
+                  >
+                    <FiPlus className="w-4 h-4" />
+                    New Template
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {templateEntries.map((tpl) => (
                   <article key={tpl.id || tpl.name} className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/95 dark:bg-[#0f274f] p-4 min-w-0">
                     <div className="h-28 rounded-xl bg-[#e2e8ef] dark:bg-[#17345f] flex items-center justify-center px-4 text-center">
@@ -414,6 +562,7 @@ export default function Certificates() {
                     Certificate templates will appear here once they are created in the backend.
                   </div>
                 )}
+                </div>
               </div>
             )}
 

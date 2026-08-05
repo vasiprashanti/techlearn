@@ -22,6 +22,13 @@ const studentSchema = new mongoose.Schema(
       index: true,
     },
 
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
+
     name: {
       type: String,
       required: true,

@@ -181,7 +181,15 @@ export default function Courses() {
     }
 
     try {
-      await adminAPI.createCourse(formData);
+      const res = await adminAPI.createCourse(formData);
+      const newCourseId = res?.data?._id || res?._id || res?.id;
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnTo = searchParams.get('returnTo');
+      if (returnTo) {
+        const targetUrl = newCourseId ? `${decodeURIComponent(returnTo)}&newId=${newCourseId}` : decodeURIComponent(returnTo);
+        navigate(targetUrl);
+        return;
+      }
       await fetchCourses();
       setShowForm(false);
       setCourseForm({ title: "", description: "", numTopics: 0, level: "Beginner", assignedBatchIds: [], instructor: "", duration: "", schedule: "", startDate: "" });

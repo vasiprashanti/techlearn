@@ -97,6 +97,8 @@ const SubmissionMonitor = lazy(() => import('./pages/AdminDashbaord/SubmissionMo
 const AuditLogs = lazy(() => import('./pages/AdminDashbaord/AuditLogs'))
 const Reports = lazy(() => import('./pages/AdminDashbaord/Reports'))
 const Settings = lazy(() => import('./pages/AdminDashbaord/Settings'))
+const Programs = lazy(() => import('./pages/AdminDashbaord/Programs'))
+const ProgramDetails = lazy(() => import('./pages/AdminDashbaord/ProgramDetails'))
 
 const Contact = lazy(() => import('./pages/Contact/Contact'))
 const About = lazy(() => import('./pages/About/About'))
@@ -187,7 +189,9 @@ function LayoutWrapper() {
     '/submission-monitor', 
     '/audit-logs',  
     '/reports',
-    '/settings'
+    '/settings',
+    '/programs',
+    '/admin/programs'
   ];
 
   const isDashboardRoute = adminSidebarRoutes.includes(location.pathname) || 
@@ -196,6 +200,7 @@ function LayoutWrapper() {
                            location.pathname.startsWith('/question-bank/') ||
                            location.pathname.startsWith('/track-templates/') ||
                            location.pathname.startsWith('/track/') ||
+                           location.pathname.startsWith('/programs/') ||
                            location.pathname.startsWith('/admin');
 
   const isStudentSidebarRoute =
@@ -354,6 +359,10 @@ function LayoutWrapper() {
 <Route path="/audit-logs" element={<AuditLogs />} />
 <Route path="/reports" element={<Reports />} />
 <Route path="/settings" element={<Settings />} />
+<Route path="/programs" element={<Programs />} />
+<Route path="/programs/:programId" element={<ProgramDetails />} />
+<Route path="/admin/programs" element={<Programs />} />
+<Route path="/admin/programs/:programId" element={<ProgramDetails />} />
 
 
           </Route>

@@ -6,6 +6,7 @@ import Course from "../models/Course.js";
 import Topic from "../models/Topic.js";
 import Student from "../models/Student.js";
 import Submission from "../models/Submission.js";
+import Program from "../models/Program.js";
 import mongoose from "mongoose";
 
 import { updateStudentStreak } from "../utils/streakUtil.js";
@@ -70,6 +71,7 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     photoUrl: user?.photoUrl || user?.avatar || "",
     role: user?.role || "student",
     programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
+    programId: user?.programId || linkedStudent?.programId || null,
     streak: linkedStudent?.streak || 0,
   };
 };
@@ -88,7 +90,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection programId").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({
@@ -129,7 +131,54 @@ export const getDashboardData = async (req, res) => {
     }
 
     const linkedStudent = normalizedEmail
-      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak programSelection").lean()
+      ? await Student.findOne({ email: normalizedEmail }).select("_id name streak programSelection programId batchId").lean()
+      : null;
+
+    const selectedProgram = linkedStudent?.programSelection || user?.programSelection;
+    const directProgramId = user?.programId || linkedStudent?.programId;
+    let program = directProgramId
+      ? await Program.findOne({ _id: directProgramId, status: { $ne: "Archived" } })
+          .populate("courseIds", "_id title description level courseType numTopics")
+          .populate("roadmapIds", "_id title status")
+          .populate("trackTemplateIds", "_id name trackType status")
+          .populate("certificateTemplateIds", "_id name status")
+          .populate("projectIds", "_id title category duration_days status")
+          .lean()
+      : null;
+
+    // Backfill resource delivery for older accounts that predate programId.
+    if (!program && selectedProgram && selectedProgram !== "Both") {
+      program = await Program.findOne({
+        programType: new RegExp(`^${String(selectedProgram).replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}$`, "i"),
+        status: "Active",
+        visibility: "Public",
+      })
+        .sort({ createdAt: -1 })
+        .populate("courseIds", "_id title description level courseType numTopics")
+        .populate("roadmapIds", "_id title status")
+        .populate("trackTemplateIds", "_id name trackType status")
+        .populate("certificateTemplateIds", "_id name status")
+        .populate("projectIds", "_id title category duration_days status")
+        .lean();
+    }
+
+    const programPayload = program
+      ? {
+          id: program._id,
+          name: program.name,
+          description: program.description || "",
+          programType: program.programType,
+          duration: program.duration,
+          status: program.status,
+          visibility: program.visibility,
+          batchIds: (program.batchIds || []).map((id) => String(id)),
+          studentIds: (program.studentIds || []).map((id) => String(id)),
+          courses: program.courseIds || [],
+          roadmaps: program.roadmapIds || [],
+          trackTemplates: program.trackTemplateIds || [],
+          certificates: program.certificateTemplateIds || [],
+          projects: program.projectIds || [],
+        }
       : null;
     const dashboardUser = buildDashboardUserPayload(user, linkedStudent);
     const latestDailyChallenge = linkedStudent?._id
@@ -174,6 +223,7 @@ export const getDashboardData = async (req, res) => {
           progressPercent: 0,
         },
         user: dashboardUser,
+        program: programPayload,
         avatar: user?.avatar || "",
         mcqProgress: {
           totalMcqs: 0,
@@ -291,6 +341,7 @@ export const getDashboardData = async (req, res) => {
       answeredCheckpointMcqs,
       totalCourseProgress: { progressPercent: courseProgressPercent },
       user: dashboardUser,
+      program: programPayload,
       mcqProgress: {
         totalMcqs,
         answeredMcqs,

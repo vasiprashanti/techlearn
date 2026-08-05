@@ -8,6 +8,7 @@ import Student from "../models/Student.js";
 import Project from "../models/Project.js";
 import ProjectDay from "../models/ProjectDay.js";
 import ProjectTask from "../models/ProjectTask.js";
+import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import StudentProject from "../models/StudentProject.js";
 
 
@@ -241,6 +242,12 @@ export const registerUser = async (req, res) => {
       });
     }
 
+    const enrolledProgram = await syncProgramEnrollment({
+      user: newUser,
+      student,
+      batchId: student.batchId || batch._id,
+      programSelection: newUser.programSelection,
+    });
 
 
     res.status(201).json({
@@ -252,6 +259,7 @@ export const registerUser = async (req, res) => {
         name: `${newUser.firstName} ${newUser.lastName}`.trim().replace(/\.$/, ""),
         email: newUser.email,
         programSelection: newUser.programSelection,
+        programId: newUser.programId || enrolledProgram?._id || null,
       },
       token,
     });

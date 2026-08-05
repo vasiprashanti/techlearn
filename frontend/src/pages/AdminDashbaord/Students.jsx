@@ -399,8 +399,19 @@ const Students = () => {
         programSelection: studentForm.programSelection,
         status: studentForm.status,
       };
-      if (editingStudentId) await adminAPI.updateStudent(editingStudentId, payload);
-      else await adminAPI.createStudent(payload);
+      if (editingStudentId) {
+        await adminAPI.updateStudent(editingStudentId, payload);
+      } else {
+        const res = await adminAPI.createStudent(payload);
+        const newStudentId = res?.data?._id || res?._id || res?.id;
+        const searchParams = new URLSearchParams(window.location.search);
+        const returnTo = searchParams.get('returnTo');
+        if (returnTo) {
+          const targetUrl = newStudentId ? `${decodeURIComponent(returnTo)}&newId=${newStudentId}` : decodeURIComponent(returnTo);
+          navigate(targetUrl);
+          return;
+        }
+      }
       await loadStudentsData();
       setIsAddFormOpen(false);
       setEditingStudentId(null);

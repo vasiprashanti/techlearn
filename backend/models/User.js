@@ -37,6 +37,12 @@ const userSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
     startDate: {
       type: Date,
       default: null,

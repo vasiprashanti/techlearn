@@ -41,6 +41,7 @@ import batchRoutes from "./routes/batchRoutes.js";
 import submissionRoutes from "./routes/submissionRoutes.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import adminPortalRoutes from "./routes/adminPortalRoutes.js";
+import adminProgramRoutes from "./routes/adminProgramRoutes.js";
 import questionBankRoutes from "./routes/questionBank.routes.js";
 import analyticsRoutes from "./routes/analyticsRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
@@ -128,6 +129,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use(uiLibraryRoutes); // Handles its own path
 
 //ADMIN DASHBOARD Routes
+app.use("/api/admin/programs", adminProgramRoutes);
 app.use("/api/admin/projects", projectRoutes);
 app.use("/api/admin/batch", batchRoutes);
 app.use("/api/admin/students", studentRoutes);

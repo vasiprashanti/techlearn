@@ -50,6 +50,7 @@ export const UserProvider = ({ children }) => {
   const [activities, setActivities] = useState({});
   const [isReady, setIsReady] = useState(false);
   const [latestDailyChallenge, setLatestDailyChallenge] = useState(null);
+  const [program, setProgram] = useState(null);
 
   // Load user data from localStorage and validate structure
   const loadUserFromStorage = () => {
@@ -147,6 +148,7 @@ export const UserProvider = ({ children }) => {
       projectXP: totalProjectXPVal
     });
     setLatestDailyChallenge(data.latestDailyChallenge || null);
+    setProgram(data.program || null);
   };
 
   // Fetch user + dashboard data from API
@@ -227,6 +229,7 @@ export const UserProvider = ({ children }) => {
         activities,
         isReady,
         latestDailyChallenge,
+        program,
         updateXp: (newXp) => setXp(newXp),
         markActivity: (date, status) =>
           setActivities((prev) => ({ ...prev, [date]: status })),

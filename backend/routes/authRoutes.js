@@ -9,6 +9,7 @@ import admin from "../utils/firebaseAdmin.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
 
@@ -54,6 +55,13 @@ const mapUserToStudentCohort = async (user) => {
     await user.save();
   }
 
+  await syncProgramEnrollment({
+    user,
+    student,
+    batchId: student.batchId,
+    programSelection: student.programSelection || user.programSelection,
+  });
+
   return { user, student, batch };
 };
 
@@ -68,6 +76,7 @@ const formatAuthUser = (user, student = null, batch = null) => ({
   batchId: user.batchId || student?.batchId || null,
   startDate: user.startDate || batch?.startDate || null,
   programSelection: user.programSelection,
+  programId: user.programId || student?.programId || null,
 });
 
 /* ========== REGISTER ========== */

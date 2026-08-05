@@ -271,6 +271,15 @@ export default function ProjectsList() {
 
       const createdProject = await adminAPI.createProject(formData);
       const projectId = createdProject?.project?._id || createdProject?._id;
+
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnTo = searchParams.get('returnTo');
+      if (returnTo) {
+        const targetUrl = projectId ? `${decodeURIComponent(returnTo)}&newId=${projectId}` : decodeURIComponent(returnTo);
+        navigate(targetUrl);
+        return;
+      }
+
       if (!projectId) throw new Error("Project was created, but its setup page could not be opened.");
 
       setShowCreateModal(false);
