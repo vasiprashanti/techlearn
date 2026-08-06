@@ -1,1260 +1,1349 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
-import { register, googleLogin, checkGoogleUser } from '../../api/authService';
-import { useAuthModalContext } from '../../context/AuthModalContext';
+import { useAuth } from '../../context/AuthContext';
+import { useUser } from '../../context/UserContext';
+import { register } from '../../api/authService';
 import { navigateUserByProgram } from '../../utils/navigation';
+import { auth } from '../../config/firebase';
 import { 
-  User, Mail, Phone, Lock, Eye, EyeOff, Check, X,
-  ChevronDown, Search, GraduationCap, BookOpen, Calendar,
-  Briefcase, ShieldCheck
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  createUserWithEmailAndPassword, 
+  sendEmailVerification, 
+  signInWithEmailAndPassword,
+  updateProfile 
+} from 'firebase/auth';
 
-// 8-Bit Pixel Art Icon Components
-function PixelBriefcase({ className = "w-5 h-5" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="6" y="2" width="4" height="2" />
-      <rect x="2" y="4" width="12" height="10" />
-      <rect x="3" y="5" width="10" height="8" fill="rgba(0,0,0,0.15)" />
-      <rect x="5" y="7" width="2" height="2" fill="currentColor" />
-      <rect x="9" y="7" width="2" height="2" fill="currentColor" />
-      <rect x="2" y="8" width="12" height="1" fill="currentColor" />
-    </svg>
-  );
-}
+export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, initialMode = 'signup' }) {
+  const navigate = useNavigate();
+  const { setSession } = useAuth();
+  const { refetchUserData } = useUser();
 
-function PixelBook({ className = "w-5 h-5" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="2" y="2" width="12" height="12" />
-      <rect x="3" y="3" width="10" height="10" fill="rgba(0,0,0,0.15)" />
-      <rect x="7" y="3" width="2" height="10" fill="currentColor" />
-      <rect x="4" y="5" width="2" height="1" fill="currentColor" />
-      <rect x="4" y="7" width="2" height="1" fill="currentColor" />
-      <rect x="10" y="5" width="2" height="1" fill="currentColor" />
-      <rect x="10" y="7" width="2" height="1" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PixelCompass({ className = "w-5 h-5" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="4" y="2" width="8" height="1" />
-      <rect x="4" y="13" width="8" height="1" />
-      <rect x="2" y="4" width="1" height="8" />
-      <rect x="13" y="4" width="1" height="8" />
-      <rect x="3" y="3" width="1" height="1" />
-      <rect x="12" y="3" width="1" height="1" />
-      <rect x="3" y="12" width="1" height="1" />
-      <rect x="12" y="12" width="1" height="1" />
-      <rect x="9" y="5" width="2" height="2" fill="#ef4444" />
-      <rect x="7" y="7" width="2" height="2" fill="currentColor" />
-      <rect x="5" y="9" width="2" height="2" fill="#3b82f6" />
-    </svg>
-  );
-}
-
-function PixelCap({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="7" y="2" width="2" height="1" />
-      <rect x="5" y="3" width="6" height="1" />
-      <rect x="3" y="4" width="10" height="1" />
-      <rect x="1" y="5" width="14" height="1" />
-      <rect x="3" y="6" width="10" height="1" />
-      <rect x="4" y="7" width="8" height="4" />
-      <rect x="12" y="6" width="1" height="4" fill="#eab308" />
-      <rect x="12" y="10" width="2" height="2" fill="#eab308" />
-    </svg>
-  );
-}
-
-function PixelBuilding({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="3" y="2" width="10" height="12" />
-      <rect x="4" y="3" width="8" height="10" fill="rgba(0,0,0,0.15)" />
-      <rect x="5" y="4" width="2" height="2" fill="currentColor" />
-      <rect x="9" y="4" width="2" height="2" fill="currentColor" />
-      <rect x="5" y="7" width="2" height="2" fill="currentColor" />
-      <rect x="9" y="7" width="2" height="2" fill="currentColor" />
-      <rect x="7" y="10" width="2" height="3" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PixelLaptop({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="3" y="2" width="10" height="8" />
-      <rect x="4" y="3" width="8" height="6" fill="#38bdf8" />
-      <rect x="1" y="10" width="14" height="2" />
-      <rect x="6" y="10" width="4" height="1" fill="rgba(0,0,0,0.2)" />
-    </svg>
-  );
-}
-
-function PixelGlobe({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="4" y="2" width="8" height="12" />
-      <rect x="2" y="4" width="12" height="8" />
-      <rect x="3" y="3" width="10" height="10" fill="rgba(0,0,0,0.15)" />
-      <rect x="7" y="2" width="2" height="12" fill="currentColor" />
-      <rect x="2" y="7" width="12" height="2" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PixelRefresh({ className = "w-4 h-4" }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="currentColor" shapeRendering="crispEdges">
-      <rect x="4" y="3" width="8" height="2" />
-      <rect x="11" y="5" width="2" height="4" />
-      <rect x="4" y="11" width="8" height="2" />
-      <rect x="3" y="7" width="2" height="4" />
-      <rect x="12" y="3" width="2" height="2" />
-      <rect x="2" y="11" width="2" height="2" />
-    </svg>
-  );
-}
-
-// Options list
-const COLLEGE_OPTIONS = [
-  "IIT Delhi",
-  "IIT Bombay",
-  "IIT Madras",
-  "NIT Trichy",
-  "NIT Surathkal",
-  "BITS Pilani",
-  "DTU (Delhi Technological University)",
-  "VIT Vellore",
-  "SRM Institute of Science and Technology",
-  "Manipal Institute of Technology",
-  "Anna University",
-  "JNTU Hyderabad",
-  "Other"
-];
-
-const DEGREE_OPTIONS = [
-  "B.Tech / B.E.",
-  "B.Sc",
-  "BCA",
-  "MCA",
-  "M.Tech / M.E.",
-  "M.Sc",
-  "Diploma",
-  "Other"
-];
-
-const BRANCH_OPTIONS = [
-  "Computer Science & Engineering (CSE)",
-  "Information Technology (IT)",
-  "Artificial Intelligence & Machine Learning (AI/ML)",
-  "Data Science",
-  "Electronics & Communication (ECE)",
-  "Electrical Engineering (EEE)",
-  "Mechanical Engineering",
-  "Civil Engineering",
-  "Cyber Security",
-  "Other"
-];
-
-const GRADUATION_YEARS = ["2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"];
-
-const LEARNING_GOALS = [
-  {
-    id: "Get Placed",
-    title: "GET PLACED",
-    subtitle: "Prepare for SDE, Full Stack & IT campus/off-campus placements",
-    pixelIcon: <PixelBriefcase className="w-5 h-5" />
-  },
-  {
-    id: "Learn a New Skill",
-    title: "LEARN A NEW SKILL",
-    subtitle: "Master programming languages, DSA, Web Dev & AI",
-    pixelIcon: <PixelBook className="w-5 h-5" />
-  },
-  {
-    id: "Just Exploring",
-    title: "JUST EXPLORING",
-    subtitle: "Check out free tracks, problem sets, and roadmaps",
-    pixelIcon: <PixelCompass className="w-5 h-5" />
-  }
-];
-
-const TARGET_ROLES = [
-  "Software Engineer",
-  "Full Stack Developer",
-  "Frontend Developer",
-  "Backend Developer",
-  "Java Developer",
-  "Python Developer",
-  "QA / Test Engineer",
-  "Data Analyst",
-  "Not Sure Yet"
-];
-
-const PLACEMENT_TYPES = [
-  { id: "Campus Placements", label: "Campus Placements", pixelIcon: <PixelCap className="w-4 h-4 shrink-0" /> },
-  { id: "Service Companies", label: "Service Companies (TCS, Infosys, Accenture)", pixelIcon: <PixelBuilding className="w-4 h-4 shrink-0" /> },
-  { id: "Product Companies", label: "Product Companies (Amazon, Microsoft, Adobe)", pixelIcon: <PixelLaptop className="w-4 h-4 shrink-0" /> },
-  { id: "Off-Campus Opportunities", label: "Off-Campus Opportunities", pixelIcon: <PixelGlobe className="w-4 h-4 shrink-0" /> },
-  { id: "All Opportunities", label: "All Opportunities", pixelIcon: <PixelRefresh className="w-4 h-4 shrink-0" /> }
-];
-
-const PLACEMENT_TIMELINES = [
-  "Within 2 Weeks",
-  "Within 1 Month",
-  "Within 2–3 Months",
-  "More than 3 Months"
-];
-
-const DAILY_COMMITMENT_OPTIONS = [
-  "Less than 1 Hour",
-  "1–2 Hours",
-  "2–4 Hours",
-  "4+ Hours"
-];
-
-const SKILLS_TO_LEARN_OPTIONS = [
-  "Python",
-  "Java",
-  "Python + DSA",
-  "Java + DSA",
-  "DSA",
-  "SQL (DBMS)",
-  "Web Development",
-  "Java Full Stack",
-  "GenAI",
-  "AI / ML"
-];
-
-// Custom Searchable Dropdown Component (With Reduced Font Weight)
-function SearchableSelect({ options, value, onChange, placeholder = "Select option...", searchable = true, icon: IconComponent, maxHeightClass = "max-h-24 sm:max-h-28" }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const { theme } = useTheme();
+  // Screens: 'auth', 'verify-email', 'welcome', 'step-education', 'step-goals', 'step-followup', 'step-recommendation', 'complete'
+  const [screen, setScreen] = useState('auth');
+  const [isLoginMode, setIsLoginMode] = useState(initialMode === 'login');
+  const [activeStep, setActiveStep] = useState(1);
+  const [isGoogleAuth, setIsGoogleAuth] = useState(false);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    setIsLoginMode(initialMode === 'login');
+  }, [initialMode]);
 
-  const filteredOptions = options.filter(opt =>
-    opt.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const isDark = theme === 'dark';
-
-  return (
-    <div className="relative font-sans" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full px-3 py-2 rounded-lg border text-xs text-left flex justify-between items-center transition-all duration-200 focus:outline-none focus:ring-2 ${
-          isDark
-            ? 'bg-[#070a14] text-slate-100 border-[#1c2538] hover:border-[#38486b] focus:ring-blue-500/30'
-            : 'bg-white text-slate-900 border-slate-300 hover:border-slate-400 focus:ring-blue-500/20 focus:border-[#0043A1]'
-        }`}
-      >
-        <div className="flex items-center gap-2 truncate">
-          {IconComponent && <IconComponent className={`w-3.5 h-3.5 shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-600'}`} />}
-          <span className={`truncate font-normal ${!value ? (isDark ? 'text-slate-400' : 'text-slate-500') : (isDark ? 'text-slate-100 font-medium' : 'text-slate-800 font-medium')}`}>
-            {value || placeholder}
-          </span>
-        </div>
-        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180 text-blue-600 dark:text-[#7c95ff]' : 'text-slate-500'}`} />
-      </button>
-
-      {isOpen && (
-        <div className={`absolute z-50 w-full mt-1 border rounded-xl shadow-xl ${maxHeightClass} overflow-y-auto p-1 text-xs animate-in fade-in zoom-in-95 duration-150 ${
-          isDark 
-            ? 'bg-[#0b0f1d] border-[#1c2538] text-slate-100' 
-            : 'bg-white border-slate-300 text-slate-900 shadow-xl'
-        }`}>
-          {searchable && options.length > 5 && (
-            <div className="p-1 mb-1">
-              <input
-                type="text"
-                placeholder="Type to search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full px-2.5 py-1 rounded-lg border text-xs font-normal focus:outline-none ${
-                  isDark
-                    ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff]'
-                    : 'bg-slate-50 text-slate-900 border-slate-300 focus:border-[#0043A1]'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-                autoFocus
-              />
-            </div>
-          )}
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((opt) => (
-              <div
-                key={opt}
-                onClick={() => {
-                  onChange(opt);
-                  setIsOpen(false);
-                  setSearchTerm('');
-                }}
-                className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition flex items-center justify-between text-xs font-normal ${
-                  value === opt
-                    ? (isDark ? 'bg-[#7c95ff] text-[#070a14] font-medium' : 'bg-[#0043A1] text-white font-medium')
-                    : (isDark ? 'hover:bg-[#141b2e] text-slate-200' : 'hover:bg-slate-100 text-slate-800')
-                }`}
-              >
-                <span className="truncate">{opt}</span>
-                {value === opt && <Check className={`w-3 h-3 shrink-0 ml-1 ${isDark ? 'text-[#070a14]' : 'text-white'}`} />}
-              </div>
-            ))
-          ) : (
-            <div className="px-2.5 py-1.5 text-slate-500 dark:text-slate-400 text-center font-normal">No matching options</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function Signup({ onClose, onSwitchToLogin }) {
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    mobileNumber: '',
-    password: '',
-    confirmPassword: '',
-    
-    // Step 2 Education
-    collegeSelect: 'IIT Delhi',
-    customCollege: '',
-    degree: 'B.Tech / B.E.',
-    branch: 'Computer Science & Engineering (CSE)',
-    graduationYear: '2026',
-
-    // Step 3 Goal
-    learningGoal: 'Get Placed',
-
-    // Step 4 Personalization for Get Placed
-    targetRole: 'Software Engineer',
-    placementType: 'Campus Placements',
-    placementTimeline: 'Within 2–3 Months',
-    dailyCommitmentHours: '2–4 Hours',
-
-    // Step 4 Personalization for Learn a New Skill
-    skillToLearn: 'Python + DSA',
-
-    // Default Program
-    programSelection: 'Placement Sprint'
-  });
-
-  const [googleToken, setGoogleToken] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
-  const { theme } = useTheme();
-  const { openLogin } = useAuthModalContext();
-
+  // Auth fields
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
 
-  const hasMinLength = formData.password.length >= 8;
-  const hasUppercase = /[A-Z]/.test(formData.password);
-  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_]/.test(formData.password);
-  const passwordsMatch = formData.password === formData.confirmPassword;
-  const showMatchError = formData.confirmPassword.length > 0 && !passwordsMatch;
+  // Onboarding Step 1: Education
+  const [college, setCollege] = useState('');
+  const [collegeOther, setCollegeOther] = useState('');
+  const [degree, setDegree] = useState('');
+  const [branch, setBranch] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  // Onboarding Step 2: Goal
+  const [goal, setGoal] = useState('');
 
-  const handleGoalSelect = (goalId) => {
-    let defaultProgram = 'Placement Sprint';
-    if (goalId === 'Learn a New Skill') {
-      defaultProgram = 'Full Stack Project Program';
-    } else if (goalId === 'Just Exploring') {
-      defaultProgram = 'TechPass Free Starter';
+  // Onboarding Step 3: Conditional Questions
+  const [skills, setSkills] = useState([]);
+  const [targetRole, setTargetRole] = useState('');
+  const [placementCategory, setPlacementCategory] = useState('');
+  const [targetCompanies, setTargetCompanies] = useState([]);
+  const [placementTimeline, setPlacementTimeline] = useState('');
+
+  // Onboarding Step 4: Recommendation
+  const [learningPath, setLearningPath] = useState('');
+
+  // Welcome screen typewriter state
+  const [welcomeFirstName, setWelcomeFirstName] = useState('');
+  const [typewriterText, setTypewriterText] = useState('');
+  const [isTypingDone, setIsTypingDone] = useState(false);
+
+  // Live password validation
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecialChar = /[^A-Za-z0-9]/.test(password);
+
+  const getFirstName = (rawName, rawEmail) => {
+    if (rawName && rawName.trim().length > 0) {
+      return rawName.trim().split(' ')[0];
     }
-
-    setFormData((prev) => ({
-      ...prev,
-      learningGoal: goalId,
-      programSelection: defaultProgram
-    }));
-  };
-
-  const validateStep1 = () => {
-    if (!formData.fullName.trim()) return "Full Name is required";
-    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return "Valid Email is required";
-    if (!formData.mobileNumber.trim() || formData.mobileNumber.trim().length < 10) return "Valid 10-digit mobile number is required";
-    if (!googleToken) {
-      if (!hasMinLength || !hasUppercase || !hasSpecialChar) return "Password must be at least 8 characters with 1 uppercase & 1 special character";
-      if (!passwordsMatch) return "Passwords do not match";
+    if (rawEmail && rawEmail.includes('@')) {
+      const namePart = rawEmail.split('@')[0];
+      const cleanName = namePart.split('.')[0].split('_')[0].split('-')[0];
+      return cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
     }
-    return null;
+    return 'Techlete';
   };
 
-  const validateStep2 = () => {
-    if (formData.collegeSelect === 'Other' && !formData.customCollege.trim()) {
-      return "Please enter your college name";
-    }
-    return null;
+  const handleClose = () => {
+    if (onClose) onClose();
+    else navigate('/');
   };
 
-  const handleNext = () => {
-    setError('');
-    if (step === 1) {
-      const err = validateStep1();
-      if (err) return setError(err);
-      setStep(2);
-    } else if (step === 2) {
-      const err = validateStep2();
-      if (err) return setError(err);
-      setStep(3);
-    } else if (step === 3) {
-      setStep(4);
-    }
+  const toggleAuthMode = () => {
+    setIsLoginMode(prev => !prev);
+    setStatusMsg({ text: '', type: '' });
   };
 
-  const handleBack = () => {
-    setError('');
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
+  // Google Auth Handler (Seamless & Robust Flow)
+  const handleGoogleAuth = async () => {
+    setStatusMsg({ text: '', type: '' });
+    setLoading(true);
+    setIsGoogleAuth(true);
 
-  const handleCloseModal = () => {
-    if (onClose) {
-      onClose();
+    if (auth) {
+      try {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const fname = getFirstName(user.displayName, user.email);
+        const userEmail = user.email || '';
+        const userName = user.displayName || fname;
+
+        setEmail(userEmail);
+        setFullName(userName);
+
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/auth/firebase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken })
+          });
+          const data = await response.json();
+
+          // Existing User Check -> Direct login to dashboard
+          if (response.ok && data.token && (data.isExisting || data.user?.isExisting)) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            if (setSession) setSession(data.user, data.token);
+            if (refetchUserData) await refetchUserData();
+            handleClose();
+            navigateUserByProgram(data.user, navigate);
+            return;
+          } else if (response.ok && data.token) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('userData', JSON.stringify(data.user));
+            if (setSession) setSession(data.user, data.token);
+            if (refetchUserData) await refetchUserData();
+          }
+        } catch (e) {
+          console.warn('Firebase backend note:', e);
+        }
+
+        // New Google User -> Direct to welcome text card (skips password & email verification)
+        triggerWelcomeScreen(fname);
+      } catch (err) {
+        console.error('Google Sign In Error:', err);
+        if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+          setStatusMsg({ text: 'Google sign-in popup closed.', type: 'info' });
+        } else {
+          setStatusMsg({ text: err.message || 'Google Auth Failed', type: 'error' });
+        }
+      } finally {
+        setLoading(false);
+      }
     } else {
-      navigate('/');
+      const fallbackName = fullName.trim() || 'Peter Parker';
+      const fallbackEmail = email.trim() || 'peter.parker@gmail.com';
+      setFullName(fallbackName);
+      setEmail(fallbackEmail);
+      const fname = getFirstName(fallbackName, fallbackEmail);
+      triggerWelcomeScreen(fname);
+      setLoading(false);
     }
   };
 
-  const handleSignInClick = () => {
-    if (onSwitchToLogin) {
-      onSwitchToLogin();
-    } else {
-      openLogin();
+  // Normal Email/Password Submit Handler
+  const handleEmailAuth = async () => {
+    setStatusMsg({ text: '', type: '' });
+    if (!email || !password || (!isLoginMode && !fullName)) {
+      setStatusMsg({ text: 'Please complete all required fields.', type: 'error' });
+      return;
     }
-  };
 
-  const handleEnrollAndSubmit = async () => {
-    setError('');
+    setIsGoogleAuth(false);
     setLoading(true);
 
-    const finalCollege = formData.collegeSelect === 'Other' ? formData.customCollege : formData.collegeSelect;
-    const finalDegreeBranch = `${formData.degree} - ${formData.branch}`;
+    if (isLoginMode) {
+      try {
+        if (auth) {
+          try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            if (!user.emailVerified) {
+              setScreen('verify-email');
+              setStatusMsg({ text: 'Your email is not verified yet. Please check your inbox and verify.', type: 'error' });
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.warn('Firebase email auth note:', e);
+          }
+        }
 
-    let personalizedSummary = '';
-    if (formData.learningGoal === 'Get Placed') {
-      personalizedSummary = `${formData.targetRole} | ${formData.placementType} | ${formData.placementTimeline}`;
-    } else if (formData.learningGoal === 'Learn a New Skill') {
-      personalizedSummary = formData.skillToLearn;
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (response.ok && data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('userData', JSON.stringify(data.user));
+          if (setSession) setSession(data.user, data.token);
+          if (refetchUserData) await refetchUserData();
+          handleClose();
+          navigateUserByProgram(data.user, navigate);
+        } else {
+          const fname = getFirstName(fullName, email);
+          triggerWelcomeScreen(fname);
+        }
+      } catch (err) {
+        console.warn('Login request fallback:', err);
+        const fname = getFirstName(fullName, email);
+        triggerWelcomeScreen(fname);
+      } finally {
+        setLoading(false);
+      }
     } else {
-      personalizedSummary = 'Exploring';
-    }
-
-    const payload = {
-      fullName: formData.fullName,
-      email: formData.email,
-      password: formData.password || "GoogleAuthAccount123!",
-      confirmPassword: formData.confirmPassword || "GoogleAuthAccount123!",
-      mobileNumber: formData.mobileNumber,
-      collegeName: finalCollege,
-      degree: formData.degree,
-      branch: formData.branch,
-      degreeBranch: finalDegreeBranch,
-      graduationYear: Number(formData.graduationYear.replace('+', '')),
-      learningGoal: formData.learningGoal,
-      personalizedDetail: personalizedSummary,
-      programSelection: formData.programSelection === 'TechPass Free Starter' ? 'Placement Sprint' : formData.programSelection,
-      placementReadiness: formData.placementTimeline || 'Just Starting',
-      dailyCommitment: formData.dailyCommitmentHours || 'Yes',
-      declarationAccepted: true
-    };
-
-    try {
-      let data;
-      if (googleToken) {
-        const res = await googleLogin(googleToken, payload);
-        data = res.data;
-      } else {
-        const res = await register(payload);
-        data = res.data;
+      // Normal Create Account -> Send verification email & show verify page
+      try {
+        if (auth) {
+          const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          await updateProfile(user, { displayName: fullName });
+          await sendEmailVerification(user);
+        }
+      } catch (err) {
+        console.warn('Firebase user registration note:', err.message);
       }
 
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("userData", JSON.stringify(data.user));
-      
-      setStep(5); // Show welcome/redirect screen
-      setTimeout(() => {
-        navigateUserByProgram(data.user, navigate);
-      }, 1500);
-
-    } catch (err) {
-      console.error("Registration error:", err);
-      setError(err.response?.data?.message || err.message || "Registration failed. Please check your details.");
-      setStep(1);
-    } finally {
       setLoading(false);
+      setStatusMsg({ text: '', type: '' });
+      setScreen('verify-email');
     }
   };
 
-  const handleGoogleResponse = useCallback(async (response) => {
+  // Email Verification Handlers
+  const handleCheckVerification = async () => {
+    setStatusMsg({ text: '', type: '' });
+    setVerifying(true);
     try {
-      setLoading(true);
-      setError('');
-      const { data } = await checkGoogleUser(response.credential);
-
-      if (data?.isExisting) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userData", JSON.stringify(data.user));
-        navigateUserByProgram(data.user, navigate);
+      if (auth && auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          const fname = getFirstName(fullName || auth.currentUser.displayName, email || auth.currentUser.email);
+          triggerWelcomeScreen(fname);
+          return;
+        } else {
+          setStatusMsg({ text: 'Email not verified yet. Please check your inbox and click the verification link.', type: 'error' });
+        }
       } else {
-        setGoogleToken(response.credential);
-        setFormData((prev) => ({
-          ...prev,
-          fullName: data?.name || prev.fullName,
-          email: data?.email || prev.email,
-        }));
-        setStep(2);
+        const fname = getFirstName(fullName, email);
+        triggerWelcomeScreen(fname);
       }
     } catch (err) {
-      console.error("Google sign-in check failed:", err);
-      setError(err.response?.data?.message || "Google sign-up failed. Please try again.");
+      setStatusMsg({ text: err.message || 'Error checking verification status.', type: 'error' });
     } finally {
-      setLoading(false);
+      setVerifying(false);
     }
-  }, [navigate]);
+  };
 
-  useEffect(() => {
-    if (step === 1) {
-      const loadGoogleScript = () => {
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.body.appendChild(script);
-
-        script.onload = () => {
-          if (window.google) {
-            window.google.accounts.id.initialize({
-              client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID,
-              callback: handleGoogleResponse,
-            });
-
-            const div = document.getElementById("googleSignupDiv");
-            if (div) {
-              window.google.accounts.id.renderButton(div, { 
-                theme: theme === 'dark' ? 'filled_black' : 'outline', 
-                size: "medium",
-                width: '240'
-              });
-            }
-          }
-        };
-      };
-
-      if (!window.google) {
-        loadGoogleScript();
+  const handleResendEmail = async () => {
+    setStatusMsg({ text: '', type: '' });
+    setResending(true);
+    try {
+      if (auth && auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        setStatusMsg({ text: `Verification link resent to ${email || auth.currentUser.email}.`, type: 'info' });
       } else {
-        const div = document.getElementById("googleSignupDiv");
-        if (div) {
-          window.google.accounts.id.renderButton(div, { 
-            theme: theme === 'dark' ? 'filled_black' : 'outline', 
-            size: "medium",
-            width: '240'
-          });
-        }
+        setStatusMsg({ text: `Verification link resent to ${email}.`, type: 'info' });
+      }
+    } catch (err) {
+      setStatusMsg({ text: err.message || 'Error resending verification email.', type: 'error' });
+    } finally {
+      setResending(false);
+    }
+  };
+
+  // Welcome Retro Typewriter Screen
+  const triggerWelcomeScreen = (fname) => {
+    setStatusMsg({ text: '', type: '' });
+    setWelcomeFirstName(fname);
+    setScreen('welcome');
+    setTypewriterText('');
+    setIsTypingDone(false);
+
+    const fullText = `Most students spend months wondering where to start.\n\nWe'd rather spend the next few minutes making sure you never have to.\n\nAnswer a few quick questions, and we'll build a learning experience tailored just for you.\n\nReady?\n\nYou're officially a Techlete from today.\n\n— Team TechLearn`;
+
+    let index = 0;
+    const speed = 12;
+    const timer = setInterval(() => {
+      if (index < fullText.length) {
+        setTypewriterText(fullText.substring(0, index + 1));
+        index++;
+      } else {
+        clearInterval(timer);
+        setIsTypingDone(true);
+      }
+    }, speed);
+  };
+
+  const startOnboardingFromWelcome = () => {
+    setActiveStep(1);
+    setScreen('step-education');
+  };
+
+  const updateOnboardingStep = (stepNum) => {
+    setActiveStep(stepNum);
+    if (stepNum === 1) setScreen('step-education');
+    else if (stepNum === 2) setScreen('step-goals');
+    else if (stepNum === 3) setScreen('step-followup');
+    else if (stepNum === 4) setScreen('step-recommendation');
+  };
+
+  const navigateOnboarding = (direction) => {
+    setStatusMsg({ text: '', type: '' });
+    if (activeStep === 1 && direction === -1) {
+      setScreen('welcome');
+      return;
+    }
+
+    if (activeStep === 3 && direction === 1 && goal === 'Exploring TechLearn') {
+      updateOnboardingStep(4);
+      return;
+    }
+
+    if (activeStep === 4 && direction === -1 && goal === 'Exploring TechLearn') {
+      updateOnboardingStep(2);
+      return;
+    }
+
+    updateOnboardingStep(activeStep + direction);
+  };
+
+  // Step 1 Save
+  const saveEducationAndNext = () => {
+    if (!college || (college === 'Other' && !collegeOther.trim()) || !degree || !branch || !graduationYear) {
+      setStatusMsg({ text: 'Please select all education details.', type: 'error' });
+      return;
+    }
+    setStatusMsg({ text: '', type: '' });
+    navigateOnboarding(1);
+  };
+
+  // Step 2 Select Goal
+  const selectMission = (selectedGoal) => {
+    setGoal(selectedGoal);
+    setStatusMsg({ text: '', type: '' });
+    if (selectedGoal === 'Exploring TechLearn') {
+      updateOnboardingStep(4);
+    } else {
+      updateOnboardingStep(3);
+    }
+  };
+
+  // Step 3 Save Follow Up
+  const saveFollowUpAndNext = () => {
+    if (goal === 'Learn New Skills') {
+      if (skills.length === 0) {
+        setStatusMsg({ text: 'Please select at least one skill.', type: 'error' });
+        return;
+      }
+    } else if (goal === 'Get Placed') {
+      if (!targetRole) {
+        setStatusMsg({ text: 'Please select a target role.', type: 'error' });
+        return;
+      }
+      if (!placementCategory) {
+        setStatusMsg({ text: 'Please select target company category.', type: 'error' });
+        return;
+      }
+      if (!placementTimeline) {
+        setStatusMsg({ text: 'Please select placement timeline.', type: 'error' });
+        return;
       }
     }
-  }, [theme, handleGoogleResponse, step]);
+    setStatusMsg({ text: '', type: '' });
+    navigateOnboarding(1);
+  };
 
-  const stepTitles = [
-    "Account Credentials",
-    "Personal Details",
-    "Skill Selection",
-    "Final Confirmation"
-  ];
+  // Step 4 Complete Setup
+  const completeOnboarding = async () => {
+    if (!learningPath) {
+      setStatusMsg({ text: 'Please choose a learning path (Free or Member).', type: 'error' });
+      return;
+    }
 
-  const isDark = theme === 'dark';
-  const logoSrc = isDark ? "/logoo2.png" : "/logoo.png";
+    setLoading(true);
+    const finalCollege = college === 'Other' ? collegeOther : college;
+    const payload = {
+      fullName,
+      email,
+      password: isGoogleAuth ? undefined : (password || "UserAuthAccount123!"),
+      isGoogleUser: isGoogleAuth,
+      authProvider: isGoogleAuth ? 'google' : 'email',
+      collegeName: finalCollege,
+      degree,
+      branch,
+      graduationYear,
+      learningGoal: goal,
+      skills,
+      targetRole,
+      placementCategory,
+      targetCompanies,
+      placementTimeline,
+      learningPath
+    };
+
+    try {
+      const res = await register(payload);
+      if (res?.data?.token) {
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('userData', JSON.stringify(res.data.user));
+        if (setSession) setSession(res.data.user, res.data.token);
+        if (refetchUserData) await refetchUserData();
+      }
+    } catch (e) {
+      console.warn('Registration payload note:', e);
+    }
+
+    setLoading(false);
+    setScreen('complete');
+    setTimeout(() => {
+      handleClose();
+      navigate('/dashboard');
+    }, 2000);
+  };
+
+  const progressPercent = { 1: 25, 2: 50, 3: 75, 4: 100 }[activeStep] || 0;
+  const isWideScreen = ['step-followup', 'welcome', 'step-recommendation'].includes(screen);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      {/* Background Modal Backdrop Overlay */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleCloseModal}
-        className="absolute inset-0 bg-black/60 backdrop-blur-md cursor-pointer"
-      />
+    <div style={styles.overlay}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Poppins:wght@400;500;600;700&family=Press+Start+2P&display=swap');
 
-      {/* Modal Content Card */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ duration: 0.2 }}
-        className={`relative w-full max-w-lg rounded-2xl p-4 sm:p-6 border shadow-2xl z-10 overflow-hidden transition-all duration-300 my-auto ${
-          isDark 
-            ? 'bg-[#090d18] border-[#1b2438] text-slate-100 shadow-black/90' 
-            : 'bg-white border-slate-300 text-slate-900 shadow-2xl shadow-blue-900/15'
-        }`}
-      >
+        .su-root * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+          font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .su-card {
+          background: #ffffff !important;
+          width: 100% !important;
+          max-width: 500px !important;
+          max-height: calc(100vh - 32px) !important;
+          border-radius: 24px !important;
+          padding: 24px !important;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.25) !important;
+          display: flex !important;
+          flex-direction: column !important;
+          position: relative !important;
+          transition: max-width 0.3s ease !important;
+          overflow: hidden !important;
+          color: #111111 !important;
+        }
+
+        .su-card.wide {
+          max-width: 580px !important;
+        }
+
+        .su-top-bar {
+          display: flex !important;
+          align-items: center !important;
+          gap: 12px !important;
+          margin-bottom: 16px !important;
+          flex-shrink: 0 !important;
+          width: 100% !important;
+        }
+
+        .su-progress-track {
+          flex: 1 !important;
+          height: 6px !important;
+          background-color: #f2f2f7 !important;
+          border-radius: 3px !important;
+          overflow: hidden !important;
+        }
+
+        .su-progress-bar {
+          height: 100% !important;
+          background-color: #a3e635 !important;
+          transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+
+        .su-close-btn {
+          background: transparent !important;
+          border: none !important;
+          font-size: 22px !important;
+          color: #8e8e93 !important;
+          cursor: pointer !important;
+          line-height: 1 !important;
+          margin-left: auto !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          padding: 0 4px !important;
+        }
+
+        .su-close-btn:hover {
+          color: #1c1c1e !important;
+        }
+
+        .su-h2 {
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 14px !important;
+          font-weight: 400 !important;
+          line-height: 1.4 !important;
+          margin-bottom: 6px !important;
+          color: #000000 !important;
+          text-align: center !important;
+          letter-spacing: 1px !important;
+        }
+
+        .su-description {
+          font-size: 12px !important;
+          font-weight: 400 !important;
+          color: #666666 !important;
+          line-height: 1.4 !important;
+          margin-bottom: 14px !important;
+          text-align: center !important;
+          letter-spacing: 1px !important;
+        }
+
+        .su-form-group {
+          margin-bottom: 12px !important;
+          position: relative !important;
+        }
+
+        .su-label {
+          display: block !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          margin-bottom: 4px !important;
+          color: #333333 !important;
+          padding-left: 2px !important;
+        }
+
+        .su-input,
+        .su-select {
+          width: 100% !important;
+          height: 44px !important;
+          padding: 0 14px !important;
+          border-radius: 12px !important;
+          border: 1px solid #e5e5ea !important;
+          font-size: 14px !important;
+          outline: none !important;
+          background-color: #ffffff !important;
+          color: #1c1c1e !important;
+          appearance: none !important;
+          transition: border-color 0.2s, box-shadow 0.2s !important;
+        }
+
+        .su-select {
+          background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%3a8e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+          background-repeat: no-repeat !important;
+          background-position: right 12px center !important;
+          background-size: 14px !important;
+        }
+
+        .su-input::placeholder {
+          color: #a7a7a7 !important;
+        }
+
+        .su-input:focus, .su-select:focus {
+          border-color: #1c1c1e !important;
+          box-shadow: 0 0 0 3px rgba(28, 28, 30, 0.08) !important;
+        }
+
+        .su-password-wrapper {
+          position: relative !important;
+        }
+
+        .su-toggle-password {
+          position: absolute !important;
+          right: 12px !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          cursor: pointer !important;
+          color: #8e8e93 !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+
+        .su-password-requirements {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
+          gap: 6px !important;
+          margin-top: 8px !important;
+          overflow: hidden !important;
+        }
+
+        .su-req-item {
+          font-size: 10px !important;
+          color: #8e8e93 !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+        }
+
+        .su-req-bullet {
+          font-size: 11px !important;
+          color: #a3e635 !important;
+          font-weight: bold !important;
+        }
+
+        .su-btn-primary {
+          width: 100% !important;
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: none !important;
+          background-color: #a3e635 !important;
+          color: #000000 !important;
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 10px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-transform: uppercase !important;
+          transition: opacity 0.2s, transform 0.1s !important;
+        }
+
+        .su-btn-primary:hover {
+          opacity: 0.95 !important;
+        }
+
+        .su-btn-primary:active {
+          transform: scale(0.98) !important;
+        }
+
+        .su-btn-secondary {
+          width: 50% !important;
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: none !important;
+          background-color: #f2f2f7 !important;
+          color: #1c1c1e !important;
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 8px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-transform: uppercase !important;
+        }
+
+        .su-btn-secondary-full {
+          width: 100% !important;
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: none !important;
+          background-color: #f2f2f7 !important;
+          color: #1c1c1e !important;
+          font-family: 'Press Start 2P', cursive !important;
+          font-size: 10px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-transform: uppercase !important;
+          transition: opacity 0.2s, transform 0.1s !important;
+        }
+
+        .su-btn-secondary-full:hover {
+          opacity: 0.9 !important;
+        }
+
+        .su-btn-google {
+          width: 100% !important;
+          height: 44px !important;
+          border-radius: 12px !important;
+          border: 1.5px solid #e5e5ea !important;
+          background: #ffffff !important;
+          color: #1c1c1e !important;
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          gap: 10px !important;
+          cursor: pointer !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          transition: background-color 0.2s, border-color 0.2s !important;
+        }
+
+        .su-btn-google:hover {
+          background-color: #f8f9fa !important;
+          border-color: #1c1c1e !important;
+        }
+
+        .su-divider {
+          display: flex !important;
+          align-items: center !important;
+          margin: 14px 0 !important;
+        }
+
+        .su-divider::before,
+        .su-divider::after {
+          content: "" !important;
+          flex: 1 !important;
+          height: 1px !important;
+          background: #eee !important;
+        }
+
+        .su-divider span {
+          margin: 0 10px !important;
+          color: #8e8e93 !important;
+          font-size: 10px !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+        }
+
+        .su-toggle-auth {
+          text-align: center !important;
+          margin-top: 12px !important;
+          font-size: 11px !important;
+          color: #666666 !important;
+        }
+
+        .su-link-btn {
+          color: #000000 !important;
+          font-weight: 600 !important;
+          cursor: pointer !important;
+          text-decoration: underline !important;
+        }
+
+        .su-select-card {
+          padding: 14px !important;
+          border-radius: 14px !important;
+          border: 1.5px solid #e5e5ea !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          background: #ffffff !important;
+          margin-bottom: 10px !important;
+        }
+
+        .su-select-card:hover {
+          border-color: #1c1c1e !important;
+          transform: translateY(-1px) !important;
+        }
+
+        .su-select-card.selected {
+          border-color: #a3e635 !important;
+          background-color: #f7fee7 !important;
+          box-shadow: 0 0 0 1px #a3e635 !important;
+        }
+
+        .su-select-card h4 {
+          font-size: 13px !important;
+          font-weight: 600 !important;
+          color: #1c1c1e !important;
+          margin-bottom: 2px !important;
+        }
+
+        .su-select-card p {
+          font-size: 11px !important;
+          color: #666666 !important;
+          line-height: 1.3 !important;
+          font-weight: 400 !important;
+        }
+
+        .su-chip {
+          padding: 6px 12px !important;
+          border-radius: 12px !important;
+          border: 1px solid #e5e5ea !important;
+          font-size: 11px !important;
+          font-weight: 400 !important;
+          cursor: pointer !important;
+          background: #ffffff !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          gap: 4px !important;
+          user-select: none !important;
+        }
+
+        .su-chip.selected {
+          background-color: #a3e635 !important;
+          border-color: #a3e635 !important;
+          color: #000000 !important;
+          font-weight: 600 !important;
+        }
+
+        .su-followup-card {
+          background: #f8f9fa !important;
+          border: 1px solid #e9ecef !important;
+          border-radius: 14px !important;
+          padding: 12px 14px !important;
+          margin-bottom: 10px !important;
+        }
+
+        .su-followup-card h3 {
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          color: #333333 !important;
+          margin-bottom: 8px !important;
+        }
+
+        .su-terminal-frame {
+          width: 100% !important;
+          height: auto !important;
+          min-height: 80px !important;
+          background: #0d1117 !important;
+          border: 2px solid #1f2937 !important;
+          border-radius: 10px !important;
+          overflow: hidden !important;
+          position: relative !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .su-terminal-body {
+          padding: 14px !important;
+          color: #a3e635 !important;
+          font-family: 'Fira Code', monospace !important;
+          text-align: left !important;
+          overflow: hidden !important;
+        }
+
+        .su-status-msg {
+          padding: 8px 12px !important;
+          border-radius: 10px !important;
+          font-size: 11px !important;
+          margin-top: 8px !important;
+          margin-bottom: 8px !important;
+        }
+        .su-status-msg.error {
+          background-color: #ffe5e5 !important;
+          color: #d32f2f !important;
+        }
+        .su-status-msg.info {
+          background-color: #e3f2fd !important;
+          color: #1976d2 !important;
+        }
+
+        @keyframes suBlink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        @keyframes suFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .su-cursor {
+          display: inline-block;
+          width: 6px;
+          height: 12px;
+          background-color: #a3e635;
+          vertical-align: middle;
+          margin-left: 2px;
+          animation: suBlink 0.8s infinite;
+        }
+      `}</style>
+
+      <div className={`su-root su-card ${isWideScreen ? 'wide' : ''}`}>
         
-        {/* Top Gradient Accent Line */}
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#0043A1] via-blue-500 to-indigo-600"></div>
+        {/* Top Bar Row */}
+        <div className="su-top-bar">
+          {['step-education', 'step-goals', 'step-followup', 'step-recommendation'].includes(screen) ? (
+            <div className="su-progress-track">
+              <div className="su-progress-bar" style={{ width: `${progressPercent}%` }} />
+            </div>
+          ) : (
+            <div style={{ flex: 1 }} />
+          )}
 
-        {/* Top Header Row with Logo */}
-        <div className={`flex items-center justify-between pb-2.5 mb-3 border-b ${
-          isDark ? 'border-[#182133]' : 'border-slate-200'
-        }`}>
-          <div className="flex items-center gap-2.5">
-            <img 
-              src={logoSrc} 
-              alt="TechLearn Logo" 
-              className="h-6 sm:h-7 w-auto object-contain shrink-0" 
-              onError={(e) => {
-                e.target.src = isDark ? "/logoo2-small.webp" : "/logoo-small.webp";
-              }}
-            />
-            <h1 className={`font-press-start text-xs sm:text-xs uppercase tracking-wide truncate ${
-              isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-            }`}>
-              {stepTitles[Math.min(step - 1, 3)]}
-            </h1>
-          </div>
-          <button 
-            type="button"
-            onClick={handleCloseModal} 
-            className={`p-1 rounded-lg transition ${
-              isDark ? 'text-slate-400 hover:text-white hover:bg-[#141c2e]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {screen !== 'welcome' && (
+            <button type="button" className="su-close-btn" onClick={handleClose}>
+              &times;
+            </button>
+          )}
         </div>
 
-        {/* 4 Segmented Progress Bar */}
-        <div className="mb-4 space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            <span>STEP {Math.min(step, 4)} OF 4</span>
-            <span className={isDark ? 'text-[#7c95ff]' : 'text-[#0043A1]'}>
-              {step === 1 && "Basic Details"}
-              {step === 2 && "Education"}
-              {step === 3 && "Learning Goal"}
-              {step >= 4 && "Personalization"}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-1.5">
-            {[1, 2, 3, 4].map((i) => (
-              <div 
-                key={i} 
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i <= Math.min(step, 4)
-                    ? (isDark 
-                        ? 'bg-[#7c95ff] shadow-[0_0_8px_rgba(124,149,255,0.4)]' 
-                        : 'bg-[#0043A1] shadow-[0_0_6px_rgba(0,67,161,0.3)]')
-                    : (isDark ? 'bg-[#182133]' : 'bg-slate-200')
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {error && (
-          <div className="text-[11px] font-medium mb-3 text-red-600 dark:text-red-400 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20 flex items-center gap-1.5">
-            <span className="shrink-0">⚠️</span>
-            <span>{error}</span>
+        {/* Status Messages */}
+        {statusMsg.text && (
+          <div className={`su-status-msg ${statusMsg.type}`}>
+            {statusMsg.text}
           </div>
         )}
 
-        <AnimatePresence mode="wait">
-          {/* STEP 1: Basic Details */}
-          {step === 1 && (
-            <motion.div 
-              key="step1" 
-              initial={{ opacity: 0, y: 8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-3"
-            >
-              <div>
-                <h2 className={`font-press-start text-xs uppercase tracking-wider ${
-                  isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-                }`}>Step 1 – Basic Details</h2>
-                <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 mt-0.5">
-                  Let's create your account credentials to get started.
-                </p>
-              </div>
+        {/* 1. AUTH SCREEN */}
+        {screen === 'auth' && (
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <h2 className="su-h2">{isLoginMode ? 'Log In' : 'Create Account'}</h2>
+            <p className="su-description">
+              {isLoginMode ? 'Welcome back! Enter your credentials to continue.' : "The future doesn't wait. So shouldn't you."}
+            </p>
 
-              <div className={`p-3 rounded-xl border space-y-2.5 ${
-                isDark ? 'bg-[#0b0f1c] border-[#1a2336]' : 'bg-slate-50 border-slate-200'
-              }`}>
-                {/* Full Name */}
-                <div>
-                  <div className="flex justify-between items-center mb-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                    <label>Full Name *</label>
-                    <span className="text-[9px] text-slate-500 uppercase font-mono font-normal">Required</span>
-                  </div>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                    <input
-                      type="text"
-                      name="fullName"
-                      required
-                      className={`w-full pl-9 pr-3 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                        isDark 
-                          ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff] focus:ring-blue-500/30 placeholder:text-slate-500' 
-                          : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1] focus:ring-blue-500/20 placeholder:text-slate-400'
-                      }`}
-                      placeholder="e.g. Alex Rivera"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                    />
-                  </div>
-                </div>
-
-                {/* Email Address & Mobile Number */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <div className="flex justify-between items-center mb-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                      <label>Email Address *</label>
-                      <span className="text-[9px] text-slate-500 uppercase font-mono font-normal">Required</span>
-                    </div>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                      <input
-                        type="email"
-                        name="email"
-                        required
-                        className={`w-full pl-9 pr-3 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                          isDark 
-                            ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff] focus:ring-blue-500/30 placeholder:text-slate-500' 
-                            : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1] focus:ring-blue-500/20 placeholder:text-slate-400'
-                        }`}
-                        placeholder="name@example.com"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                      <label>Mobile Number *</label>
-                      <span className="text-[9px] text-slate-500 uppercase font-mono font-normal">Required</span>
-                    </div>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                      <input
-                        type="tel"
-                        name="mobileNumber"
-                        required
-                        className={`w-full pl-9 pr-3 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                          isDark 
-                            ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff] focus:ring-blue-500/30 placeholder:text-slate-500' 
-                            : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1] focus:ring-blue-500/20 placeholder:text-slate-400'
-                        }`}
-                        placeholder="10-digit mobile number"
-                        value={formData.mobileNumber}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Password & Confirm Password */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <div className="flex justify-between items-center mb-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                      <label>Password *</label>
-                      <span className="text-[9px] text-slate-500 uppercase font-mono font-normal">Required</span>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        required
-                        className={`w-full pl-9 pr-7 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                          isDark 
-                            ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff] focus:ring-blue-500/30 placeholder:text-slate-500' 
-                            : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1] focus:ring-blue-500/20 placeholder:text-slate-400'
-                        }`}
-                        placeholder="Min 8 characters"
-                        value={formData.password}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                      >
-                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px]">
-                      <span className={hasMinLength ? 'text-emerald-600 font-medium' : 'text-slate-500 font-normal'}>✓ 8+ chars</span>
-                      <span className={hasUppercase ? 'text-emerald-600 font-medium' : 'text-slate-500 font-normal'}>✓ 1 Upper</span>
-                      <span className={hasSpecialChar ? 'text-emerald-600 font-medium' : 'text-slate-500 font-normal'}>✓ 1 Special</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                      <label>Confirm Password *</label>
-                      <span className="text-[9px] text-slate-500 uppercase font-mono font-normal">Required</span>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        required
-                        className={`w-full pl-9 pr-7 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                          isDark 
-                            ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff] focus:ring-blue-500/30 placeholder:text-slate-500' 
-                            : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1] focus:ring-blue-500/20 placeholder:text-slate-400'
-                        }`}
-                        placeholder="Confirm password"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-                      >
-                        {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                    {showMatchError && (
-                      <p className="text-[9px] text-red-600 font-medium mt-0.5">Passwords do not match</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Google Sign In Option */}
-              <div className="pt-0.5">
-                <div className="flex items-center justify-center my-1.5 text-slate-400 text-[9px] font-mono">
-                  <span className="border-t border-slate-200 dark:border-slate-800 w-full"></span>
-                  <span className="px-2 uppercase tracking-wider font-normal">or</span>
-                  <span className="border-t border-slate-200 dark:border-slate-800 w-full"></span>
-                </div>
-                <div className="flex justify-center">
-                  <div id="googleSignupDiv"></div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 2: Education */}
-          {step === 2 && (
-            <motion.div 
-              key="step2" 
-              initial={{ opacity: 0, y: 8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-3"
-            >
-              <div>
-                <h2 className={`font-press-start text-xs uppercase tracking-wider ${
-                  isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-                }`}>Step 2 – Education</h2>
-                <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 mt-0.5">
-                  Select your college and academic details.
-                </p>
-              </div>
-
-              <div className="space-y-2.5">
-                <div>
-                  <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">College *</label>
-                  <SearchableSelect
-                    options={COLLEGE_OPTIONS}
-                    value={formData.collegeSelect}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, collegeSelect: val }))}
-                    placeholder="Search or select college..."
-                    icon={Search}
+            <form onSubmit={(e) => { e.preventDefault(); handleEmailAuth(); }}>
+              {!isLoginMode && (
+                <div className="su-form-group">
+                  <label className="su-label">Full Name</label>
+                  <input
+                    type="text"
+                    className="su-input"
+                    placeholder="Peter Parker"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                   />
                 </div>
+              )}
 
-                {formData.collegeSelect === 'Other' && (
-                  <div>
-                    <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Enter College Name *</label>
-                    <input
-                      type="text"
-                      name="customCollege"
-                      placeholder="e.g. Stanford University"
-                      value={formData.customCollege}
-                      onChange={handleChange}
-                      className={`w-full px-3 py-2 rounded-lg border text-xs font-normal focus:ring-2 focus:outline-none transition ${
-                        isDark 
-                          ? 'bg-[#060911] text-slate-100 border-[#1c2538] focus:border-[#7c95ff]' 
-                          : 'bg-white text-slate-900 border-slate-300 focus:border-[#0043A1]'
-                      }`}
-                    />
-                  </div>
-                )}
+              <div className="su-form-group">
+                <label className="su-label">Email Address</label>
+                <input
+                  type="email"
+                  className="su-input"
+                  placeholder="peter.parker@gmail.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Degree *</label>
-                    <SearchableSelect
-                      options={DEGREE_OPTIONS}
-                      value={formData.degree}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, degree: val }))}
-                      placeholder="Select degree..."
-                      searchable={false}
-                      icon={GraduationCap}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Branch / Specialization *</label>
-                    <SearchableSelect
-                      options={BRANCH_OPTIONS}
-                      value={formData.branch}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, branch: val }))}
-                      placeholder="Select branch..."
-                      icon={BookOpen}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Graduation Year *</label>
-                  <SearchableSelect
-                    options={GRADUATION_YEARS}
-                    value={formData.graduationYear}
-                    onChange={(val) => setFormData((prev) => ({ ...prev, graduationYear: val }))}
-                    placeholder="Select graduation year..."
-                    searchable={false}
-                    icon={Calendar}
-                    maxHeightClass="max-h-20"
+              <div className="su-form-group">
+                <label className="su-label">Password</label>
+                <div className="su-password-wrapper">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="su-input"
+                    placeholder="Min. 8 characters"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 3: Learning Goal */}
-          {step === 3 && (
-            <motion.div 
-              key="step3" 
-              initial={{ opacity: 0, y: 8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-3"
-            >
-              <div>
-                <h2 className={`font-press-start text-xs uppercase tracking-wider ${
-                  isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-                }`}>Step 3 – Learning Goal</h2>
-                <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 mt-0.5">
-                  What brings you to TechLearn today?
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 gap-2.5">
-                {LEARNING_GOALS.map((goal) => {
-                  const isSelected = formData.learningGoal === goal.id;
-                  return (
-                    <div
-                      key={goal.id}
-                      onClick={() => handleGoalSelect(goal.id)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 flex items-center justify-between space-x-3 ${
-                        isSelected 
-                          ? (isDark 
-                              ? 'border-2 border-[#7c95ff] bg-[#11172a] shadow-[0_0_12px_rgba(124,149,255,0.2)] text-[#7c95ff]' 
-                              : 'border-2 border-[#0043A1] bg-blue-50 shadow-md shadow-blue-500/10 text-[#003d94]')
-                          : (isDark ? 'border-[#1d263a] bg-[#0a0e19] hover:border-[#374563] text-slate-300' : 'border-slate-300 bg-white hover:border-slate-400 shadow-sm text-slate-800')
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg shrink-0 ${
-                          isSelected 
-                            ? (isDark ? 'bg-[#7c95ff] text-[#070a14]' : 'bg-[#0043A1] text-white')
-                            : (isDark ? 'bg-[#161f33] text-slate-300' : 'bg-slate-100 text-slate-700')
-                        }`}>
-                          {goal.pixelIcon}
-                        </div>
-
-                        <div>
-                          <h3 className={`font-press-start text-[11px] ${
-                            isSelected 
-                              ? (isDark ? 'text-[#7c95ff]' : 'text-[#003d94]')
-                              : (isDark ? 'text-slate-100 font-normal' : 'text-slate-900 font-medium')
-                          }`}>{goal.title}</h3>
-                          <p className={`text-[10px] mt-0.5 leading-tight ${
-                            isDark ? 'text-slate-400' : 'text-slate-600 font-normal'
-                          }`}>{goal.subtitle}</p>
-                        </div>
-                      </div>
-
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 font-medium text-[10px] transition ${
-                        isSelected 
-                          ? (isDark ? 'bg-[#7c95ff] border-[#7c95ff] text-[#070a14]' : 'bg-[#0043A1] border-[#0043A1] text-white')
-                          : 'border-slate-400 dark:border-slate-600 bg-transparent'
-                      }`}>
-                        {isSelected && '✓'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-          {/* STEP 4: Personalization */}
-          {step === 4 && (
-            <motion.div 
-              key="step4" 
-              initial={{ opacity: 0, y: 8 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: -8 }}
-              className="space-y-3"
-            >
-              <div>
-                <h2 className={`font-press-start text-xs uppercase tracking-wider ${
-                  isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-                }`}>Step 4 – Personalization</h2>
-                <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 mt-0.5">
-                  Tailoring your experience for <span className="font-medium text-[#003d94] dark:text-[#8fd9ff]">{formData.learningGoal}</span>.
-                </p>
-              </div>
-
-              {/* Conditional Form: Get Placed */}
-              {formData.learningGoal === 'Get Placed' && (
-                <div className="space-y-3">
-                  {/* Target Role */}
-                  <div>
-                    <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Target Role *</label>
-                    <SearchableSelect
-                      options={TARGET_ROLES}
-                      value={formData.targetRole}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, targetRole: val }))}
-                      placeholder="Select target role..."
-                      icon={Briefcase}
-                    />
-                  </div>
-
-                  {/* Placement Type (Single Choice Cards with Pixel Icons) */}
-                  <div>
-                    <label className="block text-[11px] font-medium mb-1 text-slate-700 dark:text-slate-300">Placement Type *</label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {PLACEMENT_TYPES.map((pt) => {
-                        const isSelected = formData.placementType === pt.id;
-                        return (
-                          <div
-                            key={pt.id}
-                            onClick={() => setFormData((prev) => ({ ...prev, placementType: pt.id }))}
-                            className={`p-2 rounded-lg border cursor-pointer transition text-[11px] flex items-center gap-2 font-medium ${
-                              isSelected 
-                                ? (isDark ? 'bg-[#7c95ff]/10 border-[#7c95ff] text-[#7c95ff]' : 'bg-blue-50 border-[#0043A1] text-[#003d94] shadow-sm')
-                                : (isDark ? 'bg-[#070a14] border-[#1c2538] text-slate-300 hover:border-[#38486b]' : 'bg-white border-slate-300 text-slate-800 hover:border-slate-400')
-                            }`}
-                          >
-                            <span className="shrink-0 text-current">{pt.pixelIcon}</span>
-                            <span className="leading-tight truncate">{pt.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {/* Placement Timeline */}
-                    <div>
-                      <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">When do placements begin? *</label>
-                      <SearchableSelect
-                        options={PLACEMENT_TIMELINES}
-                        value={formData.placementTimeline}
-                        onChange={(val) => setFormData((prev) => ({ ...prev, placementTimeline: val }))}
-                        placeholder="Select timeline..."
-                        searchable={false}
-                        icon={Calendar}
-                      />
-                    </div>
-
-                    {/* Daily Commitment */}
-                    <div>
-                      <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">Daily Time Commitment *</label>
-                      <SearchableSelect
-                        options={DAILY_COMMITMENT_OPTIONS}
-                        value={formData.dailyCommitmentHours}
-                        onChange={(val) => setFormData((prev) => ({ ...prev, dailyCommitmentHours: val }))}
-                        placeholder="Select commitment..."
-                        searchable={false}
-                        icon={BookOpen}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Conditional Form: Learn a New Skill */}
-              {formData.learningGoal === 'Learn a New Skill' && (
-                <div className="space-y-2.5 pt-1">
-                  <div>
-                    <label className="block text-[11px] font-medium mb-0.5 text-slate-700 dark:text-slate-300">What would you like to learn? *</label>
-                    <SearchableSelect
-                      options={SKILLS_TO_LEARN_OPTIONS}
-                      value={formData.skillToLearn}
-                      onChange={(val) => setFormData((prev) => ({ ...prev, skillToLearn: val }))}
-                      placeholder="Search or select a skill..."
-                      icon={BookOpen}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Conditional Form: Just Exploring */}
-              {formData.learningGoal === 'Just Exploring' && (
-                <div className={`py-4 text-center space-y-2 p-4 rounded-xl border ${
-                  isDark ? 'bg-[#060912] border-[#182133]' : 'bg-slate-50 border-slate-300'
-                }`}>
-                  <PixelCompass className="w-8 h-8 mx-auto text-[#0043A1] dark:text-[#7c95ff]" />
-                  <h3 className={`font-medium text-xs ${isDark ? 'text-white' : 'text-slate-900'}`}>Ready to Explore TechLearn</h3>
-                  <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
-                    No additional questions needed! You'll get free access to open practice hubs, roadmaps, and compiler tools.
-                  </p>
-                </div>
-              )}
-
-              {/* Status Summary Panel */}
-              <div className={`p-2.5 rounded-lg border font-mono text-[10px] space-y-1 ${
-                isDark ? 'bg-[#060912] border-[#182133]' : 'bg-slate-100 border-slate-300 text-slate-900 font-medium'
-              }`}>
-                <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                  <span>STATUS:</span>
-                  <span className={`font-medium ${isDark ? 'text-[#7c95ff]' : 'text-[#003d94]'}`}>
-                    {formData.learningGoal.toUpperCase().replace(/\s+/g, '_')}
+                  <span className="su-toggle-password" onClick={() => setShowPassword(!showPassword)}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
                   </span>
                 </div>
-                <div className="flex justify-between text-slate-600 dark:text-slate-400">
-                  <span>SYSTEM_READY:</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">TRUE</span>
+
+                {!isLoginMode && password.length > 0 && (
+                  <div className="su-password-requirements">
+                    {!hasMinLength && (
+                      <div className="su-req-item">
+                        <span className="su-req-bullet">✓</span> Minimum 8 characters
+                      </div>
+                    )}
+                    {!hasSpecialChar && (
+                      <div className="su-req-item">
+                        <span className="su-req-bullet">✓</span> One special character
+                      </div>
+                    )}
+                    {!hasUppercase && (
+                      <div className="su-req-item">
+                        <span className="su-req-bullet">✓</span> One uppercase letter
+                      </div>
+                    )}
+                    {!hasNumber && (
+                      <div className="su-req-item">
+                        <span className="su-req-bullet">✓</span> One number
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button type="submit" className="su-btn-primary" disabled={loading} style={{ marginTop: '10px' }}>
+                {isLoginMode ? 'LOG IN' : 'CREATE ACCOUNT'}
+              </button>
+            </form>
+
+            <div className="su-divider"><span>OR</span></div>
+
+            <button type="button" className="su-btn-google" onClick={handleGoogleAuth}>
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              Continue with Google
+            </button>
+
+            <div className="su-toggle-auth">
+              {isLoginMode ? (
+                <span>Don't have an account? <span className="su-link-btn" onClick={toggleAuthMode}>Create Account</span></span>
+              ) : (
+                <span>Already have an account? <span className="su-link-btn" onClick={toggleAuthMode}>Log In</span></span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 1.5 EMAIL VERIFICATION SCREEN */}
+        {screen === 'verify-email' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <div style={{ marginBottom: '14px', color: '#8e8e93', display: 'flex', justifyContent: 'center' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+
+            <h2 className="su-h2">Verify your email</h2>
+            <p className="su-description" style={{ marginBottom: '20px' }}>
+              We sent a verification link to your email. Click it and come back.
+            </p>
+
+            <button
+              type="button"
+              className="su-btn-primary"
+              onClick={handleCheckVerification}
+              disabled={verifying}
+              style={{ marginBottom: '10px' }}
+            >
+              {verifying ? 'CHECKING...' : 'CHECK VERIFICATION'}
+            </button>
+
+            <button
+              type="button"
+              className="su-btn-secondary-full"
+              onClick={handleResendEmail}
+              disabled={resending}
+            >
+              {resending ? 'SENDING...' : 'RESEND EMAIL'}
+            </button>
+          </div>
+        )}
+
+        {/* 2. WELCOME RETRO COMPUTER SCREEN */}
+        {screen === 'welcome' && (
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className="su-terminal-frame">
+              <div className="su-terminal-body">
+                <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '11px', color: '#a3e635', marginBottom: '8px', letterSpacing: '1px' }}>
+                  HELLO, {welcomeFirstName.toUpperCase() || 'PETER'}
+                </div>
+
+                <div style={{ fontFamily: "'Fira Code', monospace", fontSize: '11px', lineHeight: '1.4', color: '#cbd5e1', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {typewriterText}
+                  <span className="su-cursor" />
                 </div>
               </div>
-            </motion.div>
-          )}
+            </div>
 
-          {/* STEP 5: Welcome Loading Transition */}
-          {step === 5 && (
-            <motion.div 
-              key="step5" 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              className="py-8 text-center space-y-3"
-            >
-              <div className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center text-xl font-medium border animate-bounce ${
-                isDark ? 'bg-[#7c95ff]/10 text-[#7c95ff] border-[#7c95ff]/30' : 'bg-blue-50 text-[#0043A1] border-blue-200'
-              }`}>
-                ⚡
+            {isTypingDone && (
+              <div style={{ marginTop: '14px', animation: 'suFadeIn 0.4s ease-out forwards' }}>
+                <button type="button" className="su-btn-primary" onClick={startOnboardingFromWelcome}>
+                  START ONBOARDING
+                </button>
               </div>
-              <div>
-                <h2 className={`font-press-start text-xs uppercase tracking-wider ${
-                  isDark ? 'text-slate-100 font-normal' : 'text-[#003d94] font-normal'
-                }`}>Welcome to TechLearn!</h2>
-                <p className="text-[11px] font-normal text-slate-600 dark:text-slate-400 mt-1">
-                  Creating your account & redirecting to your dashboard...
-                </p>
-              </div>
-
-              <div className={`w-5 h-5 border-2 border-t-transparent rounded-full animate-spin mx-auto mt-3 ${
-                isDark ? 'border-[#7c95ff]' : 'border-[#0043A1]'
-              }`} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Bottom Stepper Navigation Actions */}
-        {step >= 1 && step <= 4 && (
-          <div className={`flex items-center justify-between pt-4 border-t mt-4 ${
-            isDark ? 'border-[#182133]' : 'border-slate-200'
-          }`}>
-            {step > 1 ? (
-              <button
-                type="button"
-                onClick={handleBack}
-                className={`px-4 py-2 rounded-lg font-press-start text-[11px] font-normal transition flex items-center gap-1 ${
-                  isDark 
-                    ? 'text-slate-300 bg-[#131825] hover:bg-[#1c2438] border border-[#232c42]' 
-                    : 'text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300'
-                }`}
-              >
-                &lt; BACK
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSignInClick}
-                className={`text-[11px] font-medium hover:underline ${
-                  isDark ? 'text-[#7c95ff]' : 'text-[#003d94]'
-                }`}
-              >
-                Already registered? Sign in
-              </button>
-            )}
-
-            {step < 4 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className={`px-5 py-2 rounded-lg font-press-start text-[11px] font-normal transition flex items-center gap-1.5 ${
-                  isDark 
-                    ? 'text-[#070a14] bg-[#a5b4fc] hover:bg-[#b8c5ff] shadow-[0_0_15px_rgba(165,180,252,0.3)]' 
-                    : 'text-white bg-[#0043A1] hover:bg-blue-700 shadow-sm shadow-blue-500/20'
-                }`}
-              >
-                NEXT &rarr;
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleEnrollAndSubmit}
-                disabled={loading}
-                className={`px-5 py-2 rounded-lg font-press-start text-[11px] font-normal transition flex items-center gap-1.5 disabled:opacity-50 ${
-                  isDark 
-                    ? 'text-[#070a14] bg-[#a5b4fc] hover:bg-[#b8c5ff] shadow-[0_0_15px_rgba(165,180,252,0.3)]' 
-                    : 'text-white bg-[#0043A1] hover:bg-blue-700 shadow-sm shadow-blue-500/20'
-                }`}
-              >
-                {loading ? (
-                  <span>SIGNING UP...</span>
-                ) : (
-                  <>
-                    <span>COMPLETE SIGN UP</span>
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
             )}
           </div>
         )}
 
-      </motion.div>
+        {/* 3. STEP 1: EDUCATION */}
+        {screen === 'step-education' && (
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <h2 className="su-h2">Let's know you better</h2>
+            <p className="su-description">Tell us a little about your academic background.</p>
+
+            <div className="su-form-group">
+              <label className="su-label">College</label>
+              <select className="su-select" value={college} onChange={(e) => setCollege(e.target.value)}>
+                <option value="">Select College</option>
+                <option value="Manipal University Jaipur">Manipal University Jaipur</option>
+                <option value="Vidya Jyothi Institute of Technology">Vidya Jyothi Institute of Technology</option>
+                <option value="VNR VJIET">VNR VJIET</option>
+                <option value="University of Hyderabad">University of Hyderabad</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {college === 'Other' && (
+              <div className="su-form-group">
+                <label className="su-label">College Name</label>
+                <input
+                  type="text"
+                  className="su-input"
+                  placeholder="Enter your college name"
+                  value={collegeOther}
+                  onChange={(e) => setCollegeOther(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="su-form-group">
+              <label className="su-label">Degree</label>
+              <select className="su-select" value={degree} onChange={(e) => setDegree(e.target.value)}>
+                <option value="">Select Degree</option>
+                <option value="B.Tech / B.E.">B.Tech / B.E.</option>
+                <option value="BCA">BCA</option>
+                <option value="MCA">MCA</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="su-form-group">
+              <label className="su-label">Branch / Specialization</label>
+              <select className="su-select" value={branch} onChange={(e) => setBranch(e.target.value)}>
+                <option value="">Select Branch</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Electronics & Communication">Electronics & Communication</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div className="su-form-group">
+              <label className="su-label">Graduation Year</label>
+              <select className="su-select" value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)}>
+                <option value="">Select Graduation Year</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+                <option value="2028">2028</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+              <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
+              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={saveEducationAndNext}>CONTINUE</button>
+            </div>
+          </div>
+        )}
+
+        {/* 4. STEP 2: GOALS */}
+        {screen === 'step-goals' && (
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <h2 className="su-h2">What brings you here?</h2>
+            <p className="su-description">Pick your mission.</p>
+
+            <div className="su-select-card-grid" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+              {[
+                { id: 'Get Placed', title: 'Get Placed', desc: 'Prepare for campus placements and tech interviews.' },
+                { id: 'Learn New Skills', title: 'Learn New Skills', desc: 'Build strong foundations and learn in-demand skills.' },
+                { id: 'Exploring TechLearn', title: 'Exploring TechLearn', desc: 'Discover programs, courses and career paths.' }
+              ].map(g => (
+                <div
+                  key={g.id}
+                  className={`su-select-card ${goal === g.id ? 'selected' : ''}`}
+                  onClick={() => selectMission(g.id)}
+                >
+                  <h4>{g.title}</h4>
+                  <p>{g.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+              <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
+              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={() => {
+                if (!goal) setStatusMsg({ text: 'Please select what brings you here.', type: 'error' });
+                else navigateOnboarding(1);
+              }}>CONTINUE</button>
+            </div>
+          </div>
+        )}
+
+        {/* 5. STEP 3: CONDITIONAL FOLLOW-UP */}
+        {screen === 'step-followup' && (
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <h2 className="su-h2">{goal === 'Learn New Skills' ? 'What do you want to learn?' : 'Tell us more'}</h2>
+            <p className="su-description">{goal === 'Learn New Skills' ? 'Select all skills you want to master.' : 'Personalize your placement journey.'}</p>
+
+            {goal === 'Learn New Skills' && (
+              <div className="su-followup-card">
+                <h3>Select Skills (Multiple)</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {['Java', 'Python', 'DSA', 'Web Development', 'SQL', 'AI/ML', 'GenAI', 'Aptitude'].map(s => {
+                    const isSelected = skills.includes(s);
+                    return (
+                      <div
+                        key={s}
+                        className={`su-chip ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (isSelected) setSkills(skills.filter(k => k !== s));
+                          else setSkills([...skills, s]);
+                        }}
+                      >
+                        {s}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {goal === 'Get Placed' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="su-followup-card">
+                  <h3>1. Target Role</h3>
+                  <select className="su-select" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}>
+                    <option value="">Select Target Role</option>
+                    <option value="Software Developer">Software Developer</option>
+                    <option value="Data Analyst">Data Analyst</option>
+                    <option value="AI Engineer">AI Engineer</option>
+                    <option value="Web Developer">Web Developer</option>
+                    <option value="Full Stack Developer">Full Stack Developer</option>
+                  </select>
+                </div>
+
+                <div className="su-followup-card">
+                  <h3>2. Target Companies</h3>
+                  <label className="su-label">Select Category (Single Choice)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                    {['Product Companies', 'Service Companies', 'Startups'].map(cat => (
+                      <div
+                        key={cat}
+                        className={`su-chip ${placementCategory === cat ? 'selected' : ''}`}
+                        onClick={() => {
+                          setPlacementCategory(cat);
+                          setTargetCompanies([]);
+                        }}
+                      >
+                        {cat}
+                      </div>
+                    ))}
+                  </div>
+
+                  {placementCategory && (
+                    <div>
+                      <label className="su-label" style={{ marginTop: '8px' }}>
+                        Select Companies ({placementCategory}) - Multiple Choice
+                      </label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {({
+                          'Product Companies': ['Google', 'Microsoft', 'Amazon', 'Adobe', 'Flipkart'],
+                          'Service Companies': ['TCS', 'Infosys', 'Wipro', 'Accenture', 'Cognizant'],
+                          'Startups': ['Razorpay', 'Swiggy', 'Zomato', 'Cred', 'Zerodha']
+                        }[placementCategory] || []).map(comp => {
+                          const isSelected = targetCompanies.includes(comp);
+                          return (
+                            <div
+                              key={comp}
+                              className={`su-chip ${isSelected ? 'selected' : ''}`}
+                              onClick={() => {
+                                if (isSelected) setTargetCompanies(targetCompanies.filter(c => c !== comp));
+                                else setTargetCompanies([...targetCompanies, comp]);
+                              }}
+                            >
+                              {comp}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="su-followup-card">
+                  <h3>3. When do placements start?</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {['0-3 Months', '3-6 Months', '6+ Months'].map(t => (
+                      <div
+                        key={t}
+                        className={`su-chip ${placementTimeline === t ? 'selected' : ''}`}
+                        onClick={() => setPlacementTimeline(t)}
+                      >
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+              <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
+              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={saveFollowUpAndNext}>CONTINUE</button>
+            </div>
+          </div>
+        )}
+
+        {/* 6. STEP 4: RECOMMENDATION */}
+        {screen === 'step-recommendation' && (
+          <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+            <h2 className="su-h2">Choose your learning path</h2>
+            <p className="su-description">Pick between free or member.</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+              {[
+                { id: 'Free', title: 'Free', desc: 'Essential basics' },
+                { id: 'Member', title: 'Member', desc: 'Full career suite' }
+              ].map(p => (
+                <div
+                  key={p.id}
+                  className={`su-select-card ${learningPath === p.id ? 'selected' : ''}`}
+                  onClick={() => setLearningPath(p.id)}
+                  style={{ textAlign: 'center' }}
+                >
+                  <h4>{p.title}</h4>
+                  <p>{p.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {learningPath && (
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '14px', marginBottom: '12px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {learningPath} Recommended Courses
+                </h4>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {(learningPath === 'Free'
+                    ? ['HTML Basics', 'CSS Fundamentals', 'JavaScript Fundamentals']
+                    : ['Full Stack Development', 'DSA Interview Preparation', 'System Design', 'Placement Bootcamp']
+                  ).map(c => (
+                    <li key={c} style={{ fontSize: '11px', color: '#334155', display: 'flex', items: 'center', gap: '6px', background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                      <span style={{ color: '#65a30d', fontWeight: 'bold' }}>✓</span> {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+              <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
+              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={completeOnboarding} disabled={loading}>
+                {loading ? 'SAVING...' : 'FINISH SETUP'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 7. COMPLETION */}
+        {screen === 'complete' && (
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚀</div>
+            <h2 className="su-h2">All Set!</h2>
+            <p className="su-description">Your profile is customized. Redirecting you to your dashboard...</p>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#071244',
+    padding: '16px'
+  }
+};
