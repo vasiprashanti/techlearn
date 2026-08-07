@@ -19,11 +19,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   const { setSession } = useAuth();
   const { refetchUserData } = useUser();
 
-  // Screens: 'auth', 'verify-email', 'welcome', 'step-education', 'step-goals', 'step-followup', 'step-recommendation', 'complete'
   const [screen, setScreen] = useState('auth');
   const [isLoginMode, setIsLoginMode] = useState(initialMode === 'login');
   const [activeStep, setActiveStep] = useState(1);
   const [isGoogleAuth, setIsGoogleAuth] = useState(false);
+  const [isEnrolledShortOnboarding, setIsEnrolledShortOnboarding] = useState(false);
 
   useEffect(() => {
     setIsLoginMode(initialMode === 'login');
@@ -52,6 +52,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   // Onboarding Step 3: Conditional Questions
   const [skills, setSkills] = useState([]);
   const [targetRole, setTargetRole] = useState('');
+  const [targetRoleOther, setTargetRoleOther] = useState('');
   const [placementCategory, setPlacementCategory] = useState('');
   const [targetCompanies, setTargetCompanies] = useState([]);
   const [placementTimeline, setPlacementTimeline] = useState('');
@@ -190,6 +191,19 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           localStorage.setItem('userData', JSON.stringify(data.user));
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
+
+          // Case A — Enrolled Cohort Student without placement onboarding completed
+          if (data.user?.isEnrolledStudent && !data.user?.targetRole) {
+            setFullName(data.user.firstName || 'Student');
+            setEmail(data.user.email || '');
+            setIsEnrolledShortOnboarding(true);
+            setGoal('Get Placed');
+            setActiveStep(3);
+            setScreen('step-followup');
+            setLoading(false);
+            return;
+          }
+
           handleClose();
           navigateUserByProgram(data.user, navigate);
         } else {
@@ -381,6 +395,32 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       }
     }
     setStatusMsg({ text: '', type: '' });
+
+    if (isEnrolledShortOnboarding) {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const endpoint = baseUrl.endsWith('/api') ? `${baseUrl}/users/preferences` : `${baseUrl.replace(/\/+$/, '')}/api/users/preferences`;
+      fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetRole: targetRole === 'Other' ? targetRoleOther : targetRole,
+          placementCategory,
+          targetCompanies,
+          placementTimeline
+        })
+      }).finally(() => {
+        setLoading(false);
+        handleClose();
+        navigate('/dashboard');
+      });
+      return;
+    }
+
     navigateOnboarding(1);
   };
 
@@ -410,7 +450,8 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       graduationYear,
       learningGoal: goal,
       skills,
-      targetRole,
+      targetRole: targetRole === 'Other' ? targetRoleOther : targetRole,
+      targetRoleOther,
       placementCategory,
       targetCompanies,
       placementTimeline,
@@ -1223,18 +1264,37 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
                   <h3>1. Target Role</h3>
                   <select className="su-select" value={targetRole} onChange={(e) => setTargetRole(e.target.value)}>
                     <option value="">Select Target Role</option>
-                    <option value="Software Developer">Software Developer</option>
-                    <option value="Data Analyst">Data Analyst</option>
-                    <option value="AI Engineer">AI Engineer</option>
-                    <option value="Web Developer">Web Developer</option>
+                    <option value="Frontend Developer">Frontend Developer</option>
+                    <option value="Backend Developer">Backend Developer</option>
                     <option value="Full Stack Developer">Full Stack Developer</option>
+                    <option value="Java Developer">Java Developer</option>
+                    <option value="Python Developer">Python Developer</option>
+                    <option value="Data Analyst">Data Analyst</option>
+                    <option value="QA Engineer">QA Engineer</option>
+                    <option value="UI/UX Designer">UI/UX Designer</option>
+                    <option value="DevOps Engineer">DevOps Engineer</option>
+                    <option value="Other">Other</option>
                   </select>
+
+                  {targetRole === 'Other' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <label className="su-label">Don't see your role? Type it below:</label>
+                      <input
+                        type="text"
+                        className="su-input"
+                        placeholder="e.g. Cybersecurity Engineer, Mobile App Dev..."
+                        value={targetRoleOther}
+                        onChange={(e) => setTargetRoleOther(e.target.value)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="su-followup-card">
                   <h3>2. Target Companies</h3>
+                  <p style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>What type of opportunity are you preparing for?</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                    {['Product Companies', 'Service Companies', 'Startups'].map(cat => (
+                    {['Campus Placements', 'Product Companies', 'Service Companies'].map(cat => (
                       <div
                         key={cat}
                         className={`su-chip ${placementCategory === cat ? 'selected' : ''}`}
@@ -1250,11 +1310,14 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
                   {placementCategory && (
                     <div>
+                      <p style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px', fontStyle: 'italic' }}>
+                        Select your target companies:
+                      </p>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {({
-                          'Product Companies': ['Google', 'Microsoft', 'Amazon', 'Adobe', 'Flipkart'],
-                          'Service Companies': ['TCS', 'Infosys', 'Wipro', 'Accenture', 'Cognizant'],
-                          'Startups': ['Razorpay', 'Swiggy', 'Zomato', 'Cred', 'Zerodha']
+                          'Campus Placements': ['Deloitte', 'Cognizant', 'Infosys', 'TCS', 'Capgemini', 'Wipro', 'Accenture', 'HCLTech', 'Tech Mahindra', 'IBM'],
+                          'Product Companies': ['Google', 'Microsoft', 'Amazon', 'Apple', 'Adobe', 'Atlassian', 'Salesforce', 'Oracle', 'NVIDIA', 'Uber'],
+                          'Service Companies': ['TCS', 'Infosys', 'Wipro', 'Accenture', 'Cognizant', 'Capgemini', 'HCLTech', 'Tech Mahindra', 'LTIMindtree']
                         }[placementCategory] || []).map(comp => {
                           const isSelected = targetCompanies.includes(comp);
                           return (
@@ -1276,9 +1339,10 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
                 </div>
 
                 <div className="su-followup-card">
-                  <h3>3. When do placements start?</h3>
+                  <h3>3. Placement Timeline</h3>
+                  <p style={{ fontSize: '10px', color: '#666', marginBottom: '8px' }}>When are you planning to get placed?</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {['0-3 Months', '3-6 Months', '6+ Months'].map(t => (
+                    {['Within 3 Months', '3–6 Months', '6–12 Months', 'More than 1 Year', 'Just Preparing'].map(t => (
                       <div
                         key={t}
                         className={`su-chip ${placementTimeline === t ? 'selected' : ''}`}

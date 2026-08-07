@@ -145,69 +145,99 @@ export default function OnboardingPrograms() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: idx * 0.1 }}
-                  className={`relative flex flex-col justify-between rounded-3xl p-6 transition-all duration-300 bg-white dark:bg-[#0e1a30] border ${
+                  className={`relative flex flex-col justify-between rounded-3xl overflow-hidden transition-all duration-300 bg-white dark:bg-[#0e1a30] border ${
                     isSelected
                       ? 'border-[#a3e635] shadow-xl shadow-[#a3e635]/15 ring-2 ring-[#a3e635]'
                       : 'border-[#e2e8f0] dark:border-[#1e293b] hover:border-[#cbd5e1] dark:hover:border-[#334155] hover:shadow-lg'
                   }`}
                 >
-                  <div className="space-y-4">
-                    {/* Program Type & Access Tier Badges */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="px-3 py-1 rounded-full bg-[#f7fee7] dark:bg-[#1a2e05] text-[#3f6212] dark:text-[#a3e635] text-xs font-bold tracking-wide uppercase">
-                        {program.programType || 'Learning Track'}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                  {/* Course Image Header Banner */}
+                  <div className="h-36 w-full bg-gradient-to-r from-slate-800 via-blue-900 to-indigo-950 relative overflow-hidden flex items-center justify-center p-4">
+                    {program.thumbnailUrl || program.image ? (
+                      <img
+                        src={program.thumbnailUrl || program.image}
+                        alt={program.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <BookOpen className="w-10 h-10 text-[#a3e635] mx-auto opacity-80 mb-1" />
+                        <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">
+                          {program.programType || 'Course Program'}
+                        </span>
+                      </div>
+                    )}
+                    {/* Badge Overlay */}
+                    <div className="absolute top-3 right-3">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase shadow-md ${
                         program.pricingType === 'Paid'
-                          ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
-                          : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-emerald-500 text-white'
                       }`}>
-                        {program.pricingType === 'Paid' ? `Paid (₹${program.programFee})` : 'Free Track'}
+                        {program.pricingType === 'Paid' ? `Paid (₹${program.programFee})` : 'Free'}
                       </span>
                     </div>
+                  </div>
 
-                    {/* Program Title & Description */}
-                    <div>
-                      <h3 className="text-lg font-bold text-[#0f172a] dark:text-white leading-snug">
+                  <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#f7fee7] dark:bg-[#1a2e05] text-[#3f6212] dark:text-[#a3e635] text-[10px] font-bold tracking-wide uppercase">
+                          {program.programType || 'Learning Track'}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-bold text-[#0f172a] dark:text-white leading-snug">
                         {program.name}
                       </h3>
+
                       {program.description && (
-                        <p className="mt-2 text-xs text-[#64748b] dark:text-[#94a3b8] line-clamp-3 leading-relaxed">
+                        <p className="text-xs text-[#64748b] dark:text-[#94a3b8] line-clamp-2 leading-relaxed">
                           {program.description}
                         </p>
                       )}
                     </div>
 
-                    {/* Meta info */}
-                    <div className="pt-3 border-t border-[#f1f5f9] dark:border-[#1e293b] flex items-center justify-between text-xs text-[#64748b] dark:text-[#94a3b8]">
-                      <span>Duration: <strong>{program.duration || 'Self-paced'}</strong></span>
-                      <div className="flex items-center gap-3">
-                        {program.courseCount > 0 && <span>{program.courseCount} Courses</span>}
-                        {program.projectCount > 0 && <span>{program.projectCount} Projects</span>}
+                    <div className="space-y-4">
+                      {/* Meta info */}
+                      <div className="pt-3 border-t border-[#f1f5f9] dark:border-[#1e293b] flex items-center justify-between text-xs text-[#64748b] dark:text-[#94a3b8]">
+                        <span>Duration: <strong>{program.duration || 'Self-paced'}</strong></span>
+                        <div className="flex items-center gap-3 font-semibold">
+                          {program.courseCount > 0 && <span>{program.courseCount} Courses</span>}
+                          {program.projectCount > 0 && <span>{program.projectCount} Projects</span>}
+                        </div>
+                      </div>
+
+                      {/* Action CTA buttons */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleStartProgram(program._id)}
+                          disabled={isBusy}
+                          className={`ob-pixel-heading flex-1 inline-flex items-center justify-center gap-1.5 py-3 px-3 rounded-xl text-[11px] uppercase transition shadow-md ${
+                            isSelected
+                              ? 'bg-[#a3e635] text-[#000000] hover:opacity-95'
+                              : program.pricingType === 'Paid'
+                              ? 'bg-amber-500 hover:bg-amber-600 text-black font-bold'
+                              : 'bg-[#3C83F6] hover:bg-blue-600 text-white font-bold'
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {isBusy ? (
+                            'Starting...'
+                          ) : (
+                            <>
+                              <span>
+                                {isSelected
+                                  ? 'Continue'
+                                  : program.pricingType === 'Paid'
+                                  ? 'Enroll Now'
+                                  : 'Start Learning'}
+                              </span>
+                              <Rocket className="w-3.5 h-3.5" />
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Start Action Button */}
-                  <div className="pt-6 mt-4">
-                    <button
-                      onClick={() => handleStartProgram(program._id)}
-                      disabled={isBusy}
-                      className={`ob-pixel-heading w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-xs uppercase transition shadow-md ${
-                        isSelected
-                          ? 'bg-[#a3e635] text-[#000000] hover:opacity-95'
-                          : 'bg-[#f2f2f7] dark:bg-[#1e293b] text-[#1c1c1e] dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                    >
-                      {isBusy ? (
-                        'Starting...'
-                      ) : (
-                        <>
-                          <span>{isSelected ? 'Continue Program' : 'Start Program'}</span>
-                          <Rocket className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
                   </div>
                 </motion.div>
               );
