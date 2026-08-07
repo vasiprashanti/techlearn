@@ -117,6 +117,35 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetRole: {
+      type: String,
+      default: "",
+    },
+    placementCategory: {
+      type: String,
+      default: "",
+    },
+    targetCompanies: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    placementTimeline: {
+      type: String,
+      default: "",
+    },
+    learningPath: {
+      type: String,
+      enum: ["Free", "Member", ""],
+      default: "",
+    },
     personalizedDetail: {
       type: String,
       default: "",

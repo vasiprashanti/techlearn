@@ -148,6 +148,12 @@ export default function Programs() {
       visibility: 'Public',
       pricingType: 'Free',
       programFee: '0',
+      learningGoalsText: 'Get Placed',
+      placementCategoriesText: 'Product Based, Service Based',
+      targetCompaniesText: '',
+      skillTagsText: '',
+      targetRolesText: '',
+      accessTier: 'Both',
     });
     setModalError('');
     setIsModalOpen(true);
@@ -168,6 +174,12 @@ export default function Programs() {
       visibility: program.visibility || 'Public',
       pricingType: program.pricingType || 'Free',
       programFee: String(program.programFee || 0),
+      learningGoalsText: Array.isArray(program.learningGoals) ? program.learningGoals.join(', ') : '',
+      placementCategoriesText: Array.isArray(program.placementCategories) ? program.placementCategories.join(', ') : '',
+      targetCompaniesText: Array.isArray(program.targetCompanies) ? program.targetCompanies.join(', ') : '',
+      skillTagsText: Array.isArray(program.skillTags) ? program.skillTags.join(', ') : '',
+      targetRolesText: Array.isArray(program.targetRoles) ? program.targetRoles.join(', ') : '',
+      accessTier: program.accessTier || 'Both',
     });
     setModalError('');
     setIsModalOpen(true);
@@ -204,6 +216,12 @@ export default function Programs() {
       }
     }
 
+    const parseCommaString = (str) =>
+      (str || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
     try {
       setSaving(true);
       const payload = {
@@ -215,6 +233,12 @@ export default function Programs() {
         visibility: formData.visibility,
         pricingType: formData.pricingType,
         programFee: formData.pricingType === 'Paid' ? Number(formData.programFee) : 0,
+        learningGoals: parseCommaString(formData.learningGoalsText),
+        placementCategories: parseCommaString(formData.placementCategoriesText),
+        targetCompanies: parseCommaString(formData.targetCompaniesText),
+        skillTags: parseCommaString(formData.skillTagsText),
+        targetRoles: parseCommaString(formData.targetRolesText),
+        accessTier: formData.accessTier || 'Both',
       };
 
       if (editingProgram) {
@@ -805,6 +829,89 @@ export default function Programs() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Matching Metadata Section */}
+              <div className="pt-3 border-t border-slate-700/50 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                  Student Matching Metadata
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-80">
+                      Skill Tags (Comma Separated)
+                    </label>
+                    <input
+                      type="text"
+                      name="skillTagsText"
+                      placeholder="e.g. Java, Python, React, DSA"
+                      value={formData.skillTagsText}
+                      onChange={handleFormChange}
+                      className={`w-full px-3.5 py-2 rounded-xl text-sm outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#152449] border-slate-700 text-white focus:border-blue-500 border'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 border'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-80">
+                      Target Companies (Comma Separated)
+                    </label>
+                    <input
+                      type="text"
+                      name="targetCompaniesText"
+                      placeholder="e.g. Google, Amazon, TCS"
+                      value={formData.targetCompaniesText}
+                      onChange={handleFormChange}
+                      className={`w-full px-3.5 py-2 rounded-xl text-sm outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#152449] border-slate-700 text-white focus:border-blue-500 border'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 border'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-80">
+                      Placement Categories
+                    </label>
+                    <input
+                      type="text"
+                      name="placementCategoriesText"
+                      placeholder="e.g. Product Based, Service Based"
+                      value={formData.placementCategoriesText}
+                      onChange={handleFormChange}
+                      className={`w-full px-3.5 py-2 rounded-xl text-sm outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#152449] border-slate-700 text-white focus:border-blue-500 border'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 border'
+                      }`}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1 opacity-80">
+                      Access Tier Eligibility
+                    </label>
+                    <select
+                      name="accessTier"
+                      value={formData.accessTier}
+                      onChange={handleFormChange}
+                      className={`w-full px-3.5 py-2 rounded-xl text-sm outline-none transition-all ${
+                        isDarkMode
+                          ? 'bg-[#152449] border-slate-700 text-white focus:border-blue-500 border'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-blue-500 border'
+                      }`}
+                    >
+                      <option value="Both">Both (Free & Member)</option>
+                      <option value="Free">Free Tier Only</option>
+                      <option value="Member">Member Tier Only</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               {/* Submit Buttons */}

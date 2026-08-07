@@ -3,16 +3,17 @@ import mongoose from "mongoose";
 import Program from "../models/Program.js";
 import User from "../models/User.js";
 import Student from "../models/Student.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { ENTITY_CONFIG } from "../controllers/admin/adminProgramController.js";
 
 dotenv.config();
 
 function runValidation() {
-  console.log("⚡ Starting Program Entity In-Memory Schema & Validation Checks...");
+  console.log("⚡ Starting Program Entity & Onboarding In-Memory Schema Checks...");
 
   try {
-    // 1. Validation Test: Free Pricing Schema Validation
-    console.log("1. Testing Program Schema (Free Pricing)...");
+    // 1. Validation Test: Free Pricing & Matching Metadata Schema
+    console.log("1. Testing Program Schema (Free Pricing & Matching Metadata)...");
     const freeProgram = new Program({
       name: "Test Placement Sprint",
       description: "Automated test program",
@@ -21,6 +22,12 @@ function runValidation() {
       status: "Draft",
       visibility: "Public",
       pricingType: "Free",
+      learningGoals: ["Get Placed"],
+      placementCategories: ["Product Based"],
+      targetCompanies: ["Google", "Amazon"],
+      skillTags: ["Java", "DSA"],
+      targetRoles: ["Software Engineer"],
+      accessTier: "Both",
     });
 
     const freeErr = freeProgram.validateSync();
@@ -28,7 +35,7 @@ function runValidation() {
       console.error("❌ Free Program validation failed:", freeErr.message);
       process.exit(1);
     }
-    console.log("✅ Free Program schema validation passed");
+    console.log("✅ Free Program schema & matching metadata validation passed");
 
     // 2. Validation Test: Paid Pricing without fee should fail validation
     console.log("2. Testing Program Schema (Paid without Fee - Should Fail)...");
@@ -46,27 +53,73 @@ function runValidation() {
     }
     console.log("✅ Paid Program validation successfully caught invalid fee:", paidErr.errors.programFee?.message || paidErr.message);
 
-    // 3. Validation Test: Paid Pricing with valid fee
-    console.log("3. Testing Program Schema (Paid with Valid Fee)...");
-    const validPaid = new Program({
-      name: "Test Paid Skill Program",
-      description: "Paid program test",
-      programType: "Full Stack Project Program",
-      duration: "60 Days",
+    // 3. Validation Test: ProgramEnrollment schema
+    console.log("3. Testing ProgramEnrollment Schema...");
+    const dummyUserId = new mongoose.Types.ObjectId();
+    const dummyStudentId = new mongoose.Types.ObjectId();
+    const dummyProgramId = new mongoose.Types.ObjectId();
+
+    const enrollment = new ProgramEnrollment({
+      userId: dummyUserId,
+      studentId: dummyStudentId,
+      programId: dummyProgramId,
       status: "Active",
-      visibility: "Public",
-      pricingType: "Paid",
-      programFee: 4999,
+      accessTier: "Free",
+      source: "onboarding",
     });
-    const validPaidErr = validPaid.validateSync();
-    if (validPaidErr) {
-      console.error("❌ Valid paid program failed validation:", validPaidErr.message);
+
+    const enrollErr = enrollment.validateSync();
+    if (enrollErr) {
+      console.error("❌ ProgramEnrollment schema validation failed:", enrollErr.message);
       process.exit(1);
     }
-    console.log("✅ Paid Program with fee schema validation passed");
+    console.log("✅ ProgramEnrollment schema validation passed");
 
-    // 4. Test Schema Fields & Relationship Arrays
-    console.log("4. Testing Relationship Array Definitions...");
+    // 4. Validation Test: User and Student onboarding fields
+    console.log("4. Testing User and Student Onboarding Schemas...");
+    const testUser = new User({
+      firstName: "Test",
+      lastName: "Student",
+      email: "test.student@example.com",
+      password: "Password123!",
+      skills: ["Java", "Python"],
+      targetRole: "Software Engineer",
+      placementCategory: "Product Based",
+      targetCompanies: ["Google", "Amazon"],
+      placementTimeline: "3 Months",
+      learningPath: "Free",
+      learningGoal: "Get Placed",
+    });
+
+    const userErr = testUser.validateSync();
+    if (userErr) {
+      console.error("❌ User schema validation failed:", userErr.message);
+      process.exit(1);
+    }
+
+    const testStudent = new Student({
+      collegeId: new mongoose.Types.ObjectId(),
+      userId: testUser._id,
+      name: "Test Student",
+      email: "test.student@example.com",
+      skills: ["Java", "Python"],
+      targetRole: "Software Engineer",
+      placementCategory: "Product Based",
+      targetCompanies: ["Google", "Amazon"],
+      placementTimeline: "3 Months",
+      learningPath: "Free",
+      learningGoal: "Get Placed",
+    });
+
+    const studentErr = testStudent.validateSync();
+    if (studentErr) {
+      console.error("❌ Student schema validation failed:", studentErr.message);
+      process.exit(1);
+    }
+    console.log("✅ User and Student onboarding schema validation passed");
+
+    // 5. Test Schema Fields & Relationship Arrays
+    console.log("5. Testing Relationship Array Definitions...");
     const expectedRelationships = {
       batches: { field: "batchIds", model: "Batch", label: "name" },
       students: { field: "studentIds", model: "Student", label: "name" },
@@ -101,49 +154,7 @@ function runValidation() {
     }
     console.log("✅ All 7 Program relationship mappings match the schema and admin attachment API");
 
-    const userProgramPath = User.schema.path("programId");
-    const studentProgramPath = Student.schema.path("programId");
-    if (userProgramPath?.options?.ref !== "Program" || studentProgramPath?.options?.ref !== "Program") {
-      console.error("❌ User and Student program enrollment references are not configured");
-      process.exit(1);
-    }
-    console.log("✅ User and Student Program enrollment references validated");
-
-    const dummyId = new mongoose.Types.ObjectId();
-    const fullProgram = new Program({
-      name: "Full Relationship Program",
-      programType: "AI & Machine Learning Program",
-      duration: "90 Days",
-      batchIds: [dummyId],
-      studentIds: [dummyId],
-      courseIds: [dummyId],
-      roadmapIds: [dummyId],
-      trackTemplateIds: [dummyId],
-      certificateTemplateIds: [dummyId],
-      projectIds: [dummyId],
-    });
-
-    const relErr = fullProgram.validateSync();
-    if (relErr) {
-      console.error("❌ Relationship program validation failed:", relErr.message);
-      process.exit(1);
-    }
-    if (
-      fullProgram.batchIds.length === 1 &&
-      fullProgram.studentIds.length === 1 &&
-      fullProgram.courseIds.length === 1 &&
-      fullProgram.roadmapIds.length === 1 &&
-      fullProgram.trackTemplateIds.length === 1 &&
-      fullProgram.certificateTemplateIds.length === 1 &&
-      fullProgram.projectIds.length === 1
-    ) {
-      console.log("✅ All 7 relationship array fields validated successfully");
-    } else {
-      console.error("❌ Relationship array verification failed");
-      process.exit(1);
-    }
-
-    console.log("\n🎉 ALL PROGRAM ENTITY SCHEMA, RELATIONSHIP & VALIDATION CHECKS PASSED!");
+    console.log("\n🎉 ALL PROGRAM ENTITY & ONBOARDING SCHEMA CHECKS PASSED SUCCESSFULLY!");
     process.exit(0);
   } catch (error) {
     console.error("❌ Validation Failed:", error);

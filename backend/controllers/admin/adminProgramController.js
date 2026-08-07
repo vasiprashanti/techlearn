@@ -135,6 +135,12 @@ export const listPrograms = async (req, res) => {
       visibility: p.visibility,
       pricingType: p.pricingType,
       programFee: p.programFee,
+      learningGoals: p.learningGoals || [],
+      placementCategories: p.placementCategories || [],
+      targetCompanies: p.targetCompanies || [],
+      skillTags: p.skillTags || [],
+      targetRoles: p.targetRoles || [],
+      accessTier: p.accessTier || "Both",
       studentCount: Array.isArray(p.studentIds) ? p.studentIds.length : 0,
       batchCount: Array.isArray(p.batchIds) ? p.batchIds.length : 0,
       courseCount: Array.isArray(p.courseIds) ? p.courseIds.length : 0,
@@ -177,6 +183,12 @@ export const createProgram = async (req, res) => {
       visibility,
       pricingType,
       programFee,
+      learningGoals,
+      placementCategories,
+      targetCompanies,
+      skillTags,
+      targetRoles,
+      accessTier,
     } = req.body;
 
     if (!name || !programType || !duration) {
@@ -206,6 +218,12 @@ export const createProgram = async (req, res) => {
       visibility: visibility || "Public",
       pricingType: pricingType || "Free",
       programFee: pricingType === "Paid" ? parsedFee : 0,
+      learningGoals: Array.isArray(learningGoals) ? learningGoals : [],
+      placementCategories: Array.isArray(placementCategories) ? placementCategories : [],
+      targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
+      skillTags: Array.isArray(skillTags) ? skillTags : [],
+      targetRoles: Array.isArray(targetRoles) ? targetRoles : [],
+      accessTier: accessTier || "Both",
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
@@ -285,6 +303,12 @@ export const updateProgram = async (req, res) => {
       visibility,
       pricingType,
       programFee,
+      learningGoals,
+      placementCategories,
+      targetCompanies,
+      skillTags,
+      targetRoles,
+      accessTier,
     } = req.body;
 
     if (name !== undefined) program.name = name.trim();
@@ -293,6 +317,12 @@ export const updateProgram = async (req, res) => {
     if (duration !== undefined) program.duration = duration.trim();
     if (status !== undefined) program.status = status;
     if (visibility !== undefined) program.visibility = visibility;
+    if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];
+    if (placementCategories !== undefined) program.placementCategories = Array.isArray(placementCategories) ? placementCategories : [];
+    if (targetCompanies !== undefined) program.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
+    if (skillTags !== undefined) program.skillTags = Array.isArray(skillTags) ? skillTags : [];
+    if (targetRoles !== undefined) program.targetRoles = Array.isArray(targetRoles) ? targetRoles : [];
+    if (accessTier !== undefined) program.accessTier = accessTier;
 
     if (pricingType !== undefined) {
       program.pricingType = pricingType;

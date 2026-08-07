@@ -53,6 +53,41 @@ const programSchema = new mongoose.Schema(
         message: "Program fee is required and must be non-negative for Paid programs",
       },
     },
+    learningGoals: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    placementCategories: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetCompanies: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    skillTags: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetRoles: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    accessTier: {
+      type: String,
+      enum: ["Free", "Member", "Both"],
+      default: "Both",
+    },
     batchIds: [
       {
         type: mongoose.Schema.Types.ObjectId,

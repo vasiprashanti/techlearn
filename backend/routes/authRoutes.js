@@ -79,61 +79,10 @@ const formatAuthUser = (user, student = null, batch = null) => ({
   programId: user.programId || student?.programId || null,
 });
 
+import { registerUser } from "../controllers/userController.js";
+
 /* ========== REGISTER ========== */
-router.post("/register", async function register(req, res) {
-  try {
-    const { firstName, lastName, fullName, email, password, confirmPassword } = req.body;
-
-    let finalFirstName = firstName;
-    let finalLastName = lastName;
-
-    if (fullName) {
-      const parts = fullName.trim().split(" ");
-      finalFirstName = parts[0];
-      finalLastName = parts.slice(1).join(" ") || ".";
-    }
-
-    if (!finalFirstName || !finalLastName || !email || !password || !confirmPassword) {
-      return res.status(400).json({ message: "Please fill all fields" });
-    }
-
-    const formattedEmail = normalizeEmail(email);
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
-    if (!emailRegex.test(formattedEmail)) {
-      return res
-        .status(400)
-        .json({ message: "Please enter a valid email account" });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    const emailExists = await User.findOne({ email: formattedEmail });
-    if (emailExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const newUser = await User.create({
-      firstName: finalFirstName,
-      lastName: finalLastName,
-      email: formattedEmail,
-      password,
-    });
-
-    const mapped = await mapUserToStudentCohort(newUser);
-    const token = generateToken(mapped.user._id);
-    return res.status(201).json({
-      message: "User registered successfully",
-      user: formatAuthUser(mapped.user, mapped.student, mapped.batch),
-      token,
-    });
-  } catch (err) {
-    console.error("Register error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
-//Tested and working fine
+router.post("/register", registerUser);
 
 /* ========== LOGIN ========== */
 router.post("/login", async function login(req, res) {

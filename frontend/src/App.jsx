@@ -21,6 +21,7 @@ const ProjectDayNotes = lazy(() => import('./pages/Dashboard/ProjectDayNotes'))
 const ProjectOverview = lazy(() => import('./pages/Dashboard/ProjectOverview'))
 const Performance = lazy(() => import('./pages/Dashboard/Performance'))
 const DashboardSettings = lazy(() => import('./pages/Dashboard/Settings'))
+const OnboardingPrograms = lazy(() => import('./pages/Onboarding/OnboardingPrograms'))
 const Languages = lazy(() => import('./pages/Dashboard/Languages'))
 const Concepts = lazy(() => import('./pages/Dashboard/Concepts'))
 const ImportantConceptDetail = lazy(() => import('./pages/Dashboard/ImportantConceptDetail'))
@@ -239,6 +240,7 @@ function LayoutWrapper() {
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           
           <Route element={<PrivateRoute />}>
+            <Route path="/onboarding/programs" element={<OnboardingPrograms />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/demo" element={<DemoDashboard />} />
             <Route path="/demo/project/day-notes" element={<ProjectDayNotes />} />

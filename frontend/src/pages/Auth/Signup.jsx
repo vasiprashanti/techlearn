@@ -384,11 +384,15 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
     }
 
     setLoading(true);
+    setStatusMsg({ text: '', type: '' });
+
     const finalCollege = college === 'Other' ? collegeOther : college;
+    const finalPassword = isGoogleAuth ? undefined : (password || "UserAuthAccount123!");
     const payload = {
       fullName,
       email,
-      password: isGoogleAuth ? undefined : (password || "UserAuthAccount123!"),
+      password: finalPassword,
+      confirmPassword: finalPassword,
       isGoogleUser: isGoogleAuth,
       authProvider: isGoogleAuth ? 'google' : 'email',
       collegeName: finalCollege,
@@ -411,17 +415,23 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         localStorage.setItem('userData', JSON.stringify(res.data.user));
         if (setSession) setSession(res.data.user, res.data.token);
         if (refetchUserData) await refetchUserData();
+
+        setLoading(false);
+        setScreen('complete');
+        setTimeout(() => {
+          handleClose();
+          navigate('/onboarding/programs');
+        }, 1800);
+        return;
+      } else {
+        throw new Error(res?.data?.message || 'Registration failed.');
       }
     } catch (e) {
-      console.warn('Registration payload note:', e);
+      console.error('Registration error:', e);
+      const errMsg = e.response?.data?.message || e.message || 'Registration failed. Please check your information and try again.';
+      setStatusMsg({ text: errMsg, type: 'error' });
+      setLoading(false);
     }
-
-    setLoading(false);
-    setScreen('complete');
-    setTimeout(() => {
-      handleClose();
-      navigate('/dashboard');
-    }, 2000);
   };
 
   const progressPercent = { 1: 25, 2: 50, 3: 75, 4: 100 }[activeStep] || 0;

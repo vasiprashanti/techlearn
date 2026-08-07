@@ -1,11 +1,13 @@
 /**
- * Navigates users to their respective dashboards based on their role and programSelection.
- * Keeps placeholders/comments for Placement, Project, and General users.
+ * Navigates users based on role, enrollment status, and onboarding flow.
+ *
+ * Flow: Signup -> onboarding answers -> Program assignment -> /onboarding/programs -> Start -> /dashboard
  * 
  * @param {Object} user - The authenticated user object
  * @param {Function} navigate - The react-router-dom navigate function
+ * @param {Object} options - Navigation options (e.g., isNewSignup: true)
  */
-export const navigateUserByProgram = (user, navigate) => {
+export const navigateUserByProgram = (user, navigate, options = {}) => {
   if (!user) {
     navigate('/');
     return;
@@ -16,27 +18,12 @@ export const navigateUserByProgram = (user, navigate) => {
     return;
   }
 
-  const program = user.programSelection;
-
-  // Keep routing placeholders for:
-  // 1. Placement Users
-  // 2. Project Users
-  // 3. General Users (implementation later)
-  if (program === 'Placement Sprint') {
-    // [PLACEHOLDER] Routing for Placement Users
-    console.log("Routing Placement Sprint user to /dashboard");
-    navigate('/dashboard');
-  } else if (program === 'Full Stack Project Program') {
-    // [PLACEHOLDER] Routing for Project Users
-    console.log("Routing Project Program user to /dashboard");
-    navigate('/dashboard');
-  } else if (program === 'Both') {
-    // [PLACEHOLDER] Routing for users enrolled in both programs
-    console.log("Routing Both programs user to /dashboard");
-    navigate('/dashboard');
-  } else {
-    // [PLACEHOLDER] Routing for General Users (implementation later)
-    console.log("Routing General user (no program / other program) to /dashboard");
-    navigate('/dashboard');
+  // Explicit new signup or missing primary programId -> /onboarding/programs
+  if (options.isNewSignup || !user.programId) {
+    navigate('/onboarding/programs');
+    return;
   }
+
+  // Active program already selected -> /dashboard
+  navigate('/dashboard');
 };

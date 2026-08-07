@@ -110,6 +110,29 @@ const getDefaultBatchWindow = () => {
   return { startDate, expiryDate };
 };
 
+const getVerifiedEmailFromReq = async (req) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded?.id) {
+          const u = await User.findById(decoded.id).select("email").lean();
+          if (u?.email) return u.email.toLowerCase();
+        }
+      }
+    }
+    if (req.body?.idToken && admin?.auth) {
+      const decodedFirebase = await admin.auth().verifyIdToken(req.body.idToken);
+      if (decodedFirebase?.email) return decodedFirebase.email.toLowerCase();
+    }
+  } catch (err) {
+    // Token invalid or unverified
+  }
+  return null;
+};
+
 export const registerUser = async (req, res) => {
   try {
     const { 
@@ -127,6 +150,13 @@ export const registerUser = async (req, res) => {
       degree,
       branch,
       learningGoal,
+      skills,
+      targetRole,
+      placementCategory,
+      targetCompanies,
+      placementTimeline,
+      learningPath,
+      programSelection,
       personalizedDetail,
       placementReadiness,
       dailyCommitment,
@@ -138,27 +168,24 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    if (!password || !confirmPassword) {
-      return res.status(400).json({ message: "Password and Confirm Password are required" });
-    }
+    const verifiedEmail = await getVerifiedEmailFromReq(req);
+    const isVerifiedSession = Boolean(verifiedEmail && verifiedEmail === emailCheck);
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
-    if (!isValidEmail(emailCheck)) {
-      return res.status(400).json({ message: "Please provide a valid email address" });
-    }
-
-    if (!isValidPassword(password)) {
-      return res.status(400).json({
-        message: "Password must be at least 6 characters with one letter and one number",
-      });
-    }
-
-    const existingUser = await User.findOne({ email: emailCheck });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    if (!isVerifiedSession) {
+      if (!password || !confirmPassword) {
+        return res.status(400).json({ message: "Password and Confirm Password are required" });
+      }
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: "Passwords do not match" });
+      }
+      if (!isValidEmail(emailCheck)) {
+        return res.status(400).json({ message: "Please provide a valid email address" });
+      }
+      if (!isValidPassword(password)) {
+        return res.status(400).json({
+          message: "Password must be at least 6 characters with one letter and one number",
+        });
+      }
     }
 
     // Handle names
@@ -199,80 +226,134 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    let targetUser = await User.findOne({ email: emailCheck });
 
-    const newUser = new User({
-      firstName: trimmedFirstName,
-      lastName: trimmedLastName,
-      email: emailCheck,
-      password: hashedPassword,
-      isClub: isClub || false,
-      mobileNumber: mobileNumber || "",
-      collegeName: collegeNameText,
-      degree: degree || "",
-      branch: branch || "",
-      degreeBranch: degreeBranch || (degree && branch ? `${degree} ${branch}` : degree || branch || ""),
-      graduationYear: graduationYear ? Number(graduationYear) : null,
-      learningGoal: learningGoal || "",
-      personalizedDetail: personalizedDetail || "",
-      programSelection: programSelection || "Placement Sprint",
-      placementReadiness: placementReadiness || "",
-      dailyCommitment: dailyCommitment || "",
-      declarationAccepted: declarationAccepted || false,
-      batchId: batch._id,
-    });
+    if (targetUser) {
+      if (!isVerifiedSession) {
+        return res.status(400).json({ message: "User already exists" });
+      }
 
-    await newUser.save();
-    const token = generatorToken(newUser._id);
+      // Update existing verified Google/Firebase or session user with onboarding answers
+      if (trimmedFirstName) targetUser.firstName = trimmedFirstName;
+      if (trimmedLastName) targetUser.lastName = trimmedLastName;
+      if (collegeNameText) targetUser.collegeName = collegeNameText;
+      if (degree) targetUser.degree = degree;
+      if (branch) targetUser.branch = branch;
+      if (degreeBranch) targetUser.degreeBranch = degreeBranch;
+      if (graduationYear) targetUser.graduationYear = Number(graduationYear);
+      if (learningGoal) targetUser.learningGoal = learningGoal;
+      if (Array.isArray(skills)) targetUser.skills = skills;
+      if (targetRole) targetUser.targetRole = targetRole;
+      if (placementCategory) targetUser.placementCategory = placementCategory;
+      if (Array.isArray(targetCompanies)) targetUser.targetCompanies = targetCompanies;
+      if (placementTimeline) targetUser.placementTimeline = placementTimeline;
+      if (learningPath) targetUser.learningPath = learningPath;
+
+      await targetUser.save();
+    } else {
+      const rawPassword = password || "UserAuthAccount123!";
+      const hashedPassword = await bcrypt.hash(rawPassword, 12);
+
+      targetUser = new User({
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
+        email: emailCheck,
+        password: hashedPassword,
+        authProvider: isVerifiedSession ? "google" : "local",
+        isClub: isClub || false,
+        mobileNumber: mobileNumber || "",
+        collegeName: collegeNameText,
+        degree: degree || "",
+        branch: branch || "",
+        degreeBranch: degreeBranch || (degree && branch ? `${degree} ${branch}` : degree || branch || ""),
+        graduationYear: graduationYear ? Number(graduationYear) : null,
+        learningGoal: learningGoal || "",
+        skills: Array.isArray(skills) ? skills : [],
+        targetRole: targetRole || "",
+        placementCategory: placementCategory || "",
+        targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
+        placementTimeline: placementTimeline || "",
+        learningPath: learningPath || "",
+        personalizedDetail: personalizedDetail || "",
+        programSelection: programSelection || "Placement Sprint",
+        placementReadiness: placementReadiness || "",
+        dailyCommitment: dailyCommitment || "",
+        declarationAccepted: declarationAccepted || false,
+        batchId: batch._id,
+      });
+
+      await targetUser.save();
+    }
+
+    const token = generatorToken(targetUser._id);
 
     // Check if an admin already created a student profile for this email
     let student = await Student.findOne({ email: emailCheck });
 
     if (student) {
       // Link the existing student profile to the new user account
-      student.userId = newUser._id;
+      student.userId = targetUser._id;
       student.collegeId = student.collegeId || college._id;
       student.batchId = student.batchId || batch._id;
-      student.programSelection = newUser.programSelection;
+      student.programSelection = targetUser.programSelection;
+      student.learningGoal = targetUser.learningGoal;
+      student.skills = targetUser.skills;
+      student.targetRole = targetUser.targetRole;
+      student.placementCategory = targetUser.placementCategory;
+      student.targetCompanies = targetUser.targetCompanies;
+      student.placementTimeline = targetUser.placementTimeline;
+      student.learningPath = targetUser.learningPath;
       await student.save();
     } else {
       // Create matching Student record
       student = await Student.create({
         collegeId: college._id,
         batchId: batch._id,
-        userId: newUser._id,
+        userId: targetUser._id,
         name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
         email: emailCheck,
         primaryTrack: "General Track",
-        programSelection: newUser.programSelection,
+        programSelection: targetUser.programSelection,
+        learningGoal: targetUser.learningGoal,
+        skills: targetUser.skills,
+        targetRole: targetUser.targetRole,
+        placementCategory: targetUser.placementCategory,
+        targetCompanies: targetUser.targetCompanies,
+        placementTimeline: targetUser.placementTimeline,
+        learningPath: targetUser.learningPath,
         status: "Active",
       });
     }
 
-    const enrolledProgram = await syncProgramEnrollment({
-      user: newUser,
+    const enrolledPrograms = await syncProgramEnrollment({
+      user: targetUser,
       student,
       batchId: student.batchId || batch._id,
-      programSelection: newUser.programSelection,
+      programSelection: targetUser.programSelection,
+      onboardingData: req.body,
     });
 
+    const enrolledList = Array.isArray(enrolledPrograms) ? enrolledPrograms : [enrolledPrograms].filter(Boolean);
 
     res.status(201).json({
       message: "User registered successfully",
-      user: {
-        id: newUser._id,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        name: `${newUser.firstName} ${newUser.lastName}`.trim().replace(/\.$/, ""),
-        email: newUser.email,
-        programSelection: newUser.programSelection,
-        programId: newUser.programId || enrolledProgram?._id || null,
-      },
       token,
+      user: {
+        id: targetUser._id,
+        firstName: targetUser.firstName,
+        lastName: targetUser.lastName,
+        name: `${targetUser.firstName} ${targetUser.lastName}`.trim().replace(/\.$/, ""),
+        email: targetUser.email,
+        programSelection: targetUser.programSelection,
+        programId: targetUser.programId || enrolledList[0]?._id || null,
+        learningGoal: targetUser.learningGoal,
+        learningPath: targetUser.learningPath,
+      },
+      assignedPrograms: enrolledList,
     });
   } catch (error) {
     console.error("Register Error:", error);
-    res.status(500).json({ message: "Server Error during registration" });
+    res.status(500).json({ message: error.message || "Server Error" });
   }
 };
 
@@ -372,5 +453,79 @@ export const updateUserProfile = async (req, res) => {
   } catch (error) {
     console.error("Update Error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// 📌 PUT /api/users/preferences
+export const updatePreferences = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const {
+      skills,
+      targetRole,
+      placementCategory,
+      targetCompanies,
+      placementTimeline,
+      learningPath,
+      learningGoal,
+    } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : [];
+    if (targetRole !== undefined) user.targetRole = targetRole;
+    if (placementCategory !== undefined) user.placementCategory = placementCategory;
+    if (targetCompanies !== undefined) user.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
+    if (placementTimeline !== undefined) user.placementTimeline = placementTimeline;
+    if (learningPath !== undefined) user.learningPath = learningPath;
+    if (learningGoal !== undefined) user.learningGoal = learningGoal;
+
+    await user.save();
+
+    let student = await Student.findOne({ userId: user._id });
+    if (!student && user.email) {
+      student = await Student.findOne({ email: user.email.toLowerCase() });
+    }
+
+    if (student) {
+      student.skills = user.skills;
+      student.targetRole = user.targetRole;
+      student.placementCategory = user.placementCategory;
+      student.targetCompanies = user.targetCompanies;
+      student.placementTimeline = user.placementTimeline;
+      student.learningPath = user.learningPath;
+      if (learningGoal) student.learningGoal = user.learningGoal;
+      await student.save();
+    }
+
+    // Re-run program matching
+    const enrolledPrograms = await syncProgramEnrollment({
+      user,
+      student,
+      batchId: student?.batchId || user.batchId,
+      programSelection: user.programSelection,
+      onboardingData: {
+        learningGoal: user.learningGoal,
+        placementCategory: user.placementCategory,
+        targetCompanies: user.targetCompanies,
+        skills: user.skills,
+        targetRole: user.targetRole,
+        learningPath: user.learningPath,
+      },
+    });
+
+    invalidateDashboardCache(userId);
+
+    res.json({
+      message: "Preferences updated and programs matched successfully",
+      user,
+      assignedPrograms: enrolledPrograms,
+    });
+  } catch (error) {
+    console.error("Update Preferences Error:", error);
+    res.status(500).json({ message: error.message || "Failed to update preferences" });
   }
 };

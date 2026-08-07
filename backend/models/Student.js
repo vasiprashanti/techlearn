@@ -55,12 +55,45 @@ const studentSchema = new mongoose.Schema(
       default: "Placement Sprint",
     },
 
+    learningGoal: {
+      type: String,
+      default: "",
+    },
+    skills: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    targetRole: {
+      type: String,
+      default: "",
+    },
+    placementCategory: {
+      type: String,
+      default: "",
+    },
+    targetCompanies: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    placementTimeline: {
+      type: String,
+      default: "",
+    },
+    learningPath: {
+      type: String,
+      enum: ["Free", "Member", ""],
+      default: "",
+    },
+
     status: {
       type: String,
       enum: ["Active", "Inactive", "Suspended"],
       default: "Active",
     },
-
     streak: {
       type: Number,
       default: 0,
