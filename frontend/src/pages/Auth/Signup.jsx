@@ -320,6 +320,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       return;
     }
 
+    if (activeStep === 2 && direction === 1 && goal === 'Exploring TechLearn') {
+      updateOnboardingStep(4);
+      return;
+    }
+
     if (activeStep === 3 && direction === 1 && goal === 'Exploring TechLearn') {
       updateOnboardingStep(4);
       return;
