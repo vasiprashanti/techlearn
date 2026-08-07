@@ -89,6 +89,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
   const toggleAuthMode = () => {
     setIsLoginMode(prev => !prev);
+    setEmail('');
+    setPassword('');
+    setFullName('');
     setStatusMsg({ text: '', type: '' });
   };
 
@@ -174,21 +177,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
     if (isLoginMode) {
       try {
-        if (auth) {
-          try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-            if (!user.emailVerified) {
-              setScreen('verify-email');
-              setStatusMsg({ text: 'Your email is not verified yet. Please check your inbox and verify.', type: 'error' });
-              setLoading(false);
-              return;
-            }
-          } catch (e) {
-            console.warn('Firebase email auth note:', e);
-          }
-        }
-
         const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -199,12 +187,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           localStorage.setItem('token', data.token);
           localStorage.setItem('userData', JSON.stringify(data.user));
           if (setSession) setSession(data.user, data.token);
-          if (refetchUserData) await refetchUserData();
+          if (refetchUserData) refetchUserData();
           handleClose();
           navigateUserByProgram(data.user, navigate);
         } else {
-          const fname = getFirstName(fullName, email);
-          triggerWelcomeScreen(fname);
+          setStatusMsg({ text: data.message || 'Invalid email or password.', type: 'error' });
         }
       } catch (err) {
         console.warn('Login request fallback:', err);
@@ -224,6 +211,21 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         }
       } catch (err) {
         console.warn('Firebase user registration note:', err.message);
+        // If account already exists in Firebase, sign in to send verification email
+        if (err.code === 'auth/email-already-in-use' && auth) {
+          try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            if (!userCredential.user.emailVerified) {
+              await sendEmailVerification(userCredential.user);
+            }
+          } catch (signInErr) {
+            console.warn('Firebase sign-in resend note:', signInErr.message);
+          }
+        } else if (err.code === 'auth/weak-password' || err.code === 'auth/invalid-email') {
+          setLoading(false);
+          setStatusMsg({ text: err.message || 'Invalid details provided.', type: 'error' });
+          return;
+        }
       }
 
       setLoading(false);
