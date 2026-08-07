@@ -147,9 +147,12 @@ export const matchProgramsForUser = async (onboardingData = {}) => {
       }
     }
 
-    if (score > 0) {
-      scoredCandidates.push({ program, score });
+    // Default minimum baseline score for active & public programs
+    if (score === 0) {
+      score = 1;
     }
+
+    scoredCandidates.push({ program, score });
   }
 
   // Sort descending by score

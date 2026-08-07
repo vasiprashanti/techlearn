@@ -177,7 +177,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
     if (isLoginMode) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/auth/login`, {
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const endpoint = baseUrl.endsWith('/api') ? `${baseUrl}/auth/login` : `${baseUrl.replace(/\/+$/, '')}/api/auth/login`;
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -194,9 +196,8 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           setStatusMsg({ text: data.message || 'Invalid email or password.', type: 'error' });
         }
       } catch (err) {
-        console.warn('Login request fallback:', err);
-        const fname = getFirstName(fullName, email);
-        triggerWelcomeScreen(fname);
+        console.error('Login error:', err);
+        setStatusMsg({ text: 'Network error or unable to reach server. Please try again.', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -379,8 +380,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   };
 
   // Step 4 Complete Setup
-  const completeOnboarding = async () => {
-    if (!learningPath) {
+  const completeOnboarding = async (pathChoice) => {
+    const selectedPath = pathChoice || learningPath;
+    if (!selectedPath) {
       setStatusMsg({ text: 'Please choose a learning path (Free or Member).', type: 'error' });
       return;
     }
@@ -407,7 +409,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       placementCategory,
       targetCompanies,
       placementTimeline,
-      learningPath
+      learningPath: selectedPath
     };
 
     try {
@@ -422,7 +424,11 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         setScreen('complete');
         setTimeout(() => {
           handleClose();
-          navigate('/onboarding/programs');
+          if (selectedPath === 'Member') {
+            navigate('/learn/certification/payment');
+          } else {
+            navigate('/onboarding/programs');
+          }
         }, 1800);
         return;
       } else {
@@ -437,7 +443,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
   };
 
   const progressPercent = { 1: 25, 2: 50, 3: 75, 4: 100 }[activeStep] || 0;
-  const isWideScreen = ['step-followup', 'welcome', 'step-recommendation'].includes(screen);
+  const isWideScreen = ['step-followup', 'step-recommendation'].includes(screen);
 
   return (
     <div style={styles.overlay}>
@@ -637,25 +643,35 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           opacity: 0.95 !important;
         }
 
-        .su-btn-primary:active {
-          transform: scale(0.98) !important;
+        .su-btn-row {
+          display: flex !important;
+          gap: 10px !important;
+          width: 100% !important;
+          margin-top: auto !important;
+          padding-top: 8px !important;
+        }
+
+        .su-btn-row .su-btn-primary,
+        .su-btn-row .su-btn-secondary {
+          flex: 1 1 0% !important;
+          width: 50% !important;
         }
 
         .su-btn-secondary {
-          width: 50% !important;
           height: 44px !important;
           border-radius: 12px !important;
           border: none !important;
           background-color: #f2f2f7 !important;
           color: #1c1c1e !important;
           font-family: 'Press Start 2P', cursive !important;
-          font-size: 8px !important;
+          font-size: 10px !important;
           font-weight: 400 !important;
           cursor: pointer !important;
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
           text-transform: uppercase !important;
+          transition: opacity 0.2s, transform 0.1s !important;
         }
 
         .su-btn-secondary-full {
@@ -811,22 +827,23 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
         .su-terminal-frame {
           width: 100% !important;
-          height: auto !important;
-          min-height: 80px !important;
+          height: 310px !important;
           background: #0d1117 !important;
           border: 2px solid #1f2937 !important;
-          border-radius: 10px !important;
+          border-radius: 14px !important;
           overflow: hidden !important;
           position: relative !important;
-          transition: all 0.3s ease !important;
+          display: flex !important;
+          flex-direction: column !important;
         }
 
         .su-terminal-body {
-          padding: 14px !important;
+          padding: 16px !important;
           color: #a3e635 !important;
           font-family: 'Fira Code', monospace !important;
           text-align: left !important;
-          overflow: hidden !important;
+          overflow-y: hidden !important;
+          height: 100% !important;
         }
 
         .su-status-msg {
@@ -893,7 +910,7 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         {/* 1. AUTH SCREEN */}
         {screen === 'auth' && (
           <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-            <h2 className="su-h2">{isLoginMode ? 'Log In' : 'Create Account'}</h2>
+            <h2 className="su-h2">{isLoginMode ? 'Welcome back' : 'Create Account'}</h2>
             <p className="su-description">
               {isLoginMode ? 'Welcome back! Enter your credentials to continue.' : "The future doesn't wait. So shouldn't you."}
             </p>
@@ -1125,9 +1142,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+            <div className="su-btn-row">
               <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
-              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={saveEducationAndNext}>CONTINUE</button>
+              <button type="button" className="su-btn-primary" onClick={saveEducationAndNext}>CONTINUE</button>
             </div>
           </div>
         )}
@@ -1155,9 +1172,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+            <div className="su-btn-row">
               <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
-              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={() => {
+              <button type="button" className="su-btn-primary" onClick={() => {
                 if (!goal) setStatusMsg({ text: 'Please select what brings you here.', type: 'error' });
                 else navigateOnboarding(1);
               }}>CONTINUE</button>
@@ -1169,11 +1186,12 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         {screen === 'step-followup' && (
           <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             <h2 className="su-h2">{goal === 'Learn New Skills' ? 'What do you want to learn?' : 'Tell us more'}</h2>
-            <p className="su-description">{goal === 'Learn New Skills' ? 'Select all skills you want to master.' : 'Personalize your placement journey.'}</p>
+            <p className="su-description" style={{ fontStyle: 'italic' }}>
+              {goal === 'Learn New Skills' ? 'Select all that apply.' : 'Select all that apply.'}
+            </p>
 
             {goal === 'Learn New Skills' && (
               <div className="su-followup-card">
-                <h3>Select Skills (Multiple)</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {['Java', 'Python', 'DSA', 'Web Development', 'SQL', 'AI/ML', 'GenAI', 'Aptitude'].map(s => {
                     const isSelected = skills.includes(s);
@@ -1210,7 +1228,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
                 <div className="su-followup-card">
                   <h3>2. Target Companies</h3>
-                  <label className="su-label">Select Category (Single Choice)</label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                     {['Product Companies', 'Service Companies', 'Startups'].map(cat => (
                       <div
@@ -1228,9 +1245,6 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
                   {placementCategory && (
                     <div>
-                      <label className="su-label" style={{ marginTop: '8px' }}>
-                        Select Companies ({placementCategory}) - Multiple Choice
-                      </label>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {({
                           'Product Companies': ['Google', 'Microsoft', 'Amazon', 'Adobe', 'Flipkart'],
@@ -1273,9 +1287,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+            <div className="su-btn-row">
               <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
-              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={saveFollowUpAndNext}>CONTINUE</button>
+              <button type="button" className="su-btn-primary" onClick={saveFollowUpAndNext}>CONTINUE</button>
             </div>
           </div>
         )}
@@ -1284,47 +1298,138 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
         {screen === 'step-recommendation' && (
           <div style={{ display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             <h2 className="su-h2">Choose your learning path</h2>
-            <p className="su-description">Pick between free or member.</p>
+            <p className="su-description" style={{ fontStyle: 'italic' }}>Select the plan that fits your goals.</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-              {[
-                { id: 'Free', title: 'Free', desc: 'Essential basics' },
-                { id: 'Member', title: 'Member', desc: 'Full career suite' }
-              ].map(p => (
-                <div
-                  key={p.id}
-                  className={`su-select-card ${learningPath === p.id ? 'selected' : ''}`}
-                  onClick={() => setLearningPath(p.id)}
-                  style={{ textAlign: 'center' }}
-                >
-                  <h4>{p.title}</h4>
-                  <p>{p.desc}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px', alignItems: 'stretch' }}>
+              {/* Card 1: Free Access */}
+              <div
+                className={`su-select-card ${learningPath === 'Free' ? 'selected' : ''}`}
+                onClick={() => setLearningPath('Free')}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  padding: '18px 16px',
+                  borderRadius: '18px',
+                  border: learningPath === 'Free' ? '2px solid #a3e635' : '1px solid #e2e8f0',
+                  background: learningPath === 'Free' ? '#f7fee7' : '#ffffff',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  height: '100%'
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.6px', marginBottom: '4px' }}>
+                    Standard Access
+                  </div>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', lineHeight: '1.2' }}>
+                    Free Access
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px 0', fontSize: '11px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#65a30d', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Essential foundational courses
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#65a30d', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Standard learning dashboard
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#65a30d', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Self-paced quizzes & practice
+                    </li>
+                  </ul>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLearningPath('Free'); completeOnboarding('Free'); }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    background: learningPath === 'Free' ? '#a3e635' : '#f8fafc',
+                    color: '#0f172a',
+                    fontWeight: '600',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    marginTop: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  Start for Free
+                </button>
+              </div>
+
+              {/* Card 2: TechLearn Membership */}
+              <div
+                className={`su-select-card ${learningPath === 'Member' ? 'selected' : ''}`}
+                onClick={() => setLearningPath('Member')}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justify: 'space-between',
+                  padding: '18px 16px',
+                  borderRadius: '18px',
+                  border: learningPath === 'Member' ? '2px solid #a3e635' : '2px solid #3b82f6',
+                  background: learningPath === 'Member' ? '#f7fee7' : '#f0f9ff',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  height: '100%'
+                }}
+              >
+                <div style={{ position: 'absolute', top: '-10px', right: '12px', background: '#3b82f6', color: '#ffffff', fontSize: '9px', fontWeight: '700', padding: '3px 10px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', boxShadow: '0 2px 6px rgba(59, 130, 246, 0.3)' }}>
+                  Recommended
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#2563eb', letterSpacing: '0.6px', marginBottom: '4px' }}>
+                    Full Suite
+                  </div>
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '12px', lineHeight: '1.2' }}>
+                    TechLearn Membership
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 16px 0', fontSize: '11px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '12px' }}>✓</span> All premium placement tracks
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Full DSA & System Design suite
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Priority mentor & placement support
+                    </li>
+                    <li style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', lineHeight: '1.3' }}>
+                      <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '12px' }}>✓</span> Verified completion certificates
+                    </li>
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setLearningPath('Member'); completeOnboarding('Member'); }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: learningPath === 'Member' ? '#a3e635' : '#2563eb',
+                    color: learningPath === 'Member' ? '#0f172a' : '#ffffff',
+                    fontWeight: '600',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    marginTop: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  Become a Member
+                </button>
+              </div>
             </div>
 
-            {learningPath && (
-              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '14px', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: 600, color: '#0f172a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  {learningPath} Recommended Courses
-                </h4>
-                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {(learningPath === 'Free'
-                    ? ['HTML Basics', 'CSS Fundamentals', 'JavaScript Fundamentals']
-                    : ['Full Stack Development', 'DSA Interview Preparation', 'System Design', 'Placement Bootcamp']
-                  ).map(c => (
-                    <li key={c} style={{ fontSize: '11px', color: '#334155', display: 'flex', items: 'center', gap: '6px', background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                      <span style={{ color: '#65a30d', fontWeight: 'bold' }}>✓</span> {c}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: 'auto', paddingTop: '8px' }}>
+            <div className="su-btn-row">
               <button type="button" className="su-btn-secondary" onClick={() => navigateOnboarding(-1)}>BACK</button>
-              <button type="button" className="su-btn-primary" style={{ width: '50%' }} onClick={completeOnboarding} disabled={loading}>
-                {loading ? 'SAVING...' : 'FINISH SETUP'}
+              <button type="button" className="su-btn-primary" onClick={() => completeOnboarding(learningPath || 'Free')} disabled={loading}>
+                {loading ? 'SAVING...' : 'CONTINUE'}
               </button>
             </div>
           </div>
@@ -1355,7 +1460,9 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#071244',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     padding: '16px'
   }
 };
