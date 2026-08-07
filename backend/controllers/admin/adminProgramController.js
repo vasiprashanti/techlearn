@@ -180,7 +180,7 @@ export const listPrograms = async (req, res) => {
     });
   } catch (error) {
     console.error("Error listing programs:", error);
-    res.status(500).json({ success: false, message: error.message || "Failed to fetch programs" });
+    res.status(500).json({success: false, message: error.message || "Failed to fetch programs" });
   }
 };
 
