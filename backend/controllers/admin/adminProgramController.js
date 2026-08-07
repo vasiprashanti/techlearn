@@ -7,7 +7,6 @@ import Roadmap from "../../models/Roadmap.js";
 import TrackTemplate from "../../models/TrackTemplate.js";
 import CertificateTemplate from "../../models/CertificateTemplate.js";
 import Project from "../../models/Project.js";
-
 // Whitelist mapping for attachment entity types
 export const ENTITY_CONFIG = {
   batches: {
@@ -74,23 +73,38 @@ export const listPrograms = async (req, res) => {
     const query = {};
 
     // Search filter
-    if (search.trim()) {
-      const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const safeSearch =
+      typeof search === "string"
+        ? search.trim()
+        : "";
+    if (safeSearch) {
+      const searchRegex = new RegExp(safeSearch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       query.$or = [{ name: searchRegex }, { description: searchRegex }, { programType: searchRegex }];
     }
 
     // Program Type filter
-    if (programType.trim()) {
+    if (typeof programType === "string" && programType.trim()) {
       query.programType = programType.trim();
     }
-
     // Status filter
-    if (status.trim()) {
+    // if (status.trim()) {
+    //   query.status = status.trim();
+    // }
+    const allowedStatus = ["Draft", "Active", "Archived"];
+
+    if (typeof status === "string" && status.trim()) {
+      if (!allowedStatus.includes(status.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status filter",
+        });
+      }
+
       query.status = status.trim();
     }
 
     // Month filter based on createdAt (expected format: YYYY-MM or MM)
-    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(month.trim())) {
+    if (typeof month === "string" && /^\d{4}-(0[1-9]|1[0-2])$/.test(month.trim())) {
       const parts = month.trim().split("-");
       if (parts.length === 2) {
         const year = parseInt(parts[0], 10);
@@ -116,8 +130,16 @@ export const listPrograms = async (req, res) => {
     ]);
     const sortOptions = {};
     const safeSortBy = allowedSortFields.has(sortBy) ? sortBy : "createdAt";
-    sortOptions[safeSortBy] = sortOrder === "asc" ? 1 : -1;
+    //sortOptions[safeSortBy] = sortOrder === "asc" ? 1 : -1;
+    const safeSortOrder =
+      sortOrder === "asc"
+        ? "asc"
+        : sortOrder === "desc"
+          ? "desc"
+          : "desc";
 
+    sortOptions[safeSortBy] =
+      safeSortOrder === "asc" ? 1 : -1;
     const totalPrograms = await Program.countDocuments(query);
     const rawPrograms = await Program.find(query)
       .sort(sortOptions)
@@ -158,7 +180,7 @@ export const listPrograms = async (req, res) => {
     });
   } catch (error) {
     console.error("Error listing programs:", error);
-    res.status(500).json({ success: false, message: error.message || "Failed to fetch programs" });
+    res.status(500).json({success: false, message: error.message || "Failed to fetch programs" });
   }
 };
 
@@ -168,24 +190,52 @@ export const listPrograms = async (req, res) => {
  */
 export const createProgram = async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      programType,
-      duration,
-      status,
-      visibility,
-      pricingType,
-      programFee,
-    } = req.body;
-
-    if (!name || !programType || !duration) {
+    const { name, description, programType, duration, status, visibility, pricingType, programFee, } = req.body;
+    if (typeof name !== "string" || !name.trim()) {
       return res.status(400).json({
         success: false,
-        message: "Program name, program type, and duration are required",
+        message: "Program name is required",
       });
     }
-
+    if (typeof programType !== "string" || !programType.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Program type is required",
+      });
+    }
+    if (typeof duration !== "string" || !duration.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Duration is required",
+      });
+    }
+    const allowedStatus = ["Draft", "Active", "Archived"];
+    if (status !== undefined && !allowedStatus.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status",
+      });
+    }
+    const allowedVisibility = ["Public", "Private"];
+    if (visibility !== undefined && !allowedVisibility.includes(visibility)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid visibility",
+      });
+    }
+    const allowedPricing = ["Free", "Paid"];
+    if (pricingType !== undefined && !allowedPricing.includes(pricingType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid pricing type",
+      });
+    }
+    if (description !== undefined && typeof description !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Description must be a string",
+      });
+    }
     let parsedFee = 0;
     if (pricingType === "Paid") {
       parsedFee = Number(programFee);
@@ -196,7 +246,6 @@ export const createProgram = async (req, res) => {
         });
       }
     }
-
     const program = new Program({
       name: name.trim(),
       description: (description || "").trim(),
@@ -209,9 +258,7 @@ export const createProgram = async (req, res) => {
       createdBy: req.user?._id || null,
       updatedBy: req.user?._id || null,
     });
-
     await program.save();
-
     res.status(201).json({
       success: true,
       message: "Program created successfully",
@@ -219,10 +266,12 @@ export const createProgram = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating program:", error);
-    res.status(400).json({ success: false, message: error.message || "Failed to create program" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create program",
+    });
   }
 };
-
 /**
  * GET /api/admin/programs/:programId
  * Get a single program by ID with populated attachment sections
@@ -230,11 +279,9 @@ export const createProgram = async (req, res) => {
 export const getProgramById = async (req, res) => {
   try {
     const { programId } = req.params;
-
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
-
     const program = await Program.findById(programId)
       .populate("batchIds", ENTITY_CONFIG.batches.selectFields)
       .populate("studentIds", ENTITY_CONFIG.students.selectFields)
@@ -244,11 +291,9 @@ export const getProgramById = async (req, res) => {
       .populate("certificateTemplateIds", ENTITY_CONFIG.certificates.selectFields)
       .populate("projectIds", ENTITY_CONFIG.projects.selectFields)
       .lean();
-
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
-
     res.json({
       success: true,
       program,
@@ -258,7 +303,6 @@ export const getProgramById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Failed to fetch program detail" });
   }
 };
-
 /**
  * PATCH /api/admin/programs/:programId
  * Update program metadata and pricing
@@ -266,35 +310,87 @@ export const getProgramById = async (req, res) => {
 export const updateProgram = async (req, res) => {
   try {
     const { programId } = req.params;
-
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
-
     const program = await Program.findById(programId);
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
-
     const {
-      name,
-      description,
-      programType,
-      duration,
-      status,
-      visibility,
-      pricingType,
-      programFee,
-    } = req.body;
+      name, description, programType, duration, status, visibility, pricingType, programFee, } = req.body;
+    //if (name !== undefined) program.name = name.trim();
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Program name cannot be empty",
+        });
+      }
+      program.name = name.trim();
+    }
+    //if (description !== undefined) program.description = description.trim();
+    if (description !== undefined) {
+      if (typeof description !== "string") {
+        return res.status(400).json({
+          success: false,
+          message: "Description must be a string",
+        });
+      }
+      program.description = description.trim();
+    }
+    //if (programType !== undefined) program.programType = programType.trim();
+    if (programType !== undefined) {
+      if (typeof programType !== "string" || !programType.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Program type cannot be empty",
+        });
+      }
 
-    if (name !== undefined) program.name = name.trim();
-    if (description !== undefined) program.description = description.trim();
-    if (programType !== undefined) program.programType = programType.trim();
-    if (duration !== undefined) program.duration = duration.trim();
-    if (status !== undefined) program.status = status;
-    if (visibility !== undefined) program.visibility = visibility;
+      program.programType = programType.trim();
+    }
+    //if (duration !== undefined) program.duration = duration.trim();
+    if (duration !== undefined) {
+      if (typeof duration !== "string" || !duration.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: "Duration cannot be empty",
+        });
+      }
 
+      program.duration = duration.trim();
+    }
+    //if (status !== undefined) program.status = status;
+    const allowedStatus = ["Draft", "Active", "Archived"];
+    if (status !== undefined) {
+      if (!allowedStatus.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status",
+        });
+      }
+      program.status = status;
+    }
+    // if (visibility !== undefined) program.visibility = visibility;
+    const allowedVisibility = ["Public", "Private"];
+    if (visibility !== undefined) {
+      if (!allowedVisibility.includes(visibility)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid visibility",
+        });
+      }
+      program.visibility = visibility;
+    }
+    const allowedPricing = ["Free", "Paid"];
     if (pricingType !== undefined) {
+      if (!allowedPricing.includes(pricingType)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid pricing type",
+        });
+      }
       program.pricingType = pricingType;
       if (pricingType === "Paid") {
         const parsedFee = Number(programFee);
@@ -308,7 +404,8 @@ export const updateProgram = async (req, res) => {
       } else {
         program.programFee = 0;
       }
-    } else if (program.pricingType === "Paid" && programFee !== undefined) {
+    }
+    else if (program.pricingType === "Paid" && programFee !== undefined) {
       const parsedFee = Number(programFee);
       if (isNaN(parsedFee) || parsedFee < 0) {
         return res.status(400).json({
@@ -318,10 +415,8 @@ export const updateProgram = async (req, res) => {
       }
       program.programFee = parsedFee;
     }
-
     program.updatedBy = req.user?._id || program.updatedBy;
     await program.save();
-
     res.json({
       success: true,
       message: "Program updated successfully",
@@ -329,10 +424,12 @@ export const updateProgram = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating program:", error);
-    res.status(400).json({ success: false, message: error.message || "Failed to update program" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update program",
+    });
   }
 };
-
 /**
  * DELETE /api/admin/programs/:programId
  * Delete Program (never deletes attached entities)
@@ -340,16 +437,13 @@ export const updateProgram = async (req, res) => {
 export const deleteProgram = async (req, res) => {
   try {
     const { programId } = req.params;
-
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
-
     const program = await Program.findByIdAndDelete(programId);
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
-
     res.json({
       success: true,
       message: "Program deleted successfully (attached resources were preserved)",
@@ -359,7 +453,6 @@ export const deleteProgram = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Failed to delete program" });
   }
 };
-
 /**
  * GET /api/admin/programs/:programId/available/:entityType
  * Search and paginate attachable entities for a Program
@@ -368,26 +461,21 @@ export const getAvailableEntities = async (req, res) => {
   try {
     const { programId, entityType } = req.params;
     const { search = "", page = 1, limit = 20 } = req.query;
-
     if (!ENTITY_CONFIG[entityType]) {
       return res.status(400).json({
         success: false,
         message: `Unsupported entity type '${entityType}'. Supported: ${Object.keys(ENTITY_CONFIG).join(", ")}`,
       });
     }
-
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
-
     const program = await Program.findById(programId).lean();
     if (!program) {
       return res.status(404).json({ success: false, message: "Program not found" });
     }
-
     const config = ENTITY_CONFIG[entityType];
     const attachedIds = (program[config.fieldKey] || []).map((id) => id.toString());
-
     const searchQuery = {};
     if (search.trim()) {
       const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -397,11 +485,9 @@ export const getAvailableEntities = async (req, res) => {
         searchQuery[config.labelField] = searchRegex;
       }
     }
-
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
     const skip = (pageNum - 1) * limitNum;
-
     const totalCount = await config.model.countDocuments(searchQuery);
     const items = await config.model
       .find(searchQuery)
@@ -410,12 +496,10 @@ export const getAvailableEntities = async (req, res) => {
       .skip(skip)
       .limit(limitNum)
       .lean();
-
     const formattedItems = items.map((item) => ({
       ...item,
       isAttached: attachedIds.includes(item._id.toString()),
     }));
-
     res.json({
       success: true,
       items: formattedItems,
@@ -432,7 +516,6 @@ export const getAvailableEntities = async (req, res) => {
     res.status(500).json({ success: false, message: error.message || "Failed to fetch available entities" });
   }
 };
-
 /**
  * POST /api/admin/programs/:programId/attachments/:entityType
  * Attach one or multiple existing entities to a Program
@@ -448,15 +531,12 @@ export const attachEntities = async (req, res) => {
         message: `Unsupported entity type '${entityType}'`,
       });
     }
-
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ success: false, message: "Invalid program ID format" });
     }
-
     if (!Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ success: false, message: "ids array is required and cannot be empty" });
     }
-
     const invalidIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
     if (invalidIds.length > 0) {
       return res.status(400).json({
@@ -465,42 +545,58 @@ export const attachEntities = async (req, res) => {
         invalidIds,
       });
     }
-
     const validIds = [...new Set(ids.map((id) => id.toString()))];
-
     const config = ENTITY_CONFIG[entityType];
-
-    // Verify target entities exist
-    const existingEntities = await config.model.find({ _id: { $in: validIds } }).select("_id").lean();
-    const existingEntityIds = existingEntities.map((e) => e._id);
-
-    if (existingEntityIds.length === 0) {
-      return res.status(404).json({ success: false, message: "None of the specified target entities were found" });
+    const program = await Program.findById(programId);
+    if (!program) {
+      return res.status(404).json({
+        success: false,
+        message: "Program not found",
+      });
     }
-
-    const updateQuery = {};
-    updateQuery[config.fieldKey] = { $each: existingEntityIds };
-
-    const updatedProgram = await Program.findByIdAndUpdate(
-      programId,
-      {
-        $addToSet: updateQuery,
-        $set: { updatedBy: req.user?._id || null },
-      },
-      { new: true, runValidators: true }
-    )
-      .populate(config.fieldKey, config.selectFields)
+    // Verify ALL requested entities exist
+    const existingEntities = await config.model
+      .find({ _id: { $in: validIds } })
+      .select("_id")
       .lean();
-
-    if (!updatedProgram) {
-      return res.status(404).json({ success: false, message: "Program not found" });
+    if (existingEntities.length !== validIds.length) {
+      const foundIds = existingEntities.map((e) => e._id.toString());
+      const missingIds = validIds.filter(
+        (id) => !foundIds.includes(id)
+      );
+      return res.status(404).json({
+        success: false,
+        message: "One or more requested resources do not exist.",
+        missingIds,
+      });
     }
-
+    const attachedIds = (program[config.fieldKey] || []).map((id) =>
+      id.toString()
+    );
+    const duplicateIds = validIds.filter((id) =>
+      attachedIds.includes(id)
+    );
+    if (duplicateIds.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "One or more resources are already attached.",
+        duplicateIds,
+      });
+    }
+    program[config.fieldKey].push(
+      ...existingEntities.map((e) => e._id)
+    );
+    program.updatedBy = req.user?._id || null;
+    await program.save();
+    await program.populate(
+      config.fieldKey,
+      config.selectFields
+    );
     res.json({
       success: true,
-      message: `Successfully attached ${existingEntityIds.length} ${entityType}`,
-      program: updatedProgram,
-      attachedEntities: updatedProgram[config.fieldKey],
+      message: `${validIds.length} ${entityType} attached successfully.`,
+      program,
+      attachedEntities: program[config.fieldKey],
     });
   } catch (error) {
     console.error("Error attaching entities:", error);
@@ -527,30 +623,42 @@ export const detachEntity = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid ID format" });
     }
 
+    // const config = ENTITY_CONFIG[entityType];
+
+    // const updateQuery = {};
+    // updateQuery[config.fieldKey] = entityId;
     const config = ENTITY_CONFIG[entityType];
 
-    const updateQuery = {};
-    updateQuery[config.fieldKey] = entityId;
+    const program = await Program.findById(programId);
 
-    const updatedProgram = await Program.findByIdAndUpdate(
-      programId,
-      {
-        $pull: updateQuery,
-        $set: { updatedBy: req.user?._id || null },
-      },
-      { new: true, runValidators: true }
-    )
-      .populate(config.fieldKey, config.selectFields)
-      .lean();
-
-    if (!updatedProgram) {
-      return res.status(404).json({ success: false, message: "Program not found" });
+    if (!program) {
+      return res.status(404).json({
+        success: false,
+        message: "Program not found",
+      });
     }
-
+    const attachedIds = (program[config.fieldKey] || []).map((id) =>
+      id.toString()
+    );
+    if (!attachedIds.includes(entityId)) {
+      return res.status(404).json({
+        success: false,
+        message: `${entityType} is not attached to this program`,
+      });
+    }
+    program[config.fieldKey] = program[config.fieldKey].filter(
+      (id) => id.toString() !== entityId
+    );
+    program.updatedBy = req.user?._id || null;
+    await program.save();
+    await program.populate(
+      config.fieldKey,
+      config.selectFields
+    );
     res.json({
       success: true,
       message: `Successfully detached entity from ${entityType}`,
-      program: updatedProgram,
+      program,
     });
   } catch (error) {
     console.error("Error detaching entity:", error);
