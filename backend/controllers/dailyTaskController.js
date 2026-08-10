@@ -4,6 +4,8 @@ import TrackTemplate from "../models/TrackTemplate.js";
 import Question from "../models/Questions.js";
 import DailyTaskAttempt from "../models/DailyTaskAttempt.js";
 import UserProgress from "../models/UserProgress.js";
+import Program from "../models/Program.js";
+import ProgramEnrollment from "../models/ProgramEnrollment.js";
 import { calculateTaskXP, TASK_XP } from "../services/xpService.js";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import { updateStudentStreak } from "../utils/streakUtil.js";
@@ -40,28 +42,64 @@ const combineDateAndTime = (date, timeString = "00:00") => {
   return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
+const resolveTrackTemplateForStudent = async (student, batch) => {
+  if (batch?.assignedDailyTaskTrack) {
+    const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack);
+    if (trackTemplate && trackTemplate.trackType === "Daily Task") return trackTemplate;
+  }
+  if (batch?.assignedTrackTemplateIds?.length) {
+    const trackTemplate = await TrackTemplate.findOne({
+      _id: { $in: batch.assignedTrackTemplateIds },
+      trackType: "Daily Task",
+      status: "Active",
+    });
+    if (trackTemplate) return trackTemplate;
+  }
+  let program = null;
+  if (student.programId) {
+    program = await Program.findById(student.programId).lean();
+  }
+  if (!program && student.programSelection) {
+    program = await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
+  }
+  if (program?.trackTemplateIds?.length) {
+    const trackTemplate = await TrackTemplate.findOne({
+      _id: { $in: program.trackTemplateIds },
+      trackType: "Daily Task",
+      status: "Active",
+    });
+    if (trackTemplate) return trackTemplate;
+  }
+  return TrackTemplate.findOne({ trackType: "Daily Task", status: "Active" }).sort({ createdAt: -1 });
+};
+
+const getIndividualStartDate = async (student, userId) => {
+  if (userId) {
+    const enrollment = await ProgramEnrollment.findOne({ userId, status: "Active" }).lean();
+    if (enrollment?.assignedAt) return enrollment.assignedAt;
+  }
+  return student.createdAt || new Date();
+};
+
 export const getTodayDailyTasks = async (req, res) => {
   try {
     const userId = req.user._id;
     const email = req.user.email.toLowerCase().trim();
 
-    // 1. Resolve student and batch
+    // 1. Resolve student and optional batch
     const student = await Student.findOne({ email });
     if (!student) {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }
 
-    const batch = await Batch.findById(student.batchId);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "No batch assigned to student." });
-    }
-
-    if (batch.status !== BATCH_STATUS.ACTIVE) {
+    const batch = student.batchId ? await Batch.findById(student.batchId) : null;
+    if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
       return res.status(403).json({ success: false, message: "This batch is currently not active." });
     }
 
     // 2. Resolve Daily Task template track
-    if (!batch.assignedDailyTaskTrack) {
+    const trackTemplate = await resolveTrackTemplateForStudent(student, batch);
+    if (!trackTemplate || trackTemplate.trackType !== "Daily Task") {
       return res.status(200).json({
         success: true,
         data: {
@@ -73,17 +111,12 @@ export const getTodayDailyTasks = async (req, res) => {
       });
     }
 
-    const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack);
-    if (!trackTemplate || trackTemplate.trackType !== "Daily Task") {
-      return res.status(404).json({ success: false, message: "Assigned Daily Task track template not found." });
-    }
-
     // 3. Resolve active day number
-    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task");
-    const batchEnd = endOfDay(batch.expiryDate);
+    const individualStartDate = batch ? null : await getIndividualStartDate(student, userId);
+    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
     const now = new Date();
 
-    if (dayNumber === 0 || now > batchEnd) {
+    if (batch?.expiryDate && now > endOfDay(batch.expiryDate)) {
       return res.status(200).json({
         success: true,
         data: {
@@ -112,7 +145,7 @@ export const getTodayDailyTasks = async (req, res) => {
     // Populate day assignment tasks
     const tasksAssigned = (dayAssignment.tasks || []).filter((task) =>
       (task.status || "Published") === "Published" &&
-      (!task.batchId || String(task.batchId) === String(batch._id))
+      (!batch || !task.batchId || String(task.batchId) === String(batch._id))
     );
     const populatedTasks = [];
 
@@ -276,25 +309,19 @@ export const submitDailyTask = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student record not found." });
     }
 
-    const batch = await Batch.findById(student.batchId);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: "Batch not found." });
-    }
+    const batch = student.batchId ? await Batch.findById(student.batchId) : null;
 
-    if (!batch.assignedDailyTaskTrack) {
-      return res.status(400).json({ success: false, message: "No Daily Task track assigned to this batch." });
-    }
-
-    const trackTemplate = await TrackTemplate.findById(batch.assignedDailyTaskTrack).populate("dayAssignments.tasks.questionId");
+    const trackTemplate = await resolveTrackTemplateForStudent(student, batch);
     if (!trackTemplate) {
       return res.status(404).json({ success: false, message: "Track template not found." });
     }
 
-    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task");
+    const individualStartDate = batch ? null : await getIndividualStartDate(student, userId);
+    const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Task", individualStartDate);
 
     let attempt = await DailyTaskAttempt.findOne({
       userId,
-      batchId: batch._id,
+      ...(batch ? { batchId: batch._id } : {}),
       trackId: trackTemplate._id,
       dayNumber,
     });

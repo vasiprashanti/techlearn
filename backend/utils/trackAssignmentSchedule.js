@@ -1,21 +1,31 @@
-export const getTrackAssignmentDate = (batch, trackType) => {
-  if (batch.startDate) {
-    return batch.startDate;
+export const getTrackAssignmentDate = (batch, trackType, individualStartDate) => {
+  if (batch) {
+    if (batch.startDate) {
+      return new Date(batch.startDate);
+    }
+
+    const getBaseDate = () => {
+      if (trackType === "Daily Task") {
+        return batch.assignedDailyTaskTrackAt || batch.assignedTrackTemplateAt;
+      }
+
+      if (trackType === "Daily Challenge") {
+        return batch.assignedDailyChallengeTrackAt || batch.assignedTrackTemplateAt;
+      }
+
+      return batch.assignedTrackTemplateAt;
+    };
+
+    const baseDate = getBaseDate();
+    if (baseDate) return new Date(baseDate);
   }
 
-  const getBaseDate = () => {
-    if (trackType === "Daily Task") {
-      return batch.assignedDailyTaskTrackAt || batch.assignedTrackTemplateAt;
-    }
+  if (individualStartDate) {
+    const d = new Date(individualStartDate);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
 
-    if (trackType === "Daily Challenge") {
-      return batch.assignedDailyChallengeTrackAt || batch.assignedTrackTemplateAt;
-    }
-
-    return batch.assignedTrackTemplateAt;
-  };
-
-  return getBaseDate() || new Date();
+  return new Date();
 };
 
 const getISTDateParts = (date) => {
@@ -37,8 +47,8 @@ export const combineDateAndTime = (date, timeString = "00:00") => {
   return new Date(utcTime - 5.5 * 60 * 60 * 1000);
 };
 
-export const calculateCurrentDayNumber = (batch, trackTemplate, trackType) => {
-  const trackAssignmentDate = getTrackAssignmentDate(batch, trackType);
+export const calculateCurrentDayNumber = (batch, trackTemplate, trackType, individualStartDate) => {
+  const trackAssignmentDate = getTrackAssignmentDate(batch, trackType, individualStartDate);
   const now = new Date();
   
   let currentDay = 0;
@@ -69,6 +79,7 @@ export const calculateCurrentDayNumber = (batch, trackTemplate, trackType) => {
     }
   }
   
-  return currentDay;
+  return Math.max(1, currentDay);
 };
+
 

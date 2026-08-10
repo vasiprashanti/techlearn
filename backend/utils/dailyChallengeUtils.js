@@ -202,58 +202,59 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  const batch = studentContext.student
+  const batch = studentContext.student?.batchId
     ? await Batch.findById(studentContext.student.batchId)
-    : await ensureDemoBatch();
+    : (studentContext.student ? null : await ensureDemoBatch());
 
-  console.log("[DAILY_CHALLENGE_DEBUG] Student Context:", {
-    studentId: studentContext.student?._id,
-    studentEmail: studentContext.studentEmail,
-    studentBatchId: studentContext.student?.batchId,
-    accessSource: studentContext.accessSource,
-  });
-
-  console.log("[DAILY_CHALLENGE_DEBUG] Batch Resolved:", {
-    batchId: batch?._id,
-    batchName: batch?.name,
-    status: batch?.status,
-    startDate: batch?.startDate,
-    expiryDate: batch?.expiryDate,
-    releaseTime: batch?.releaseTime,
-    assignedTrack: batch?.assignedTrack,
-  });
-
-  if (!batch) {
-    const error = new Error("No batch is assigned for this Daily Challenge access.");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (batch.status !== BATCH_STATUS.ACTIVE) {
+  if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
     const error = new Error("This batch is not active for Daily Challenge access.");
     error.statusCode = 403;
     throw error;
   }
 
   const TrackTemplate = mongoose.model("TrackTemplate");
-  let trackTemplate = batch.assignedDailyChallengeTrack
-    ? await TrackTemplate.findById(batch.assignedDailyChallengeTrack)
-    : null;
+  let trackTemplate = null;
+  if (batch) {
+    trackTemplate = batch.assignedDailyChallengeTrack
+      ? await TrackTemplate.findById(batch.assignedDailyChallengeTrack)
+      : null;
+    if (!trackTemplate) {
+      const candidateTemplateIds = [
+        ...(batch.assignedTrackTemplateIds || []),
+        batch.assignedTrackTemplate,
+      ].filter(Boolean);
+      if (candidateTemplateIds.length) {
+        trackTemplate = await TrackTemplate.findOne({
+          _id: { $in: candidateTemplateIds },
+          trackType: "Daily Challenge",
+          status: "Active",
+        });
+      }
+    }
+  }
+
   if (!trackTemplate) {
-    const candidateTemplateIds = [
-      ...(batch.assignedTrackTemplateIds || []),
-      batch.assignedTrackTemplate,
-    ].filter(Boolean);
-    if (candidateTemplateIds.length) {
+    const Program = mongoose.model("Program");
+    let program = studentContext.student?.programId
+      ? await Program.findById(studentContext.student.programId).lean()
+      : null;
+    if (!program && studentProgram) {
+      program = await Program.findOne({ programType: studentProgram, status: "Active" }).sort({ createdAt: -1 }).lean();
+    }
+    if (program?.trackTemplateIds?.length) {
       trackTemplate = await TrackTemplate.findOne({
-        _id: { $in: candidateTemplateIds },
+        _id: { $in: program.trackTemplateIds },
         trackType: "Daily Challenge",
         status: "Active",
       });
     }
+    if (!trackTemplate) {
+      trackTemplate = await TrackTemplate.findOne({ trackType: "Daily Challenge", status: "Active" }).sort({ createdAt: -1 });
+    }
   }
-  const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Challenge");
-  const batchEnd = endOfDay(batch.expiryDate);
+
+  const individualStartDate = batch ? null : (studentContext.student?.createdAt || user?.createdAt || new Date());
+  const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Challenge", individualStartDate);
   const now = new Date();
 
   if (dayNumber === 0) {
@@ -262,7 +263,7 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  if (now > batchEnd) {
+  if (batch?.expiryDate && now > endOfDay(batch.expiryDate)) {
     const error = new Error("This batch has expired for Daily Challenge access.");
     error.statusCode = 403;
     throw error;

@@ -878,7 +878,7 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
   const statusColor = statusBadgeClass(program.status);
 
   return (
-    <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
+    <article className={`relative rounded-xl overflow-hidden border ${selected ? 'border-[#3C83F6] ring-1 ring-[#3C83F6]/50 dark:border-blue-400 dark:ring-blue-400/50' : 'border-black/10 dark:border-white/15'} bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] h-full flex flex-col justify-between hover:bg-white dark:hover:bg-[#162a52] hover:shadow-md transition-all duration-300 group`}>
       {/* Checkbox — top-left */}
       <div className="absolute left-3 top-2.5 z-20">
         <input
@@ -924,38 +924,42 @@ function ProgramCard({ program, selected, onSelectToggle, onEdit, onDelete, onVi
         )}
       </div>
 
-      {/* Tinted Top Panel — matches CategoryCard's topTint */}
+      {/* Tinted Top Panel — Fixed height for 100% uniform card grid layout */}
       <div
-        className="px-4 pt-4 pb-3.5 min-h-[80px] border-b border-black/10 dark:border-white/15 bg-[#d8e6ef] dark:bg-[#24384e] pl-11 pr-9 flex flex-col justify-center cursor-pointer"
+        className="px-4 pt-3 pb-2.5 min-h-[112px] border-b border-black/10 dark:border-white/15 bg-[#dbe7f3]/90 dark:bg-[#1a2d48] pl-10 pr-9 flex flex-col justify-between cursor-pointer"
         onClick={onView}
       >
-        <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase mb-1.5 ${statusColor}`}>
+        <span className={`inline-flex self-start px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusColor}`}>
           {program.status}
         </span>
-        <h3 className="text-xs md:text-sm leading-snug font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
-        <p className="mt-0.5 text-[10px] md:text-[11px] leading-tight text-slate-500 dark:text-slate-400 truncate">{program.programType}</p>
+        <div className="min-h-[38px] flex items-center py-0.5">
+          <h3 className="text-xs md:text-sm leading-tight font-bold text-slate-900 dark:text-white line-clamp-2">{program.name}</h3>
+        </div>
+        <p className="text-[10px] md:text-[11px] leading-snug text-slate-500 dark:text-slate-400 truncate pb-0.5">{program.programType}</p>
       </div>
 
       {/* Bottom Panel */}
-      <div className="px-4 py-3.5 mt-auto bg-white/70 dark:bg-transparent flex flex-col gap-2 text-left">
-        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
-          <span>Duration</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums truncate max-w-[100px]">{program.duration || '—'}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
-          <span>Students</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{program.studentCount || 0}</span>
-        </div>
-        <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
-          <span>Pricing</span>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">
-            {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
-          </span>
+      <div className="px-4 py-3.5 flex-1 flex flex-col justify-between gap-3 text-left bg-white/70 dark:bg-transparent">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
+            <span>Duration</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums truncate max-w-[100px]">{program.duration || '—'}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
+            <span>Students</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200 tabular-nums">{program.studentCount || 0}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-[11px] md:text-[12px] text-slate-500 dark:text-slate-400">
+            <span>Pricing</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
+            </span>
+          </div>
         </div>
 
         <button
           onClick={onView}
-          className="mt-3 w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+          className="w-full h-9 rounded-xl bg-[#3C83F6] hover:bg-[#2f73e0] dark:bg-[#bceaff] dark:hover:bg-[#a6e2ff] dark:text-[#06224d] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
         >
           <FiEye className="w-3.5 h-3.5" /> View Program
         </button>
