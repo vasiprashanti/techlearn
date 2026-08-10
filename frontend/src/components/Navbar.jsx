@@ -141,25 +141,38 @@ const Navbar = () => {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center" style={{ gap: '62px' }}>
           <Link
-            to="/learn"
+            to={location.pathname === '/onboarding/programs' ? '#' : '/learn'}
+            onClick={(e) => {
+              if (location.pathname === '/onboarding/programs') {
+                e.preventDefault();
+              }
+            }}
             className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}
+              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
           >
             Learn
           </Link>
           <Link
-            to="/dashboard"
+            to={location.pathname === '/onboarding/programs' ? '#' : '/dashboard'}
+            onClick={(e) => {
+              if (location.pathname === '/onboarding/programs') {
+                e.preventDefault();
+              }
+            }}
             className={`relative text-[15px] font-extralight transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-[-2px] 
               after:h-px after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b]'}
+              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
           >
             Dashboard
           </Link>
+
 
           {isAuthenticated ? (
             <div className="relative" ref={userMenuRef}>
@@ -254,28 +267,43 @@ const Navbar = () => {
       >
         <div className="flex flex-col w-full">
           <Link
-            to="/learn"
-            onClick={closeMenu}
+            to={location.pathname === '/onboarding/programs' ? '#' : '/learn'}
+            onClick={(e) => {
+              if (location.pathname === '/onboarding/programs') {
+                e.preventDefault();
+                return;
+              }
+              closeMenu();
+            }}
             className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/learn') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}
+              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
           >
             Learn
           </Link>
           <Link
-            to="/dashboard"
-            onClick={closeMenu}
+            to={location.pathname === '/onboarding/programs' ? '#' : '/dashboard'}
+            onClick={(e) => {
+              if (location.pathname === '/onboarding/programs') {
+                e.preventDefault();
+                return;
+              }
+              closeMenu();
+            }}
             className={`relative block py-1.5 text-[14px] transition-all duration-300 ease-in-out 
               hover:after:w-full after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-px 
               after:bg-current after:transition-all after:duration-300 after:ease-in-out 
               ${location.pathname.startsWith('/dashboard') ? 'after:w-full' : 'after:w-0'} 
-              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}`}
+              ${isDarkMode ? 'text-[#e0e6f5] hover:text-white' : 'text-[#00113b] hover:text-[#001b5c]'}
+              ${location.pathname === '/onboarding/programs' ? 'cursor-not-allowed opacity-70 hover:after:w-0' : ''}`}
           >
             Dashboard
           </Link>
         </div>
+
 
         <div className="flex flex-col w-full">
           {isAuthenticated ? (
