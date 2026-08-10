@@ -173,8 +173,28 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
       return;
     }
 
+    // Front-end email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setStatusMsg({ text: 'Please enter a valid email address.', type: 'error' });
+      return;
+    }
+
+    // Front-end password validation on signup (strictly enforcing all 4 criteria)
+    if (!isLoginMode) {
+      if (!hasMinLength || !hasUppercase || !hasNumber || !hasSpecialChar) {
+        setStatusMsg({
+          text: 'Password must meet all 4 requirements: at least 8 characters, an uppercase letter, a number, and a special character.',
+          type: 'error'
+        });
+        return;
+      }
+    }
+
+
     setIsGoogleAuth(false);
     setLoading(true);
+
 
     if (isLoginMode) {
       try {
@@ -192,8 +212,9 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
-          // Case A — Enrolled Cohort Student without placement onboarding completed
-          if (data.user?.isEnrolledStudent && !data.user?.targetRole) {
+          // Only trigger onboarding if the user has NOT completed onboarding (missing targetRole and missing programId)
+          const hasCompletedOnboarding = Boolean(data.user?.targetRole || data.user?.programId);
+          if (!hasCompletedOnboarding && data.user?.isEnrolledStudent) {
             setFullName(data.user.firstName || 'Student');
             setEmail(data.user.email || '');
             setIsEnrolledShortOnboarding(true);
@@ -206,6 +227,8 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
 
           handleClose();
           navigateUserByProgram(data.user, navigate);
+
+
         } else {
           setStatusMsg({ text: data.message || 'Invalid email or password.', type: 'error' });
         }
@@ -473,7 +496,13 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (selectedPath === 'Member') {
             navigate('/learn/certification/payment');
           } else {
-            navigate('/onboarding/programs');
+            navigate('/onboarding/programs', {
+              state: {
+                targetRole: payload.targetRole,
+                skills: payload.skills,
+                learningGoal: payload.learningGoal,
+              }
+            });
           }
         }, 1800);
         return;

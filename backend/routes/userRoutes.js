@@ -4,6 +4,7 @@ import {
   loginUser,
   updateUserProfile,
   updatePreferences,
+  updateProgramTier,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -14,5 +15,7 @@ userRoutes.post("/login", loginUser);
 
 userRoutes.put("/user/:id", updateUserProfile);
 userRoutes.put("/preferences", protect, updatePreferences);
+userRoutes.post("/update-program-tier", protect, updateProgramTier);
 
 export default userRoutes;
+

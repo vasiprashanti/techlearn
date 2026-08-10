@@ -73,6 +73,9 @@ const buildDashboardUserPayload = (user, linkedStudent) => {
     programSelection: linkedStudent?.programSelection || user?.programSelection || "Placement Sprint",
     programId: user?.programId || linkedStudent?.programId || null,
     streak: linkedStudent?.streak || 0,
+    learningGoal: user?.learningGoal || linkedStudent?.learningGoal || "",
+    targetRole: user?.targetRole || linkedStudent?.targetRole || "",
+    skills: user?.skills || linkedStudent?.skills || [],
   };
 };
 
@@ -90,7 +93,7 @@ export const getDashboardData = async (req, res) => {
     }
 
     const [user, progress, totalExercises, notesMcqCounts] = await Promise.all([
-      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection programId").lean(),
+      User.findById(userId).select("avatar photoUrl email firstName lastName name role programSelection programId learningGoal targetRole skills").lean(),
       UserProgress.findOne({ userId })
         .select("courseXP exerciseXP projectXP completedExercises answeredCheckpointMcqs createdAt")
         .populate({

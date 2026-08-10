@@ -77,8 +77,11 @@ const formatAuthUser = (user, student = null, batch = null) => ({
   startDate: user.startDate || batch?.startDate || null,
   programSelection: user.programSelection,
   programId: user.programId || student?.programId || null,
-  isEnrolledStudent: !!student,
+  isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId),
+  targetRole: user.targetRole || student?.targetRole || "",
+  learningGoal: user.learningGoal || student?.learningGoal || "",
 });
+
 
 import { registerUser } from "../controllers/userController.js";
 

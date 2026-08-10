@@ -25,9 +25,10 @@ const isValidEmail = (email) => {
 
 // Password validation helper
 const isValidPassword = (password) => {
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{6,}$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
   return passwordRegex.test(password);
 };
+
 
 const ensureDefaultProjectExists = async () => {
   try {
@@ -348,6 +349,8 @@ export const registerUser = async (req, res) => {
         programId: targetUser.programId || enrolledList[0]?._id || null,
         learningGoal: targetUser.learningGoal,
         learningPath: targetUser.learningPath,
+        targetRole: targetUser.targetRole,
+        skills: targetUser.skills || [],
       },
       assignedPrograms: enrolledList,
     });
@@ -409,6 +412,10 @@ export const loginUser = async (req, res) => {
         avatar: user.avatar || "",
         role: user.role,
         isClub: user.isClub,
+        targetRole: user.targetRole || "",
+        learningGoal: user.learningGoal || "",
+        programId: user.programId || null,
+        isEnrolledStudent: user.isClub || Boolean(user.batchId),
       },
       token,
     });
@@ -417,6 +424,7 @@ export const loginUser = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
 
 // 📌 PUT /api/user/:id
 export const updateUserProfile = async (req, res) => {
@@ -529,3 +537,44 @@ export const updatePreferences = async (req, res) => {
     res.status(500).json({ message: error.message || "Failed to update preferences" });
   }
 };
+
+/**
+ * POST /api/users/update-program-tier
+ * Updates program tier subscription for user (Placement vs Skill)
+ */
+export const updateProgramTier = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { planId, learningGoal, targetRole, selectedSkill } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (learningGoal) user.learningGoal = learningGoal;
+    if (targetRole) user.targetRole = targetRole;
+    if (selectedSkill && (!user.skills || user.skills.length === 0)) {
+      user.skills = [selectedSkill];
+    }
+    user.learningPath = planId;
+
+    await user.save();
+    invalidateDashboardCache(userId);
+
+    res.json({
+      success: true,
+      message: "Program tier updated successfully",
+      user: {
+        _id: user._id,
+        learningGoal: user.learningGoal,
+        targetRole: user.targetRole,
+        learningPath: user.learningPath,
+      },
+    });
+  } catch (error) {
+    console.error("Update Program Tier Error:", error);
+    res.status(500).json({ message: error.message || "Failed to update program tier" });
+  }
+};
+

@@ -16,8 +16,8 @@ const combineDateAndTime = (dateValue, timeValue = "00:00") => {
   return date;
 };
 
-const getCurrentDayFromAssignment = (assignment, batch) => {
-  const assignmentDate = assignment?.assignedAt || assignment?.activatedAt || batch?.assignedTrackTemplateAt || batch?.startDate || new Date();
+const getCurrentDayFromAssignment = (assignment, batch, student) => {
+  const assignmentDate = assignment?.assignedAt || assignment?.activatedAt || batch?.assignedTrackTemplateAt || batch?.startDate || student?.createdAt || new Date();
   const releaseStart = combineDateAndTime(assignmentDate, batch?.releaseTime || "00:00");
   const elapsedDays = Math.floor((Date.now() - releaseStart.getTime()) / DAY_MS);
   return Math.max(1, elapsedDays + 1);
