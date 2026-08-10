@@ -174,8 +174,8 @@ export default function OnboardingPrograms() {
       badge: 'ADDITIONAL SKILLS',
       highlight: false,
       icon: Sparkles,
-      color: 'border-purple-500 bg-purple-50/60 dark:bg-purple-950/30 shadow-xl shadow-purple-500/10',
-      btnStyle: 'bg-purple-600 text-white font-extrabold hover:bg-purple-700 shadow-lg shadow-purple-500/25',
+      color: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30 shadow-xl shadow-blue-500/10',
+      btnStyle: 'bg-[#3c83f6] text-white font-extrabold hover:bg-blue-600 shadow-lg shadow-blue-500/25',
       features: [
         'Available after purchasing a ₹499 Skill Program',
         `Access multiple skill programs (${displaySkills}, and more)`,
@@ -197,7 +197,7 @@ export default function OnboardingPrograms() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-[#060d1a] text-[#0f172a] dark:text-[#f1f5f9] font-sans selection:bg-[#3c83f6]/20">
+    <div className="relative isolate min-h-screen bg-[#f8fafc] dark:bg-[#060d1a] text-[#0f172a] dark:text-[#f1f5f9] font-sans selection:bg-[#3c83f6]/20">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         .ob-pixel-heading {
@@ -205,15 +205,15 @@ export default function OnboardingPrograms() {
         }
       `}</style>
 
-      {/* VIEWPORT 1: HERO SECTION */}
-      <section className="relative isolate overflow-hidden min-h-[calc(100vh-64px)] flex flex-col justify-center items-center">
-        {/* Soft background ambient gradient */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent dark:from-blue-600/15"
-        />
+      {/* Global Ambient Background Glow spanning whole page uniformly */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent dark:from-blue-600/15"
+      />
 
-        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 py-16 text-center sm:py-24">
+      {/* VIEWPORT 1: HERO SECTION - TAKES EXACT FULL VIEWPORT HEIGHT */}
+      <section className="relative w-full min-h-[calc(100vh-64px)] flex flex-col justify-center items-center px-4 py-6">
+        <div className="mx-auto flex max-w-3xl flex-col items-center px-6 text-center">
           
           {/* Target Role / Selected Skill Tag Badge */}
           <motion.div
@@ -231,14 +231,15 @@ export default function OnboardingPrograms() {
             </span>
           </motion.div>
 
-          {/* Title */}
+          {/* Two-Line Title */}
           <motion.h1
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="ob-pixel-heading mt-8 text-[clamp(1.15rem,4.2vw,2.2rem)] leading-[1.6] bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] bg-clip-text text-transparent uppercase tracking-wider"
+            className="ob-pixel-heading mt-8 flex flex-col items-center gap-2.5 text-[clamp(1.15rem,4.2vw,2.2rem)] leading-[1.4] bg-gradient-to-r from-[#53b6ff] via-[#45a2ff] to-[#3c83f6] bg-clip-text text-transparent uppercase tracking-wider"
           >
-            {isPlacement ? 'PLACEMENT PROGRAM TIERS' : 'SKILL PROGRAM TIERS'}
+            <span>{isPlacement ? 'PLACEMENT PROGRAM' : 'SKILL PROGRAM'}</span>
+            <span>TIERS</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -277,7 +278,7 @@ export default function OnboardingPrograms() {
             </p>
           </motion.div>
 
-          {/* Check Pricing Button */}
+          {/* Check Pricing Button (Green Neon Style with Press Start 2P Font) */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -287,10 +288,10 @@ export default function OnboardingPrograms() {
             <button
               type="button"
               onClick={handleCheckPricing}
-              className="group inline-flex h-12 items-center justify-center rounded-full bg-[#3c83f6] hover:bg-blue-600 text-white px-8 text-sm font-semibold tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-blue-500/25 active:scale-95"
+              className="group inline-flex h-12 items-center justify-center rounded-xl bg-[#a3e635] hover:bg-[#86efac] text-slate-950 px-8 text-[10px] sm:text-xs tracking-widest uppercase transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-[#a3e635]/25 active:scale-95 cursor-pointer ob-pixel-heading font-normal"
             >
-              <span>Check Pricing</span>
-              <ArrowDown className="ml-2 h-4 w-4 transition-transform group-hover:translate-y-1" />
+              <span>CHECK PRICING</span>
+              <ArrowDown className="ml-2.5 h-4 w-4 transition-transform group-hover:translate-y-1" />
             </button>
           </motion.div>
 
@@ -298,8 +299,8 @@ export default function OnboardingPrograms() {
       </section>
 
 
-      {/* VIEWPORT 2: PRICING PLANS SECTION */}
-      <section id="pricing" className="min-h-screen w-full flex flex-col justify-center items-center px-4 py-8 sm:py-12 bg-slate-50/50 dark:bg-[#081224]/50 border-t border-slate-200/60 dark:border-slate-800/60">
+      {/* VIEWPORT 2: PRICING PLANS SECTION (100% SEAMLESS BACKGROUND) */}
+      <section id="pricing" className="min-h-screen w-full flex flex-col justify-center items-center px-4 py-12 sm:py-16">
         <div className="max-w-6xl mx-auto w-full space-y-6">
           
           <div className="text-center space-y-1.5">
@@ -371,7 +372,7 @@ export default function OnboardingPrograms() {
                       type="button"
                       disabled={loading}
                       onClick={() => handleSelectPlan(plan.id)}
-                      className={`w-full py-3 px-4 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all duration-200 ${plan.btnStyle} disabled:opacity-50`}
+                      className={`w-full py-3 px-4 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all duration-200 ${plan.btnStyle} disabled:opacity-50 cursor-pointer`}
                     >
                       {loading && isSelected ? 'Processing...' : isSelected ? 'Current Plan' : 'Select Plan'}
                     </button>
