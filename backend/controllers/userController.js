@@ -245,10 +245,13 @@ export const registerUser = async (req, res) => {
       if (learningGoal) targetUser.learningGoal = learningGoal;
       if (Array.isArray(skills)) targetUser.skills = skills;
       if (targetRole) targetUser.targetRole = targetRole;
+      if (req.body.targetRoleOther || req.body.otherTargetRole) targetUser.otherTargetRole = req.body.targetRoleOther || req.body.otherTargetRole;
       if (placementCategory) targetUser.placementCategory = placementCategory;
       if (Array.isArray(targetCompanies)) targetUser.targetCompanies = targetCompanies;
       if (placementTimeline) targetUser.placementTimeline = placementTimeline;
       if (learningPath) targetUser.learningPath = learningPath;
+      targetUser.onboardingCompleted = true;
+      targetUser.onboardingCompletedAt = new Date();
 
       await targetUser.save();
     } else {
@@ -271,6 +274,7 @@ export const registerUser = async (req, res) => {
         learningGoal: learningGoal || "",
         skills: Array.isArray(skills) ? skills : [],
         targetRole: targetRole || "",
+        otherTargetRole: req.body.targetRoleOther || req.body.otherTargetRole || "",
         placementCategory: placementCategory || "",
         targetCompanies: Array.isArray(targetCompanies) ? targetCompanies : [],
         placementTimeline: placementTimeline || "",
@@ -281,6 +285,8 @@ export const registerUser = async (req, res) => {
         dailyCommitment: dailyCommitment || "",
         declarationAccepted: declarationAccepted || false,
         batchId: batch._id,
+        onboardingCompleted: true,
+        onboardingCompletedAt: new Date(),
       });
 
       await targetUser.save();
@@ -297,13 +303,19 @@ export const registerUser = async (req, res) => {
       student.collegeId = student.collegeId || college._id;
       student.batchId = student.batchId || batch._id;
       student.programSelection = targetUser.programSelection;
+      student.degree = targetUser.degree || student.degree;
+      student.branch = targetUser.branch || student.branch;
+      student.graduationYear = targetUser.graduationYear || student.graduationYear;
       student.learningGoal = targetUser.learningGoal;
       student.skills = targetUser.skills;
       student.targetRole = targetUser.targetRole;
+      student.otherTargetRole = targetUser.otherTargetRole;
       student.placementCategory = targetUser.placementCategory;
       student.targetCompanies = targetUser.targetCompanies;
       student.placementTimeline = targetUser.placementTimeline;
       student.learningPath = targetUser.learningPath;
+      student.onboardingCompleted = true;
+      student.onboardingCompletedAt = targetUser.onboardingCompletedAt;
       await student.save();
     } else {
       // Create matching Student record
@@ -313,15 +325,21 @@ export const registerUser = async (req, res) => {
         userId: targetUser._id,
         name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
         email: emailCheck,
+        degree: targetUser.degree || "",
+        branch: targetUser.branch || "",
+        graduationYear: targetUser.graduationYear || null,
         primaryTrack: "General Track",
         programSelection: targetUser.programSelection,
         learningGoal: targetUser.learningGoal,
         skills: targetUser.skills,
         targetRole: targetUser.targetRole,
+        otherTargetRole: targetUser.otherTargetRole,
         placementCategory: targetUser.placementCategory,
         targetCompanies: targetUser.targetCompanies,
         placementTimeline: targetUser.placementTimeline,
         learningPath: targetUser.learningPath,
+        onboardingCompleted: true,
+        onboardingCompletedAt: targetUser.onboardingCompletedAt,
         status: "Active",
       });
     }
@@ -345,12 +363,22 @@ export const registerUser = async (req, res) => {
         lastName: targetUser.lastName,
         name: `${targetUser.firstName} ${targetUser.lastName}`.trim().replace(/\.$/, ""),
         email: targetUser.email,
+        collegeName: targetUser.collegeName,
+        degree: targetUser.degree,
+        branch: targetUser.branch,
+        graduationYear: targetUser.graduationYear,
         programSelection: targetUser.programSelection,
         programId: targetUser.programId || enrolledList[0]?._id || null,
         learningGoal: targetUser.learningGoal,
         learningPath: targetUser.learningPath,
         targetRole: targetUser.targetRole,
+        otherTargetRole: targetUser.otherTargetRole,
+        placementCategory: targetUser.placementCategory,
+        targetCompanies: targetUser.targetCompanies || [],
+        placementTimeline: targetUser.placementTimeline || "",
         skills: targetUser.skills || [],
+        onboardingCompleted: true,
+        onboardingCompletedAt: targetUser.onboardingCompletedAt,
       },
       assignedPrograms: enrolledList,
     });
@@ -389,17 +417,14 @@ export const loginUser = async (req, res) => {
 
     const token = generatorToken(user._id);
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
-    // res.status(200).json({
-    //   message: "Login successful",
-    //   user: {
-    //     id: user._id,
-    //     firstName: user.firstName,
-    //     email: user.email,
-    //     role: user.role, // From main repo
-    //     isClub: user.isClub, // From backend_web
-    //   },
-    //   token,
-    // });
+    let student = await Student.findOne({ email: user.email.toLowerCase() });
+
+    const isProfileComplete = Boolean(
+      user.onboardingCompleted ||
+      student?.onboardingCompleted ||
+      (user.targetRole && (user.collegeName || user.degree))
+    );
+
     res.status(200).json({
       message: "Login successful",
       user: {
@@ -412,10 +437,22 @@ export const loginUser = async (req, res) => {
         avatar: user.avatar || "",
         role: user.role,
         isClub: user.isClub,
-        targetRole: user.targetRole || "",
-        learningGoal: user.learningGoal || "",
-        programId: user.programId || null,
-        isEnrolledStudent: user.isClub || Boolean(user.batchId),
+        collegeName: user.collegeName || "",
+        degree: user.degree || student?.degree || "",
+        branch: user.branch || student?.branch || "",
+        graduationYear: user.graduationYear || student?.graduationYear || null,
+        targetRole: user.targetRole || student?.targetRole || "",
+        otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
+        learningGoal: user.learningGoal || student?.learningGoal || "",
+        placementCategory: user.placementCategory || student?.placementCategory || "",
+        targetCompanies: user.targetCompanies?.length ? user.targetCompanies : (student?.targetCompanies || []),
+        placementTimeline: user.placementTimeline || student?.placementTimeline || "",
+        skills: user.skills?.length ? user.skills : (student?.skills || []),
+        programId: user.programId || student?.programId || null,
+        batchId: user.batchId || student?.batchId || null,
+        isEnrolledStudent: user.isClub || Boolean(user.batchId) || Boolean(student),
+        onboardingCompleted: isProfileComplete,
+        onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
       },
       token,
     });
@@ -471,11 +508,17 @@ export const updatePreferences = async (req, res) => {
     const {
       skills,
       targetRole,
+      otherTargetRole,
+      targetRoleOther,
       placementCategory,
       targetCompanies,
       placementTimeline,
       learningPath,
       learningGoal,
+      collegeName,
+      degree,
+      branch,
+      graduationYear,
     } = req.body;
 
     const user = await User.findById(userId);
@@ -485,11 +528,19 @@ export const updatePreferences = async (req, res) => {
 
     if (skills !== undefined) user.skills = Array.isArray(skills) ? skills : [];
     if (targetRole !== undefined) user.targetRole = targetRole;
+    if (otherTargetRole !== undefined || targetRoleOther !== undefined) user.otherTargetRole = otherTargetRole || targetRoleOther || "";
     if (placementCategory !== undefined) user.placementCategory = placementCategory;
     if (targetCompanies !== undefined) user.targetCompanies = Array.isArray(targetCompanies) ? targetCompanies : [];
     if (placementTimeline !== undefined) user.placementTimeline = placementTimeline;
     if (learningPath !== undefined) user.learningPath = learningPath;
     if (learningGoal !== undefined) user.learningGoal = learningGoal;
+    if (collegeName) user.collegeName = collegeName;
+    if (degree) user.degree = degree;
+    if (branch) user.branch = branch;
+    if (graduationYear) user.graduationYear = Number(graduationYear);
+
+    user.onboardingCompleted = true;
+    user.onboardingCompletedAt = new Date();
 
     await user.save();
 
@@ -501,11 +552,17 @@ export const updatePreferences = async (req, res) => {
     if (student) {
       student.skills = user.skills;
       student.targetRole = user.targetRole;
+      student.otherTargetRole = user.otherTargetRole;
       student.placementCategory = user.placementCategory;
       student.targetCompanies = user.targetCompanies;
       student.placementTimeline = user.placementTimeline;
       student.learningPath = user.learningPath;
+      if (degree) student.degree = degree;
+      if (branch) student.branch = branch;
+      if (graduationYear) student.graduationYear = Number(graduationYear);
       if (learningGoal) student.learningGoal = user.learningGoal;
+      student.onboardingCompleted = true;
+      student.onboardingCompletedAt = user.onboardingCompletedAt;
       await student.save();
     }
 

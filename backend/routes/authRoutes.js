@@ -12,6 +12,7 @@ import Batch from "../models/Batch.js";
 import { syncProgramEnrollment } from "../utils/programEnrollment.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { isAdminIdentity } from "../utils/adminAccess.js";
+import { registerUser } from "../controllers/userController.js";
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -27,10 +28,10 @@ const normalizeEmail = (email = "") => String(email).trim().toLowerCase();
 const mapUserToStudentCohort = async (user) => {
   if (!user?.email) return { user, student: null, batch: null };
 
-  const student = await Student.findOne({ email: normalizeEmail(user.email) });
+  const student = await Student.findOne({ email: normalizeEmail(user.email) }).populate("collegeId", "name").populate("batchId", "name");
   if (!student) return { user, student: null, batch: null };
 
-  const batch = await Batch.findById(student.batchId).lean();
+  const batch = student.batchId || (await Batch.findById(student.batchId).lean());
   if (!batch) {
     console.warn(`Warning: Batch ID ${student.batchId} not found for student ${student.email}`);
   }
@@ -41,13 +42,23 @@ const mapUserToStudentCohort = async (user) => {
     await student.save();
   }
 
-  if (!user.batchId || String(user.batchId) !== String(student.batchId)) {
-    user.batchId = student.batchId;
+  if (!user.batchId || String(user.batchId) !== String(student.batchId?._id || student.batchId)) {
+    user.batchId = student.batchId?._id || student.batchId;
     changed = true;
   }
 
   if (batch && batch.startDate && (!user.startDate || new Date(user.startDate).getTime() !== new Date(batch.startDate).getTime())) {
     user.startDate = batch.startDate;
+    changed = true;
+  }
+
+  // Pre-fill user college and degree from imported student if missing on user
+  if (!user.collegeName && student.collegeId?.name) {
+    user.collegeName = student.collegeId.name;
+    changed = true;
+  }
+  if (!user.degree && student.degree) {
+    user.degree = student.degree;
     changed = true;
   }
 
@@ -58,32 +69,48 @@ const mapUserToStudentCohort = async (user) => {
   await syncProgramEnrollment({
     user,
     student,
-    batchId: student.batchId,
+    batchId: student.batchId?._id || student.batchId,
     programSelection: student.programSelection || user.programSelection,
   });
 
   return { user, student, batch };
 };
 
-const formatAuthUser = (user, student = null, batch = null) => ({
-  id: user._id,
-  firstName: user.firstName,
-  lastName: user.lastName,
-  email: user.email,
-  photoUrl: user.photoUrl || "",
-  role: user.role,
-  isClub: user.isClub,
-  batchId: user.batchId || student?.batchId || null,
-  startDate: user.startDate || batch?.startDate || null,
-  programSelection: user.programSelection,
-  programId: user.programId || student?.programId || null,
-  isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId),
-  targetRole: user.targetRole || student?.targetRole || "",
-  learningGoal: user.learningGoal || student?.learningGoal || "",
-});
+const formatAuthUser = (user, student = null, batch = null) => {
+  const isProfileComplete = Boolean(
+    user.onboardingCompleted ||
+    student?.onboardingCompleted ||
+    (user.targetRole && (user.collegeName || user.degree))
+  );
 
-
-import { registerUser } from "../controllers/userController.js";
+  return {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    photoUrl: user.photoUrl || "",
+    role: user.role,
+    isClub: user.isClub,
+    batchId: user.batchId || student?.batchId?._id || student?.batchId || null,
+    startDate: user.startDate || batch?.startDate || null,
+    programSelection: user.programSelection,
+    programId: user.programId || student?.programId || null,
+    isEnrolledStudent: !!student || user.isClub || Boolean(user.batchId),
+    targetRole: user.targetRole || student?.targetRole || "",
+    otherTargetRole: user.otherTargetRole || student?.otherTargetRole || "",
+    learningGoal: user.learningGoal || student?.learningGoal || "",
+    collegeName: user.collegeName || (student?.collegeId && typeof student.collegeId === 'object' ? student.collegeId.name : "") || "",
+    degree: user.degree || student?.degree || "",
+    branch: user.branch || student?.branch || "",
+    graduationYear: user.graduationYear || student?.graduationYear || null,
+    placementCategory: user.placementCategory || student?.placementCategory || "",
+    targetCompanies: user.targetCompanies?.length ? user.targetCompanies : (student?.targetCompanies || []),
+    placementTimeline: user.placementTimeline || student?.placementTimeline || "",
+    skills: user.skills?.length ? user.skills : (student?.skills || []),
+    onboardingCompleted: isProfileComplete,
+    onboardingCompletedAt: user.onboardingCompletedAt || student?.onboardingCompletedAt || (isProfileComplete ? user.updatedAt : null),
+  };
+};
 
 /* ========== REGISTER ========== */
 router.post("/register", registerUser);
@@ -99,7 +126,7 @@ router.post("/login", async function login(req, res) {
     }
 
     const formattedEmail = normalizeEmail(email);
-    const emailRegex = /^[\w.-]+@(gmail|outlook|yahoo)\.com$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formattedEmail)) {
       return res.status(400).json({ message: "Invalid email format" });
     }

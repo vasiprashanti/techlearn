@@ -123,26 +123,40 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           });
           const data = await response.json();
 
-          // Existing User Check -> Direct login to dashboard
-          if (response.ok && data.token && (data.isExisting || data.user?.isExisting)) {
+          // Existing User Check -> Direct login to dashboard if onboarding complete, else pre-fill and trigger welcome
+          if (response.ok && data.token) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('userData', JSON.stringify(data.user));
             if (setSession) setSession(data.user, data.token);
             if (refetchUserData) await refetchUserData();
-            handleClose();
-            navigateUserByProgram(data.user, navigate);
-            return;
-          } else if (response.ok && data.token) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('userData', JSON.stringify(data.user));
-            if (setSession) setSession(data.user, data.token);
-            if (refetchUserData) await refetchUserData();
+
+            if (data.user?.onboardingCompleted) {
+              handleClose();
+              navigateUserByProgram(data.user, navigate);
+              return;
+            } else {
+              // Pre-fill existing imported student or user information
+              if (data.user?.collegeName) setCollege(data.user.collegeName);
+              if (data.user?.degree) setDegree(data.user.degree);
+              if (data.user?.branch) setBranch(data.user.branch);
+              if (data.user?.graduationYear) setGraduationYear(data.user.graduationYear);
+              if (data.user?.learningGoal) setGoal(data.user.learningGoal);
+              if (data.user?.targetRole) setTargetRole(data.user.targetRole);
+              if (data.user?.otherTargetRole) setTargetRoleOther(data.user.otherTargetRole);
+              if (data.user?.placementCategory) setPlacementCategory(data.user.placementCategory);
+              if (data.user?.targetCompanies?.length) setTargetCompanies(data.user.targetCompanies);
+              if (data.user?.placementTimeline) setPlacementTimeline(data.user.placementTimeline);
+              if (data.user?.skills?.length) setSkills(data.user.skills);
+
+              triggerWelcomeScreen(fname);
+              return;
+            }
           }
         } catch (e) {
           console.warn('Firebase backend note:', e);
         }
 
-        // New Google User -> Direct to welcome text card (skips password & email verification)
+        // New Google User -> Direct to welcome text card
         triggerWelcomeScreen(fname);
       } catch (err) {
         console.error('Google Sign In Error:', err);
@@ -212,23 +226,29 @@ export default function Signup({ onClose, onSwitchToLogin, onSwitchToSignup, ini
           if (setSession) setSession(data.user, data.token);
           if (refetchUserData) refetchUserData();
 
-          // Only trigger onboarding if the user has NOT completed onboarding (missing targetRole and missing programId)
-          const hasCompletedOnboarding = Boolean(data.user?.targetRole || data.user?.programId);
-          if (!hasCompletedOnboarding && data.user?.isEnrolledStudent) {
-            setFullName(data.user.firstName || 'Student');
-            setEmail(data.user.email || '');
-            setIsEnrolledShortOnboarding(true);
-            setGoal('Get Placed');
-            setActiveStep(3);
-            setScreen('step-followup');
-            setLoading(false);
+          // Check persistent onboardingCompleted state
+          if (data.user?.onboardingCompleted) {
+            handleClose();
+            navigateUserByProgram(data.user, navigate);
+            return;
+          } else {
+            // Pre-fill existing user/imported student details into onboarding UI state
+            if (data.user?.collegeName) setCollege(data.user.collegeName);
+            if (data.user?.degree) setDegree(data.user.degree);
+            if (data.user?.branch) setBranch(data.user.branch);
+            if (data.user?.graduationYear) setGraduationYear(data.user.graduationYear);
+            if (data.user?.learningGoal) setGoal(data.user.learningGoal);
+            if (data.user?.targetRole) setTargetRole(data.user.targetRole);
+            if (data.user?.otherTargetRole) setTargetRoleOther(data.user.otherTargetRole);
+            if (data.user?.placementCategory) setPlacementCategory(data.user.placementCategory);
+            if (data.user?.targetCompanies?.length) setTargetCompanies(data.user.targetCompanies);
+            if (data.user?.placementTimeline) setPlacementTimeline(data.user.placementTimeline);
+            if (data.user?.skills?.length) setSkills(data.user.skills);
+
+            const fname = getFirstName(data.user?.firstName || fullName, data.user?.email || email);
+            triggerWelcomeScreen(fname);
             return;
           }
-
-          handleClose();
-          navigateUserByProgram(data.user, navigate);
-
-
         } else {
           setStatusMsg({ text: data.message || 'Invalid email or password.', type: 'error' });
         }

@@ -43,6 +43,18 @@ const studentSchema = new mongoose.Schema(
     rollNo: {
       type: String,
     },
+    degree: {
+      type: String,
+      default: "",
+    },
+    branch: {
+      type: String,
+      default: "",
+    },
+    graduationYear: {
+      type: Number,
+      default: null,
+    },
 
     primaryTrack: {
       type: String,
@@ -69,6 +81,10 @@ const studentSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    otherTargetRole: {
+      type: String,
+      default: "",
+    },
     placementCategory: {
       type: String,
       default: "",
@@ -85,8 +101,15 @@ const studentSchema = new mongoose.Schema(
     },
     learningPath: {
       type: String,
-      enum: ["Free", "Member", ""],
       default: "",
+    },
+    onboardingCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingCompletedAt: {
+      type: Date,
+      default: null,
     },
 
     status: {
