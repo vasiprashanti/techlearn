@@ -200,7 +200,7 @@ router.post("/google-check", async function checkGoogleUser(req, res) {
     const formattedEmail = normalizeEmail(email);
     const user = await User.findOne({ email: formattedEmail });
 
-    if (user && user.collegeName) {
+    if (user) {
       const mapped = await mapUserToStudentCohort(user);
       const jwtToken = generateToken(mapped.user._id);
       return res.status(200).json({
