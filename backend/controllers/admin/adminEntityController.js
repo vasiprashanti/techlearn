@@ -3240,6 +3240,14 @@ export const getStudentDetailAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student not found." });
     }
 
+    let user = null;
+    if (student.userId) {
+      user = await User.findById(student.userId).lean();
+    }
+    if (!user && student.email) {
+      user = await User.findOne({ email: student.email.toLowerCase() }).lean();
+    }
+
     const submissions = await Submission.find({ studentId }).sort({ submittedAt: -1 }).lean();
     const score =
       submissions.length > 0
@@ -3257,7 +3265,7 @@ export const getStudentDetailAdmin = async (req, res) => {
         id: student._id,
         name: student.name,
         email: student.email,
-        college: student.collegeId?.name || "Unknown College",
+        college: user?.collegeName || student.collegeId?.name || "Unknown College",
         batch: student.batchId?.name || "No Batch (Individual)",
         track: student.primaryTrack || "General Track",
         programSelection: student.programSelection || "Placement Sprint",
@@ -3271,6 +3279,29 @@ export const getStudentDetailAdmin = async (req, res) => {
         lastActive: submissions[0]?.submittedAt || student.lastActiveAt,
         status: student.status,
         joined: student.createdAt,
+        userProfile: {
+          id: user?._id || student.userId || student._id,
+          name: user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : student.name,
+          firstName: user?.firstName || student.name.split(" ")[0] || "",
+          lastName: user?.lastName || student.name.split(" ").slice(1).join(" ") || "",
+          email: user?.email || student.email,
+          role: user?.role || "user",
+          college: user?.collegeName || student.collegeId?.name || "",
+          degree: user?.degree || student.degree || "",
+          branch: user?.branch || student.branch || "",
+          graduationYear: user?.graduationYear || student.graduationYear || null,
+          batch: student.batchId?.name || "",
+          program: student.programSelection || user?.programSelection || "Placement Sprint",
+          learningGoal: user?.learningGoal || student.learningGoal || "",
+          targetRole: user?.targetRole || student.targetRole || "",
+          otherTargetRole: user?.otherTargetRole || student.otherTargetRole || "",
+          placementCategory: user?.placementCategory || student.placementCategory || "",
+          targetCompanies: user?.targetCompanies?.length ? user.targetCompanies : (student.targetCompanies || []),
+          placementTimeline: user?.placementTimeline || student.placementTimeline || "",
+          skills: user?.skills?.length ? user.skills : (student.skills || []),
+          onboardingCompleted: Boolean(user?.onboardingCompleted || student.onboardingCompleted),
+          onboardingCompletedAt: user?.onboardingCompletedAt || student.onboardingCompletedAt || null,
+        },
       },
     });
   } catch (error) {

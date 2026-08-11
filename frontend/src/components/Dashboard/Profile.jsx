@@ -270,6 +270,118 @@ const Profile = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Education Section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                      Education & Enrollment
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">College</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
+                        {displayUser?.collegeName || "Not assigned"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Degree</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
+                        {displayUser?.degree || "Not assigned"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Branch / Stream</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
+                        {displayUser?.branch || "Not specified"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Graduation Year</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.graduationYear || "Not specified"}
+                      </p>
+                    </div>
+                    {displayUser?.programSelection && (
+                      <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 sm:col-span-2">
+                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Program Selection</p>
+                        <p className="text-sm font-bold text-[#2d7fe8] dark:text-[#8fd9ff]">
+                          {displayUser.programSelection}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Placement Goals & Preferences */}
+                <div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                      Goals & Placement Preferences
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Learning Goal</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.learningGoal || "Not specified"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Target Role</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Opportunity Type</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.placementCategory || "Not specified"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Placement Timeline</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.placementTimeline || "Not specified"}
+                      </p>
+                    </div>
+                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 sm:col-span-2">
+                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Selected Target Companies</p>
+                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
+                        {Array.isArray(displayUser?.targetCompanies) && displayUser.targetCompanies.length > 0 
+                          ? displayUser.targetCompanies.join(", ") 
+                          : "None selected"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills & Interests */}
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                      Skills & Interests
+                    </h2>
+                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {Array.isArray(displayUser?.skills) && displayUser.skills.length > 0 ? (
+                      displayUser.skills.map((skill, index) => (
+                        <span key={index} className="rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 text-xs font-semibold text-[#2d7fe8] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">No skills selected yet.</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </motion.div>
 

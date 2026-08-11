@@ -68,11 +68,7 @@ export const upsertProgramEnrollment = async ({
       individualStartDate: existing?.individualStartDate || existing?.assignedAt || now,
     },
     $setOnInsert: {
-      userId,
-      studentId,
-      programId: resolvedProgramId,
       assignedAt: now,
-      individualStartDate: now,
       source,
     },
   };
