@@ -141,239 +141,315 @@ const Profile = () => {
             </h1>
           </motion.div>
 
-          {/* Main Content Grid (Responsive two-column grid) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 w-full lg:items-stretch">
-            
-            {/* Left Column - Info & Security Section */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}
-              className="w-full order-2 lg:order-1 flex flex-col h-full"
-            >
-              {/* Account Details Card */}
-              <div className={`${dashboardCardClass} flex-1 flex flex-col justify-between gap-8 h-full`}>
-                {/* Account Details Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
-                      Account Profile
+          {/* 1. TOP HEADER BANNER CARD */}
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            className="w-full relative overflow-hidden rounded-3xl bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-xl"
+          >
+            {/* Banner top color strip */}
+            <div className="h-28 md:h-32 w-full bg-gradient-to-r from-[#0052a3] via-[#0274c4] to-[#0091d9]" />
+
+            {/* Profile Content Bar */}
+            <div className="p-6 md:p-8 pt-0 flex flex-col md:flex-row items-center md:items-end justify-between gap-6 -mt-14 md:-mt-16 relative z-10">
+              <div className="flex flex-col md:flex-row items-center md:items-end gap-5 text-center md:text-left">
+                {/* Avatar with camera trigger */}
+                <div className="relative group shrink-0">
+                  <div className="w-28 h-28 md:w-32 md:h-32 rounded-3xl p-1 bg-white dark:bg-[#020b23] shadow-xl">
+                    <div className="w-full h-full rounded-[22px] overflow-hidden bg-slate-100 dark:bg-[#091842]">
+                      <img
+                        src={selectedAvatar}
+                        alt="Avatar"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsSelectingAvatar(true)}
+                    className="absolute -bottom-1 -right-1 bg-[#3C83F6] hover:bg-[#2563eb] text-white p-2 rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all duration-300 z-10"
+                    title="Change Avatar"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* User info & Pills */}
+                <div className="space-y-2 pb-1">
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-[#0d2a57] dark:text-white">
+                      {userName}
                     </h2>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                      {displayUser?.email || "No email provided"}
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Full Name */}
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
-                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Full Name</p>
-                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
-                          {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-1">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[9px] uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-extrabold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      {displayUser?.role === 'admin' ? 'ADMIN ACCOUNT' : 'STUDENT ACCOUNT'}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-[9px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-extrabold">
+                      {displayUser?.programSelection || "Placement Sprint"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[9px] uppercase tracking-widest text-amber-600 dark:text-amber-400 font-extrabold">
+                      {Number(xp || 0).toLocaleString()} XP
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-                    {/* Email Address */}
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
-                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
-                        <Mail className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Email Address</p>
-                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
-                          {displayUser?.email || "No email provided"}
-                        </p>
-                      </div>
-                    </div>
+              {/* Account Settings Action Button */}
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/profile/settings')}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white px-6 py-3 text-xs font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all shrink-0"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Account Settings</span>
+              </button>
+            </div>
+          </motion.div>
 
-                    {/* Account Type / Role */}
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
-                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
-                        <Shield className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Account Role</p>
-                        <p className="text-sm font-semibold text-[#0d2a57] dark:text-white capitalize">
-                          {displayUser?.role || "Student"}
-                        </p>
-                      </div>
-                    </div>
+          {/* 2. THREE STAT METRIC CARDS ROW */}
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-5 w-full"
+          >
+            {/* Total XP Card */}
+            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[110px]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">TOTAL XP</span>
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                  <Zap className="w-4 h-4 animate-pulse" />
+                </div>
+              </div>
+              <p className="text-3xl font-black text-[#0d2a57] dark:text-white">
+                {Number(xp || 0).toLocaleString()}
+              </p>
+            </div>
 
-                    {/* Security / Password */}
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 transition-all duration-300 hover:bg-black/[0.08] dark:hover:bg-white/[0.08] hover:border-black/10 dark:hover:border-white/10 flex items-start gap-3.5">
-                      <div className="p-2.5 rounded-xl bg-[#dbf1ff] dark:bg-[#0d366f] text-[#2d7fe8] dark:text-[#8fd9ff] shrink-0">
-                        <Lock className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Password</p>
-                        <div className="flex items-center gap-2 justify-between">
-                          <p className="text-sm font-semibold text-[#0d2a57] dark:text-white tracking-[0.25em]">
-                            ••••••••
-                          </p>
-                          <span className="rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-2 py-0.5 text-[8px] uppercase tracking-widest text-[#4d6f9c] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8ac7f3] font-bold">Secure</span>
-                        </div>
-                      </div>
+            {/* Exercises Card */}
+            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[110px]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">EXERCISES</span>
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                  <Award className="w-4 h-4" />
+                </div>
+              </div>
+              <p className="text-3xl font-black text-[#0d2a57] dark:text-white">
+                {progress?.completedExercises || 0} <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">/ {progress?.totalExercises || 0}</span>
+              </p>
+            </div>
+
+            {/* Course Progress Card */}
+            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-5 md:p-6 flex flex-col justify-between shadow-sm min-h-[110px]">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-bold">COURSE</span>
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                  {progress?.courseProgress || 0}%
+                </p>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                    style={{ width: `${progress?.courseProgress || 0}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* 3. TWO-COLUMN EQUAL 2x2 SECTION CARDS GRID */}
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full items-stretch"
+          >
+            {/* ROW 1 - CARD A: Account Profile */}
+            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-7 shadow-sm flex flex-col justify-between h-full">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 pb-1 border-b border-black/5 dark:border-white/5">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-[#0d2a57] dark:text-white">
+                    Account Profile
+                  </h3>
+                </div>
+
+                <div className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Full Name</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {displayUser?.firstName || "First"} {displayUser?.lastName || "Last"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Email Address</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {displayUser?.email || "No email provided"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Account Role</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white capitalize">
+                      {displayUser?.role || "Student"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Password</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#0d2a57] dark:text-white tracking-[0.2em]">••••••••</span>
+                      <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[8px] uppercase tracking-widest text-blue-600 dark:text-blue-400 font-bold">ENCRYPTED</span>
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Learning Summary Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
-                      Learning Overview
-                    </h2>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+            {/* ROW 1 - CARD B: Education & Enrollment */}
+            <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-7 shadow-sm flex flex-col justify-between h-full">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 pb-1 border-b border-black/5 dark:border-white/5">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-base font-bold text-[#0d2a57] dark:text-white">
+                    Education & Enrollment
+                  </h3>
+                </div>
+
+                <div className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">College</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {displayUser?.collegeName || "Not assigned"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Degree</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {displayUser?.degree || "Not assigned"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Branch / Stream</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white truncate">
+                      {displayUser?.branch || "Not specified"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Graduation Year</span>
+                    <span className="font-semibold text-[#0d2a57] dark:text-white">
+                      {displayUser?.graduationYear || "Not specified"}
+                    </span>
+                  </div>
+                  <div className="py-2.5 flex items-center justify-between gap-4">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Program Selection</span>
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
+                      {displayUser?.programSelection || "Placement Sprint"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 2 - CARD C: Goals & Placement Preferences */}
+            {(displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetRole) || Boolean(displayUser?.placementCategory)) && (
+              <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-7 shadow-sm flex flex-col justify-between h-full">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-1 border-b border-black/5 dark:border-white/5">
+                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                      <Award className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#0d2a57] dark:text-white">
+                      Goals & Placement Preferences
+                    </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* XP Stats */}
-                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] uppercase tracking-widest text-amber-700 dark:text-yellow-500 font-bold">Total XP</span>
-                        <Zap className="w-4 h-4 text-yellow-500 animate-pulse" />
-                      </div>
-                      <p className="text-xl font-black text-amber-850 dark:text-yellow-400">
-                        {Number(xp || 0).toLocaleString()}
-                      </p>
+                  <div className="divide-y divide-black/5 dark:divide-white/5 text-sm">
+                    <div className="py-2.5 flex items-center justify-between gap-4">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Learning Goal</span>
+                      <span className="font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.learningGoal || "Not specified"}
+                      </span>
                     </div>
-
-                    {/* Exercises Solved */}
-                    <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border border-blue-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] uppercase tracking-widest text-[#2d7fe8] dark:text-[#8fd9ff] font-bold">Exercises</span>
-                        <Award className="w-4 h-4 text-blue-500" />
-                      </div>
-                      <p className="text-xl font-black text-[#0d2a57] dark:text-[#8fd9ff]">
-                        {progress?.completedExercises || 0} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">/ {progress?.totalExercises || 0}</span>
-                      </p>
+                    <div className="py-2.5 flex items-center justify-between gap-4">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Target Role</span>
+                      <span className="font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
+                      </span>
                     </div>
-
-                    {/* Course Progress */}
-                    <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between min-h-[100px]">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] uppercase tracking-widest text-emerald-700 dark:text-emerald-400 font-bold">Course</span>
-                        <BookOpen className="w-4 h-4 text-emerald-500" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xl font-black text-emerald-800 dark:text-emerald-400">
-                          {progress?.courseProgress || 0}%
-                        </p>
-                        <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                            style={{ width: `${progress?.courseProgress || 0}%` }}
-                          />
-                        </div>
-                      </div>
+                    <div className="py-2.5 flex items-center justify-between gap-4">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Opportunity Type</span>
+                      <span className="font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.placementCategory || "Not specified"}
+                      </span>
+                    </div>
+                    <div className="py-2.5 flex items-center justify-between gap-4">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Placement Timeline</span>
+                      <span className="font-semibold text-[#0d2a57] dark:text-white">
+                        {displayUser?.placementTimeline || "Not specified"}
+                      </span>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Education Section */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
-                      Education & Enrollment
-                    </h2>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+            {/* ROW 2 - CARD D: Target Companies & Skills Cards */}
+            <div className="flex flex-col gap-6 justify-between h-full">
+              {/* Target Companies */}
+              {(displayUser?.learningGoal === "Get Placed" || Boolean(displayUser?.targetCompanies?.length)) && (
+                <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-7 shadow-sm space-y-3 flex-1 flex flex-col justify-center">
+                  <div className="flex items-center gap-3 pb-1 border-b border-black/5 dark:border-white/5">
+                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-base font-bold text-[#0d2a57] dark:text-white">
+                      Selected Target Companies
+                    </h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">College</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
-                        {displayUser?.collegeName || "Not assigned"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Degree</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
-                        {displayUser?.degree || "Not assigned"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Branch / Stream</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white truncate">
-                        {displayUser?.branch || "Not specified"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Graduation Year</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.graduationYear || "Not specified"}
-                      </p>
-                    </div>
-                    {displayUser?.programSelection && (
-                      <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 sm:col-span-2">
-                        <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Program Selection</p>
-                        <p className="text-sm font-bold text-[#2d7fe8] dark:text-[#8fd9ff]">
-                          {displayUser.programSelection}
-                        </p>
-                      </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {Array.isArray(displayUser?.targetCompanies) && displayUser.targetCompanies.length > 0 ? (
+                      displayUser.targetCompanies.map((company, index) => (
+                        <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
+                          {company}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">None selected</p>
                     )}
                   </div>
                 </div>
+              )}
 
-                {/* Placement Goals & Preferences */}
-                <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
-                      Goals & Placement Preferences
-                    </h2>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Learning Goal</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.learningGoal || "Not specified"}
-                      </p>
+              {/* Skills & Interests */}
+              {(displayUser?.learningGoal === "Learn New Skills" || (Array.isArray(displayUser?.skills) && displayUser.skills.length > 0)) && (
+                <div className="bg-white/80 dark:bg-[#061438]/80 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-3xl p-6 md:p-7 shadow-sm space-y-3 flex-1 flex flex-col justify-center">
+                  <div className="flex items-center gap-3 pb-1 border-b border-black/5 dark:border-white/5">
+                    <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                      <Zap className="w-4 h-4" />
                     </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Target Role</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.targetRole || displayUser?.otherTargetRole || "Not specified"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Opportunity Type</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.placementCategory || "Not specified"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Placement Timeline</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {displayUser?.placementTimeline || "Not specified"}
-                      </p>
-                    </div>
-                    <div className="bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl p-4 sm:col-span-2">
-                      <p className="text-[9px] uppercase tracking-widest text-[#5f82ac] dark:text-[#81bde6] font-bold mb-1">Selected Target Companies</p>
-                      <p className="text-sm font-semibold text-[#0d2a57] dark:text-white">
-                        {Array.isArray(displayUser?.targetCompanies) && displayUser.targetCompanies.length > 0 
-                          ? displayUser.targetCompanies.join(", ") 
-                          : "None selected"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Skills & Interests */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <h2 className="text-[10px] tracking-widest uppercase text-[#4d6f9c] dark:text-[#7fb9e6] font-bold">
+                    <h3 className="text-base font-bold text-[#0d2a57] dark:text-white">
                       Skills & Interests
-                    </h2>
-                    <div className="h-[1px] flex-1 bg-[#86c4ff]/35 dark:bg-[#66b6ec]/35"></div>
+                    </h3>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     {Array.isArray(displayUser?.skills) && displayUser.skills.length > 0 ? (
                       displayUser.skills.map((skill, index) => (
-                        <span key={index} className="rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 text-xs font-semibold text-[#2d7fe8] dark:border-[#6bb8ec]/40 dark:bg-[#0d366f] dark:text-[#8fd9ff]">
+                        <span key={index} className="rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300">
                           {skill}
                         </span>
                       ))
@@ -382,63 +458,9 @@ const Profile = () => {
                     )}
                   </div>
                 </div>
-              </div>
-            </motion.div>
-
-            {/* Right Column - Avatar Profile display */}
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}
-              className="w-full flex flex-col order-1 lg:order-2 lg:h-full"
-            >
-              <div className={`${dashboardCardClass} flex flex-col md:flex-row lg:flex-col items-center justify-center md:justify-around relative overflow-hidden lg:h-full py-8 md:py-10 gap-6 md:gap-10`}>
-                
-                {/* Decorative background blur */}
-                <div className="absolute -mr-20 -mt-20 h-64 w-64 rounded-full bg-gradient-to-br from-[#53b6ff]/20 to-transparent blur-3xl dark:from-[#8fd9ff]/15 top-0 right-0"></div>
-
-                <div className="relative mt-2 group shrink-0">
-                  <div className="w-40 h-40 rounded-full p-1.5 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-400 shadow-xl">
-                    <div className="w-full h-full rounded-full overflow-hidden bg-white dark:bg-black border-4 border-transparent">
-                      <img
-                        src={selectedAvatar}
-                        alt="Avatar"
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => setIsSelectingAvatar(true)}
-                    className="absolute bottom-2 right-2 bg-gradient-to-br from-[#3C83F6] to-[#2563eb] dark:from-white dark:to-gray-200 text-white dark:text-black p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300 z-10"
-                    title="Change Avatar"
-                  >
-                    <Camera className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex flex-col items-center md:items-center lg:items-center relative z-10">
-                  <h2 className="mb-1 text-center md:text-center lg:text-center text-xl font-medium tracking-tight text-[#0d2a57] dark:text-[#8fd9ff]">
-                    {userName}
-                  </h2>
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#86c4ff]/50 bg-[#dbf1ff] px-3 py-1 dark:border-[#6bb8ec]/40 dark:bg-[#0d366f]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse"></div>
-                    <span className="text-[9px] uppercase tracking-widest text-[#4d6f9c] dark:text-[#8ac7f3] font-bold">
-                      Student Account
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => navigate('/dashboard/profile/settings')}
-                    className="mt-5 inline-flex w-fit items-center gap-2 rounded-xl bg-[#00113b] px-5 py-2.5 text-sm font-semibold text-[#daf0fa] shadow-md shadow-[#00113b]/15 transition hover:bg-[#001b5c] dark:bg-[#00113b] dark:text-[#daf0fa] dark:hover:bg-[#001b5c]"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span>Settings</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-          </div>
+              )}
+            </div>
+          </motion.div>
         </div>
       </UserSidebarLayout>
 
