@@ -292,7 +292,7 @@ export const registerUser = async (req, res) => {
       // Link the existing student profile to the new user account
       student.userId = targetUser._id;
       student.collegeId = student.collegeId || college._id;
-      student.programSelection = targetUser.programSelection;
+      student.programSelection = student.programSelection || targetUser.programSelection;
       student.degree = targetUser.degree || student.degree;
       student.branch = targetUser.branch || student.branch;
       student.graduationYear = targetUser.graduationYear || student.graduationYear;
