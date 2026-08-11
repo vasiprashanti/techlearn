@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Program from "../../models/Program.js";
+import Program, { PROGRAM_TYPES } from "../../models/Program.js";
 import Batch from "../../models/Batch.js";
 import Student from "../../models/Student.js";
 import Course from "../../models/Course.js";
@@ -204,6 +204,14 @@ export const createProgram = async (req, res) => {
       });
     }
 
+    const normalizedProgramType = String(programType).trim();
+    if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
+      return res.status(400).json({
+        success: false,
+        message: "Program type must be Placement or Skill",
+      });
+    }
+
     let parsedFee = 0;
     if (pricingType === "Paid") {
       parsedFee = Number(programFee);
@@ -218,7 +226,7 @@ export const createProgram = async (req, res) => {
     const program = new Program({
       name: name.trim(),
       description: (description || "").trim(),
-      programType: programType.trim(),
+      programType: normalizedProgramType,
       duration: duration.trim(),
       status: status || "Draft",
       visibility: visibility || "Public",
@@ -317,10 +325,19 @@ export const updateProgram = async (req, res) => {
       accessTier,
     } = req.body;
 
-    if (name !== undefined) program.name = name.trim();
-    if (description !== undefined) program.description = description.trim();
-    if (programType !== undefined) program.programType = programType.trim();
-    if (duration !== undefined) program.duration = duration.trim();
+    if (name !== undefined) program.name = String(name).trim();
+    if (description !== undefined) program.description = String(description).trim();
+    if (programType !== undefined) {
+      const normalizedProgramType = String(programType).trim();
+      if (!PROGRAM_TYPES.includes(normalizedProgramType)) {
+        return res.status(400).json({
+          success: false,
+          message: "Program type must be Placement or Skill",
+        });
+      }
+      program.programType = normalizedProgramType;
+    }
+    if (duration !== undefined) program.duration = String(duration).trim();
     if (status !== undefined) program.status = status;
     if (visibility !== undefined) program.visibility = visibility;
     if (learningGoals !== undefined) program.learningGoals = Array.isArray(learningGoals) ? learningGoals : [];

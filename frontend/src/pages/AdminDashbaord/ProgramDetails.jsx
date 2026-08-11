@@ -24,7 +24,6 @@ import {
   FiAlertCircle,
   FiTag,
   FiClock,
-  FiDollarSign,
   FiEye,
   FiGlobe,
   FiLock,
@@ -39,6 +38,11 @@ const SECTIONS = [
   { key: 'certificates', label: 'Certificates', icon: FiAward, field: 'certificateTemplateIds', route: '/certificates' },
   { key: 'projects', label: 'Projects', icon: FiClipboard, field: 'projectIds', route: '/admin/projects' },
 ];
+
+const getProgramType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
+};
 
 const statusBadgeClass = (status) => {
   if (status === 'Active' || status === 'Published')
@@ -459,7 +463,7 @@ export default function ProgramDetails() {
 
       {/* ── Main Content ────────────────────────────────────────────────────── */}
       <main className="flex-1 h-screen z-10 lg:ml-64 pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden">
-        <div className="max-w-[1400px] mx-auto space-y-6">
+        <div className="max-w-[1400px] mx-auto space-y-4">
 
           {/* Toast */}
           {toastMessage && (
@@ -486,8 +490,8 @@ export default function ProgramDetails() {
           {/* ── Hero Card ─────────────────────────────────────────────────────── */}
           <div className="rounded-2xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] backdrop-blur-xl shadow-[0_3px_10px_rgba(15,23,42,0.04)] dark:shadow-[0_6px_16px_rgba(0,0,0,0.15)] overflow-hidden">
             {/* Tinted Header strip */}
-            <div className="px-6 py-5 bg-[#d8e6ef] dark:bg-[#24384e] border-b border-black/10 dark:border-white/10">
-              <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="px-6 py-3.5 bg-[#d8e6ef] dark:bg-[#24384e] border-b border-black/10 dark:border-white/10">
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
                 <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                   program.status === 'Active'
                     ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
@@ -510,31 +514,30 @@ export default function ProgramDetails() {
                 {program.name}
               </h1>
               {program.description && (
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 max-w-3xl leading-relaxed">
+                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-3xl leading-relaxed">
                   {program.description}
                 </p>
               )}
             </div>
 
             {/* Quick-info chips */}
-            <div className="px-6 py-4 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+            <div className="px-6 py-2.5 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
                 <FiTag className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
-                {program.programType}
+                {getProgramType(program.programType)}
               </span>
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
                 <FiClock className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
                 {program.duration || '—'}
               </span>
-              <span className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold border ${
+              <span className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border ${
                 program.pricingType === 'Paid'
                   ? 'border-emerald-300/60 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                   : 'border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200'
               }`}>
-                <FiDollarSign className="w-3.5 h-3.5" />
                 {program.pricingType === 'Paid' ? `₹${program.programFee}` : 'Free'}
               </span>
-              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
+              <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xl text-xs font-semibold border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-700 dark:text-slate-200">
                 <FiUsers className="w-3.5 h-3.5 text-[#3C83F6] dark:text-[#bceaff]" />
                 {program.studentCount || 0} Students
               </span>
@@ -542,7 +545,7 @@ export default function ProgramDetails() {
           </div>
 
           {/* ── Section Navigation Tabs ──────────────────────────────────────── */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="-mt-1 flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
             {SECTIONS.map((sec) => {
               const Icon = sec.icon;
               const count = (program[sec.field] || []).length;
@@ -551,15 +554,15 @@ export default function ProgramDetails() {
                 <button
                   key={sec.key}
                   onClick={() => setActiveTab(sec.key)}
-                  className={`flex items-center gap-2 h-9 px-3.5 rounded-xl font-bold text-xs transition-all whitespace-nowrap shrink-0 ${
+                  className={`flex items-center gap-1.5 h-8 px-3 rounded-xl font-bold text-[11px] transition-all whitespace-nowrap shrink-0 ${
                     isActive
                       ? 'bg-[#3C83F6] dark:bg-[#bceaff] text-white dark:text-[#06224d] shadow-sm'
                       : 'border border-black/10 dark:border-white/10 bg-white/60 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/90 dark:hover:bg-white/10'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-3 h-3" />
                   <span>{sec.label}</span>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    <span className={`px-1.5 py-0 rounded-full text-[10px] font-bold ${
                     isActive
                       ? 'bg-white/25 dark:bg-black/20 text-white dark:text-[#06224d]'
                       : 'bg-black/8 dark:bg-white/10 text-slate-600 dark:text-slate-300'
@@ -572,9 +575,9 @@ export default function ProgramDetails() {
           </div>
 
           {/* ── Section Panel ─────────────────────────────────────────────────── */}
-          <section className="space-y-4">
+          <section className="space-y-3">
             {/* Section Header */}
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 dark:border-white/5 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 dark:border-white/5 pb-3">
               <div>
                 <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   Attached {currentSection.label}

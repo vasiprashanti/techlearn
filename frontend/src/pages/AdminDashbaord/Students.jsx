@@ -25,6 +25,11 @@ const searchRoutes = [
   { id: "reports", title: "Reports", category: "Operations" },
 ];
 
+const getProgramType = (value) => {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'placement' || normalized.includes('placement') ? 'Placement' : 'Skill';
+};
+
 const normalizeStudent = (student) => ({
   ...student,
   id: student.id || student._id || `${student.email || 'student'}-${student.batch || 'batch'}`,
@@ -36,6 +41,7 @@ const normalizeStudent = (student) => ({
   batch: student.batch || '',
   programId: student.programId || '',
   programName: student.programName || '',
+  programType: student.programType ? getProgramType(student.programType) : '',
   track: student.track || 'General Track',
   programSelection: student.programSelection || 'Placement Sprint',
   accuracy: Number(student.accuracy ?? student.score ?? 0),
@@ -146,7 +152,10 @@ const StudentModal = ({ student, onClose }) => {
             </div>
             <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Program Selection</span>
-              <span className="block font-bold mt-1 truncate text-[#3C83F6] dark:text-[#8fd9ff]">{student.programName || student.programSelection || 'No program assigned'}</span>
+              <span className="block font-bold mt-1 truncate text-[#3C83F6] dark:text-[#8fd9ff]">
+                {student.programName || student.programSelection || 'No program assigned'}
+                {student.programType && <span className="font-semibold text-slate-500 dark:text-slate-400"> · {student.programType}</span>}
+              </span>
             </div>
           </div>
 
@@ -244,7 +253,7 @@ const Students = () => {
     const normalizedPrograms = programItems.map((program) => ({
       id: program.id || program._id,
       name: program.name || program.programType || 'Untitled Program',
-      programType: program.programType || '',
+      programType: program.programType ? getProgramType(program.programType) : '',
     })).filter((program) => program.id);
     const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
     setStudents(normalizedStudents);
@@ -678,7 +687,7 @@ const Students = () => {
                       <option className={dropdownOptionClass} value="">No program selected</option>
                       {programs.map((program) => (
                         <option className={dropdownOptionClass} key={program.id} value={program.id}>
-                          {program.name}
+                          {program.name} · {program.programType}
                         </option>
                       ))}
                     </select>

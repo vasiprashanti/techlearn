@@ -17,7 +17,7 @@ function runValidation() {
     const freeProgram = new Program({
       name: "Test Placement Sprint",
       description: "Automated test program",
-      programType: "Placement Sprint",
+      programType: "Placement",
       duration: "30 Days",
       status: "Draft",
       visibility: "Public",
@@ -37,11 +37,25 @@ function runValidation() {
     }
     console.log("✅ Free Program schema & matching metadata validation passed");
 
-    // 2. Validation Test: Paid Pricing without fee should fail validation
-    console.log("2. Testing Program Schema (Paid without Fee - Should Fail)...");
+    // 2. Validation Test: Program type must use the new two-value taxonomy
+    console.log("2. Testing Program Schema (Unsupported Program Type - Should Fail)...");
+    const invalidType = new Program({
+      name: "Invalid Type Program",
+      programType: "Other",
+      duration: "30 Days",
+    });
+    const typeErr = invalidType.validateSync();
+    if (!typeErr?.errors?.programType) {
+      console.error("❌ ERROR: Unsupported program type unexpectedly passed validation!");
+      process.exit(1);
+    }
+    console.log("✅ Program type validation successfully rejected unsupported values");
+
+    // 3. Validation Test: Paid Pricing without fee should fail validation
+    console.log("3. Testing Program Schema (Paid without Fee - Should Fail)...");
     const invalidPaid = new Program({
       name: "Invalid Paid Program",
-      programType: "Placement Sprint",
+      programType: "Placement",
       duration: "30 Days",
       pricingType: "Paid",
       programFee: -10,
@@ -53,8 +67,8 @@ function runValidation() {
     }
     console.log("✅ Paid Program validation successfully caught invalid fee:", paidErr.errors.programFee?.message || paidErr.message);
 
-    // 3. Validation Test: ProgramEnrollment schema
-    console.log("3. Testing ProgramEnrollment Schema...");
+    // 4. Validation Test: ProgramEnrollment schema
+    console.log("4. Testing ProgramEnrollment Schema...");
     const dummyUserId = new mongoose.Types.ObjectId();
     const dummyStudentId = new mongoose.Types.ObjectId();
     const dummyProgramId = new mongoose.Types.ObjectId();
@@ -75,8 +89,8 @@ function runValidation() {
     }
     console.log("✅ ProgramEnrollment schema validation passed");
 
-    // 4. Validation Test: User and Student onboarding fields
-    console.log("4. Testing User and Student Onboarding Schemas...");
+    // 5. Validation Test: User and Student onboarding fields
+    console.log("5. Testing User and Student Onboarding Schemas...");
     const testUser = new User({
       firstName: "Test",
       lastName: "Student",
@@ -118,8 +132,8 @@ function runValidation() {
     }
     console.log("✅ User and Student onboarding schema validation passed");
 
-    // 5. Test Schema Fields & Relationship Arrays
-    console.log("5. Testing Relationship Array Definitions...");
+    // 6. Test Schema Fields & Relationship Arrays
+    console.log("6. Testing Relationship Array Definitions...");
     const expectedRelationships = {
       batches: { field: "batchIds", model: "Batch", label: "name" },
       students: { field: "studentIds", model: "Student", label: "name" },
