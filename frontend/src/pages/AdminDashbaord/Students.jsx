@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiDownload, FiEdit2, FiEye, FiPlus, FiSearch, FiTrash2, FiUpload } from 'react-icons/fi';
 import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
 import Sidebar from "../../components/AdminDashbaord/Admin_Sidebar";
 import LoadingScreen from '../../components/AdminDashbaord/AdminPageLoader';
 import StudentReportModal from '../../components/AdminDashbaord/StudentReportModal';
@@ -35,6 +34,8 @@ const normalizeStudent = (student) => ({
   college: student.college || '',
   batchId: student.batchId || '',
   batch: student.batch || '',
+  programId: student.programId || '',
+  programName: student.programName || '',
   track: student.track || 'General Track',
   programSelection: student.programSelection || 'Placement Sprint',
   accuracy: Number(student.accuracy ?? student.score ?? 0),
@@ -145,7 +146,7 @@ const StudentModal = ({ student, onClose }) => {
             </div>
             <div className="bg-black/[0.02] dark:bg-white/[0.02] p-3 rounded-xl border border-black/[0.04] dark:border-white/[0.04]">
               <span className="block text-[11px] font-bold uppercase tracking-wider text-[#8498ad] dark:text-white/45">Program Selection</span>
-              <span className="block font-bold mt-1 truncate text-[#3C83F6] dark:text-[#8fd9ff]">{student.programSelection || 'Placement Sprint'}</span>
+              <span className="block font-bold mt-1 truncate text-[#3C83F6] dark:text-[#8fd9ff]">{student.programName || student.programSelection || 'No program assigned'}</span>
             </div>
           </div>
 
@@ -193,13 +194,12 @@ const StudentModal = ({ student, onClose }) => {
 
 const Students = () => {
   const { theme } = useTheme();
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isPageScrolled, setIsPageScrolled] = useState(false);
   const [students, setStudents] = useState(() => readAdminSessionCache('students', emptyStudents));
   const [colleges, setColleges] = useState(() => readAdminSessionCache('students-colleges', []));
   const [batches, setBatches] = useState(() => readAdminSessionCache('students-batches', []));
+  const [programs, setPrograms] = useState([]);
   const [tracks, setTracks] = useState(() => readAdminSessionCache('students-tracks', []));
   const [isLoadingStudents, setIsLoadingStudents] = useState(() => !hasMeaningfulAdminData(readAdminSessionCache('students', emptyStudents)));
   const [mounted, setMounted] = useState(false);
@@ -211,7 +211,7 @@ const Students = () => {
   const [formError, setFormError] = useState('');
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
-  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
+  const [studentForm, setStudentForm] = useState({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
   const [searchQuery, setSearchQuery] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [bulkImportCollegeId, setBulkImportCollegeId] = useState('');
@@ -227,20 +227,30 @@ const Students = () => {
   const studentFormInputClass = 'w-full px-3 py-2.5 text-sm rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-slate-800 dark:text-white placeholder:text-black/35 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-[#3C83F6]/30 dark:focus:ring-[#7fb1ff]/35';
 
   const loadStudentsData = useCallback(async () => {
-    const [remoteStudents, remoteColleges, remoteBatches, remoteTracks] = await Promise.all([
+    const [remoteStudents, remoteColleges, remoteBatches, remoteTracks, remotePrograms] = await Promise.all([
       adminAPI.getStudents(),
       adminAPI.getColleges(),
       adminAPI.getBatches(),
       adminAPI.getTrackTemplates().catch(() => []),
+      adminAPI.getPrograms({ status: 'Active', limit: 100 }).catch(() => ({ programs: [] })),
     ]);
     const normalizedStudents = preferRemoteData(remoteStudents, emptyStudents).map(normalizeStudent);
     const normalizedColleges = preferRemoteData(remoteColleges, []).map((college) => ({ id: college.id || college._id, name: college.name || 'Untitled College' }));
     const normalizedBatches = preferRemoteData(remoteBatches, []).map((batch) => ({ id: batch.id || batch._id, name: batch.name || batch.id || 'Untitled Batch', college: batch.college || '' }));
     const normalizedTracks = preferRemoteData(remoteTracks, []).map((track) => track.name).filter(Boolean);
+    const programItems = Array.isArray(remotePrograms)
+      ? remotePrograms
+      : (remotePrograms?.programs || remotePrograms?.items || remotePrograms?.data || []);
+    const normalizedPrograms = programItems.map((program) => ({
+      id: program.id || program._id,
+      name: program.name || program.programType || 'Untitled Program',
+      programType: program.programType || '',
+    })).filter((program) => program.id);
     const uniqueTracks = Array.from(new Set(normalizedTracks)).filter((t) => t !== 'General Track');
     setStudents(normalizedStudents);
     setColleges(normalizedColleges);
     setBatches(normalizedBatches);
+    setPrograms(normalizedPrograms);
     setTracks(uniqueTracks);
     writeAdminSessionCache('students', normalizedStudents);
     writeAdminSessionCache('students-colleges', normalizedColleges);
@@ -257,6 +267,7 @@ const Students = () => {
         setStudents(emptyStudents);
         setColleges([]);
         setBatches([]);
+        setPrograms([]);
         setTracks([]);
       }
     }).finally(() => {
@@ -360,7 +371,7 @@ const Students = () => {
   const openAddStudent = () => {
     setEditingStudentId(null);
     setFormError('');
-    setStudentForm({ name: '', email: '', collegeId: '', batchId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
+    setStudentForm({ name: '', email: '', collegeId: '', batchId: '', programId: '', track: '', programSelection: 'Placement Sprint', status: 'Active' });
     setIsAddFormOpen(true);
   };
 
@@ -374,6 +385,7 @@ const Students = () => {
       email: student.email || '',
       collegeId: matchingCollege?.id || '',
       batchId: matchingBatch?.id || '',
+      programId: student.programId || programs.find((program) => program.programType === student.programSelection)?.id || '',
       track: student.track || '',
       programSelection: student.programSelection || 'Placement Sprint',
       status: student.status || 'Active',
@@ -394,6 +406,7 @@ const Students = () => {
         email: studentForm.email.trim().toLowerCase(),
         collegeId: studentForm.collegeId,
         batchId: studentForm.batchId || null,
+        programId: studentForm.programId || null,
         primaryTrack: studentForm.track.trim() || 'General Track',
         programSelection: studentForm.programSelection,
         status: studentForm.status,
@@ -650,13 +663,28 @@ const Students = () => {
                 <div>
                   <label className="admin-micro-label text-black/45 dark:text-white/45">Program</label>
                   <div className="relative mt-1 rounded-xl border border-black/10 dark:border-white/15 bg-white/85 dark:bg-[#0f1f43] shadow-[0_4px_14px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_20px_rgba(0,0,0,0.2)] transition-all focus-within:ring-2 focus-within:ring-[#3C83F6]/35 dark:focus-within:ring-[#7fb1ff]/35">
-                    <select value={studentForm.programSelection} onChange={(e) => setStudentForm((prev) => ({ ...prev, programSelection: e.target.value }))} className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none">
-                      <option className={dropdownOptionClass} value="Placement Sprint">Placement Sprint</option>
-                      <option className={dropdownOptionClass} value="Full Stack Project Program">Full Stack Project Program</option>
-                      <option className={dropdownOptionClass} value="Both">Both</option>
+                    <select
+                      value={studentForm.programId}
+                      onChange={(e) => {
+                        const selectedProgram = programs.find((program) => program.id === e.target.value);
+                        setStudentForm((prev) => ({
+                          ...prev,
+                          programId: e.target.value,
+                          programSelection: selectedProgram?.programType || prev.programSelection,
+                        }));
+                      }}
+                      className="appearance-none w-full px-3 py-2.5 pr-10 text-sm font-medium rounded-xl border-0 bg-transparent text-slate-800 dark:text-white outline-none"
+                    >
+                      <option className={dropdownOptionClass} value="">No program selected</option>
+                      {programs.map((program) => (
+                        <option className={dropdownOptionClass} key={program.id} value={program.id}>
+                          {program.name}
+                        </option>
+                      ))}
                     </select>
                     <FiChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-black/45 dark:text-white/60" />
                   </div>
+                  <p className="text-[11px] text-black/40 dark:text-white/40 mt-1.5">Batch is optional; without one this learner follows their own program Day 1.</p>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -767,7 +795,7 @@ const Students = () => {
       <div className={`flex min-h-screen w-full font-sans antialiased admin-dashboard-typography text-slate-900 dark:text-slate-100 ${isDarkMode ? 'dark' : 'light'}`}>
         <div className={`fixed inset-0 -z-10 transition-colors duration-1000 ${isDarkMode ? 'bg-gradient-to-br from-[#020b23] via-[#001233] to-[#0a1128]' : 'bg-gradient-to-br from-[#daf0fa] via-[#bceaff] to-[#bceaff]'}`} />
         <Sidebar onToggle={setSidebarCollapsed} isCollapsed={sidebarCollapsed} />
-        <main onScroll={(e) => setIsPageScrolled(e.currentTarget.scrollTop > 12)} className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
+        <main className={`flex-1 h-screen transition-all duration-700 ease-in-out z-10 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-28 pb-12 px-4 sm:px-6 md:px-10 lg:px-14 xl:px-16 overflow-y-auto overflow-x-hidden`}>
           <div className="max-w-[1600px] mx-auto space-y-4">
             <div>
               <h1 className="admin-page-title">Students</h1>

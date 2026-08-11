@@ -67,6 +67,8 @@ export default function ProgramDetails() {
   const [availableLoading, setAvailableLoading] = useState(false);
   const [availableSearch, setAvailableSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState('');
   const [attaching, setAttaching] = useState(false);
 
   const [detachItem, setDetachItem] = useState(null);
@@ -140,8 +142,23 @@ export default function ProgramDetails() {
   const handleOpenAttachModal = (entityType) => {
     setAttachModalType(entityType);
     setSelectedIds([]);
+    setSelectedBatchId('');
     setAvailableSearch('');
     fetchAvailableEntities(entityType, '');
+    if (entityType === 'students') {
+      adminAPI.getBatches()
+        .then((res) => {
+          const items = Array.isArray(res) ? res : (res?.batches || res?.items || res?.data || []);
+          setBatches(items.map((batch) => ({
+            id: batch.id || batch._id,
+            name: batch.name || batch.id || 'Untitled Batch',
+          })).filter((batch) => batch.id));
+        })
+        .catch((err) => {
+          console.error('Error fetching batches for program enrollment:', err);
+          setBatches([]);
+        });
+    }
   };
 
   const handleToggleSelect = (id) => {
@@ -152,7 +169,12 @@ export default function ProgramDetails() {
     if (selectedIds.length === 0 || !attachModalType) return;
     try {
       setAttaching(true);
-      await adminAPI.attachProgramEntities(programId, attachModalType, selectedIds);
+      await adminAPI.attachProgramEntities(
+        programId,
+        attachModalType,
+        selectedIds,
+        attachModalType === 'students' ? { batchId: selectedBatchId || null } : {}
+      );
       setAttachModalType(null);
       setSelectedIds([]);
       setToastMessage(`Successfully attached ${selectedIds.length} item(s) to Program!`);
@@ -300,6 +322,27 @@ export default function ProgramDetails() {
                 />
               </div>
             </div>
+
+            {attachModalType === 'students' && (
+              <div className="px-5 pb-2 shrink-0">
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-black/50 dark:text-white/50 mb-1.5">
+                  Batch (Optional)
+                </label>
+                <select
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-black/10 dark:border-white/15 bg-white/80 dark:bg-[#0f1f43] text-sm text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-[#3C83F6]/30"
+                >
+                  <option value="">No batch — individual program schedule</option>
+                  {batches.map((batch) => (
+                    <option key={batch.id} value={batch.id}>{batch.name}</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-black/45 dark:text-white/45 mt-1.5">
+                  Leave empty for Day 1 to start on the learner's enrollment date.
+                </p>
+              </div>
+            )}
 
             {/* Item List */}
             <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2 min-h-0">

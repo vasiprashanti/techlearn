@@ -20,6 +20,16 @@ const programEnrollmentSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // A program enrollment may be individual (null) or cohort based.
+    // This is deliberately stored on the enrollment instead of relying on
+    // Student.batchId, because one learner can take multiple programs with
+    // different schedules.
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
+      index: true,
+    },
     status: {
       type: String,
       enum: ["Active", "Completed", "Paused"],
@@ -34,6 +44,13 @@ const programEnrollmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // The learner's own Day 1 anchor. It remains stable if a learner is
+    // later moved onto a batch schedule and is used again if the batch is
+    // removed.
+    individualStartDate: {
+      type: Date,
+      default: Date.now,
+    },
     source: {
       type: String,
       enum: ["onboarding", "admin", "preference_update"],
@@ -45,6 +62,7 @@ const programEnrollmentSchema = new mongoose.Schema(
 
 // Prevent duplicate enrollment for the same user in the same program
 programEnrollmentSchema.index({ userId: 1, programId: 1 }, { unique: true });
+programEnrollmentSchema.index({ studentId: 1, programId: 1 });
 
 const ProgramEnrollment = mongoose.model("ProgramEnrollment", programEnrollmentSchema);
 

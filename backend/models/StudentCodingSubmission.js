@@ -17,6 +17,12 @@ const studentCodingSubmissionSchema = new mongoose.Schema(
       ref: "Batch",
       default: null,
     },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
     trackId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Track",

@@ -528,8 +528,11 @@ export const adminAPI = {
     if (params.limit) query.set('limit', params.limit);
     return request(`/admin/programs/${programId}/available/${entityType}?${query.toString()}`);
   },
-  attachProgramEntities: (programId, entityType, ids) =>
-    request(`/admin/programs/${programId}/attachments/${entityType}`, { method: 'POST', body: JSON.stringify({ ids }) }),
+  attachProgramEntities: (programId, entityType, ids, options = {}) =>
+    request(`/admin/programs/${programId}/attachments/${entityType}`, {
+      method: 'POST',
+      body: JSON.stringify({ ids, ...options }),
+    }),
   detachProgramEntity: (programId, entityType, entityId) =>
     request(`/admin/programs/${programId}/attachments/${entityType}/${entityId}`, { method: 'DELETE' }),
 };

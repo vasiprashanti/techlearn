@@ -4,9 +4,11 @@ import Batch, { BATCH_STATUS } from "../models/Batch.js";
 import CodingRound from "../models/CodingRound.js";
 import College from "../models/College.js";
 import Question from "../models/Questions.js";
+import Program from "../models/Program.js";
 import Student from "../models/Student.js";
 import Track from "../models/Track.js";
 import DailyChallengeAttempt from "../models/DailyChallengeAttempt.js";
+import { resolveProgramSchedule } from "./programSchedule.js";
 
 export const DAILY_CHALLENGE_RULES = {
   timerLimitMinutes: 60,
@@ -202,9 +204,24 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     throw error;
   }
 
-  const batch = studentContext.student?.batchId
-    ? await Batch.findById(studentContext.student.batchId)
+  const schedule = studentContext.student
+    ? await resolveProgramSchedule({ user, student: studentContext.student })
+    : {
+        programId: null,
+        scheduleType: "batch",
+        batchId: null,
+        individualStartDate: null,
+      };
+
+  const batch = schedule.batchId
+    ? await Batch.findById(schedule.batchId)
     : (studentContext.student ? null : await ensureDemoBatch());
+
+  if (schedule.batchId && !batch) {
+    const error = new Error("The assigned batch could not be found.");
+    error.statusCode = 403;
+    throw error;
+  }
 
   if (batch && batch.status !== BATCH_STATUS.ACTIVE) {
     const error = new Error("This batch is not active for Daily Challenge access.");
@@ -213,6 +230,13 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   const TrackTemplate = mongoose.model("TrackTemplate");
+  let program = schedule.programId
+    ? await Program.findById(schedule.programId).lean()
+    : null;
+  if (!program && studentProgram) {
+    program = await Program.findOne({ programType: studentProgram, status: "Active" }).sort({ createdAt: -1 }).lean();
+  }
+
   let trackTemplate = null;
   if (batch) {
     trackTemplate = batch.assignedDailyChallengeTrack
@@ -234,13 +258,6 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   if (!trackTemplate) {
-    const Program = mongoose.model("Program");
-    let program = studentContext.student?.programId
-      ? await Program.findById(studentContext.student.programId).lean()
-      : null;
-    if (!program && studentProgram) {
-      program = await Program.findOne({ programType: studentProgram, status: "Active" }).sort({ createdAt: -1 }).lean();
-    }
     if (program?.trackTemplateIds?.length) {
       trackTemplate = await TrackTemplate.findOne({
         _id: { $in: program.trackTemplateIds },
@@ -248,12 +265,12 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
         status: "Active",
       });
     }
-    if (!trackTemplate) {
+    if (!trackTemplate && !schedule.programId) {
       trackTemplate = await TrackTemplate.findOne({ trackType: "Daily Challenge", status: "Active" }).sort({ createdAt: -1 });
     }
   }
 
-  const individualStartDate = batch ? null : (studentContext.student?.createdAt || user?.createdAt || new Date());
+  const individualStartDate = batch ? null : (schedule.individualStartDate || studentContext.student?.createdAt || user?.createdAt || new Date());
   const dayNumber = calculateCurrentDayNumber(batch, trackTemplate, "Daily Challenge", individualStartDate);
   const now = new Date();
 
@@ -270,15 +287,17 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   }
 
   const desiredTrackType = normalizeTrackType(
-    normalizedTrackType || studentContext.student?.primaryTrack || batch.assignedTrack || "DSA"
+    normalizedTrackType || studentContext.student?.primaryTrack || batch?.assignedTrack || "DSA"
   );
 
   console.log("[DAILY_CHALLENGE_DEBUG] Track Search:", {
-    batchId: batch._id,
+    batchId: batch?._id || null,
+    programId: schedule.programId || null,
+    scheduleType: schedule.scheduleType,
     desiredTrackType,
     requestedTrackType,
     studentPrimaryTrack: studentContext.student?.primaryTrack,
-    batchAssignedTrack: batch.assignedTrack,
+    batchAssignedTrack: batch?.assignedTrack,
   });
 
   if (trackTemplate) {
@@ -301,6 +320,10 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
           studentEmail: studentContext.studentEmail,
           accessSource: studentContext.accessSource,
           batch,
+          program,
+          programId: schedule.programId || program?._id || null,
+          scheduleType: schedule.scheduleType,
+          individualStartDate,
           track: {
             _id: trackTemplate._id,
             trackType: desiredTrackType,
@@ -316,6 +339,12 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
 
     // If an active track template is assigned to this batch but has NO questions for today's exact dayNumber, throw error
     const error = new Error(`No Daily Challenge questions are configured for Day ${dayNumber} in the assigned track.`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!batch) {
+    const error = new Error("No Daily Challenge track template is configured for this individual program.");
     error.statusCode = 404;
     throw error;
   }
@@ -371,6 +400,10 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
     studentEmail: studentContext.studentEmail,
     accessSource: studentContext.accessSource,
     batch,
+    program,
+    programId: schedule.programId || program?._id || null,
+    scheduleType: schedule.scheduleType,
+    individualStartDate,
     track,
     questions: validQuestions,
     dayNumber,
@@ -378,17 +411,30 @@ export const resolveDailyChallengeContext = async ({ user, email, trackType }) =
   };
 };
 
-export const upsertDailyChallengeRound = async ({ batch, track, questions, dayNumber, durationMinutes }) => {
-  const dateStr = new Date(batch.startDate).toISOString().slice(0, 10).replace(/[^0-9]/g, "");
-  const linkId = `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}-${dateStr}`;
+export const upsertDailyChallengeRound = async ({
+  batch,
+  program,
+  programId,
+  track,
+  questions,
+  dayNumber,
+  durationMinutes,
+  individualStartDate,
+}) => {
+  const anchorDate = batch?.startDate || individualStartDate || new Date();
+  const dateStr = new Date(anchorDate).toISOString().slice(0, 10).replace(/[^0-9]/g, "");
+  const linkId = batch?._id
+    ? `daily-${batch._id}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}-${dateStr}`
+    : `daily-program-${programId || program?._id || "individual"}-${String(track.trackType || "track").toLowerCase()}-day-${dayNumber}-${dateStr}`;
   const resolvedQuestions = Array.isArray(questions) && questions.length > 0 ? questions : [];
 
   const problems = resolvedQuestions.map((q) => mapQuestionToProblem(q));
 
   const roundPayload = {
-    title: `Daily Challenge - ${batch.name} - ${track.trackType} - Day ${dayNumber}`,
-    college: batch.name,
-    batchId: batch._id,
+    title: `Daily Challenge - ${batch?.name || program?.name || "Individual Program"} - ${track.trackType} - Day ${dayNumber}`,
+    college: batch?.name || program?.name || "Individual Program",
+    batchId: batch?._id || null,
+    programId: programId || program?._id || null,
     trackId: track._id,
     date: startOfDay(),
     duration: durationMinutes,
@@ -415,19 +461,33 @@ export const resolveDailyChallengeParticipant = async ({ codingRound, user, emai
     allowGuestFallback: true,
   });
 
-  if (!student || !student.batchId) {
-    const error = new Error("Student-to-batch mapping is required for Daily Challenge access.");
+  if (!student) {
+    const error = new Error("Student mapping is required for Daily Challenge access.");
     error.statusCode = 403;
     throw error;
   }
 
-  if (String(student.batchId) !== String(codingRound.batchId)) {
-    const error = new Error("This Daily Challenge is not assigned to your batch.");
-    error.statusCode = 403;
-    throw error;
+  const schedule = await resolveProgramSchedule({
+    user,
+    student,
+    programId: codingRound.programId || null,
+  });
+
+  if (codingRound.batchId) {
+    if (!schedule.batchId || String(schedule.batchId) !== String(codingRound.batchId)) {
+      const error = new Error("This Daily Challenge is not assigned to your batch.");
+      error.statusCode = 403;
+      throw error;
+    }
+  } else if (codingRound.programId) {
+    if (String(schedule.programId || "") !== String(codingRound.programId) || schedule.batchId) {
+      const error = new Error("This Daily Challenge is not assigned to your individual program schedule.");
+      error.statusCode = 403;
+      throw error;
+    }
   }
 
-  return { student, studentEmail, accessSource };
+  return { student, studentEmail, accessSource, schedule };
 };
 
 export const getDailyChallengeAttempt = async ({ codingRoundId, studentEmail }) =>
@@ -454,7 +514,8 @@ export const ensureDailyChallengeAttempt = async ({
     attempt = new DailyChallengeAttempt({
       codingRoundId: codingRound._id,
       studentId: student?._id || null,
-      batchId: codingRound.batchId,
+      batchId: codingRound.batchId || null,
+      programId: codingRound.programId || null,
       trackId: codingRound.trackId,
       questionId: codingRound.questionId,
       studentEmail,

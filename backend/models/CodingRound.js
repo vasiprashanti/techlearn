@@ -85,6 +85,12 @@ const codingRoundSchema = new mongoose.Schema(
       default: null,
       index: true,
     },
+    programId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Program",
+      default: null,
+      index: true,
+    },
     trackId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Track",
@@ -117,6 +123,7 @@ codingRoundSchema.index({ college: 1 });
 codingRoundSchema.index({ date: 1, duration: 1 });
 codingRoundSchema.index({ challengeType: 1, trackTemplateId: 1, dayNumber: 1 });
 codingRoundSchema.index({ challengeType: 1, batchId: 1, trackId: 1, dayNumber: 1 });
+codingRoundSchema.index({ challengeType: 1, programId: 1, dayNumber: 1 });
 
 const CodingRound = mongoose.model("CodingRound", codingRoundSchema);
 export default CodingRound;

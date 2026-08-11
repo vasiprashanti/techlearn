@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { invalidateDashboardCache } from "./dashboardController.js";
 import College from "../models/College.js";
-import Batch from "../models/Batch.js";
 import Student from "../models/Student.js";
 import Project from "../models/Project.js";
 import ProjectDay from "../models/ProjectDay.js";
@@ -101,15 +100,6 @@ const ensureDefaultProjectExists = async () => {
 };
 
 const escapeRegex = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const getDefaultBatchWindow = () => {
-  const startDate = new Date();
-  startDate.setHours(0, 0, 0, 0);
-  const expiryDate = new Date(startDate);
-  expiryDate.setDate(expiryDate.getDate() + 59);
-  expiryDate.setHours(23, 59, 59, 999);
-  return { startDate, expiryDate };
-};
 
 const getVerifiedEmailFromReq = async (req) => {
   try {
@@ -212,21 +202,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Resolve or create Batch
-    let batch = await Batch.findOne({ collegeId: college._id, name: "Cohort 1" });
-    if (!batch) {
-      const { startDate, expiryDate } = getDefaultBatchWindow();
-      batch = await Batch.create({
-        name: "Cohort 1",
-        collegeId: college._id,
-        startDate,
-        expiryDate,
-        releaseTime: "00:00",
-        status: "Active",
-        assignedTrack: programSelection || "Placement Sprint",
-      });
-    }
-
     let targetUser = await User.findOne({ email: emailCheck });
 
     if (targetUser) {
@@ -280,7 +255,6 @@ export const registerUser = async (req, res) => {
         placementReadiness: placementReadiness || "",
         dailyCommitment: dailyCommitment || "",
         declarationAccepted: declarationAccepted || false,
-        batchId: batch._id,
       });
 
       await targetUser.save();
@@ -295,7 +269,6 @@ export const registerUser = async (req, res) => {
       // Link the existing student profile to the new user account
       student.userId = targetUser._id;
       student.collegeId = student.collegeId || college._id;
-      student.batchId = student.batchId || batch._id;
       student.programSelection = targetUser.programSelection;
       student.learningGoal = targetUser.learningGoal;
       student.skills = targetUser.skills;
@@ -309,7 +282,6 @@ export const registerUser = async (req, res) => {
       // Create matching Student record
       student = await Student.create({
         collegeId: college._id,
-        batchId: batch._id,
         userId: targetUser._id,
         name: `${trimmedFirstName} ${trimmedLastName}`.trim().replace(/\.$/, ""),
         email: emailCheck,
@@ -329,7 +301,7 @@ export const registerUser = async (req, res) => {
     const enrolledPrograms = await syncProgramEnrollment({
       user: targetUser,
       student,
-      batchId: student.batchId || batch._id,
+      programId: student.programId || targetUser.programId,
       programSelection: targetUser.programSelection,
       onboardingData: req.body,
     });
@@ -513,7 +485,6 @@ export const updatePreferences = async (req, res) => {
     const enrolledPrograms = await syncProgramEnrollment({
       user,
       student,
-      batchId: student?.batchId || user.batchId,
       programSelection: user.programSelection,
       onboardingData: {
         learningGoal: user.learningGoal,

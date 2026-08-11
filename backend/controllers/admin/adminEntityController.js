@@ -8,7 +8,6 @@ import Batch, { BATCH_STATUS } from "../../models/Batch.js";
 import Course from "../../models/Course.js";
 import Student from "../../models/Student.js";
 import Program from "../../models/Program.js";
-import ProgramEnrollment from "../../models/ProgramEnrollment.js";
 import Submission from "../../models/Submission.js";
 import StudentCodingSubmission from "../../models/StudentCodingSubmission.js";
 import StudentMcqSubmission from "../../models/StudentMcqSubmission.js";
@@ -22,6 +21,15 @@ import StudentTaskProgress from "../../models/StudentTaskProgress.js";
 import StudentTrackAssignment from "../../models/StudentTrackAssignment.js";
 import { writeAuditLog } from "../../utils/auditLogger.js";
 import { assertObjectId, formatDateLabel } from "./adminCommon.js";
+import {
+  resolveProgramForSelection,
+  setBatchScheduleForStudent,
+  pauseProgramEnrollment,
+  syncPrimaryProgramPointers,
+  upsertProgramEnrollment,
+} from "../../utils/programEnrollment.js";
+
+const LEGACY_PROGRAM_SELECTIONS = ["Placement Sprint", "Full Stack Project Program", "Both"];
 
 const deleteStudentProjectProgress = async (studentIds) => {
   if (!studentIds || studentIds.length === 0) return;
@@ -2983,6 +2991,7 @@ export const listStudentsAdmin = async (req, res) => {
       .sort({ createdAt: -1 })
       .populate("collegeId", "name")
       .populate("batchId", "name")
+      .populate("programId", "name programType")
       .lean();
 
     const studentIds = students.map((student) => student._id);
@@ -3012,8 +3021,10 @@ export const listStudentsAdmin = async (req, res) => {
       email: student.email,
       collegeId: student.collegeId?._id || student.collegeId,
       batchId: student.batchId?._id || student.batchId,
+      programId: student.programId?._id || student.programId || null,
+      programName: student.programId?.name || null,
       college: student.collegeId?.name || "Unknown College",
-      batch: student.batchId?.name || "Unknown Batch",
+      batch: student.batchId?.name || "No Batch (Individual)",
       track: student.primaryTrack || "General Track",
       programSelection: student.programSelection || "Placement Sprint",
       accuracy: typeof student.overallAccuracy === 'number'
@@ -3069,9 +3080,10 @@ export const searchExistingStudentsAdmin = async (req, res) => {
 
     const [students, total] = await Promise.all([
       Student.find(query)
-        .select("name email rollNo collegeId batchId primaryTrack programSelection status")
+        .select("name email rollNo collegeId batchId programId primaryTrack programSelection status")
         .populate("collegeId", "name")
         .populate("batchId", "name")
+        .populate("programId", "name programType")
         .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
@@ -3087,7 +3099,9 @@ export const searchExistingStudentsAdmin = async (req, res) => {
       collegeId: student.collegeId?._id || student.collegeId,
       college: student.collegeId?.name || "Unknown College",
       batchId: student.batchId?._id || student.batchId,
-      batch: student.batchId?.name || "Unknown Batch",
+      programId: student.programId?._id || student.programId || null,
+      programName: student.programId?.name || null,
+      batch: student.batchId?.name || "No Batch (Individual)",
       track: student.primaryTrack || "General Track",
       programSelection: student.programSelection || "Placement Sprint",
       status: student.status || "Active",
@@ -3110,10 +3124,13 @@ export const createStudentAdmin = async (req, res) => {
     if (batchId && !assertObjectId(batchId, "batchId", res)) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-    const [batch, existingStudent, linkedUser] = await Promise.all([
+    if (programId && !assertObjectId(programId, "programId", res)) return;
+
+    const [batch, existingStudent, linkedUser, requestedProgram] = await Promise.all([
       batchId ? Batch.findById(batchId).lean() : Promise.resolve(null),
       Student.findOne({ email: normalizedEmail }).lean(),
       User.findOne({ email: normalizedEmail }).select("_id").lean(),
+      programId ? Program.findById(programId).lean() : Promise.resolve(null),
     ]);
 
     if (batchId && !batch) {
@@ -3124,9 +3141,24 @@ export const createStudentAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Selected batch does not belong to the selected college." });
     }
 
+    if (programId && !requestedProgram) {
+      return res.status(404).json({ success: false, message: "Program not found." });
+    }
+
     if (existingStudent) {
       return res.status(409).json({ success: false, message: "A student with this email already exists." });
     }
+
+    const resolvedProgram = requestedProgram || (
+      linkedUser
+        ? await resolveProgramForSelection(programSelection || batch?.programSelection)
+        : null
+    );
+    const resolvedProgramType = LEGACY_PROGRAM_SELECTIONS.includes(resolvedProgram?.programType)
+      ? resolvedProgram.programType
+      : (LEGACY_PROGRAM_SELECTIONS.includes(programSelection)
+        ? programSelection
+        : (LEGACY_PROGRAM_SELECTIONS.includes(batch?.programSelection) ? batch.programSelection : "Placement Sprint"));
 
     const student = await Student.create({
       name: name.trim(),
@@ -3134,10 +3166,10 @@ export const createStudentAdmin = async (req, res) => {
       rollNo: rollNo?.trim() || "",
       collegeId,
       batchId: batch ? batch._id : null,
-      programId: programId || null,
+      programId: resolvedProgram?._id || null,
       userId: linkedUser?._id || null,
       primaryTrack: primaryTrack?.trim() || "General Track",
-      programSelection: programSelection || (batch ? batch.programSelection : "Placement Sprint"),
+      programSelection: resolvedProgramType,
       status: status || "Active",
     });
 
@@ -3145,6 +3177,7 @@ export const createStudentAdmin = async (req, res) => {
       const userUpdate = {
         batchId: batch ? batch._id : null,
         programSelection: student.programSelection,
+        programId: resolvedProgram?._id || null,
       };
       if (batch?.startDate) {
         userUpdate.startDate = batch.startDate;
@@ -3153,27 +3186,25 @@ export const createStudentAdmin = async (req, res) => {
       }
       await User.findByIdAndUpdate(linkedUser._id, { $set: userUpdate });
 
-      // Create ProgramEnrollment record if programId or programSelection is present
-      const resolvedProgram = programId
-        ? await Program.findById(programId).lean()
-        : await Program.findOne({ programType: student.programSelection, status: "Active" }).sort({ createdAt: -1 }).lean();
-
       if (resolvedProgram) {
-        await ProgramEnrollment.findOneAndUpdate(
-          { userId: linkedUser._id, programId: resolvedProgram._id },
-          {
-            $set: { status: "Active", accessTier: "Free" },
-            $setOnInsert: {
-              userId: linkedUser._id,
-              studentId: student._id,
-              assignedAt: new Date(),
-              source: "admin",
-            },
-          },
-          { upsert: true, new: true }
-        );
-        await Program.updateOne({ _id: resolvedProgram._id }, { $addToSet: { studentIds: student._id } });
+        await upsertProgramEnrollment({
+          user: linkedUser,
+          student,
+          program: resolvedProgram,
+          batchId: batch?._id || null,
+          source: "admin",
+        });
       }
+    } else if (resolvedProgram) {
+      await Program.updateOne(
+        { _id: resolvedProgram._id },
+        {
+          $addToSet: {
+            studentIds: student._id,
+            ...(batch?._id ? { batchIds: batch._id } : {}),
+          },
+        }
+      );
     }
 
     await writeAuditLog({
@@ -3200,6 +3231,7 @@ export const getStudentDetailAdmin = async (req, res) => {
     const student = await Student.findById(studentId)
       .populate("collegeId", "name")
       .populate("batchId", "name")
+      .populate("programId", "name programType")
       .lean();
 
     if (!student) {
@@ -3227,6 +3259,8 @@ export const getStudentDetailAdmin = async (req, res) => {
         batch: student.batchId?.name || "No Batch (Individual)",
         track: student.primaryTrack || "General Track",
         programSelection: student.programSelection || "Placement Sprint",
+        programId: student.programId?._id || student.programId || null,
+        programName: student.programId?.name || null,
         accuracy: score,
         score,
         streak: student.streak || 0,
@@ -3256,17 +3290,35 @@ export const updateStudentAdmin = async (req, res) => {
       email: req.body.email?.trim()?.toLowerCase(),
       rollNo: req.body.rollNo?.trim(),
       primaryTrack: req.body.primaryTrack?.trim() || req.body.track?.trim() || "General Track",
-      programSelection: req.body.programSelection || "Placement Sprint",
+      programSelection: LEGACY_PROGRAM_SELECTIONS.includes(req.body.programSelection)
+        ? req.body.programSelection
+        : (existingStudent.programSelection || "Placement Sprint"),
       status: req.body.status,
     };
+
+    const hasProgramId = Object.prototype.hasOwnProperty.call(req.body, "programId");
+    let nextProgramId = existingStudent.programId || null;
+    if (hasProgramId) {
+      const rawProgramId = req.body.programId;
+      if (rawProgramId && rawProgramId !== "" && rawProgramId !== "null") {
+        if (!assertObjectId(rawProgramId, "programId", res)) return;
+        nextProgramId = rawProgramId;
+        update.programId = rawProgramId;
+      } else {
+        nextProgramId = null;
+        update.programId = null;
+      }
+    }
+    const previousProgramId = existingStudent.programId || null;
 
     if (req.body.collegeId) {
       if (!assertObjectId(req.body.collegeId, "collegeId", res)) return;
       update.collegeId = req.body.collegeId;
     }
 
+    const hasBatchId = Object.prototype.hasOwnProperty.call(req.body, "batchId");
     let nextBatchId = existingStudent.batchId;
-    if (Object.prototype.hasOwnProperty.call(req.body, "batchId")) {
+    if (hasBatchId) {
       const rawBatchId = req.body.batchId;
       if (rawBatchId && rawBatchId !== "" && rawBatchId !== "null") {
         if (!assertObjectId(rawBatchId, "batchId", res)) return;
@@ -3281,14 +3333,19 @@ export const updateStudentAdmin = async (req, res) => {
     const nextCollegeId = update.collegeId || existingStudent.collegeId;
     const nextEmail = update.email || existingStudent.email;
 
-    const [batch, duplicateStudent, linkedUser] = await Promise.all([
+    const [batch, duplicateStudent, linkedUser, requestedProgram] = await Promise.all([
       nextBatchId ? Batch.findById(nextBatchId).lean() : Promise.resolve(null),
       Student.findOne({ _id: { $ne: studentId }, email: nextEmail }).select("_id").lean(),
       User.findOne({ email: nextEmail }).select("_id").lean(),
+      nextProgramId ? Program.findById(nextProgramId).lean() : Promise.resolve(null),
     ]);
 
     if (nextBatchId && !batch) {
       return res.status(404).json({ success: false, message: "Batch not found." });
+    }
+
+    if (nextProgramId && !requestedProgram) {
+      return res.status(404).json({ success: false, message: "Program not found." });
     }
 
     if (batch && String(batch.collegeId) !== String(nextCollegeId)) {
@@ -3307,6 +3364,7 @@ export const updateStudentAdmin = async (req, res) => {
       const userUpdate = {
         batchId: nextBatchId,
         programSelection: update.programSelection,
+        programId: nextProgramId,
       };
       if (batch?.startDate) {
         userUpdate.startDate = batch.startDate;
@@ -3314,6 +3372,32 @@ export const updateStudentAdmin = async (req, res) => {
         userUpdate.startDate = student.createdAt;
       }
       await User.findByIdAndUpdate(linkedUser._id, { $set: userUpdate });
+
+      if (hasBatchId) {
+        await setBatchScheduleForStudent({
+          student,
+          user: linkedUser,
+          batchId: nextBatchId,
+        });
+      }
+
+      const programChanged = String(previousProgramId || "") !== String(nextProgramId || "");
+      if (hasProgramId && requestedProgram && (programChanged || hasBatchId)) {
+        await upsertProgramEnrollment({
+          user: linkedUser,
+          student,
+          program: requestedProgram,
+          batchId: hasBatchId ? nextBatchId : null,
+          source: "admin",
+        });
+      }
+
+      if (hasProgramId && !requestedProgram && previousProgramId) {
+        await pauseProgramEnrollment({ student, user: linkedUser, programId: previousProgramId });
+      }
+      if (hasProgramId) {
+        await syncPrimaryProgramPointers({ student, user: linkedUser });
+      }
     }
 
     await writeAuditLog({
@@ -3405,6 +3489,11 @@ export const removeStudentFromBatchAdmin = async (req, res) => {
         { studentId: student._id, batchId, status: "Active" },
         { $set: { status: "Inactive", deactivatedAt: new Date() } }
       ),
+      setBatchScheduleForStudent({
+        student,
+        user: student.userId ? { _id: student.userId } : null,
+        batchId: null,
+      }),
     ]);
 
     await writeAuditLog({
